@@ -1,6 +1,8 @@
 # Example data for this domain, seeded into the mock server.
 # Validated against the schemas its collections hold.
 
+domain: scheduling
+
 AppointmentExample1:
   id: 00000007-0000-4000-8000-000000000001
   startAt: '2026-04-15T10:00:00Z'

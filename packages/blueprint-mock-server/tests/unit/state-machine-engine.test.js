@@ -975,7 +975,7 @@ test('applySteps — if: true runs then: steps', () => {
   const resource = { status: 'pending' };
   const context = { object: { status: 'pending' }, request: {} };
   applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
   }], resource, context, store);
   assert.strictEqual(resource.status, 'active');
@@ -985,7 +985,7 @@ test('applySteps — if: false skips then: steps', () => {
   const resource = { status: 'pending' };
   const context = { object: { status: 'submitted' }, request: {} };
   applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
   }], resource, context, store);
   assert.strictEqual(resource.status, 'pending');
@@ -995,7 +995,7 @@ test('applySteps — if: false runs else: steps', () => {
   const resource = { status: 'pending' };
   const context = { object: { status: 'submitted' }, request: {} };
   applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }],
     else: [{ set: { field: 'status', value: 'fallback' } }]
   }], resource, context, store);
@@ -1006,7 +1006,7 @@ test('applySteps — if: true skips else: steps', () => {
   const resource = { status: 'pending' };
   const context = { object: { status: 'pending' }, request: {} };
   applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }],
     else: [{ set: { field: 'status', value: 'fallback' } }]
   }], resource, context, store);
@@ -1017,7 +1017,7 @@ test('applySteps — if: false with no else: runs no steps', () => {
   const resource = { status: 'pending' };
   const context = { object: { status: 'submitted' }, request: {} };
   applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
   }], resource, context, store);
   assert.strictEqual(resource.status, 'pending');
@@ -1027,7 +1027,7 @@ test('applySteps — if: propagates pendingEvents from branch', () => {
   const resource = { id: 'app-1' };
   const context = { object: { id: 'app-1', status: 'pending' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingEvents } = applySteps([{
-    if: "$object.status == 'pending'",
+    if: "object.status == 'pending'",
     then: [{ emit: { type: 'intake.application.activated', data: { appId: '$object.id' } } }]
   }], resource, context, store);
   assert.strictEqual(pendingEvents.length, 1);
@@ -1043,7 +1043,7 @@ test('applySteps — match: runs steps for matching when: branch', () => {
   const resource = { status: 'pending' };
   const context = { object: { program: 'snap' }, request: {} };
   applySteps([{
-    match: '$object.program',
+    match: 'object.program',
     when: {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }],
       medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
@@ -1056,7 +1056,7 @@ test('applySteps — match: skips non-matching when: branches', () => {
   const resource = { status: 'pending' };
   const context = { object: { program: 'medicaid' }, request: {} };
   applySteps([{
-    match: '$object.program',
+    match: 'object.program',
     when: {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }],
       medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
@@ -1069,7 +1069,7 @@ test('applySteps — match: runs no steps when value matches no branch', () => {
   const resource = { status: 'pending' };
   const context = { object: { program: 'tanf' }, request: {} };
   applySteps([{
-    match: '$object.program',
+    match: 'object.program',
     when: {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }]
     }
@@ -1080,11 +1080,28 @@ test('applySteps — match: runs no steps when value matches no branch', () => {
 test('applySteps — match: propagates pendingCreates from branch', () => {
   const context = { object: { program: 'snap', id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingCreates } = applySteps([{
-    match: '$object.program',
+    match: 'object.program',
     when: {
       snap: [{ call: { POST: 'data-exchange/service-calls', body: { applicationId: '$object.id' } } }]
     }
   }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
+});
+
+// =============================================================================
+// Value expressions embedded in a string
+// =============================================================================
+
+test('resolveValue — joins value expressions embedded in braces', () => {
+  const context = { params: { timerType: 'sla_warning' }, object: { id: 't1' } };
+  assert.strictEqual(resolveValue('workflow.{$params.timerType}.{$object.id}', context), 'workflow.sla_warning.t1');
+});
+
+test('resolveValue — an embedded value that is missing contributes nothing', () => {
+  assert.strictEqual(resolveValue('task-{$object.missing}', { object: {} }), 'task-');
+});
+
+test('resolveValue — embedding evaluates nothing; text outside the braces stays as written', () => {
+  assert.strictEqual(resolveValue('{$object.a} + 1', { object: { a: 'x' } }), 'x + 1');
 });

@@ -68,7 +68,7 @@ Rules contracts produce two artifacts:
 
 **`*-graph.yaml`** — The compiled artifact produced by the resolve pipeline. Contains the fully resolved dependency graph — all nodes, edges, and expressions — with no references to blueprint-specific types or tooling. This is what the evaluator runs against. Any rules engine that implements the graph schema can evaluate it, which is what makes the reference evaluator replaceable. States deploy the graph; they author the rules file.
 
-A ruleset can optionally declare a standalone HTTP endpoint, which the resolver generates into the resolved OpenAPI spec — callable from any HTTP client, served by the mock server, no additional wiring required. Rules contracts are otherwise orthogonal to OpenAPI specs: an OpenAPI spec never references a rules file. Rules inputs and outputs reference the same shared schemas as OpenAPI specs, giving both a common type baseline without coupling the contract types to each other.
+Every ruleset has a standalone HTTP endpoint under its domain, at the path it declares; the endpoint is required, so a ruleset defined in the blueprint is always reachable through its API. The resolver documents a rules file's endpoints in an OpenAPI document generated beside it, so they are callable from any HTTP client and served by the mock server with no additional wiring. Rules contracts are otherwise orthogonal to OpenAPI specs: an OpenAPI spec never references a rules file, and a rules file needs no OpenAPI document to exist. Rules inputs and outputs reference the same shared schemas as OpenAPI specs, giving both a common type baseline without coupling the contract types to each other.
 
 ---
 
@@ -78,7 +78,7 @@ Three invocation modes, one evaluation contract:
 
 1. **State machine `evaluate:` step** — Evaluation embedded in a workflow. The step references a ruleset, maps context data to input paths, and binds the result for use in subsequent steps and guards.
 
-2. **Standalone endpoint** — A ruleset that declares an endpoint block gets a generated POST endpoint in the resolved OpenAPI spec. Useful for direct integration from a frontend or adapter, or for testing with curl.
+2. **Standalone endpoint** — Every ruleset is evaluated at a POST endpoint under its domain, documented in the OpenAPI document resolve generates from its rules file. See the [rules guide](../guides/rules-guide.md#endpoints) for where it is and how to move or remove it. Useful for direct integration from a frontend or adapter, or for testing with curl.
 
 3. **Browser client** — The `blueprint-rules-engine` package includes a browser-compatible evaluator that runs the same compiled graph client-side with no server required. The same API works identically on the server and in the browser.
 

@@ -121,6 +121,7 @@ run(join(__dirname, 'build-mock-page.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
   `--source=${join(HARNESS, 'contracts')}`,
   `--overlay=${join(HARNESS, 'contracts/overlays')}`,
+  '--first-tour=scenarios/application-walkthrough.arazzo.yaml',
   ...(sourceUrl() ? [`--source-url=${sourceUrl()}`] : []),
   `--out=${join(HARNESS, 'generated/mock')}`,
 ]);

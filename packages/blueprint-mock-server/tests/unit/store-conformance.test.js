@@ -48,6 +48,7 @@ const CONTRACT_METHODS = [
   'deleteResource',
   'clearAll',
   'insertResource',
+  'append',
   'count',
   'snapshot',
   'restore',
@@ -365,7 +366,38 @@ for (const impl of implementations) {
       });
     });
 
+    describe('append', () => {
+      it('stores a record exactly as given', () => {
+        const record = { id: 'e1', type: 'x.happened', time: '2024-01-01T00:00:00Z' };
+        store.append(C, record);
+        assert.deepStrictEqual(store.findById(C, 'e1'), record, 'no timestamps, no minted id');
+        assert.ok(!('createdAt' in record), 'leaves the caller’s object alone');
+      });
+
+      it('adds no registered defaults', () => {
+        store.registerCollectionDefaults(C, { evidence: [] });
+        store.append(C, { id: 'e1' });
+        assert.deepStrictEqual(store.findById(C, 'e1'), { id: 'e1' });
+        store.registerCollectionDefaults(C, {});
+      });
+
+      it('replaces at the same id rather than duplicating', () => {
+        store.append(C, { id: 'e1', v: 1 });
+        store.append(C, { id: 'e1', v: 2 });
+        assert.strictEqual(store.count(C), 1);
+        assert.strictEqual(store.findById(C, 'e1').v, 2);
+      });
+    });
+
     describe('snapshot and restore', () => {
+      it('restores each record exactly as snapshotted', () => {
+        store.append(C, { id: 'e1', time: '2024-01-01T00:00:00Z' });
+        const taken = store.snapshot();
+        store.restore(taken);
+        assert.deepStrictEqual(store.findById(C, 'e1'), { id: 'e1', time: '2024-01-01T00:00:00Z' },
+          'a record without timestamps does not gain them on restore');
+      });
+
       it('round-trips a session', () => {
         seedThree(store);
         const taken = store.snapshot();

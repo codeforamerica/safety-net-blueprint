@@ -185,7 +185,7 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
       const multiMachine = sm.machines.length > 1;
       const anchor = multiMachine ? `#${machine.object.toLowerCase()}` : '';
       const actionCount = (machine.actions || []).length;
-      const eventCount = (machine.events || []).length;
+      const eventCount = (machine.on || []).length;
       const badges = (machine.states || []).map(s => stateBadge(s.id)).join(' ');
       return `<tr>
         <td style="white-space:nowrap;"><a href="${sm.domain}.html${anchor}" style="font-weight:600;color:${COLORS.darkBlue};">${titleCase(sm.domain)}</a></td>
@@ -300,8 +300,8 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
     })() : '';
 
     // Events table
-    const eventsHtml = (machine.events || []).length ? (() => {
-      const rows = machine.events.map(sub => {
+    const eventsHtml = (machine.on || []).length ? (() => {
+      const rows = machine.on.map(sub => {
         const emitter = eventIndex?.emitters[sub.type];
         const emitterLink = emitter
           ? `<a href="${emitter.domain}.html">${titleCase(emitter.domain)}/${emitter.object}</a>`
@@ -340,7 +340,7 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
   const body = `
     <div style="margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">${titleCase(sm.domain)} State Machine</h1>
-      <p style="font-size:12px;color:${COLORS.textLight};">Domain: <code>${sm.domain}</code> · API spec: <code>${sm.apiSpec}</code></p>
+      <p style="font-size:12px;color:${COLORS.textLight};">Domain: <code>${sm.domain}</code> · API: ${sm.apis.map((api) => `<code>${api.split('/').pop()}</code>`).join(', ') || 'none'}</p>
     </div>
     ${sections}`;
 

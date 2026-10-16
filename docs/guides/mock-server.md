@@ -21,13 +21,19 @@ curl http://localhost:1080/health
 
 **Metrics endpoints** — generated from metrics files (`*-metrics.yaml`): `GET /{domain}/metrics` and `GET /{domain}/metrics/{id}`, computed on-the-fly from live data.
 
+**Registry endpoints** — `GET /platform/registry` lists the registry types the contracts declare, and `GET /platform/registry/{type}` and `/platform/registry/{type}/{entryId}` read their entries, straight from the `*-registry-{type}.yaml` files. Files of one type combine; an entry id two of them define stops the mock from starting.
+
+**Rules endpoints** — one `POST` per ruleset, at `/{domain}` and the path the ruleset declares. See the [rules guide](rules-guide.md#endpoints).
+
+Each route has one source. A transition, composition or ruleset is served from the contract that produced it; the operation resolve generated for it in an OpenAPI document only documents it. Two documents declaring the same route stop the mock from starting, with an error naming both — and `validate` reports any route two contracts claim before that, including two in the same file.
+
 Adding a new operation or resource requires only a contract change.
 
 ## Seed data
 
 At startup, the server populates its databases from two sources:
 
-- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Records are routed to collections by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
+- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Each declares its domain with a top-level `domain`; every other key is a record, routed to a collection by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
 - **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records. These are always loaded from the spec directory regardless of `--seed`.
 
 The safety-net-contracts package ships hand-authored `*-mock-data.yaml` files alongside each domain's specs (e.g. `domains/workflow/workflow-mock-data.yaml`). To use them:
@@ -128,7 +134,7 @@ curl -X POST http://localhost:1080/platform/events \
   -H "Content-Type: application/json" \
   -d '{
     "specversion": "1.0",
-    "type": "org.codeforamerica.safety-net-blueprint.data_exchange.call.completed",
+    "type": "org.codeforamerica.safety-net-blueprint.data-exchange.call.completed",
     "source": "/data-exchange",
     "subject": "<service-call-id>",
     "data": { "result": "conclusive", "serviceType": "fdsh_ssa" }
@@ -147,23 +153,23 @@ When any event fires, the engine scans registered stubs in order (FIFO) and pops
 curl -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
-    "on": "data_exchange.service_call.created",
+    "on": "data-exchange.external_service_call.created",
     "match": { "data.serviceType": "fdsh_ssa" },
     "response": {
-      "type": "data_exchange.call.completed",
+      "type": "data-exchange.call.completed",
       "data": { "result": "inconclusive" }
     }
   }'
 ```
 
-- `on` — the CloudEvents type suffix to match (no platform prefix, underscores)
+- `on` — the CloudEvents type suffix to match, with no platform prefix (`data-exchange.external_service_call.created`)
 - `match` — optional dot-path field matchers against the event envelope; all must match
 - `response.type` — the event type to fire when matched
 - `response.data` — merged with the trigger event's data; only specify what changes
 
-The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
+The response envelope is built by merging: an entity ID derived from the trigger's `subject`, named for the trigger's resource (e.g., `externalServiceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
 
-**Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
+**Stub IDs** are human-readable, from the last two segments of `on`: `external_service_call.created-1`, `external_service_call.created-2`, etc.
 
 ### Timer stubs
 
@@ -194,9 +200,9 @@ Match on `data.callback.event` — the event type embedded in the scheduling req
 ### Managing event stubs
 
 ```bash
-curl http://localhost:1080/mock/stubs/events                                    # list all
-curl -X DELETE http://localhost:1080/mock/stubs/events/service_call.created-1   # remove one
-curl -X DELETE http://localhost:1080/mock/stubs/events                          # clear all
+curl http://localhost:1080/mock/stubs/events                                             # list all
+curl -X DELETE http://localhost:1080/mock/stubs/events/external_service_call.created-1   # remove one
+curl -X DELETE http://localhost:1080/mock/stubs/events                                   # clear all
 ```
 
 ## HTTP stubs
@@ -329,6 +335,37 @@ Forwarding applies to requests that come into the mock. Two things it does not r
 
 - **Calls between domains inside the mock.** When one domain's state machine acts on another, the mock does it in-process. A forwarded domain is not called, and its real service never sees those changes. Adapter calls made by procedures are the same: an [HTTP stub](#http-stubs) can intercept one, forwarding cannot.
 - **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
+
+## Scenarios
+
+A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has and refers only to earlier steps.
+
+The same file runs as a test, is one of the tours in the demo page's Show me around — the walk-through among them, each drawn a step at a time — and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+
+- steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
+- reusable parameters, `{ reference: $components.parameters.<name> }`
+- runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
+- `successCriteria` comparisons joined by `&&`, and `outputs`
+- `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
+- more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
+
+A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
+
+```js
+import { createMockServer, runScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/browser';
+import { extract } from '@codeforamerica/blueprint-core/browser';
+
+const mock = await createMockServer({ contracts });
+const docs = extract(contracts, 'docs');
+const scenario = docs.find((doc) => doc.type === 'arazzo');
+const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations });
+workflow.passed; // and workflow.steps: each request, response and check
+```
+
+A failed step stops its workflow, since later steps would act on what it did not produce.
+
+A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text.
 
 ## The mock's own endpoints
 

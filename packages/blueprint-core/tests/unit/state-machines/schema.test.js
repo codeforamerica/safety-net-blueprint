@@ -156,7 +156,7 @@ test('state-machine-schema trigger types', async (t) => {
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
-        events,
+        on: events,
       }],
     };
   }
@@ -625,7 +625,7 @@ test('state-machine-schema domain-level guards and rules', async (t) => {
         object: 'Widget',
         states: [{ id: 'draft', slaClock: 'stopped' }, { id: 'active', slaClock: 'running' }],
         initialState: 'draft',
-        events: [{
+        on: [{
           type: 'domain.widget.created',
           steps: [{ call: 'routing-rule', description: 'Route on create' }],
         }],

@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "description": "A finished line, said or typed.",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "startedAt",
+    "endedAt",
+    "text",
+    "speaker"
+  ],
+  "properties": {
+    "kind": {
+      "const": "line"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it began",
+      "by the client's clock.": null
+    },
+    "endedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it ended. For a typed line",
+      "the same as startedAt.": null
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "speaker": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "client",
+        "unknown"
+      ],
+      "description": "Who said a line, as a role. A contract set replaces these by overlay —\nsafety-net-contracts might say `worker` and `applicant`.\n"
+    },
+    "speakerLabel": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "language": {
+      "type": "string",
+      "description": "Preferred language (BCP 47 language tag).",
+      "pattern": "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptLineCreate"
+}

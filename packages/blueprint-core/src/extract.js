@@ -35,7 +35,7 @@
  */
 
 import { buildRelationshipIndex } from './indexes.js';
-import { readStateMachines, readSlaTypes, readMetrics, readConfigs, readRegistries } from './contract-readers.js';
+import { readStateMachines, readSlaTypes, readMetrics, readConfigs, readRegistries, readCompositions, readRules } from './contract-readers.js';
 import { buildExamples } from './examples.js';
 import { docsFromArtifact } from './artifact.js';
 
@@ -43,6 +43,8 @@ import { docsFromArtifact } from './artifact.js';
 const READERS = {
   relationships: buildRelationshipIndex,
   'state-machines': readStateMachines,
+  compositions: readCompositions,
+  rules: readRules,
   'sla-types': readSlaTypes,
   metrics: readMetrics,
   config: readConfigs,
@@ -54,7 +56,7 @@ const READERS = {
 /**
  * @param {import('../types.js').Doc[]|object} docs - A contract set, or an
  *   artifact when reading `docs`
- * @param {'relationships'|'state-machines'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'} type - Which fact to read out
+ * @param {'relationships'|'state-machines'|'compositions'|'rules'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'} type - Which fact to read out
  * @param {object} [options] - Passed to the reader that needs them
  * @returns {*} Whatever that fact is
  */

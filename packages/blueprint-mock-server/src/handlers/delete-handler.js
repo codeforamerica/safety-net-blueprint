@@ -5,8 +5,8 @@
 import { emitEvent } from '../emit-event.js';
 import { isConfigManaged } from '../config-registry.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractPrimaryParam, capitalize } from '../collection-utils.js';
-import { extractCallerRoles, callerHeader } from '../auth-context.js';
+import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
+import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { assertFetchShaped } from '../http/request.js';
 
 /**
@@ -54,9 +54,9 @@ export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
     store.deleteResource(endpoint.collectionName, resourceId);
 
     // Auto-emit deleted event
-    try {
-      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
-      const object = endpoint.collectionName.replace(/s$/, '');
+    if (endpoint.resource) try {
+      const domain = eventDomainOf(apiMetadata);
+      const object = endpoint.resource.eventName;
       emitEvent({
         store,
         domain,
@@ -67,7 +67,7 @@ export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
         data: null,
         callerId: callerHeader(request, 'x-caller-id'),
         callerRoles: extractCallerRoles(request),
-        traceparent: callerHeader(request, 'traceparent'),
+        traceparent: traceparentOf(request),
         now: new Date().toISOString(),
       });
     } catch (eventError) {

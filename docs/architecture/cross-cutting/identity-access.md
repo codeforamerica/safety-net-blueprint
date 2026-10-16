@@ -125,7 +125,7 @@ a `userId` reference pointing back to User Service. This matches the pattern use
 Key fields:
 - `id` — stable UUID; the primary identifier on the User REST resource. Exposed as `userId` in
   JWT claims (`BackendAuthContext`). The `userId` field on the REST resource is a derived alias
-  (`x-derived: "$this.id"`) — same value, different name for JWT context compatibility.
+  (`x-derived: "this.id"`) — same value, different name for JWT context compatibility.
 - `roles` — Role object containing `name` (RoleType) and `permissions` (array of
   `{resource}:{action}` strings, e.g., `applications:read`)
 
@@ -138,7 +138,7 @@ User Service data; not a persisted entity.
 
 Key fields:
 - `userId` — matches `User.id`; the value carried in the `authid` event extension attribute.
-  On the User REST resource, `userId` is a derived field (`x-derived: "$this.id"`) — same UUID
+  On the User REST resource, `userId` is a derived field (`x-derived: "this.id"`) — same UUID
   as `id`, exposed under this name for JWT claim compatibility.
 - `roles` — Role object containing `name` (RoleType) and `permissions` (array of
   `{resource}:{action}` strings, e.g., `applications:read`)

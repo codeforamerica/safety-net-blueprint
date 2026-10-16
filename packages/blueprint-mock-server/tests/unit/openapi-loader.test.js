@@ -223,3 +223,21 @@ test('OpenAPI Loader Tests', async (t) => {
 });
 
 console.log('\n✓ All OpenAPI loader tests passed\n');
+
+test('extractMetadata — an operation generated from another contract is left to that contract', () => {
+  // A transition, a composition and a ruleset are served from the contract
+  // that produced them; the operation resolve generated only documents it, so
+  // loading it as an endpoint would give the route a second source.
+  const spec = {
+    openapi: '3.1.0',
+    info: { title: 'Intake', version: '1.0.0' },
+    paths: {
+      '/applications/{applicationId}': { get: { operationId: 'getApplication', responses: {} } },
+      '/applications/{applicationId}/submit': { post: { operationId: 'submitApplication', 'x-relationship': { type: 'state-machine-action', domain: 'intake', id: 'submit' }, responses: {} } },
+      '/applications/{applicationId}/review': { get: { operationId: 'getApplicationReview', 'x-relationship': { type: 'composition', domain: 'intake', id: 'applicationReview' }, responses: {} } },
+      '/applications/evaluate': { post: { operationId: 'evaluate', 'x-relationship': { type: 'ruleset', domain: 'intake', id: 'prompts' }, responses: {} } },
+    },
+  };
+  const { endpoints } = extractMetadata(spec, 'intake');
+  assert.deepStrictEqual(endpoints.map((e) => e.operationId), ['getApplication']);
+});

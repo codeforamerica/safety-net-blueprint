@@ -654,7 +654,7 @@
       "name": "AC 3 — Conclusive service call result",
       "item": [
         {
-          "name": "Inject data_exchange.call.completed (conclusive) for identity/member A",
+          "name": "Inject data-exchange.call.completed (conclusive) for identity/member A",
           "request": {
             "method": "POST",
             "header": [
@@ -665,7 +665,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data-exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-conclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{identityVerifIdA}}\" } },\n    \"result\": \"conclusive\",\n    \"serviceCallId\": \"sc-conclusive-001\",\n    \"serviceType\": \"fdsh_ssa\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -745,7 +745,7 @@
       "name": "AC 4 — Inconclusive service call result",
       "item": [
         {
-          "name": "Inject data_exchange.call.completed (inconclusive) for income/member A",
+          "name": "Inject data-exchange.call.completed (inconclusive) for income/member A",
           "request": {
             "method": "POST",
             "header": [
@@ -756,7 +756,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data_exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"data-exchange.call.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"sc-inconclusive-001\",\n  \"data\": {\n    \"metadata\": { \"intake\": { \"verificationId\": \"{{incomeVerifIdA}}\" } },\n    \"result\": \"inconclusive\",\n    \"serviceCallId\": \"sc-inconclusive-001\",\n    \"serviceType\": \"ssa_ievs\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -965,7 +965,7 @@
       "name": "AC 5 — Expedited flag",
       "item": [
         {
-          "name": "Inject eligibility.application.expedited",
+          "name": "Inject eligibility.determination.expedited",
           "request": {
             "method": "POST",
             "header": [
@@ -976,7 +976,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.expedited\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {}\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.determination.expedited\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1044,7 +1044,7 @@
       "name": "AC 6 — Eligibility decision write-back",
       "item": [
         {
-          "name": "Inject eligibility.application.decision_completed (member A, snap, approved)",
+          "name": "Inject eligibility.decision.completed (member A, snap, approved)",
           "request": {
             "method": "POST",
             "header": [
@@ -1055,7 +1055,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.application.decision_completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"eligibility.decision.completed\",\n  \"source\": \"/test\",\n  \"subject\": \"{{appId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"program\": \"snap\",\n    \"status\": \"approved\",\n    \"decidedAt\": \"2026-01-15T10:00:00Z\",\n    \"decisionId\": \"dec-snap-001\",\n    \"determinationId\": \"det-001\",\n    \"applicationId\": \"{{appId}}\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1131,7 +1131,7 @@
       "name": "AC 7 — Person match: confirmed (member A)",
       "item": [
         {
-          "name": "Inject client_management.person.match_resolved (confirmed, member A)",
+          "name": "Inject client-management.person.match_resolved (confirmed, member A)",
           "request": {
             "method": "POST",
             "header": [
@@ -1142,7 +1142,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberAId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"matchType\": \"confirmed\",\n    \"candidates\": [\n      { \"personId\": \"aaaaaaaa-0001-0001-0001-000000000001\", \"confidenceScore\": 0.99 }\n    ]\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client-management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberAId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberAId}}\",\n    \"matchType\": \"confirmed\",\n    \"candidates\": [\n      { \"personId\": \"aaaaaaaa-0001-0001-0001-000000000001\", \"confidenceScore\": 0.99 }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1218,7 +1218,7 @@
       "name": "AC 8 — Person match: no_match (member B)",
       "item": [
         {
-          "name": "Inject client_management.person.match_resolved (no_match, member B)",
+          "name": "Inject client-management.person.match_resolved (no_match, member B)",
           "request": {
             "method": "POST",
             "header": [
@@ -1229,7 +1229,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberBId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberBId}}\",\n    \"matchType\": \"no_match\",\n    \"candidates\": []\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client-management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberBId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberBId}}\",\n    \"matchType\": \"no_match\",\n    \"candidates\": []\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1311,7 +1311,7 @@
       "name": "AC 9 — Person match: review_required (member C)",
       "item": [
         {
-          "name": "Inject client_management.person.match_resolved (review_required, member C)",
+          "name": "Inject client-management.person.match_resolved (review_required, member C)",
           "request": {
             "method": "POST",
             "header": [
@@ -1322,7 +1322,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client_management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberCId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberCId}}\",\n    \"matchType\": \"review_required\",\n    \"candidates\": [\n      { \"personId\": \"cccccccc-0001-0001-0001-000000000001\", \"confidenceScore\": 0.82 },\n      { \"personId\": \"cccccccc-0002-0002-0002-000000000002\", \"confidenceScore\": 0.74 }\n    ]\n  }\n}",
+              "raw": "{\n  \"specversion\": \"1.0\",\n  \"type\": \"client-management.person.match_resolved\",\n  \"source\": \"/test\",\n  \"subject\": \"{{memberCId}}\",\n  \"data\": {\n    \"memberId\": \"{{memberCId}}\",\n    \"matchType\": \"review_required\",\n    \"candidates\": [\n      { \"personId\": \"cccccccc-0001-0001-0001-000000000001\", \"confidenceScore\": 0.82 },\n      { \"personId\": \"cccccccc-0002-0002-0002-000000000002\", \"confidenceScore\": 0.74 }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

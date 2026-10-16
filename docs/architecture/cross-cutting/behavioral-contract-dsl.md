@@ -6,7 +6,7 @@ This document is the architecture reference for the behavioral contract DSL — 
 
 ## Overview
 
-The behavioral contract DSL defines the dynamic behavior layer of the blueprint — what domain objects do over their lifetime, who can act on them, and what happens in response to those actions. It is additive to the OpenAPI specs. The OpenAPI specs define the resource model: CRUD endpoints, schema shapes, and query parameters. The state machine declares lifecycle-specific transition endpoints on top of those resources — each transition becomes a `POST /{resource}/{id}/{transitionId}` endpoint that is merged into the OpenAPI spec at resolve time. Together they form a complete API contract: the OpenAPI spec describes the shape; the state machine describes who can do what, when, and what happens as a result.
+The behavioral contract DSL defines the dynamic behavior layer of the blueprint — what domain objects do over their lifetime, who can act on them, and what happens in response to those actions. It is additive to the OpenAPI specs. The OpenAPI specs define the resource model: CRUD endpoints, schema shapes, and query parameters. The state machine declares lifecycle-specific transition endpoints on top of those resources — each transition becomes a `POST /{resource}/{id}/{transitionId}` endpoint that is merged into the OpenAPI spec at resolve time. Each machine attaches to the resource in its domain named for its `object` — the item path whose GET returns that schema — in whichever OpenAPI document declares it, so a domain's machines can govern resources in more than one document. (`apiSpec:`, which named a file, is deprecated and ignored.) Together they form a complete API contract: the OpenAPI spec describes the shape; the state machine describes who can do what, when, and what happens as a result.
 
 The DSL appears in three artifact types across all domains:
 
@@ -38,7 +38,8 @@ platform-state-machine.yaml          domain-state-machine.yaml
                                       │       ├── initialState: state on creation
                                       │       ├── context:      named data bindings
                                       │       ├── actions:      actor/system-triggered state changes
-                                      │       ├── events:       event subscriptions
+                                      │       ├── on:           event subscriptions
+                                      │       ├── emits:        events its resource sends
                                       │       ├── guards:       conditions scoped to this machine
                                       │       └── procedures:   step sequences scoped to this machine
                                       ├── guards:     conditions shared across all machines
@@ -77,7 +78,7 @@ Declares what domain objects are, what states they can be in, and who can act on
 
 ### Execution layer
 
-Declares what happens when events fire: which events a machine subscribes to, what procedures run in response, and what steps those procedures execute. This is the `events:` and `procedures:` sections.
+Declares what happens when events fire: which events a machine subscribes to, what procedures run in response, and what steps those procedures execute. This is the `on:`, `emits:` and `procedures:` sections.
 
 ### Expression layer
 
@@ -177,21 +178,42 @@ context:
 
 ## Event model
 
-All machine reactions are named event subscriptions in the `events:` section. Object creation, field changes, and timer callbacks use the same event subscription model as cross-domain events.
+A machine reacts to events in its `on:` section, and declares the events its resource sends in `emits:`. The names follow XState's: `on` for what a machine receives, `emit` for what it sends.
+
+Reactions are named event subscriptions. Object creation, field changes, and timer callbacks use the same event subscription model as cross-domain events.
 
 ```yaml
-events:
-  - name: intake.application.submitted
+on:
+  - type: intake.application.submitted
     steps:
       - call: createProgramVerifications
-  - name: workflow.task.claimed
+  - type: workflow.task.claimed
     context:
       - task: {from: workflow/tasks, where: {id: $this.subject}}
     steps:
       - call: openApplication
 ```
 
-All events are CloudEvents. The `name:` field is the CloudEvents `type` attribute.
+All events are CloudEvents. The `type:` field is the CloudEvents `type` attribute.
+
+Every event is named `{domain}.{resource}.{event}`: the domain as declared, the resource as its schema is named in snake_case, and the event's own name. A resource's created, updated and deleted events need no declaring. Every other event a resource sends is declared once in its machine's `emits:`, with the shape of its data, and a step sends it by that name:
+
+```yaml
+emits:
+  - id: claimed
+    description: Records the claim and who claimed the task.
+    schema:
+      type: object
+      required: [assignedToId]
+      properties:
+        assignedToId: {type: string, format: uuid}
+actions:
+  - id: claim
+    steps:
+      - emit: {event: claimed, data: {assignedToId: $caller.id}}   # workflow.task.claimed
+```
+
+An event is always named for the resource that sends it. A step with no data to send writes just `emit: claimed`.
 
 ## Timer design
 
@@ -204,12 +226,12 @@ Two built-in shared procedures encapsulate the timer boilerplate:
 ```yaml
 - call: requestTimer
   with:
-    timerId: '"intake.snap_deadline." + $object.id'
+    timerId: "intake.snap_deadline.{$object.id}"
     fireAfter: P30D   # ISO 8601 duration; use fireAt + fireOffset for deadline-relative
     calendarType: calendar   # or: business
-    callback: {event: '"intake.snap_deadline"', data: {}}
+    callback: {event: intake.snap_deadline, data: {}}
 - call: cancelTimer
-  with: {timerId: '"intake.snap_deadline." + $object.id'}
+  with: {timerId: "intake.snap_deadline.{$object.id}"}
 ```
 
 `fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Scheduling Service](scheduling-service.md) for the full event contract.
@@ -223,7 +245,7 @@ timers:
   - id: snap_deadline
     description: 30-calendar-day SNAP processing deadline
 
-events:
+on:
   - name: intake.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, body: {reason: snap_deadline_exceeded}}
@@ -367,7 +389,7 @@ Removal of special-cased trigger types (`onCreate:`, `onUpdate:`, `onTimer:`) is
 
 **Options:**
 - **(A)** Keep `triggers:` as a separate block alongside `events:` — simpler to read for creation/update cases, but maintains two parallel models and hides lifecycle reactions from the event log
-- **(B) ✓** Fully event-driven — `onCreate:`, `onUpdate:`, and `onTimer:` become named event subscriptions in `events:`; all machine reactions visible in one place
+- **(B) ✓** Fully event-driven — `onCreate:`, `onUpdate:`, and `onTimer:` become named event subscriptions in `events:` (since renamed `on:`); all machine reactions visible in one place
 
 **Decision:** Fully event-driven (B). The `triggers:` block is removed. `onCreate:` becomes a subscription to the domain's own creation event (e.g., `workflow.task.created`). `onUpdate:` becomes a subscription to the domain's update event (e.g., `workflow.task.updated`) with a CEL condition filtering on changed fields. `onTimer:` is replaced by the timer-as-event pattern (Decision 5).
 

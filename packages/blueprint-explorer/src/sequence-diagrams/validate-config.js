@@ -46,7 +46,7 @@ function eventTypesForDomain(domain) {
   if (!sm) return new Set();
   const types = new Set();
   for (const machine of sm.machines ?? []) {
-    for (const ev of machine.events ?? []) {
+    for (const ev of machine.on ?? []) {
       if (ev.type) types.add(ev.type);
     }
   }
@@ -93,7 +93,7 @@ for (const f of configFiles) {
   const allEventTypes = new Set();
   for (const sm of smByDomain.values()) {
     for (const machine of sm.machines ?? []) {
-      for (const ev of machine.events ?? []) {
+      for (const ev of machine.on ?? []) {
         if (!ev.type) continue;
         allEventTypes.add(ev.type);
         // Also add without the leading jurisdiction prefix (e.g. "ca.foo" → "foo")

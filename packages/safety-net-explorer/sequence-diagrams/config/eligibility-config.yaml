@@ -7,7 +7,7 @@ events:
   eligibility.decision.created:
     label: Run SNAP expedited screening or initiate Medicaid data exchange
 
-  data_exchange.call.completed:
+  data-exchange.call.completed:
     label: Evaluate Medicaid ex parte when all data exchange results are in
 
   intake.application.review_completed:

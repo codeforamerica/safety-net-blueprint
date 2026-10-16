@@ -1,8 +1,6 @@
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: eligibility
-apiSpec: eligibility-openapi.yaml
-eventsSpec: eligibility-asyncapi.yaml
 machines:
   - object: Determination
     states:
@@ -16,6 +14,9 @@ machines:
     guards:
       - id: allProgramsResolved
         condition: "determination.decisions.all(d, d.status != 'pending')"
+    emits:
+      - id: complete
+        description: TODO — describe when this event is emitted and who consumes it.
     actions:
       - id: complete
         description: Marks the determination as complete once all program results are resolved.
@@ -26,9 +27,9 @@ machines:
           - conditions: [allProgramsResolved]
         steps:
           - emit:
-              type: eligibility.determination.complete
+              event: complete
               description: Signals that all program eligibility results are ready for caseworker review.
-    events:
+    on:
       - type: intake.application.submitted
         description: Initiate an eligibility determination for each program applied for.
         steps:

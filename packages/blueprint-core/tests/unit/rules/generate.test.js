@@ -13,7 +13,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { generateRulesResults } from '../../../src/rules.js';
 import { generate } from '../../../src/index.js';
-import { applyOverlays } from '../../../src/resolve/overlays.js';
 import { doc } from '../../helpers/docs.js';
 
 describe('generateRulesResults', () => {
@@ -169,9 +168,9 @@ test('generateRulesResults — compiles array inputs to JSONPath with [] notatio
   assert.deepStrictEqual(graph.dependencies.abawdMembers, ['$.household.members[]']);
 });
 
-test('generateRulesResults — endpoint overlay adds POST path to OpenAPI spec', () => {
+test('generateRulesResults — the endpoints are documented in an API document beside the rules file', () => {
   const rulesFiles = [{
-    relativePath: 'eligibility-rules.yaml',
+    relativePath: 'domains/eligibility/eligibility-rules.yaml',
     doc: {
       $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
       domain: 'eligibility',
@@ -189,42 +188,38 @@ test('generateRulesResults — endpoint overlay adds POST path to OpenAPI spec',
             { path: 'eligible', expression: 'household.monthlyGrossIncome < 150', type: { type: 'boolean' } },
           ],
         },
+        grossIncome: {
+          endpoint: { path: '/rules/gross-income' },
+          inputs: { household: { type: 'object', properties: { income: { type: 'number' } } } },
+          outputs: { gross: { type: 'number' } },
+          facts: [{ path: 'gross', expression: 'household.income' }],
+        },
       },
     },
   }];
 
-  const openApiSpec = {
-    openapi: '3.1.0',
-    info: { title: 'Eligibility API', version: '1.0.0' },
-    paths: {},
-    components: { schemas: {} },
-  };
+  const { apis } = generateRulesResults(rulesFiles);
+  const api = apis.get('domains/eligibility/eligibility-rules-openapi.yaml');
+  assert.ok(api, 'named for the rules file, beside it');
 
-  const { overlays } = generateRulesResults(rulesFiles);
-  assert.strictEqual(overlays.length, 1);
+  assert.equal(api.info['x-domain'], 'eligibility');
+  assert.deepEqual(api.servers, [{ url: '/eligibility' }], 'served under its domain');
 
-  // The generator names its target by the stem of its own domain, so point the
-  // action at the spec as it actually sits before applying — `generate` does
-  // this for real via alignRefs.
-  const { overlay } = overlays[0];
-  for (const action of overlay.actions ?? []) {
-    if (typeof action.file === 'string') action.file = 'eligibility-openapi.yaml';
-  }
+  assert.strictEqual(api.paths['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap', 'a declared path is used');
+  assert.ok(api.paths['/rules/gross-income'].post, 'each ruleset at the path it declares');
+  assert.equal(Object.keys(api.paths).length, 2, 'one endpoint per ruleset');
 
-  const docs = [
-    doc(openApiSpec, { relativePath: 'eligibility-openapi.yaml', type: 'openapi' }),
-    doc(rulesFiles[0].doc, { relativePath: 'eligibility-rules.yaml', type: 'rules' }),
-  ];
-
-  const resolved = applyOverlays(docs, [overlay]).docs[0].content;
-  assert.ok(resolved.paths['/assess-expedited-snap'], 'endpoint path added');
-  assert.ok(resolved.paths['/assess-expedited-snap'].post, 'POST operation added');
-  assert.strictEqual(resolved.paths['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
-  assert.ok(resolved.components.schemas['ExpeditedSnapRequest'], 'request schema added');
-  assert.ok(resolved.components.schemas['ExpeditedSnapResponse'], 'response schema added');
-  const responseSchema = resolved.components.schemas['ExpeditedSnapResponse'];
-  assert.ok(responseSchema.allOf, 'response schema uses allOf');
+  assert.ok(api.components.schemas['ExpeditedSnapRequest'], 'request schema added');
+  const responseSchema = api.components.schemas['ExpeditedSnapResponse'];
   assert.strictEqual(responseSchema.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
+});
+
+test('generateRulesResults — a rules file declaring no paths documents nothing', () => {
+  const { apis } = generateRulesResults([{
+    relativePath: 'x-rules.yaml',
+    doc: { domain: 'x', rulesets: { a: { inputs: {}, outputs: {}, facts: [{ path: 'a', expression: 'true' }] } } },
+  }]);
+  assert.equal(apis.size, 0);
 });
 });
 

@@ -18,6 +18,8 @@ import { basename } from 'node:path';
 import {
   detectType,
   extractDomain,
+  CONTRACT_TYPES,
+  requiresDomain,
   fileNameOf,
   stemOf,
   siblingPath,
@@ -162,54 +164,51 @@ describe('detectType', () => {
 });
 
 describe('extractDomain', () => {
-  const enumDomains = new Set(['intake', 'eligibility', 'platform']);
 
-  test('what the content declares wins', () => {
-    assert.equal(extractDomain('x.yaml', 'domains/intake/x.yaml',
-      { info: { 'x-domain': 'eligibility' } }, enumDomains), 'eligibility');
-    assert.equal(extractDomain('x.yaml', 'domains/intake/x.yaml',
-      { domain: 'eligibility' }, enumDomains), 'eligibility');
+  test('what the content declares', () => {
+    assert.equal(extractDomain({ info: { 'x-domain': 'eligibility' } }), 'eligibility');
+    assert.equal(extractDomain({ domain: 'eligibility' }), 'eligibility');
   });
 
-  test('a directory segment in the Domain enum', () => {
-    assert.equal(extractDomain('x.yaml', 'domains/intake/x.yaml', {}, enumDomains), 'intake');
+  test('x-domain on info wins over a top-level domain', () => {
+    assert.equal(extractDomain({ info: { 'x-domain': 'intake' }, domain: 'eligibility' }), 'intake');
   });
 
-  test('a filename prefix in the Domain enum', () => {
-    assert.equal(extractDomain('intake-metrics.yaml', 'somewhere/intake-metrics.yaml', {}, enumDomains), 'intake');
+  test('nothing declared is no domain — never a guess from where the file sits', () => {
+    // The folder, the filename prefix and the Domain enum used to be consulted
+    // in turn. Each guess could differ between two files of one domain, which
+    // split it, and none could tell a domain's second file from a shared one.
+    // A file that belongs to a domain now says so; validation refuses one that
+    // does not.
+    for (const content of [{}, null, undefined, { info: {} }]) {
+      assert.equal(extractDomain(content), null);
+    }
   });
+});
 
-  test('a directory under domains/ counts even when the enum omits it', () => {
-    // The case this fallback exists for. A set can declare `domains/scheduling`
-    // without having added `scheduling` to the Domain enum, which left every
-    // document there domainless unless it happened to name its own domain —
-    // splitting a domain in half, so `scheduling-openapi.yaml` had a domain
-    // and `scheduling-mock-data.yaml` did not, and a per-domain bundle of it
-    // would ship an API with an empty store.
-    assert.equal(
-      extractDomain('scheduling-mock-data.yaml', 'domains/scheduling/scheduling-mock-data.yaml', {}, enumDomains),
-      'scheduling'
-    );
-  });
+describe('requiresDomain', () => {
 
-  describe('shared libraries stay domainless', () => {
-    // The reason the enum check is still there. Inferring `base` or `common`
-    // as a domain from the directory name is worse than inferring nothing.
-    const cases = [
-      'base/components/parameters.yaml',
-      'base/schemas/enums.yaml',
-      'common/schemas/income.yaml',
-      'common/components/contact.yaml',
-    ];
-    for (const relativePath of cases) {
-      test(relativePath, () => {
-        assert.equal(extractDomain(fileNameOf(relativePath), relativePath, {}, enumDomains), null);
-      });
+  test('every type says whether it declares a domain', () => {
+    for (const [type, def] of Object.entries(CONTRACT_TYPES)) {
+      assert.ok(['required', 'optional', 'none'].includes(def.domain), type);
     }
   });
 
-  test('a document outside both conventions has no domain', () => {
-    assert.equal(extractDomain('loose.yaml', 'loose.yaml', {}, enumDomains), null);
+  test('a type that always belongs to one domain', () => {
+    for (const type of ['openapi', 'asyncapi', 'rules', 'compositions', 'mock-data', 'registry', 'config']) {
+      assert.equal(requiresDomain({ type, content: {} }), true, type);
+    }
+  });
+
+  test('a type that may be shared, or never belongs to one', () => {
+    for (const type of ['schema', 'components', 'overlay']) {
+      assert.equal(requiresDomain({ type, content: {} }), false, type);
+    }
+  });
+
+  test('a state machine with machines belongs to a domain; a library of shared guards does not', () => {
+    assert.equal(requiresDomain({ type: 'state-machine', content: { machines: [{ object: 'Application' }] } }), true);
+    assert.equal(requiresDomain({ type: 'state-machine', content: { guards: [] } }), false);
   });
 });
 

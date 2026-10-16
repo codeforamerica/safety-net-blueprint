@@ -71,11 +71,18 @@ properties:
 
   apiSpec:
     type: string
-    description: Filename of the associated OpenAPI spec.
+    deprecated: true
+    description: >
+      Deprecated and ignored. Each machine attaches to the resource in its
+      domain named for its object, in whichever OpenAPI document declares it.
 
   eventsSpec:
     type: string
-    description: Filename of the associated AsyncAPI spec listing domain events.
+    deprecated: true
+    description: >
+      Deprecated and ignored. A machine declares the events it sends under
+      `emits:`, and resolve documents them in the AsyncAPI document it
+      generates beside the API.
 
   machines:
     type: array
@@ -124,12 +131,16 @@ $defs:
                        POST /{resource}/{id}/{actionId} endpoint.
                        Guards are evaluated with OR semantics across clauses: the caller
                        passes if ANY clause satisfies (actors AND conditions within a clause).
-        events       — reactions to named domain events arriving on a subscription.
+        on           — reactions to named domain events arriving on a subscription.
                        Array — one entry per subscribed event name.
+        emits        — the events this machine's resource sends, declared once each
+                       by short name; a step sends one with `emit: <name>`.
         guards       — named conditions scoped to this machine; take precedence over
                        domain-level guards with the same id.
         procedures   — named step sequences scoped to this machine; take precedence over
                        domain-level procedures with the same id.
+        resources    — resources nested under this machine's object, and the guards
+                       that decide when one may be created or updated.
     required:
       - object
       - states
@@ -154,11 +165,20 @@ $defs:
         description: Actor- or system-triggered operations. Each becomes a POST /{resource}/{id}/{actionId} endpoint.
         items:
           $ref: "#/$defs/Transition"
-      events:
+      on:
         type: array
-        description: Event subscriptions — automatic reactions to external domain events arriving on a subscription.
+        description: Event subscriptions — automatic reactions to domain events arriving on a subscription.
         items:
           $ref: "#/$defs/OnEvent"
+      emits:
+        type: array
+        description: >
+          The events this machine's resource sends, beside the created, updated
+          and deleted events every resource sends. Each is named here once, and
+          its full name is `{domain}.{resource}.{id}` — `communication.transcript.paused`.
+          A step sends one by its id: `emit: paused`.
+        items:
+          $ref: "#/$defs/EmittedEvent"
       timers:
         type: array
         description: >
@@ -174,6 +194,21 @@ $defs:
           any domain-level guard with the same id.
         items:
           $ref: "#/$defs/Guard"
+      resources:
+        type: object
+        description: >
+          This machine's own object, and resources nested under it at any
+          depth, keyed by resource name, the schema each one's item GET
+          returns. Creating or updating one runs the guards declared here, with
+          `request` the body. For a nested resource `object` is the record this
+          machine governs, found from the path; for the machine's own object,
+          `object` is the record being updated, and there is none yet when one
+          is being created. When several machines govern a resource along its
+          path, every one must pass. Any other name is a validation error.
+        propertyNames:
+          pattern: "^[A-Z][A-Za-z0-9]*$"
+        additionalProperties:
+          $ref: "#/$defs/GovernedResource"
       procedures:
         type: array
         description: >
@@ -216,7 +251,7 @@ $defs:
   # handler inherit those bindings automatically.
   #
   # Example:
-  #   events:
+  #   on:
   #     - name: workflow.task.claimed
   #       context:
   #         - reviewTask:
@@ -336,6 +371,37 @@ $defs:
         items:
           $ref: "#/$defs/StepItem"
 
+  GovernedResource:
+    type: object
+    description: What a machine decides about its own object, or one resource nested under it.
+    additionalProperties: false
+    minProperties: 1
+    properties:
+      create:
+        $ref: "#/$defs/GovernedOperation"
+        description: >
+          When one may be created; `request` is the body being created. For the
+          machine's own object there is no `object` yet.
+      update:
+        $ref: "#/$defs/GovernedOperation"
+        description: >
+          When one may be updated; `request` is the change. A step's own update
+          is the machine's, and is not held to these guards.
+
+  GovernedOperation:
+    type: object
+    description: >
+      Guards work as they do on an action: the caller passes if ANY clause is
+      satisfied, and a refusal answers 403 for actors or 409 for conditions.
+    additionalProperties: false
+    required:
+      - guards
+    properties:
+      guards:
+        $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
+
   TransitionBlock:
     type: object
     description: >
@@ -420,7 +486,18 @@ $defs:
   #   $this.field       Field on the triggering event payload
   #   $alias.field      Field on a context-bound entity
   #   $alias            The whole context-bound entity (bare alias)
+  #   $params.field     An argument the procedure was called with (with:)
   #   literal           Any non-$ string is treated as a literal value
+  #
+  # To build a string from several values, embed expressions in braces, as
+  # OpenAPI runtime expressions are embedded: each {$…} is looked up like a
+  # lone expression and the pieces joined. Nothing is evaluated — a value is
+  # only ever looked up — so there is no operator syntax, and a missing value
+  # contributes nothing.
+  #   timerId: "workflow.{$params.timerType}.{$object.id}"
+  #
+  # Value expressions are not CEL. Conditions (a guard's condition, if:,
+  # match:, a where: string) are CEL, with unprefixed names.
   #
   # In path slots (call: path strings), use $alias.field like any other expression:
   #   POST: intake/applications/$application.id/open
@@ -512,7 +589,7 @@ $defs:
   #         person: $object.applicant
   #         policy: $policyConfig
   #       bind: $evaluation
-  #     - if: "$evaluation.eligible.value == true"
+  #     - if: "evaluation.eligible.value == true"
   #       then:
   #         - emit:
   #             type: intake.application.eligible
@@ -527,7 +604,7 @@ $defs:
   #
   # IF
   #   Conditional branch — evaluates a CEL expression; runs then: on true, else: on false.
-  #     - if: '$task.taskType == "application_review" && $application.status == "submitted"'
+  #     - if: 'task != null && task.taskType == "application_review" && application.status == "submitted"'
   #       then:
   #         - call:
   #             POST: intake/applications/$application.id/open
@@ -537,7 +614,7 @@ $defs:
   #
   # MATCH
   #   Dispatch on a single value — evaluates a CEL expression and routes to the matching branch.
-  #     - match: $object.category
+  #     - match: object.category
   #       when:
   #         identity:
   #           - call:
@@ -595,20 +672,66 @@ $defs:
           value: {description: Value expression ($now, $caller.field, $object.field, $request.field, or a literal).}
           description: {type: string}
 
-  # EmitStep.emit is typed as EventBase from schemas/events.yaml.
-  # EventBase defines: type (required), subject, causationid, data, description.
-  # The emit.type value must match a channel address in the domain's eventsSpec AsyncAPI file.
-  # This is enforced by validate-events.js at validation time.
+  # An emit names an event of its own machine by id — `emit: paused`, or
+  # `emit: { event: paused, data: ... }` — and resolve gives it its full type.
+  # A step outside any machine, in a domain-level procedure, has no resource to
+  # name an event after, so it names one in full with `type`.
   EmitStep:
     type: object
-    description: Emit a domain event. The type must match a channel in the domain's eventsSpec AsyncAPI file.
+    description: Send an event — one its machine declares under emits, by id.
     required: [emit]
     additionalProperties: false
     properties:
       emit:
-        allOf:
-          - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventBase'
-        unevaluatedProperties: false
+        oneOf:
+          - type: string
+            pattern: "^[a-z][a-z0-9_-]*$"
+            description: The id of an event the machine declares under emits.
+          - type: object
+            additionalProperties: false
+            anyOf:
+              - required: [event]
+              - required: [type]
+            properties:
+              event:
+                type: string
+                pattern: "^[a-z][a-z0-9_-]*$"
+                description: The id of an event the machine declares under emits.
+              type:
+                type: string
+                description: >
+                  The full event type. Written by resolve for an event named by
+                  id; written by hand only outside any machine.
+              subject:
+                type: string
+                description: The entity the event is about. Defaults to the emitting resource's id.
+              causationid:
+                type: string
+                description: Value expression for the id of the event that caused this one.
+              data:
+                type: object
+                additionalProperties: true
+                description: The event's data. Field values are value expressions resolved at emit time.
+              description:
+                type: string
+
+  EmittedEvent:
+    type: object
+    description: An event a machine's resource sends.
+    required: [id]
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-z0-9_-]*$"
+        description: Its short name, e.g. `paused`. The full name is `{domain}.{resource}.{id}`.
+      description:
+        type: string
+        description: What happened, for a subscriber.
+      schema:
+        type: object
+        additionalProperties: true
+        description: JSON Schema for the event's data. Absent when the event carries none.
 
   CallStep:
     type: object
@@ -755,12 +878,20 @@ $defs:
         type: string
         pattern: "^[a-z][a-zA-Z0-9]*$"
         description: Guard identifier (camelCase), referenced by name in guards.conditions.
+      description:
+        type: string
+        description: >
+          What must be true, in words a client developer reads — "the
+          transcript's profile exists". A refusal reads "Can't create a
+          transcript. It requires that the transcript's profile exists.", or
+          names the guard's id where there is no description.
       condition:
         type: string
         description: >
           CEL expression that must evaluate to true for the guard to pass.
-          Reference caller attributes as caller.roles (no $ prefix in CEL),
-          and object fields as object.field.
+          Reference caller attributes as caller.roles and object fields as
+          object.field, with no $ prefix, and ask whether a field is present
+          with has(object.field).
           Example: '"applicant" in caller.roles'
 
   # ---------------------------------------------------------------------------
@@ -804,7 +935,8 @@ $defs:
       A named reusable step sequence called with call: procedure-id.
       Inherits all context in scope at the call site (machine + trigger/operation).
       Parameterized procedures accept arguments via with: at the call site;
-      parameters are referenced as $params.name in steps and in CEL conditions.
+      parameters are referenced as $params.name in step values and as
+      params.name in CEL conditions.
 
 
       Two forms:
@@ -828,8 +960,8 @@ $defs:
           type: string
         description: >
           Parameter names this procedure accepts. Callers pass values via with:.
-          Parameters are referenced in steps as $params.name and in CEL conditions
-          as $params.name.
+          Parameters are referenced in step values as $params.name and in CEL
+          conditions as params.name.
       context:
         $ref: "#/$defs/ContextProperty"
       steps:
@@ -943,7 +1075,7 @@ $defs:
   # entity (or null if not found). To work with multiple
   # records, use forEach: — same from:/where: syntax but iterates all matches.
   #
-  # WHERE SYNTAX — two forms:
+  # WHERE SYNTAX — three forms:
   #
   #   (1) Field-value equality pairs. Values can be $this.field, $alias.field,
   #       $object.field, or a literal string:
@@ -966,6 +1098,15 @@ $defs:
   #                 - { "==": [{ var: "applicationId" }, { var: "application.id" }] }
   #                 - { "!=": [{ var: "citizenshipStatus" }, "citizen"] }
   #
+  #   (3) CEL — a string. `item` is the candidate record; `object`, `request`
+  #       and `this` are the governed record, the request body and the event;
+  #       a prior binding is named by its alias:
+  #
+  #       context:
+  #         - openPause:
+  #             from: communication/transcripts/entries
+  #             where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+  #
   # CHAINING
   #   Bindings resolve in declaration order. A binding may reference any alias
   #   already resolved above it in the same block, or from any outer scope level.
@@ -977,7 +1118,7 @@ $defs:
       expressions and { var: "alias.field" } in JSON Logic conditions.
       ContextBinding properties:
         from            — collection path to query (required).
-        where (optional) — filter condition; field-value pairs or JSON Logic.
+        where (optional) — filter condition; field-value pairs, JSON Logic, or a CEL string.
     minProperties: 1
     maxProperties: 1
     additionalProperties:
@@ -993,12 +1134,16 @@ $defs:
             intake/application-members, workflow/tasks).
         where:
           description: >
-            Filter condition — field-value equality pairs or a JSON Logic
-            expression. See ContextBinding comment block for full syntax.
+            Filter condition — field-value equality pairs, a JSON Logic
+            expression, or a CEL string. See ContextBinding comment block for
+            full syntax.
             Always returns the first matching record. Use forEach: to iterate
             over all matches.
           oneOf:
             - type: object
               description: Field-value equality pairs or JSON Logic expression.
               additionalProperties: true
+            - type: string
+              minLength: 1
+              description: A CEL expression, true for the record to bind.
 

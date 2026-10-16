@@ -389,7 +389,7 @@ async function testCrossDomainWriteBack() {
     });
     assert.strictEqual(flagRes.status, 200, `flag-expedited should return 200, got ${flagRes.status}`);
 
-    // The eligibility state machine emits eligibility.application.expedited with
+    // The eligibility state machine emits eligibility.determination.expedited with
     // subject: $object.applicationId. The intake state machine subscribes and PATCHes
     // the application. Assert the write-back landed on the correct application.
     const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
@@ -440,7 +440,7 @@ async function testCrossDomainWriteBack() {
 async function testDeterminationCompletion() {
   section('Determination — completes when all Decisions resolved');
 
-  await test('eligibility.application.decision_completed with no pending Decisions → Determination completes', async () => {
+  await test('eligibility.decision.completed with no pending Decisions → Determination completes', async () => {
     const appId = `app-comp-${Date.now()}`;
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
@@ -510,13 +510,13 @@ async function testWithdrawal() {
 }
 
 // ---------------------------------------------------------------------------
-// Medicaid ex parte — triggered by data_exchange.call.completed
+// Medicaid ex parte — triggered by data-exchange.call.completed
 // ---------------------------------------------------------------------------
 
 async function testMedicaidExParteEvaluation() {
-  section('Medicaid ex parte — triggered by data_exchange.call.completed');
+  section('Medicaid ex parte — triggered by data-exchange.call.completed');
 
-  await test('data_exchange.call.completed with no pending service calls triggers medicaid-ex-parte adapter call', async () => {
+  await test('data-exchange.call.completed with no pending service calls triggers medicaid-ex-parte adapter call', async () => {
     await clearHttpStubs();
 
     // Intercept both data-exchange service call creates so the DB has no pending calls.
@@ -536,8 +536,8 @@ async function testMedicaidExParteEvaluation() {
     const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${dets[0].id}/decisions`)).json();
     const decision = decisions[0];
 
-    // Fire data_exchange.call.completed — no pending service calls in DB, guard passes
-    await injectEvent('data_exchange.call.completed', { decisionId: decision.id, result: 'conclusive' }, `sc-${Date.now()}`);
+    // Fire data-exchange.call.completed — no pending service calls in DB, guard passes
+    await injectEvent('data-exchange.call.completed', { decisionId: decision.id, result: 'conclusive' }, `sc-${Date.now()}`);
 
     // ex parte stub should be consumed
     const { items } = await (await fetch(`${BASE_URL}/mock/stubs/http`)).json();

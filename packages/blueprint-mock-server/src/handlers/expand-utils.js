@@ -13,7 +13,7 @@
  *             at read time with $this bound to the record.
  */
 
-import { evaluateCEL } from '../cel-evaluator.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Every property map a schema contributes, following refs on the way.
@@ -63,6 +63,7 @@ export function extractExpandFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -76,6 +77,9 @@ export function extractExpandFields(schema, follow = (x) => x) {
           fkField,
           resource: rel.resource,
           collection: resourceToCollection(rel.resource),
+          // The schema keeps the key too when it is writable (the Writable
+          // pattern); otherwise the expanded record replaces it.
+          keepFk: declared.has(fkField),
         });
       }
     }
@@ -91,7 +95,8 @@ export function extractExpandFields(schema, follow = (x) => x) {
  * For each expand field:
  *   - reads the FK value from record[fkField]
  *   - calls lookup(collection, fkValue) to fetch the related object
- *   - if found: removes fkField, sets fieldName to the related object
+ *   - if found: sets fieldName to the related object, and removes fkField
+ *     unless the schema declares it too (keepFk)
  *   - if not found: leaves the record unchanged for that field
  *
  * @param {object} record - Raw DB record
@@ -104,13 +109,14 @@ export function applyExpand(record, expandFields, lookup) {
 
   const result = { ...record };
 
-  for (const { fieldName, fkField, collection } of expandFields) {
+  for (const { fieldName, fkField, collection, keepFk } of expandFields) {
     const fkValue = result[fkField];
     if (!fkValue) continue;
 
     const related = lookup(collection, fkValue);
     if (related) {
       result[fieldName] = related;
+      if (!keepFk && fkField !== fieldName) delete result[fkField];
     }
   }
 
@@ -160,15 +166,28 @@ export function getItemSchema(listSchema, schemas, follow = (x) => x) {
 }
 
 /**
- * Convert a PascalCase resource name to a kebab-case plural collection name.
- * e.g. ApplicationMember → application-members
+ * Where each resource's records are kept, by resource name, read from core's
+ * model of the API documents when they are loaded (spec-loader.js) — so a
+ * TranscriptionProfile served at /profiles is found in `profiles`.
  *
- * This mirrors the convention used by deriveCollectionName for sub-resources.
+ * @type {Map<string, string>}
+ */
+const collectionsByResource = new Map();
+
+/** @param {Map<string, string>} collections - Resource name → collection */
+export function registerResourceCollections(collections) {
+  for (const [name, collection] of collections) collectionsByResource.set(name, collection);
+}
+
+/**
+ * The collection a resource's records are kept in. One the model names is
+ * found there; otherwise the name is converted by convention — ApplicationMember
+ * → application-members — which is how it was found before the model said.
  */
 function resourceToCollection(resource) {
-  return resource
+  return collectionsByResource.get(resource) ?? (resource
     .replace(/([A-Z])/g, (_, c, i) => (i === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`))
-    + 's';
+    + 's');
 }
 
 /**
@@ -185,6 +204,7 @@ export function extractLinksFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -248,6 +268,7 @@ export function extractDerivedFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -264,7 +285,8 @@ export function extractDerivedFields(schema, follow = (x) => x) {
  * Apply x-derived field computations to a record.
  * Returns a new object — does not mutate the original.
  *
- * Each x-derived expression is evaluated with $this bound to the record.
+ * Each x-derived expression is CEL, evaluated with `this` bound to the record.
+ * One that does not evaluate leaves the field out, and says why.
  *
  * @param {object} record - DB record (after expand/links have been applied)
  * @param {Array<{ fieldName: string, expr: string }>} derivedFields
@@ -275,8 +297,11 @@ export function applyDerivedFields(record, derivedFields) {
 
   const result = { ...record };
   for (const { fieldName, expr } of derivedFields) {
-    const value = evaluateCEL(expr, { $this: record });
-    if (value !== undefined) result[fieldName] = value;
+    try {
+      result[fieldName] = evaluateCEL(expr, { this: record });
+    } catch (e) {
+      console.warn(`x-derived ${fieldName} "${expr}" did not evaluate: ${e.message}`);
+    }
   }
   return result;
 }

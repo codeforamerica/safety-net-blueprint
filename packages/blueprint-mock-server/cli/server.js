@@ -239,7 +239,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     let allCompositions = [];
     let allRulesFiles = [];
     let allGraphs = [];
-    let allPolicies = {};
+    const allRegistries = {};
     for (const specsDir of specDirs) {
       const result = isArtifactPath(specsDir)
         ? await performSetup({ docs: docsFromArtifactFile(specsDir), seedDir, verbose: true, store })
@@ -252,7 +252,9 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       allCompositions = allCompositions.concat(result.compositions || []);
       allRulesFiles = allRulesFiles.concat(result.rulesFiles || []);
       allGraphs = allGraphs.concat(result.graphs || []);
-      Object.assign(allPolicies, result.policies || {});
+      for (const [type, entries] of Object.entries(result.registries || {})) {
+        allRegistries[type] = { ...allRegistries[type], ...entries };
+      }
     }
 
 
@@ -270,7 +272,6 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       apiNames: apiSpecs.map((a) => a.name),
       readDocs,
       configs: allConfigs,
-      policies: allPolicies,
       seeded: Boolean(seedDir),
     });
 
@@ -304,7 +305,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     // A few contract-declared endpoints cannot be served by generated CRUD.
     // Matched by operationId, so adding a platform endpoint to the contract
     // needs no code here, and an override that stops matching fails at boot.
-    const { applied, unmatched } = overrideByOperationId(routes, contractOverrides({ store }));
+    const { applied, unmatched } = overrideByOperationId(routes, contractOverrides({ store, registries: allRegistries }));
     for (const key of applied) console.log(`  ${key} - contract route, custom handler`);
     if (unmatched.length > 0) {
       console.warn(`  Note: no contract route declares ${unmatched.join(', ')} — not overridden`);

@@ -468,17 +468,7 @@ components:
               description: Unique identifier for the queue.
               readOnly: true
             source:
-              type: string
-              enum:
-                - system
-                - user
-              readOnly: true
-              description: >
-                Origin of the queue. "system" queues are defined in workflow-config.yaml
-                and cannot be deleted via the API. "user" queues are created at runtime
-                via POST /queues and can be deleted. Consumers may use this field to
-                disable destructive actions for system queues without first attempting
-                the operation.
+              $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
             createdAt:
               type: string
               format: date-time

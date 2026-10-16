@@ -5,6 +5,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/data-exchange/data-exchange-config-schema.yaml"
 title: Data Exchange Config
+domain: data-exchange
 description: Schema for data-exchange-config.yaml. Validates the ExternalService catalog.
 
 allOf:
@@ -20,16 +21,23 @@ properties:
     description: Must be "data-exchange".
 
   services:
-    type: array
+    type: object
     description: >
       ExternalService catalog. Defines the external data sources available across
       all deployments. All entries in a config file are config-managed: they are
       seeded by the mock server on startup with source "system" and cannot be
       deleted via the API. States overlay this file to add endpoint configuration
       and state-specific services.
-    minItems: 1
-    items:
-      $ref: "#/$defs/ExternalServiceConfig"
+    required: [resource, entries]
+    additionalProperties: false
+    properties:
+      resource:
+        const: ExternalService
+      entries:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/ExternalServiceConfig"
 
 unevaluatedProperties: false
 

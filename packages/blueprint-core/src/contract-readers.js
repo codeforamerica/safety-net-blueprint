@@ -9,9 +9,12 @@
  * reasons the server could not run without a filesystem.
  *
  * They are readers rather than generators in `extract`'s sense: every field
- * returned is stated in the documents. The one exception is the state machine
- * reader, which follows `extends` and the `$ref`s in action schemas, and even
- * that resolves within the set rather than deriving anything new.
+ * returned is stated in the documents, with two exceptions. The state machine
+ * reader follows `extends` and the `$ref`s in action schemas, resolving within
+ * the set. And the state machine and composition readers report what each
+ * attaches to — `api`, the OpenAPI document, and `resource`, the resource in
+ * its model (`attachment.js`) — and the rules reader the route each ruleset is
+ * evaluated at, so a consumer serves them where resolve documented them.
  *
  * Unlike the loaders these replace, a document that declares none of the
  * section being asked for is skipped silently instead of warning. `validate`
@@ -20,6 +23,9 @@
  */
 
 import { followRef, indexByRelativePath, splitRef, pointerInto } from './ref-lookup.js';
+import { governedResource, declaredResource } from './attachment.js';
+import { rulesetEndpointPath } from './rules.js';
+import { expandEmits } from './event-names.js';
 
 /** Envelope keys a config document carries that are not catalogs. */
 const CONFIG_METADATA_KEYS = new Set(['$schema', 'version', 'domain']);
@@ -62,18 +68,29 @@ export function readMetrics(docs) {
 /**
  * Domain configuration catalogs, by domain.
  *
- * A catalog is any top-level array the document declares; everything else at
- * the top level is envelope metadata. `*-config-schema.yaml` is excluded for
- * free, because `discover` types it as `schema` rather than `config`.
+ * A catalog is a top-level entry that declares the resource it seeds and its
+ * entries — `queues: { resource: Queue, entries: [...] }`; everything else at
+ * the top level is envelope metadata. Each catalog reports what it seeds:
+ * `api`, the OpenAPI document of the domain declaring the resource, and
+ * `resource`, that resource in its model — both null when none does, which
+ * `validate` reports. `*-config-schema.yaml` is excluded for free, because
+ * `discover` types it as `schema` rather than `config`.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {{ domain: string, version: string, catalogs: Record<string, object[]>, relativePath: string|null }[]}
+ * @returns {{ domain: string, version: string, catalogs: Record<string, { resourceName: string, entries: object[], api: object|null, resource: object|null }>, relativePath: string|null }[]}
  */
 export function readConfigs(docs) {
   return ofType(docs, 'config').map((doc) => {
     const catalogs = {};
     for (const [key, value] of Object.entries(doc.content)) {
-      if (!CONFIG_METADATA_KEYS.has(key) && Array.isArray(value)) catalogs[key] = value;
+      if (CONFIG_METADATA_KEYS.has(key) || typeof value?.resource !== 'string' || !Array.isArray(value.entries)) continue;
+      let attached = { api: null, resource: null };
+      try {
+        attached = governed(docs, doc.content.domain, value.resource);
+      } catch {
+        // Two resources with the name: reported where attachment is decided.
+      }
+      catalogs[key] = { resourceName: value.resource, entries: value.entries, ...attached };
     }
     return {
       domain: doc.content.domain,
@@ -93,7 +110,7 @@ export function readConfigs(docs) {
  * `machine` points at the machine and `stateMachine` at the document holding
  * it, so a caller never has to ask which shape it was given.
  *
- * Two things are resolved against the set while reading:
+ * Three things are resolved against the set while reading:
  *
  *   `extends:`        the extended document's guards and procedures are
  *                     attached as `_platformGuards` / `_platformProcedures`.
@@ -102,9 +119,15 @@ export function readConfigs(docs) {
  *                     document that extends it.
  *   action `$ref`s    `schema.request` and `schema.response` are replaced by
  *                     what they point at.
+ *   short emits       `emit: paused` gets its full type,
+ *                     `communication.transcript.paused` (event-names.js).
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {{ domain: string, object: string, apiSpec: string|null, stateMachine: object, machine: object, relativePath: string|null }[]}
+ * Each entry also carries what its machine governs: `api`, the OpenAPI
+ * document, and `resource`, the resource in its model named for the machine's
+ * object. Both null when nothing in the domain serves the object.
+ *
+ * @returns {{ domain: string, object: string, apiSpec: string|null, api: object|null, resource: object|null, stateMachine: object, machine: object, relativePath: string|null }[]}
  */
 export function readStateMachines(docs) {
   const byRelativePath = indexByRelativePath(docs);
@@ -157,16 +180,77 @@ export function readStateMachines(docs) {
     };
 
     if (Array.isArray(stateMachine.machines)) {
+      // Short-named emits get their full types, as resolve gives them, so an
+      // unresolved set reads the same.
+      stateMachine.machines = stateMachine.machines.map((m) => expandEmits(m, entry.domain));
       for (const machine of stateMachine.machines) {
         if (!machine.object) continue;
-        results.push({ ...entry, object: machine.object, machine });
+        results.push({ ...entry, object: machine.object, ...governed(docs, entry.domain, machine.object), machine });
       }
     } else if (stateMachine.object) {
-      results.push({ ...entry, object: stateMachine.object, machine: stateMachine });
+      results.push({ ...entry, object: stateMachine.object, ...governed(docs, entry.domain, stateMachine.object), machine: stateMachine });
     }
   }
 
   return results;
+}
+
+/**
+ * @param {import('../types.js').Doc[]} docs
+ * @param {string} domain
+ * @param {string} object
+ * @returns {{ api: object|null, resource: object|null }}
+ */
+function governed(docs, domain, object) {
+  return governedResource(docs, domain, object) ?? { api: null, resource: null };
+}
+
+/**
+ * Compositions, by domain, with what they are about: `api`, the OpenAPI
+ * document declaring the resource their compositions name, and `resource`,
+ * that resource. Both null when the domain declares none of them.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ domain: string, doc: object, filePath: string, relativePath: string|null, api: object|null, resource: object|null }[]}
+ */
+export function readCompositions(docs) {
+  return ofType(docs, 'compositions')
+    .filter((doc) => doc.content.compositions)
+    .map((doc) => {
+      const collections = Object.values(doc.content.compositions).map((c) => c?.resource).filter(Boolean);
+      const declared = declaredResource(docs, doc.content.domain, collections, doc.relativePath ?? doc.path);
+      return {
+        domain: doc.content.domain,
+        doc: doc.content,
+        filePath: doc.path,
+        relativePath: doc.relativePath,
+        api: declared?.api ?? null,
+        resource: declared?.resource ?? null,
+      };
+    });
+}
+
+/**
+ * Rules documents, by domain, with the route each ruleset is evaluated at:
+ * `/{domain}` and the endpoint path it declares (`rulesetEndpointPath`). A
+ * ruleset declaring no path, which validation refuses, has no route.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ domain: string, doc: object, filePath: string, relativePath: string|null, rulesets: { name: string, path: string }[] }[]}
+ */
+export function readRules(docs) {
+  return ofType(docs, 'rules')
+    .filter((doc) => doc.content.rulesets)
+    .map((doc) => ({
+      domain: doc.content.domain,
+      doc: doc.content,
+      filePath: doc.path,
+      relativePath: doc.relativePath,
+      rulesets: Object.entries(doc.content.rulesets)
+        .map(([name, ruleset]) => ({ name, endpoint: rulesetEndpointPath(name, ruleset) }))
+        .filter(({ endpoint }) => endpoint !== null)
+        .map(({ name, endpoint }) => ({ name, path: `/${doc.content.domain}${endpoint}` })),
+    }));
 }
 
 const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
@@ -285,12 +369,17 @@ function resolveActionSchemas(stateMachine, byRelativePath, fromPath) {
  * took a single type and returned bare entries, so a second registry type
  * meant a second call and nothing listed what types a set actually declared.
  *
+ * Files of one type combine. An entry id two files define refuses, naming
+ * both: the second would otherwise replace the first without a word.
+ *
  * @param {import('../types.js').Doc[]} docs
  * @returns {Record<string, Record<string, object>>} Registry type to its
  *   merged entries, keyed by entry id
+ * @throws {Error} When two files of a type define the same entry id
  */
 export function readRegistries(docs) {
   const byType = {};
+  const definedIn = {};
 
   for (const doc of docs) {
     if (doc.type !== 'registry') continue;
@@ -298,7 +387,18 @@ export function readRegistries(docs) {
     if (typeof type !== 'string' || !type) continue;
 
     byType[type] ??= {};
-    Object.assign(byType[type], doc.content.entries ?? {});
+    definedIn[type] ??= {};
+    const where = doc.relativePath ?? doc.path;
+    for (const [id, entry] of Object.entries(doc.content.entries ?? {})) {
+      // Registries are additive — several files of a type combine — so an id
+      // two files define is two entries claiming one name, and the second
+      // would quietly replace the first.
+      if (definedIn[type][id] && definedIn[type][id] !== where) {
+        throw new Error(`Registry entry "${id}" of type "${type}" is defined in both ${definedIn[type][id]} and ${where}. Each entry id is defined once.`);
+      }
+      definedIn[type][id] = where;
+      byType[type][id] = entry;
+    }
   }
 
   return byType;

@@ -14,6 +14,11 @@
  */
 
 import { resolverFor } from './schema-refs.js';
+import { deriveCollectionName } from './collection-utils.js';
+import { registerResourceCollections } from './handlers/expand-utils.js';
+
+/** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
+const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
 
 /**
  * The name an API is known by, from the path of its OpenAPI document.
@@ -127,9 +132,11 @@ export function extractMetadata(spec, resourceName, resolve = null) {
       if (method === 'parameters' || !['get', 'post', 'patch', 'delete', 'put'].includes(method)) {
         continue;
       }
-      
-      // Skip action endpoints (like /submit)
-      if (path.includes('/submit')) {
+
+      // An operation resolve generated from another contract only documents
+      // it: a state machine action, a composition or a ruleset is served from
+      // that contract, so each route has one source.
+      if (GENERATED.has(operation['x-relationship']?.type)) {
         continue;
       }
       
@@ -205,6 +212,32 @@ export function extractMetadata(spec, resourceName, resolve = null) {
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
  * @returns {object[]} One metadata object per OpenAPI document
  */
+/**
+ * Give each create, update and delete the resource it acts on, and say which
+ * POSTs are calls rather than creates — both read from core's model of the
+ * document, never worked out here.
+ *
+ * A create acts on a resource's collection, an update or a delete on its item.
+ * A POST to a path that is no resource's collection — an adapter's evaluate
+ * endpoint, with no list and no item — is a call: the mock keeps nothing for it
+ * and emits no event. An operation on one key of a metadata map has no
+ * resource either, and emits none.
+ *
+ * @param {object} metadata - From extractMetadata
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc
+ */
+function markResources(metadata, doc) {
+  const resources = doc.model?.()?.resources ?? [];
+  const base = metadata.serverBasePath ?? '';
+  for (const endpoint of metadata.endpoints) {
+    const path = base && endpoint.path.startsWith(base) ? endpoint.path.slice(base.length) : endpoint.path;
+    const part = endpoint.method === 'POST' ? 'collection' : 'item';
+    const resource = resources.find((r) => r.path(part) === path);
+    if (!resource && endpoint.method === 'POST') { endpoint.isCall = true; continue; }
+    if (resource?.name) endpoint.resource = { name: resource.name, eventName: resource.eventName };
+  }
+}
+
 export function apiSpecsFromDocs(docs) {
   const loaded = [];
 
@@ -214,11 +247,27 @@ export function apiSpecsFromDocs(docs) {
       const resolve = resolverFor(doc, docs);
       // The domain is the contract's directory, which is what a person names
       // it by; the spec's own name comes from its file and can differ.
-      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath, domain: doc.domain ?? null });
+      // `doc` is the document itself, so core's answer to what something
+      // attaches to (`extract`'s `api`) finds the API loaded from it.
+      const metadata = extractMetadata(doc.content, name, resolve);
+      markResources(metadata, doc);
+      loaded.push({ ...metadata, resolve, relativePath: doc.relativePath, domain: doc.domain ?? null, doc });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }
   }
+
+  // Where each resource's records are kept, so a related record is found by
+  // its resource's name without guessing at its collection.
+  const collections = new Map();
+  for (const api of loaded) {
+    for (const resource of api.doc.model?.()?.resources ?? []) {
+      if (resource.name && !collections.has(resource.name)) {
+        collections.set(resource.name, deriveCollectionName(resource.path('collection'), ''));
+      }
+    }
+  }
+  registerResourceCollections(collections);
 
   return loaded;
 }

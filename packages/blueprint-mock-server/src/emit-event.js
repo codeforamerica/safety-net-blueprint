@@ -23,37 +23,63 @@ import { eventBus } from './event-bus.js';
  * @returns {Object} The stored event record
  */
 export function emitEventEnvelope(envelope, store) {
-  const record = {
+  const record = withoutAbsent({
     specversion: '1.0',
     datacontenttype: 'application/json',
     ...envelope,
     id: envelope.id || crypto.randomUUID(),
     time: envelope.time || new Date().toISOString(),
-  };
+  });
   // Infrastructure events (scheduling, etc.) are broadcast for stub interception
   // but not persisted — they are not domain events observable via /platform/events.
   const isInfrastructureEvent = record.type?.startsWith('scheduling.');
   if (!isInfrastructureEvent) {
-    store.insertResource('events', record);
+    saveEvent(store, record);
   }
   eventBus.emit('domain-event', record);
   return record;
 }
 
-// Roles that map to a non-user authtype value. Any other non-empty role list → 'user'.
+/**
+ * Save an event as it is. An event is a record of something that happened, not
+ * a resource, so the store adds no id and no timestamps of its own. A store
+ * written before `append` existed falls back to `insertResource`, whose events
+ * keep the timestamps it adds.
+ */
+function saveEvent(store, record) {
+  if (typeof store.append === 'function') store.append('events', record);
+  else store.insertResource('events', record);
+}
+
+// The optional CloudEvents attributes, which the events contract has an event
+// leave out when it has no value for them rather than carry as null.
+const OPTIONAL_ATTRIBUTES = ['traceparent', 'causationid', 'authid', 'authtype', 'data'];
+
+function withoutAbsent(envelope) {
+  const out = { ...envelope };
+  for (const name of OPTIONAL_ATTRIBUTES) {
+    if (out[name] === null || out[name] === undefined) delete out[name];
+  }
+  return out;
+}
+
+// Roles that map to a non-user authtype value.
 const NON_USER_AUTHTYPES = new Set(['system', 'service_account', 'api_key', 'unauthenticated', 'unknown']);
 
 /**
- * Derive the CloudEvents authtype from a caller's roles array.
- * @param {string[]} callerRoles
- * @returns {string|null}
+ * The CloudEvents auth context for a caller: who acted, and what kind of actor
+ * they are. The kind comes from a role naming one; a caller with none is a user,
+ * except the mock's own `system` caller. Empty when there is no caller, since
+ * the events contract requires `authtype` whenever `authid` is present.
+ *
+ * @param {string|null} callerId
+ * @param {string[]} [callerRoles]
+ * @returns {{ authid?: string, authtype?: string }}
  */
-function deriveAuthtype(callerRoles) {
-  if (!callerRoles || callerRoles.length === 0) return null;
-  for (const role of callerRoles) {
-    if (NON_USER_AUTHTYPES.has(role)) return role;
-  }
-  return 'user';
+export function authContext(callerId, callerRoles = []) {
+  if (!callerId) return {};
+  const named = (callerRoles || []).find(role => NON_USER_AUTHTYPES.has(role));
+  return { authid: callerId, authtype: named ?? (callerId === 'system' ? 'system' : 'user') };
 }
 
 /**
@@ -65,7 +91,7 @@ function deriveAuthtype(callerRoles) {
  * @param {string} options.action        - Action verb (e.g., 'created', 'claimed')
  * @param {string} options.resourceId    - UUID of the affected resource
  * @param {string} options.source        - Domain base path (e.g., '/workflow')
- * @param {Object|null} [options.data]   - Event payload. Defaults to null.
+ * @param {Object|null} [options.data]   - Event payload. Left out when null.
  * @param {string|null} [options.callerId]     - X-Caller-Id from request header
  * @param {string[]}    [options.callerRoles]  - X-Caller-Roles parsed array (used to derive authtype)
  * @param {string|null} [options.traceparent]  - W3C traceparent header, if present
@@ -75,17 +101,16 @@ function deriveAuthtype(callerRoles) {
  */
 export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null, store }) {
   const timestamp = now || new Date().toISOString();
-  const normalizedDomain = domain.replace(/-/g, '_');
-  const normalizedObject = object.replace(/-/g, '_');
+  // The domain as declared, hyphens and all; the resource already in snake_case.
+  const normalizedDomain = domain;
+  const normalizedObject = object;
   // An empty domain would produce ".application.created" — a CloudEvents type
   // with a leading dot and no domain, which nothing can subscribe to. A spec
   // declaring no localhost server URL has no domain prefix to contribute, so
   // the segment is left out rather than emitted empty (#448).
   const type = [normalizedDomain, normalizedObject, action].filter(Boolean).join('.');
 
-  const authtype = callerId ? deriveAuthtype(callerRoles) : null;
-
-  const envelope = {
+  const envelope = withoutAbsent({
     specversion: '1.0',
     id: crypto.randomUUID(),
     type,
@@ -93,14 +118,13 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     subject: subject ?? resourceId,
     time: timestamp,
     datacontenttype: 'application/json',
-    traceparent: traceparent || null,
-    causationid: causationid || undefined,
-    authid: callerId || null,
-    authtype: authtype || null,
-    data: data ?? null,
-  };
+    traceparent,
+    causationid,
+    ...authContext(callerId, callerRoles),
+    data,
+  });
 
-  const stored = store.create('events', envelope);
-  eventBus.emit('domain-event', stored);
-  return stored;
+  saveEvent(store, envelope);
+  eventBus.emit('domain-event', envelope);
+  return envelope;
 }

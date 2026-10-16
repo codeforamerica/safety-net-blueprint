@@ -42,7 +42,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### OpenAPI specs
 
 **[`contracts/domains/intake/intake-openapi.yaml`](contracts/domains/intake/intake-openapi.yaml)**
-- State machine RPC endpoint injection (`open`, `submit`, `withdraw`, `approve` actions)
+- State machine RPC endpoint injection (`submit`, `open`, `close`, `withdraw` actions)
 - `x-enum-source: "slaTypes[].id"` — SLA type code field populated from SLA types file
 - `x-enum-source: { source: "states[].id", machine: "Application" }` — status field populated from state machine
 - `x-relationship` expand-style relationship injection
@@ -59,6 +59,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 **[`contracts/domains/intake/intake-state-machine.yaml`](contracts/domains/intake/intake-state-machine.yaml)**
 - Multi-machine format (`machines[]` array with a single `Application` machine)
 - Action steps: `set` (record timestamps) and `emit` (fire domain events)
+- An actor guard: `withdraw` is limited to `applicant` and `case_worker`, so a caller without either gets a 403. The walk never calls it, so the walk passes with no roles
 - `x-event-type-prefix` injection — event types prefixed with `ca.` via state overlay
 - SLA clock states (`running`, `stopped`, `paused`) on each lifecycle state
 
@@ -100,11 +101,23 @@ So when you add a feature to a tooling package, adding a contract here that exer
 **[`contracts/domains/intake/intake-compositions.yaml`](contracts/domains/intake/intake-compositions.yaml)**
 - Composite view definition that generates an additional GET endpoint in the intake OpenAPI spec
 
+### Scenarios
+
+**[`contracts/scenarios/application-walkthrough.arazzo.yaml`](contracts/scenarios/application-walkthrough.arazzo.yaml)**
+- The demo page's walk-through: an application from creation to close, through every kind of thing the contracts declare, including an upload and the mock's own stub, reset and reseed
+- The tour Show me around opens with (`--first-tour` in `scripts/regenerate.js`). Each step's first line is its title in the page, and its bullets are what to notice
+- Written down, not worked out from the contracts, so it reads the same however the set changes
+
+**[`contracts/scenarios/transcript-lifecycle.arazzo.yaml`](contracts/scenarios/transcript-lifecycle.arazzo.yaml)**
+- An Arazzo scenario: a transcript started, recorded, paused, resumed and closed, with what it refuses along the way
+- Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
+- Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
+
 ### Overlays
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**
-- Extends the base `Domain` enum to add `intake` and `eligibility`
 - Extends the base `MetricCollection` enum to add `applications` and `determinations`
+- Replaces the base `RoleType` with the harness's roles, which guard actors are validated against and the demo page offers a caller
 - Uses `files:` (array/string form) rather than `file:` to target the base enums schema
 
 **[`contracts/overlays/state-overlay.yaml`](contracts/overlays/state-overlay.yaml)**
@@ -113,7 +126,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 ### Policies
 
-**[`contracts/platform/platform-policies.yaml`](contracts/platform/platform-policies.yaml)**
+**[`contracts/domains/platform/platform-registry-policies.yaml`](contracts/domains/platform/platform-registry-policies.yaml)**
 - Platform-level eligibility policy definitions
 - Exercises overlay targeting of policy files
 

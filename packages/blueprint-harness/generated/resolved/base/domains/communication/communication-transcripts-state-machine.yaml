@@ -1,0 +1,226 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: communication
+machines:
+  - object: Transcript
+    states:
+      - id: recording
+        slaClock: stopped
+        description: The conversation is on the record; lines are accepted.
+      - id: paused
+        slaClock: stopped
+        description: The conversation is off the record — an applicant asked, say. Nothing said now is stored.
+      - id: closed
+        slaClock: stopped
+        description: The transcript has ended. Terminal.
+    initialState: recording
+    context:
+      - profile:
+          from: communication/profiles
+          where: item.id == object.profileId
+    timers:
+      - id: idle_check
+        description: Whether a recording transcript has gone quiet for its profile's idleTimeout.
+    guards:
+      - id: atAfterStart
+        description: the time given is not before the transcript started
+        condition: timestamp(request.at) >= timestamp(object.startedAt)
+      - id: atAfterPauseBegan
+        description: the time given is not before the open pause began
+        condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
+      - id: aPauseIsOpen
+        description: a pause is open
+        condition: openPause != null
+      - id: profileExists
+        description: the profile it names exists
+        condition: profile != null
+      - id: modelGivenForTheService
+        description: a model is given when the profile names a transcription service
+        condition: profile == null || profile.provider == "none" || has(request.model)
+      - id: startedWhileRecording
+        description: the entry started while the transcript was recording — after it started, not during a pause, and before it closed
+        condition: timestamp(request.startedAt) >= timestamp(object.startedAt) && pauseAtStart == null && (!has(object.closedAt) || timestamp(request.startedAt) < timestamp(object.closedAt))
+      - id: endsAfterItStarts
+        description: the entry does not end before it starts
+        condition: timestamp(request.endedAt) >= timestamp(request.startedAt)
+      - id: gapOutsidePauses
+        description: a gap does not overlap a pause
+        condition: request.kind != "gap" || pauseOverlap == null
+    emits:
+      - id: paused
+        description: The conversation went off the record. Anything said until it resumes is not stored.
+      - id: resumed
+        description: The conversation is back on the record.
+      - id: closed
+        description: The transcript has ended.
+    actions:
+      - id: pause
+        description: Take the conversation off the record, at the time the client says.
+        transition:
+          from: recording
+          to: paused
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        guards:
+          - conditions:
+              - atAfterStart
+        steps:
+          - call:
+              POST: communication/transcripts/$object.id/entries
+              body:
+                kind: pause
+                startedAt: $request.at
+                endedAt: null
+          - emit:
+              event: paused
+              type: communication.transcript.paused
+      - id: resume
+        description: Put the conversation back on the record, at the time the client says.
+        transition:
+          from: paused
+          to: recording
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        context:
+          - openPause:
+              from: communication/transcripts/entries
+              where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+        guards:
+          - conditions:
+              - aPauseIsOpen
+              - atAfterPauseBegan
+        steps:
+          - call:
+              PATCH: communication/transcripts/$object.id/entries/$openPause.id
+              body:
+                endedAt: $request.at
+          - call: requestIdleCheck
+          - emit:
+              event: resumed
+              type: communication.transcript.resumed
+      - id: close
+        description: End the transcript, at the time the client says. A pause still open ends then too.
+        transition:
+          from:
+            - recording
+            - paused
+          to: closed
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        context:
+          - openPause:
+              from: communication/transcripts/entries
+              where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+        guards:
+          - conditions:
+              - atAfterStart
+              - atAfterPauseBegan
+        steps:
+          - set:
+              field: closedAt
+              value: $request.at
+          - if: openPause != null
+            then:
+              - call:
+                  PATCH: communication/transcripts/$object.id/entries/$openPause.id
+                  body:
+                    endedAt: $request.at
+          - emit:
+              event: closed
+              type: communication.transcript.closed
+    "on":
+      - type: communication.transcript.created
+        description: Ask for the first idle check, when the profile sets a timeout.
+        transition: {}
+        steps:
+          - call: requestIdleCheck
+      - type: communication.transcript_entry.created
+        description: Record when the software was last heard from.
+        steps:
+          - if: this.data.kind != "pause"
+            then:
+              - call:
+                  PATCH: communication/transcripts/$this.data.transcriptId
+                  body:
+                    lastActivityAt: $this.data.endedAt
+      - type: communication.idle_check
+        description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
+        transition:
+          from: recording
+        context:
+          - newActivity:
+              from: communication/transcripts/entries
+              where: item.transcriptId == object.id && item.kind != "pause" && timestamp(item.createdAt) > timestamp(this.data.since)
+        steps:
+          - if: newActivity != null
+            then:
+              - call: requestIdleCheck
+            else:
+              - if: has(object.lastActivityAt)
+                then:
+                  - call:
+                      POST: communication/transcripts/$object.id/close
+                      body:
+                        at: $object.lastActivityAt
+                else:
+                  - call:
+                      POST: communication/transcripts/$object.id/close
+                      body:
+                        at: $object.startedAt
+    procedures:
+      - id: requestIdleCheck
+        description: Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
+        if: profile != null && has(profile.idleTimeout)
+        then:
+          - emit:
+              type: scheduling.timer.requested
+              data:
+                timerId: communication.idle_check.{$object.id}
+                fireAfter: $profile.idleTimeout
+                callback:
+                  event: communication.idle_check
+                  data:
+                    since: $now
+    resources:
+      Transcript:
+        create:
+          context:
+            - profile:
+                from: communication/profiles
+                where: item.id == request.profileId
+          guards:
+            - conditions:
+                - profileExists
+                - modelGivenForTheService
+      TranscriptEntry:
+        create:
+          context:
+            - pauseAtStart:
+                from: communication/transcripts/entries
+                where: item.kind == "pause" && item.transcriptId == object.id && timestamp(item.startedAt) <= timestamp(request.startedAt) && (item.endedAt == null || timestamp(item.endedAt) > timestamp(request.startedAt))
+            - pauseOverlap:
+                from: communication/transcripts/entries
+                where: item.kind == "pause" && item.transcriptId == object.id && timestamp(item.startedAt) < timestamp(request.endedAt) && (item.endedAt == null || timestamp(item.endedAt) > timestamp(request.startedAt))
+          guards:
+            - conditions:
+                - startedWhileRecording
+                - endsAfterItStarts
+                - gapOutsidePauses
+        update:
+          guards:
+            - actors:
+                - system
+$defs:
+  AtRequest:
+    type: object
+    additionalProperties: false
+    required:
+      - at
+    properties:
+      at:
+        type: string
+        format: date-time
+        description: When it happened, by the client's clock.

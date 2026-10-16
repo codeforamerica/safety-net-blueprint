@@ -49,8 +49,8 @@ const SHARED_SCHEMAS = {
         // The field whose default went missing: required, an array, and only
         // visible by following a ref out of the OpenAPI document.
         documentRequests: { type: 'array', items: { $ref: '#/$defs/DocumentRequest' } },
-        // Nullable with a sibling type: ajv widens the type to allow null.
-        closedAt: { type: 'string', format: 'date-time', nullable: true },
+        // May be null, as OpenAPI 3.1 writes it.
+        closedAt: { type: ['string', 'null'], format: 'date-time' },
       },
       required: ['id', 'documentRequests'],
     },
@@ -84,11 +84,9 @@ const SPEC = {
         properties: { id: { type: 'string' } },
         required: ['id'],
       },
-      // `nullable` with nothing to qualify. ajv throws on this one for want
-      // of a sibling `type`, which is why the keyword is dropped here only.
+      // A referenced schema that may also be null, as OpenAPI 3.1 writes it.
       MaybeVerification: {
-        allOf: [{ $ref: '../../shared/shared-schema.yaml#/$defs/Verification' }],
-        nullable: true,
+        anyOf: [{ $ref: '../../shared/shared-schema.yaml#/$defs/Verification' }, { type: 'null' }],
       },
     },
   },
@@ -204,13 +202,9 @@ describe('resolving a cross-file $ref', () => {
   });
 });
 
-describe('nullable', () => {
+describe('the 2020-12 dialect', () => {
 
-  test('a nullable field with a type still accepts null', () => {
-    // Stripping `nullable` wholesale broke this: ajv honors
-    // `{ type: string, nullable: true }` by widening the type, so removing it
-    // rejected the null the field exists to allow. Five Application date
-    // fields and two Users failed this way.
+  test('a field typed [X, null] accepts null and otherwise only X', () => {
     withSet(({ docs }) => {
       const ajv = createAjv();
       registerDocuments(ajv, docs);
@@ -227,17 +221,27 @@ describe('nullable', () => {
     });
   });
 
-  test('nullable with no type to qualify does not break compilation', () => {
-    // `{ allOf: [$ref], nullable: true }` is where ajv throws, for want of a
-    // sibling type. Dropping the keyword there is what keeps this compiling.
+  test('a referenced schema or null, written as anyOf, accepts either', () => {
     withSet(({ docs }) => {
       const ajv = createAjv();
       registerDocuments(ajv, docs);
-      assert.ok(
-        validatorFor(ajv, 'domains/verification/verification-openapi.yaml', '/components/schemas/MaybeVerification'),
-        'should compile rather than throw'
-      );
+      const validateFn = validatorFor(ajv, 'domains/verification/verification-openapi.yaml', '/components/schemas/MaybeVerification');
+      assert.ok(validateFn(null), 'null');
+      assert.ok(validateFn({ id: 'v1', documentRequests: [] }), 'a verification');
+      assert.equal(validateFn({}), false, 'but not something that is neither');
     });
+  });
+
+  test('unevaluatedProperties is enforced', () => {
+    // The draft-07 build ignored it as an unknown keyword, so a closed schema
+    // composed with allOf accepted any field at all.
+    const ajv = createAjv();
+    const validateFn = ajv.compile({
+      allOf: [{ type: 'object', properties: { name: { type: 'string' } } }],
+      unevaluatedProperties: false,
+    });
+    assert.ok(validateFn({ name: 'a' }));
+    assert.equal(validateFn({ name: 'a', provider: 'none' }), false);
   });
 });
 

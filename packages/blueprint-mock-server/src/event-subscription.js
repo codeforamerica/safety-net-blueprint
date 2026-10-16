@@ -15,7 +15,7 @@ import { eventBus } from './event-bus.js';
 import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEvent, emitEventEnvelope } from './emit-event.js';
+import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase } from './collection-utils.js';
 
 /**
@@ -46,6 +46,10 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
  * The path is fully interpolated: domain/collection/uuid/operation.
  */
 function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, store) {
+  if (currentStepCalls) {
+    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store });
+    return;
+  }
   const parts = path.split('/');
   if (parts.length < 4) {
     console.error(`executePendingOperation: path "${path}" must have at least 4 segments`);
@@ -88,6 +92,10 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
  * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
  */
 function executePendingAppend({ path, body }, store) {
+  if (currentStepCalls) {
+    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store });
+    return;
+  }
   const parts = path.split('/');
   const id = parts.pop();
   const collectionPath = parts.join('/');
@@ -122,7 +130,47 @@ function executePendingAppend({ path, body }, store) {
  */
 let currentDispatch = null;
 
-export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store) {
+// What a step's call means, read against the API (step-calls.js). Set when
+// subscriptions are registered; without it, calls fall back to reading the
+// path by convention, which cannot create a nested record.
+let currentStepCalls = null;
+
+/**
+ * Do a reaction's call the way the API's route at that method and path means:
+ * a nested create, an update, or an action, which runs as the system.
+ */
+function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store }) {
+  const actor = { id: caller?.id || 'system', roles: caller?.roles || ['system'] };
+  try {
+    currentStepCalls.apply(call, {
+      caller: actor,
+      traceparent,
+      causationid,
+      now,
+      runAction: ({ entry, collection, id, action, body }) => executeTransition({
+        store,
+        resourceName: collection,
+        resourceId: id,
+        trigger: action,
+        callerId: actor.id,
+        callerRoles: actor.roles,
+        stateMachine: entry.stateMachine,
+        machine: entry.machine,
+        slaTypes: currentStepCalls.slaTypesFor(entry.domain),
+        requestBody: body || {},
+        traceparent,
+        causationid,
+        now,
+        stepCalls: currentStepCalls,
+      }),
+    });
+  } catch (e) {
+    console.error(`onEvent call ${call.method} ${call.path} failed: ${e.message}`);
+  }
+}
+
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null) {
+  currentStepCalls = stepCalls;
   // Replace rather than accumulate. Registering twice — a second server in
   // the same process, or a page rebooting one from an edited contract set —
   // otherwise leaves the first set of handlers attached, so every event is
@@ -133,10 +181,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     currentDispatch = null;
   }
 
-  // Collect events entries from new-format state machines
+  // Collect each machine's on: entries — the events it reacts to
   const machineEventSubs = [];
   for (const smEntry of allStateMachines) {
-    const onEvents = smEntry.machine?.events;
+    const onEvents = smEntry.machine?.on;
     if (!Array.isArray(onEvents)) continue;
     for (const entry of onEvents) {
       if (entry.type && Array.isArray(entry.steps)) {
@@ -228,13 +276,20 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         }
 
         // Handle collection creates
-        for (const { entity, domain: entDomain, eventObject, data } of pendingCreates) {
+        for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
           try {
             const created = store.create(entity, data);
+            // Named for the resource the API serves at that path, where the
+            // route can be found; otherwise for the path's last segment.
+            let object = eventObject || entity.replace(/s$/, '');
+            try {
+              const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+              if (resolved?.resource?.eventName) object = resolved.resource.eventName;
+            } catch { /* not a declared route: keep the path's name */ }
             emitEvent({
         store,
               domain: entDomain || smEntry.domain,
-              object: eventObject || entity.replace(/s$/, ''),
+              object,
               action: 'created',
               resourceId: created.id,
               source: `/${entDomain || smEntry.domain}`,
@@ -316,6 +371,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               traceparent: event.traceparent,
               causationid: event.id,
               time: now,
+              ...authContext('system'),
             }, store);
           } catch (e) {
             console.error(`onEvent emit "${evt.type}" failed:`, e.message);

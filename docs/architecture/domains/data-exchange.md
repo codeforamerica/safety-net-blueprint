@@ -107,10 +107,10 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `data_exchange.call.submitted` | Calling domain needs confirmation the call is in flight before entering a waiting state | submit transition | Workflow, Eligibility |
-| `data_exchange.call.completed` | Calling domain must resume its lifecycle when a result arrives | complete transition | Workflow, Eligibility, Client Management |
-| `data_exchange.call.failed` | Calling domain must handle failure — create a follow-up task, notify, or proceed without the data | fail transition | Workflow, Eligibility |
-| `data_exchange.call.timed_out` | Timeout must be treated differently from failure — may warrant retry or escalation | timeout transition | Workflow, Eligibility |
+| `data-exchange.call.submitted` | Calling domain needs confirmation the call is in flight before entering a waiting state | submit transition | Workflow, Eligibility |
+| `data-exchange.call.completed` | Calling domain must resume its lifecycle when a result arrives | complete transition | Workflow, Eligibility, Client Management |
+| `data-exchange.call.failed` | Calling domain must handle failure — create a follow-up task, notify, or proceed without the data | fail transition | Workflow, Eligibility |
+| `data-exchange.call.timed_out` | Timeout must be treated differently from failure — may warrant retry or escalation | timeout transition | Workflow, Eligibility |
 
 ## Out of scope
 

@@ -14,9 +14,11 @@
       "description": "A human-readable name for the document."
     },
     "documentDate": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date",
-      "nullable": true,
       "description": "The date the document itself bears, which is not the date it arrived."
     }
   },

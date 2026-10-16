@@ -53,7 +53,7 @@ function nextHttpId(url) {
 
 /**
  * Derive a human-readable stub ID from the `on` event type.
- * "data_exchange.service_call.created" → "service_call.created-1"
+ * "data-exchange.external_service_call.created" → "external_service_call.created-1"
  */
 function nextId(on) {
   const parts = (on || '').split('.');
@@ -90,7 +90,7 @@ function matchCriteria(stub, envelope) {
  * Register a stub. Returns the stored stub with its assigned ID.
  *
  * @param {Object} stub
- * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data_exchange.service_call.created")
+ * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data-exchange.external_service_call.created")
  * @param {Object} [stub.match]  - Dot-path field matchers against the event envelope
  * @param {Object} [stub.response] - Event to fire when matched: { type, subject?, source?, data? }.
  *   Omit for scheduling.timer.requested stubs — the callback is read from the event.
@@ -263,6 +263,7 @@ function dispatchStubResponse(stub, envelope, store) {
       type: callbackEvent,
       source: '/scheduler',
       subject: envelope.subject,
+      traceparent: envelope.traceparent,
       causationid: envelope.id,
       data: firedData,
     }, store);
@@ -277,7 +278,7 @@ function dispatchStubResponse(stub, envelope, store) {
   const fullType = type;
 
   // Derive entity ID field name from trigger event type.
-  // "data_exchange.service_call.created" → "serviceCallId"
+  // "data-exchange.external_service_call.created" → "externalServiceCallId"
   const parts = eventType.split('.');
   const entitySnake = parts.length >= 2 ? parts[parts.length - 2] : '';
   const entityCamel = toCamelCase(entitySnake);
@@ -296,6 +297,7 @@ function dispatchStubResponse(stub, envelope, store) {
     type: fullType,
     source: source || '/system',
     subject: subject !== undefined ? subject : envelope.subject,
+    traceparent: envelope.traceparent,
     causationid: envelope.id,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
   }, store);

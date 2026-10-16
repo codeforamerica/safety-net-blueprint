@@ -13,7 +13,9 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { resolve, dirname } from 'node:path';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discover, load, generate } from '@codeforamerica/blueprint-core';
 import { createMockServer } from '../../src/browser.js';
@@ -162,5 +164,30 @@ describe('the mock\'s own routes', () => {
       })(),
       /GET \/health[\s\S]*serves itself|serves itself[\s\S]*GET \/health/,
     );
+  });
+});
+
+describe('two contracts declaring one route', () => {
+  test('refuse to start, naming both documents', async () => {
+    // A set's own file still declaring GET /platform/events beside the
+    // framework's — the failure moving the events contract could cause, which
+    // first-wins used to hide by quietly serving one of them.
+    const dir = mkdtempSync(join(tmpdir(), 'dup-route-'));
+    const path = join(dir, 'platform-events-openapi.yaml');
+    writeFileSync(path, [
+      'openapi: 3.1.0',
+      'info: { title: Platform events, version: 1.0.0, x-domain: platform }',
+      'servers: [{ url: "http://localhost:1080/platform" }]',
+      'paths:',
+      '  /events:',
+      '    get: { operationId: listFrameworkEvents, responses: { "200": { description: ok } } }',
+      '',
+    ].join('\n'));
+    const events = load({ path, relativePath: 'domains/platform/platform-openapi.yaml' });
+    rmSync(dir, { recursive: true, force: true });
+
+    const set = [...discover(harness).map(load), events];
+    await assert.rejects(boot({ contracts: generate(set, 'artifact'), seed: false }),
+      /GET \/platform\/events is declared by two contracts: (base\/domains\/platform\/platform-events-openapi\.yaml and domains\/platform\/platform-openapi\.yaml|domains\/platform\/platform-openapi\.yaml and base\/domains\/platform\/platform-events-openapi\.yaml)/);
   });
 });

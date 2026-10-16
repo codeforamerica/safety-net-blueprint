@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CompleteDeterminationData, CompleteDeterminationErrors, CompleteDeterminationResponses, CreateDeterminationData, CreateDeterminationErrors, CreateDeterminationResponses, EvaluateExpeditedSnapData, EvaluateExpeditedSnapErrors, EvaluateExpeditedSnapResponses, GetDecisionData, GetDecisionErrors, GetDecisionResponses, GetDeterminationData, GetDeterminationErrors, GetDeterminationResponses, ListDecisionsData, ListDecisionsErrors, ListDecisionsResponses, ListDeterminationsData, ListDeterminationsErrors, ListDeterminationsResponses, UpdateDeterminationData, UpdateDeterminationErrors, UpdateDeterminationResponses } from './types.gen';
-import { zCompleteDeterminationData, zCompleteDeterminationResponse, zCreateDeterminationData, zCreateDeterminationResponse, zEvaluateExpeditedSnapData, zEvaluateExpeditedSnapResponse, zGetDecisionData, zGetDecisionResponse, zGetDeterminationData, zGetDeterminationResponse, zListDecisionsData, zListDecisionsResponse, zListDeterminationsData, zListDeterminationsResponse, zUpdateDeterminationData, zUpdateDeterminationResponse } from './zod.gen';
+import type { CompleteDeterminationData, CompleteDeterminationErrors, CompleteDeterminationResponses, CreateDeterminationData, CreateDeterminationErrors, CreateDeterminationResponses, GetDecisionData, GetDecisionErrors, GetDecisionResponses, GetDeterminationData, GetDeterminationErrors, GetDeterminationResponses, ListDecisionsData, ListDecisionsErrors, ListDecisionsResponses, ListDeterminationsData, ListDeterminationsErrors, ListDeterminationsResponses, UpdateDeterminationData, UpdateDeterminationErrors, UpdateDeterminationResponses } from './types.gen';
+import { zCompleteDeterminationData, zCompleteDeterminationResponse, zCreateDeterminationData, zCreateDeterminationResponse, zGetDecisionData, zGetDecisionResponse, zGetDeterminationData, zGetDeterminationResponse, zListDecisionsData, zListDecisionsResponse, zListDeterminationsData, zListDeterminationsResponse, zUpdateDeterminationData, zUpdateDeterminationResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -104,19 +104,4 @@ export const completeDetermination = <ThrowOnError extends boolean = false>(opti
     responseValidator: async (data) => await zCompleteDeterminationResponse.parseAsync(data),
     url: '/determinations/{determinationId}/complete',
     ...options
-});
-
-/**
- * Evaluate expeditedSnap
- */
-export const evaluateExpeditedSnap = <ThrowOnError extends boolean = false>(options: Options<EvaluateExpeditedSnapData, ThrowOnError>) => (options.client ?? client).post<EvaluateExpeditedSnapResponses, EvaluateExpeditedSnapErrors, ThrowOnError>({
-    requestValidator: async (data) => await zEvaluateExpeditedSnapData.parseAsync(data),
-    responseType: 'json',
-    responseValidator: async (data) => await zEvaluateExpeditedSnapResponse.parseAsync(data),
-    url: '/determinations/evaluate-expedited-snap',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
 });

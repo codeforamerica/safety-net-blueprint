@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/intake/intake-schema.yaml"
 title: Intake
+domain: intake
 description: >
   Domain schemas for the intake domain. Covers member sub-objects (demographics,
   citizenship, disability, etc.), application-level sub-objects (household,
@@ -1234,7 +1235,7 @@ $defs:
           resource: Application
       appointments:
         type: array
-        description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.scheduled fires.
+        description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.created fires.
         readOnly: true
         items:
           type: string
@@ -1536,7 +1537,7 @@ $defs:
   PersonMatch:
     title: PersonMatch
     type: object
-    description: Person matching state for an application member. Populated when client_management.person.match_resolved is received. Null until matching begins.
+    description: Person matching state for an application member. Populated when client-management.person.match_resolved is received. Null until matching begins.
     properties:
       matchStatus:
         type: string
@@ -1601,16 +1602,15 @@ $defs:
         format: date-time
         description: When the notice was sent.
       dueAt:
-        type: string
+        type: [string, "null"]
         format: date-time
-        nullable: true
         description: Deadline by which the applicant must respond.
       channel:
-        type: string
-        nullable: true
+        type: [string, "null"]
         description: Channel through which the notice was sent.
         enum:
           - email
           - in_person
           - mail
           - portal
+          - null

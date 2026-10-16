@@ -1,0 +1,228 @@
+# The domain event log every contract set gets from the framework: the
+# events each domain emits, listed, fetched, streamed and published. A
+# contract set's own platform files sit beside this one; resolve copies it
+# into every set under base/.
+#
+# The mock serves `streamEvents` as an SSE stream and `publishEvent` by firing
+# its event bus, selected by operationId (blueprint-mock-server
+# platform-routes.js); the rest is generated from this document.
+openapi: 3.1.0
+info:
+  title: Events
+  version: 1.0.0
+  x-domain: platform
+  x-status: beta
+  x-visibility: internal
+  description: |
+    The centralized log of domain events across every domain, as CloudEvents
+    1.0 envelopes. Supports REST polling and a live stream, and keeps a
+    permanent audit history whether or not a message broker is in use.
+
+    Publishing records an event a domain producer emits. It is for systems
+    recording what happened, not for requests made on a person's behalf.
+
+servers:
+  - url: https://api.example.com/platform
+    description: Production server
+  - url: http://localhost:1080/platform
+    description: Local development server
+
+tags:
+  - name: Events
+    description: Centralized event log across all domains.
+
+paths:
+  /events:
+    get:
+      summary: List events
+      description: |
+        Queryable log of all domain events across the blueprint. Supports
+        REST polling as an integration pattern and provides permanent audit
+        history regardless of whether a message broker is in use.
+
+        Events are returned in ascending time order (oldest first) to support
+        cursor-based polling.
+      operationId: listEvents
+      tags:
+        - Events
+      x-sortable:
+        # Ascending time matches the operation's cursor-based polling contract.
+        # Clients override with sort=-time for newest-first dashboards.
+        fields: [time, type, source]
+        default: time
+        tieBreaker: id
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
+        - name: type
+          in: query
+          description: >
+            Filter by CloudEvents type. Supports prefix matching with a
+            trailing wildcard (e.g., `intake.*`). When states apply an
+            x-event-type-prefix overlay, the resolved prefix is prepended
+            to all event types (e.g., `org.example.intake.*`).
+          schema:
+            type: string
+          example: intake.application.submitted
+        - name: source
+          in: query
+          description: Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+          schema:
+            type: string
+          example: /intake
+        - name: subject
+          in: query
+          description: >
+            Filter by CloudEvents subject — the entity ID the event pertains
+            to. Because every domain uses the same subject for the same entity,
+            this returns a complete cross-domain timeline for that entity.
+          schema:
+            type: string
+            format: uuid
+        - name: traceid
+          in: query
+          description: >
+            Filter by W3C Trace Context trace ID extracted from the
+            `traceparent` attribute. All events sharing a trace ID were
+            causally triggered by the same root action.
+          schema:
+            type: string
+        - name: causationid
+          in: query
+          description: >
+            Filter by the `causationid` extension — the ID of the event that
+            directly caused this one. Use it to find the response event(s)
+            produced by a specific trigger (e.g., the `call.completed` fired
+            for one `service_call.created` when several were emitted for the
+            same subject).
+          schema:
+            type: string
+            format: uuid
+        - name: start
+          in: query
+          description: Return only events at or after this timestamp (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          description: Return only events before or at this timestamp (ISO 8601).
+          schema:
+            type: string
+            format: date-time
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+      responses:
+        "200":
+          description: Paginated list of CloudEvents envelopes, ordered by time ascending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+
+    post:
+      summary: Publish an event
+      description: |
+        Publish a CloudEvents 1.0 envelope to the event log. Used by domain
+        producers to record state transitions and significant data mutations.
+      operationId: publishEvent
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "201":
+          description: Event published successfully.
+          headers:
+            Location:
+              description: URL of the published event.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+
+  /events/stream:
+    get:
+      summary: Stream domain events (SSE)
+      description: |
+        Real-time stream of domain events delivered as Server-Sent Events (SSE).
+
+        Connect with `Accept: text/event-stream`. Each event is delivered as a
+        `data:` line containing a JSON-encoded `Event` object.
+
+        The stream stays open until the client disconnects. A `: heartbeat` comment
+        is sent every 30 seconds to prevent proxy timeouts.
+      operationId: streamEvents
+      tags:
+        - Events
+      responses:
+        "200":
+          description: SSE stream of domain events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Newline-delimited SSE frames, each containing a JSON Event.
+
+  /events/{eventId}:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        description: Unique identifier of the domain event.
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get a domain event
+      description: Retrieve a single domain event by its identifier.
+      operationId: getEvent
+      tags:
+        - Events
+      responses:
+        "200":
+          description: Domain event retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    Event:
+      $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event"
+
+    EventList:
+      description: Paginated list of domain events.
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/pagination.yaml#/Pagination"
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/Event"

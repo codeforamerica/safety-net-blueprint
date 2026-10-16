@@ -133,14 +133,14 @@ The document management domain emits events across four categories: document and
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `document_management.document.created` | Notifies that a document record is established with its first version; allows consumers to correlate the new document ID with their own context | Document created via `POST /documents` | Case management, intake |
-| `document_management.document_version.uploaded` | Notifies that a file is available; carries correlation metadata back to the submitting caller so consumers can update obligation status or route review work | First version via `POST /documents`; subsequent versions via `POST /documents/{documentId}/document-versions` | Intake (rules engine updates matching Verification record), workflow (triggers caseworker review task) |
-| `document_management.document_version.accessed` | Required by HIPAA (45 CFR § 164.312) for access audit; records who accessed which version and when regardless of delivery mode | Content endpoint called via `GET /document-versions/{documentVersionId}/content` | Compliance reporting, audit |
-| `document_management.document.retained` | Notifies that a document has entered the retention period; allows consumers to update case or application records to reflect the document is no longer in active use | Retention trigger fires; `active → retained` transition | Case management, reporting |
-| `document_management.document.pending_disposition` | Notifies that the retention deadline has elapsed and the document is awaiting disposition review; drives records manager notification and review queue | Timer transition fires at `retentionDeadline` | Records management UI, reporting |
-| `document_management.document.destroyed` | Required for DoD 5015.2 destruction certificate and compliance reporting; allows consumers to clean up any references to the destroyed document | `POST /documents/{documentId}/approve-disposition` | Compliance reporting, case management |
-| `document_management.document.legal_hold_placed` | Notifies that a document has been placed under legal hold and will not advance through the retention lifecycle; standard in all DoD 5015.2 compliant platforms | `legalHold` set to `true` | Legal, compliance, case management |
-| `document_management.document.legal_hold_released` | Notifies that the legal hold has been lifted; document may now resume normal retention lifecycle | `legalHold` set to `false` | Legal, compliance, case management |
+| `document-management.document.created` | Notifies that a document record is established with its first version; allows consumers to correlate the new document ID with their own context | Document created via `POST /documents` | Case management, intake |
+| `document-management.document_version.created` | Notifies that a file is available; carries correlation metadata back to the submitting caller so consumers can update obligation status or route review work | First version via `POST /documents`; subsequent versions via `POST /documents/{documentId}/document-versions` | Intake (rules engine updates matching Verification record), workflow (triggers caseworker review task) |
+| `document-management.document_version.accessed` | Required by HIPAA (45 CFR § 164.312) for access audit; records who accessed which version and when regardless of delivery mode | Content endpoint called via `GET /document-versions/{documentVersionId}/content` | Compliance reporting, audit |
+| `document-management.document.retained` | Notifies that a document has entered the retention period; allows consumers to update case or application records to reflect the document is no longer in active use | Retention trigger fires; `active → retained` transition | Case management, reporting |
+| `document-management.document.pending_disposition` | Notifies that the retention deadline has elapsed and the document is awaiting disposition review; drives records manager notification and review queue | Timer transition fires at `retentionDeadline` | Records management UI, reporting |
+| `document-management.document.destroyed` | Required for DoD 5015.2 destruction certificate and compliance reporting; allows consumers to clean up any references to the destroyed document | `POST /documents/{documentId}/approve-disposition` | Compliance reporting, case management |
+| `document-management.document.legal_hold_placed` | Notifies that a document has been placed under legal hold and will not advance through the retention lifecycle; standard in all DoD 5015.2 compliant platforms | `legalHold` set to `true` | Legal, compliance, case management |
+| `document-management.document.legal_hold_released` | Notifies that the legal hold has been lifted; document may now resume normal retention lifecycle | `legalHold` set to `false` | Legal, compliance, case management |
 
 ## Contract artifacts
 
@@ -194,7 +194,7 @@ The document management domain emits events across four categories: document and
 **What's being decided:** How to pass "this document is for application X" along to the systems that need to act on it, without the document store needing to know what applications, cases, or other program records are.
 
 **Considerations:**
-- When a document is uploaded, downstream systems need to know what it is for. Intake must identify which verification obligation the upload satisfies; workflow must know which case or application to route a review task against; HIPAA access audit events (45 CFR § 164.312) must record business context alongside the access. Without correlation data on the document, the `document_version.uploaded` event is context-free — consumers have no way to act on it without a separate lookup that requires them to understand document management internals.
+- When a document is uploaded, downstream systems need to know what it is for. Intake must identify which verification obligation the upload satisfies; workflow must know which case or application to route a review task against; HIPAA access audit events (45 CFR § 164.312) must record business context alongside the access. Without correlation data on the document, the `document-management.document_version.created` event is context-free — consumers have no way to act on it without a separate lookup that requires them to understand document management internals.
 - Documents are submitted in the context of a verification obligation, a case task, or a direct caseworker upload. Document management should not need to know the business meaning of each context — typed FK fields for `verificationId`, `taskId`, etc. would create tight coupling to other domains and break when new contexts are added.
 - Box, Dropbox, and SharePoint all support opaque metadata bags on file objects; Documentum uses aspect metadata. None require the document management service itself to understand the business context of what is stored.
 - The correlation pass-through pattern is established in event-driven architectures: a service stores the context it was given and echoes it in events, allowing the originating domain to correlate without imposing semantic requirements on the storage layer.
@@ -537,8 +537,8 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Event emission on upload | Box, SharePoint/Graph, modern ECM | **Planned** — document_version.uploaded event |
-| Event emission on document creation | Modern ECM | **Planned** — document.created event |
+| Event emission on upload | Box, SharePoint/Graph, modern ECM | **Planned** — `document-management.document_version.created` event |
+| Event emission on document creation | Modern ECM | **Planned** — `document-management.document.created` event |
 | OCR / content extraction | OpenText, FileNet, OnBase | **Adapter layer** — text extraction on upload is a storage adapter concern; extracted content feeds the search domain |
 | Full-text search | OpenText, FileNet, OnBase | **Not in scope** — search domain |
 

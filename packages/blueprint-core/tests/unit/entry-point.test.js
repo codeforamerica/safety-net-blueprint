@@ -51,15 +51,16 @@ describe('discover', () => {
     }
   });
 
-  test('takes domain from a path segment when the document does not state one', () => {
-    // The last fallback needs the Domain enum, which only the whole set has.
+  test('reports no domain for a document that states none, wherever it sits', () => {
+    // The folder and the Domain enum were once consulted for a document that
+    // named no domain. Now only what it declares counts.
     const dir = contractsIn({
       'schemas/domain.yaml': { $schema: 'https://json-schema.org/draft/2020-12/schema', $defs: { Domain: { enum: ['intake'] } } },
-      'intake/notes.yaml': { anything: true },
+      'domains/intake/intake-notes.yaml': { anything: true },
     });
     try {
-      const found = discover(dir).find((f) => f.relativePath === 'intake/notes.yaml');
-      assert.equal(found.domain, 'intake');
+      const found = discover(dir).find((f) => f.relativePath === 'domains/intake/intake-notes.yaml');
+      assert.equal(found.domain, null);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -93,7 +93,7 @@ const SIMPLE_COMPOSITION = {
       verifications: {
         resource: 'verifications',
         bind: 'applicationId',
-        filter: "category == $section.name",
+        filter: "category == section.name",
       },
     },
   },
@@ -198,7 +198,7 @@ const INDEX_VIEW_COMPOSITION = {
       resource: 'application-members',
       bind: 'applicationId',
       index: {
-        filter: "roles.contains('primary_applicant')",
+        filter: "'primary_applicant' in roles",
         fields: ['id', 'firstName', 'lastName'],
       },
     },
@@ -386,7 +386,7 @@ describe('assembleSectionPanel — filter evaluation', () => {
     assert.strictEqual(result.include.verifications[0].category, 'identity');
   });
 
-  test('panel verifications filter uses $section.name substitution', () => {
+  test('panel verifications filter uses section.name', () => {
     // demographics section: panel.include.verifications filters category == 'demographics'
     // No verifications with that category exist → empty array
     const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });

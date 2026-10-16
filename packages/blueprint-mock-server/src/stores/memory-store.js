@@ -192,6 +192,10 @@ export function createMemoryStore() {
       getCollection(collection).set(resource.id, clone(resource));
     },
 
+    append(collection, record) {
+      getCollection(collection).set(record.id, clone(record));
+    },
+
     count(collection) {
       return getCollection(collection).size;
     },
@@ -207,7 +211,7 @@ export function createMemoryStore() {
     restore(snapshot) {
       for (const [collection, records] of Object.entries(snapshot)) {
         store.clearAll(collection);
-        for (const record of records) store.insertResource(collection, { ...record });
+        for (const record of records) getCollection(collection).set(record.id, clone(record));
       }
     },
 

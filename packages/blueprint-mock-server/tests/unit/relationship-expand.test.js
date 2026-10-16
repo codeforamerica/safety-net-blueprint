@@ -93,10 +93,10 @@ test('extractExpandFields — returns empty array when schema has no x-relations
   assert.equal(fields.length, 0);
 });
 
-test('applyExpand — adds expanded object alongside FK field (both coexist)', () => {
+test('applyExpand — keeps the FK beside the expanded object when the schema declares both', () => {
   const record = { id: 'inc-1', memberId: 'mem-1', type: 'employed', amount: 3000 };
   const expandFields = [
-    { fieldName: 'member', fkField: 'memberId', collection: 'application-members' }
+    { fieldName: 'member', fkField: 'memberId', collection: 'application-members', keepFk: true }
   ];
   const lookup = (collection, id) => {
     if (collection === 'application-members' && id === 'mem-1') {
@@ -107,7 +107,7 @@ test('applyExpand — adds expanded object alongside FK field (both coexist)', (
 
   const result = applyExpand(record, expandFields, lookup);
 
-  assert.equal(result.memberId, 'mem-1', 'FK field must be retained alongside the expanded object');
+  assert.equal(result.memberId, 'mem-1', 'the schema declares memberId too, so it stays');
   assert.deepEqual(result.member, { id: 'mem-1', applicationId: 'app-1', roles: ['primary_applicant'] });
 });
 
@@ -140,8 +140,8 @@ test('applyExpand — handles multiple expand fields on the same record', () => 
 
   const result = applyExpand(record, expandFields, lookup);
 
-  assert.equal(result.memberId, 'mem-1', 'FK field must be retained alongside the expanded object');
-  assert.equal(result.applicationId, 'app-1', 'FK field must be retained alongside the expanded object');
+  assert.equal(result.memberId, undefined, 'replaced by member');
+  assert.equal(result.applicationId, undefined, 'replaced by application');
   assert.deepEqual(result.member, { id: 'mem-1', roles: ['primary_applicant'] });
   assert.deepEqual(result.application, { id: 'app-1', status: 'draft' });
 });
@@ -157,4 +157,11 @@ test('applyExpand — does not mutate the original record', () => {
 
   assert.equal(record.memberId, 'mem-1', 'original record should not be mutated');
   assert.equal(record.member, undefined, 'original record should not be mutated');
+});
+
+test('applyExpand — replaces the FK with the expanded object when the schema does not declare the key', () => {
+  const record = { id: 't-1', profileId: 'p-1' };
+  const result = applyExpand(record, [{ fieldName: 'profile', fkField: 'profileId', collection: 'profiles', keepFk: false }],
+    (collection, id) => (collection === 'profiles' && id === 'p-1' ? { id: 'p-1' } : null));
+  assert.deepEqual(result, { id: 't-1', profile: { id: 'p-1' } });
 });

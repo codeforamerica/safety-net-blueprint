@@ -45,6 +45,7 @@ function errorPaths(errors) {
 // ---------------------------------------------------------------------------
 
 const minimalRuleset = {
+  endpoint: { path: '/assess' },
   inputs: {
     person: {
       type: 'object',
@@ -201,6 +202,7 @@ test('rules-schema facts', async (t) => {
   await t.test('accepts multiple facts', () => {
     const { valid, errors } = validate(doc({
       test: {
+        endpoint: { path: '/test' },
         inputs: {
           person: {
             type: 'object',
@@ -239,6 +241,7 @@ test('rules-schema inputs', async (t) => {
   await t.test('accepts $ref inputs', () => {
     const { valid, errors } = validate(doc({
       test: {
+        endpoint: { path: '/test' },
         inputs: { person: { $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml' } },
         outputs: { eligible: { type: 'boolean' } },
         facts: [{ path: 'eligible', expression: 'person.age >= 18' }],
@@ -250,6 +253,7 @@ test('rules-schema inputs', async (t) => {
   await t.test('accepts inline object schema inputs', () => {
     const { valid, errors } = validate(doc({
       test: {
+        endpoint: { path: '/test' },
         inputs: {
           policy: {
             type: 'object',
@@ -293,9 +297,29 @@ test('rules-schema endpoint block', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('endpoint requires path', () => {
-    const { valid } = validate(doc({ test: { ...minimalRuleset, endpoint: {} } }));
+  await t.test('every ruleset declares an endpoint', () => {
+    const { endpoint, ...withoutEndpoint } = minimalRuleset;
+    assert.ok(!validate(doc({ test: withoutEndpoint })).valid);
+  });
+
+  await t.test('an endpoint declares its path — there is no default', () => {
+    assert.ok(!validate(doc({ test: { ...minimalRuleset, endpoint: {} } })).valid);
+  });
+
+  await t.test('endpoint: false is refused — every ruleset is reachable', () => {
+    assert.ok(!validate(doc({ test: { ...minimalRuleset, endpoint: false } })).valid);
+  });
+
+  await t.test('endpoint: true means nothing and is refused', () => {
+    const { valid } = validate(doc({ test: { ...minimalRuleset, endpoint: true } }));
     assert.ok(!valid);
+  });
+
+  await t.test('a path is one or more segments, with no trailing slash', () => {
+    for (const path of ['/', '/assess/', '//assess']) {
+      assert.ok(!validate(doc({ test: { ...minimalRuleset, endpoint: { path } } })).valid, path);
+    }
+    assert.ok(validate(doc({ test: { ...minimalRuleset, endpoint: { path: '/applications/evaluate' } } })).valid);
   });
 
   await t.test('endpoint rejects unknown properties', () => {
@@ -315,11 +339,13 @@ test('rules-schema multiple rulesets', async (t) => {
   await t.test('accepts multiple rulesets in one file', () => {
     const { valid, errors } = validate(doc({
       ageCheck: {
+        endpoint: { path: '/ageCheck' },
         inputs: { person: { type: 'object', properties: { age: { type: 'integer' } } } },
         outputs: { ageVerified: { type: 'boolean' } },
         facts: [{ path: 'ageVerified', expression: 'person.age >= 18' }],
       },
       incomeCheck: {
+        endpoint: { path: '/incomeCheck' },
         inputs: { person: { type: 'object', properties: { income: { type: 'number' } } } },
         outputs: { incomeVerified: { type: 'boolean' } },
         facts: [{ path: 'incomeVerified', expression: 'person.income < 150' }],

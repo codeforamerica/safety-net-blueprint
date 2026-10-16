@@ -12,5 +12,5 @@ document.lifecycleState: { type: enum, values: [active, retained, pending_dispos
 document.legalHold: { type: boolean }
 document.retentionDeadline: { type: date }
 document.metadata: { type: object }
-document.dispositionApprovedBy: { type: string }
+document.dispositionApprovedBy: { type: [string, 'null'] }
 document.dispositionApprovedAt: { type: datetime }

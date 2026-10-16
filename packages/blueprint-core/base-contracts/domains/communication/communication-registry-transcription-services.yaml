@@ -1,0 +1,15 @@
+# The transcription services a transcript may name in its `provider`. A
+# contract set using another adds its own `transcription-services` registry
+# file; the entries combine, and the Transcript accepts every one.
+$schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
+version: "1.0.0"
+domain: communication
+type: transcription-services
+
+entries:
+  aws-transcribe:
+    description: Amazon Transcribe streaming.
+  elevenlabs-scribe:
+    description: ElevenLabs Scribe realtime.
+  none:
+    description: No transcription service — a chat, or lines a person typed. A transcript naming it has no model.

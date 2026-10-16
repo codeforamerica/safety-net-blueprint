@@ -21,6 +21,7 @@ A mock API server that reads resolved OpenAPI specs and state machine definition
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
 - **Seeding** — populates databases from example files; generates faker-based seed data when none exists
 - **State machine enforcement** — validates RPC transitions against guard conditions, actor restrictions, and current state
+- **Rules and compositions** — serves every ruleset's and composition's endpoint, at the path it declares
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
 - **Event streaming** — SSE endpoints emit domain events on state transitions
 - **Event and HTTP stubbing** — simulate downstream responses for testing event-driven flows
@@ -226,7 +227,7 @@ The mock server supports event stubs for testing event-driven behavior without a
 
 ```
 POST /mock/stubs/events
-{ "on": "data_exchange.service_call.created", "response": { "type": "data_exchange.call.completed", "data": { "result": "conclusive" } } }
+{ "on": "data-exchange.external_service_call.created", "response": { "type": "data-exchange.call.completed", "data": { "result": "conclusive" } } }
 ```
 
 Stubs are checked against [`schemas/stubs-schema.json`](schemas/stubs-schema.json). See the [mock server guide](../../docs/guides/mock-server.md#event-stubs) for both kinds of stub.

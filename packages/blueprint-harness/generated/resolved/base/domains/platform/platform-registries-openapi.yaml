@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: Registries
+  version: 1.0.0
+  x-domain: platform
+  x-status: beta
+  x-visibility: internal
+  description: |
+    Named, citable entries the contracts declare in registry files — regulatory
+    policies, sources, design patterns — readable by type. Entries carry a
+    description and whatever fields their type defines.
+servers:
+  - url: https://api.example.com/platform
+    description: Production server
+  - url: http://localhost:1080/platform
+    description: Local development server
+tags:
+  - name: Registries
+    description: Entries the contracts declare in registry files, by type.
+paths:
+  /registry:
+    get:
+      summary: List registry types
+      description: |
+        Every registry type the contracts declare, with how many entries each
+        has, in name order. `q` matches a type's name.
+      operationId: listRegistryTypes
+      tags:
+        - Registries
+      x-sortable:
+        fields:
+          - type
+        default: type
+        tieBreaker: type
+      parameters:
+        - $ref: ../../components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../components/parameters.yaml#/LimitParam
+        - $ref: ../../components/parameters.yaml#/OffsetParam
+        - $ref: ../../components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: The registry types, in name order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistryTypeList"
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /registry/{type}:
+    parameters:
+      - $ref: "#/components/parameters/RegistryTypeParam"
+    get:
+      summary: List a registry's entries
+      description: |
+        Every entry of one registry type, from every file of that type, in id
+        order. `q` matches an entry's id or description.
+      operationId: listRegistryEntries
+      tags:
+        - Registries
+      x-sortable:
+        fields:
+          - id
+        default: id
+        tieBreaker: id
+      parameters:
+        - $ref: ../../components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../components/parameters.yaml#/LimitParam
+        - $ref: ../../components/parameters.yaml#/OffsetParam
+        - $ref: ../../components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: Paginated list of entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistryEntryList"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /registry/{type}/{entryId}:
+    parameters:
+      - $ref: "#/components/parameters/RegistryTypeParam"
+      - name: entryId
+        in: path
+        required: true
+        description: The entry's stable id, e.g. `snap-processing-clock`.
+        schema:
+          type: string
+    get:
+      summary: Get a registry entry
+      description: One entry of a registry type, by its id.
+      operationId: getRegistryEntry
+      tags:
+        - Registries
+      responses:
+        "200":
+          description: The entry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistryEntry"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+components:
+  parameters:
+    RegistryTypeParam:
+      name: type
+      in: path
+      required: true
+      description: A registry type the contracts declare, e.g. `policies`.
+      schema:
+        type: string
+  schemas:
+    RegistryType:
+      type: object
+      required:
+        - type
+        - total
+      properties:
+        type:
+          type: string
+          description: The registry type, as its files declare it.
+        total:
+          type: integer
+          description: How many entries it has, across every file of the type.
+    RegistryTypeList:
+      description: Paginated list of registry types.
+      allOf:
+        - $ref: ../../components/pagination.yaml#/Pagination
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/RegistryType"
+    RegistryEntry:
+      type: object
+      required:
+        - id
+        - description
+      additionalProperties: true
+      description: An entry, with its id and the fields its type defines.
+      properties:
+        id:
+          type: string
+          description: The entry's stable id.
+        description:
+          type: string
+          description: Human-readable text for the entry.
+        deprecated:
+          type: boolean
+          description: When true, the entry should not be newly referenced.
+    RegistryEntryList:
+      description: Paginated list of registry entries.
+      allOf:
+        - $ref: ../../components/pagination.yaml#/Pagination
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/RegistryEntry"

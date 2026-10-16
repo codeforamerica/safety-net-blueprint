@@ -32,6 +32,8 @@ npm run api:new -- --name "households" --domain "intake" --resource "Household"
 
 This generates `{name}-openapi.yaml` with full CRUD paths, schemas, an inline example, and all required `info` fields (`x-domain`, `x-status`, `x-visibility`).
 
+A new domain doesn't need an event log or registry endpoints of its own: the [platform domain](../architecture/cross-cutting/platform.md) comes with the framework, and every contract set gets it. Its events are documented for it — resolve generates an events AsyncAPI document beside each API — and the [contract files conventions](../conventions/contract-files.yaml) cover how its files sit beside the framework's.
+
 ---
 
 ## Manual Creation Guide
@@ -56,7 +58,7 @@ Specs can live anywhere — the tooling takes a `--spec` argument pointing to an
 
 Create `{domain}-openapi.yaml` in your spec directory. Use the output of `api:new` as your starting point, then customize the schemas.
 
-> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. Top-level `x-events` declares domain events. `x-relationship` annotates FK fields. See the [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
+> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. `x-relationship` annotates FK fields. See the [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
 
 ### Step 3: Validate
 
@@ -234,7 +236,7 @@ Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readO
 - Must return 201 Created
 - Should have Location header
 - Must have request body
-- For sub-resource POSTs (`/resources/{id}/sub-resources`), the request schema **must** use `additionalProperties: true` (or omit the constraint entirely). The mock-server spreads URL path params into the body so denormalized parent FKs persist on the child record; a schema with `additionalProperties: false` would reject the auto-injected params. See `conventions/resources.yaml` → `sub_resource_paths` → `collection.collection_path.methods.POST` for the full rationale.
+- For sub-resource POSTs (`/resources/{id}/sub-resources`), the request schema describes only what the client sends. The parent ids come from the path and are added to the stored record after the body is validated, so the schema may be closed and need not declare them. See `conventions/resources.yaml` → `sub_resource_paths` → `collection.collection_path.methods.POST`.
 
 ### Required for PATCH Endpoints
 - Must return 200 OK

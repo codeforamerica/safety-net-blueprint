@@ -8,34 +8,6 @@ info:
 servers:
   - url: http://localhost:1080/intake
     description: Local development server
-x-events:
-  application.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.created
-    summary: Emitted when an application is created.
-  application.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
-    summary: Emitted when an application is updated via PATCH.
-  application.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
-    summary: Emitted when an application is deleted.
-  applicationMember.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
-    summary: Emitted when a household member is added to an application.
-  applicationMember.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
-    summary: Emitted when a household member is updated via PATCH.
-  applicationMember.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
-    summary: Emitted when a household member is removed from an application.
-  intake.application.submitted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
-  intake.application.withdrawn:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-    summary: Emitted when a household withdraws their application.
-  intake.application.closed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
-    summary: Emitted when intake is complete and the application is closed.
 paths:
   /applications:
     get:
@@ -364,7 +336,7 @@ paths:
                             programCount:
                               type: integer
                               readOnly: true
-                              x-derived: $this.programsAppliedFor.size()
+                              x-derived: this.programsAppliedFor.size()
                               description: How many programs this application covers, from programsAppliedFor.
                             confirmationNumber:
                               type: string
@@ -383,15 +355,17 @@ paths:
                                 - withdrawn
                                 - closed
                             submittedAt:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date-time
-                              nullable: true
                               readOnly: true
                               description: Timestamp when the application was formally submitted. Null until submitted.
                             openedAt:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date-time
-                              nullable: true
                               readOnly: true
                               description: Timestamp when a caseworker began active review. Null until the application is opened.
                             slaTypeCode:
@@ -687,7 +661,7 @@ paths:
                                           programCount:
                                             type: integer
                                             readOnly: true
-                                            x-derived: $this.programsAppliedFor.size()
+                                            x-derived: this.programsAppliedFor.size()
                                             description: How many programs this application covers, from programsAppliedFor.
                                         x-relationship:
                                           type: fk
@@ -728,9 +702,10 @@ paths:
                                       type: string
                                       description: A human-readable name for the document.
                                     documentDate:
-                                      type: string
+                                      type:
+                                        - string
+                                        - "null"
                                       format: date
-                                      nullable: true
                                       description: The date the document itself bears, which is not the date it arrived.
                                 - type: object
                                   required:
@@ -767,9 +742,10 @@ paths:
                                         resource: DocumentVersion
                                         style: links-only
                                     retentionDeadline:
-                                      type: string
+                                      type:
+                                        - string
+                                        - "null"
                                       format: date-time
-                                      nullable: true
                                       readOnly: true
                                       description: When this document becomes eligible for disposition.
                                     metadata:
@@ -1084,7 +1060,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -1103,15 +1079,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -1407,7 +1385,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -1448,9 +1426,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -1487,9 +1466,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -1701,7 +1681,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -1720,15 +1700,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -2024,7 +2006,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -2065,9 +2047,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -2104,9 +2087,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -2397,7 +2381,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -2416,15 +2400,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -2720,7 +2706,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -2761,9 +2747,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -2800,9 +2787,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -3370,7 +3358,7 @@ paths:
                                 programCount:
                                   type: integer
                                   readOnly: true
-                                  x-derived: $this.programsAppliedFor.size()
+                                  x-derived: this.programsAppliedFor.size()
                                   description: How many programs this application covers, from programsAppliedFor.
                               x-relationship:
                                 type: fk
@@ -3861,7 +3849,7 @@ paths:
                           programCount:
                             type: integer
                             readOnly: true
-                            x-derived: $this.programsAppliedFor.size()
+                            x-derived: this.programsAppliedFor.size()
                             description: How many programs this application covers, from programsAppliedFor.
                         x-relationship:
                           type: fk
@@ -4175,7 +4163,7 @@ paths:
                           programCount:
                             type: integer
                             readOnly: true
-                            x-derived: $this.programsAppliedFor.size()
+                            x-derived: this.programsAppliedFor.size()
                             description: How many programs this application covers, from programsAppliedFor.
                         x-relationship:
                           type: fk
@@ -4647,7 +4635,7 @@ paths:
                           programCount:
                             type: integer
                             readOnly: true
-                            x-derived: $this.programsAppliedFor.size()
+                            x-derived: this.programsAppliedFor.size()
                             description: How many programs this application covers, from programsAppliedFor.
                         x-relationship:
                           type: fk
@@ -4725,8 +4713,11 @@ paths:
       - name: applicationId
         in: path
         required: true
+        description: Unique identifier of the application.
         schema:
           type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
     post:
       summary: Submit application
       description: Formally submits a draft application, starting the regulatory processing clock.
@@ -4847,7 +4838,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -4866,15 +4857,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -5170,7 +5163,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -5211,9 +5204,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -5250,9 +5244,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -5409,8 +5404,11 @@ paths:
       - name: applicationId
         in: path
         required: true
+        description: Unique identifier of the application.
         schema:
           type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
     post:
       summary: Open application
       description: Moves a submitted application into active caseworker review.
@@ -5531,7 +5529,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -5550,15 +5548,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -5854,7 +5854,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -5895,9 +5895,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -5934,9 +5935,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -6093,8 +6095,11 @@ paths:
       - name: applicationId
         in: path
         required: true
+        description: Unique identifier of the application.
         schema:
           type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
     post:
       summary: Close application
       description: Closes the application once intake processing is complete.
@@ -6233,7 +6238,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -6252,15 +6257,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -6556,7 +6563,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -6597,9 +6604,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -6636,9 +6644,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -6795,8 +6804,11 @@ paths:
       - name: applicationId
         in: path
         required: true
+        description: Unique identifier of the application.
         schema:
           type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
     post:
       summary: Withdraw application
       description: Withdraws the application at the household's request.
@@ -6917,7 +6929,7 @@ paths:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                       confirmationNumber:
                         type: string
@@ -6936,15 +6948,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -7240,7 +7254,7 @@ paths:
                                     programCount:
                                       type: integer
                                       readOnly: true
-                                      x-derived: $this.programsAppliedFor.size()
+                                      x-derived: this.programsAppliedFor.size()
                                       description: How many programs this application covers, from programsAppliedFor.
                                   x-relationship:
                                     type: fk
@@ -7281,9 +7295,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -7320,9 +7335,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -7545,7 +7561,7 @@ paths:
         - Applications
       x-relationship:
         type: composition
-        domain: domains/intake/intake
+        domain: intake
         id: applicationSummary
   /applications/{applicationId}/review:
     parameters:
@@ -7618,7 +7634,7 @@ paths:
         - Applications
       x-relationship:
         type: composition
-        domain: domains/intake/intake
+        domain: intake
         id: applicationReview
   /applications/{applicationId}/review/demographics:
     parameters:
@@ -8334,9 +8350,10 @@ paths:
                               type: string
                               readOnly: true
                             itemId:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: uuid
-                              nullable: true
                               readOnly: true
                               x-relationship:
                                 resource: Polymorphic
@@ -8463,9 +8480,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8624,9 +8642,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8791,9 +8810,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8906,9 +8926,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -9067,9 +9088,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -9178,186 +9200,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-  /applications/evaluate-interview-prompts:
-    post:
-      summary: Evaluate interviewPrompts
-      operationId: evaluateInterviewPrompts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-              properties:
-                household:
-                  type: object
-                  description: Household composition and financial circumstances.
-                  properties:
-                    monthlyIncome:
-                      type: number
-                      description: Total monthly gross income reported by the household.
-                    monthlyExpenses:
-                      type: number
-                      description: Total monthly expenses reported by the household.
-                    members:
-                      type: array
-                      description: All individuals in the household.
-                      items:
-                        type: object
-                        description: |
-                          A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
-                        properties:
-                          age:
-                            type: integer
-                            description: Member's age in years.
-                          isEmployed:
-                            type: boolean
-                            description: Whether the member is currently employed.
-                          isStudent:
-                            type: boolean
-                            description: Whether the member is enrolled at least half-time in higher education.
-                          isNonCitizen:
-                            type: boolean
-                            description: Whether the member is a non-citizen subject to immigration screening.
-                application:
-                  type: object
-                  description: Application-level context relevant to the interview.
-                  properties:
-                    hasChangedCircumstances:
-                      type: boolean
-                      description: Whether the household reported changes since the application was submitted.
-      responses:
-        "200":
-          description: interviewPrompts evaluation result.
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: array
-                    description: |
-                      Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-                    items:
-                      oneOf:
-                        - type: object
-                          required:
-                            - fact
-                            - state
-                            - value
-                          properties:
-                            fact:
-                              type: string
-                              description: The fact name.
-                            state:
-                              type: string
-                              enum:
-                                - complete
-                            value:
-                              description: The computed value.
-                        - type: object
-                          required:
-                            - fact
-                            - state
-                            - value
-                          properties:
-                            fact:
-                              type: string
-                              description: The fact name.
-                            state:
-                              type: string
-                              enum:
-                                - placeholder
-                            value:
-                              description: The computed value, derived using one or more schema defaults.
-                        - type: object
-                          required:
-                            - fact
-                            - state
-                            - missing
-                          properties:
-                            fact:
-                              type: string
-                              description: The fact name.
-                            state:
-                              type: string
-                              enum:
-                                - missing
-                            missing:
-                              type: array
-                              description: Input paths required to resolve this fact.
-                              items:
-                                type: string
-                        - type: object
-                          required:
-                            - fact
-                            - state
-                            - message
-                          properties:
-                            fact:
-                              type: string
-                              description: The fact name.
-                            state:
-                              type: string
-                              enum:
-                                - error
-                            message:
-                              type: string
-                              description: The reason evaluation failed.
-                      discriminator:
-                        propertyName: state
-                description: Evaluation result for interviewPrompts.
-        "400":
-          description: The request is malformed or contains invalid parameters.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                    description: Machine-readable error code.
-                  message:
-                    type: string
-                    description: Human-readable error description.
-                  details:
-                    type: array
-                    description: Additional error details.
-                    items:
-                      type: object
-                      additionalProperties: true
-        "500":
-          description: An unexpected error occurred on the server.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                    description: Machine-readable error code.
-                  message:
-                    type: string
-                    description: Human-readable error description.
-                  details:
-                    type: array
-                    description: Additional error details.
-                    items:
-                      type: object
-                      additionalProperties: true
-      tags:
-        - Applications
-      x-relationship:
-        type: ruleset
-        domain: intake
-        id: interviewPrompts
 components:
   parameters:
     ApplicationIdParam:
@@ -9581,7 +9423,7 @@ components:
             programCount:
               type: integer
               readOnly: true
-              x-derived: $this.programsAppliedFor.size()
+              x-derived: this.programsAppliedFor.size()
               description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
@@ -9600,15 +9442,17 @@ components:
                 - withdrawn
                 - closed
             submittedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when the application was formally submitted. Null until submitted.
             openedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when a caseworker began active review. Null until the application is opened.
             slaTypeCode:
@@ -9904,7 +9748,7 @@ components:
                           programCount:
                             type: integer
                             readOnly: true
-                            x-derived: $this.programsAppliedFor.size()
+                            x-derived: this.programsAppliedFor.size()
                             description: How many programs this application covers, from programsAppliedFor.
                         x-relationship:
                           type: fk
@@ -9945,9 +9789,10 @@ components:
                       type: string
                       description: A human-readable name for the document.
                     documentDate:
-                      type: string
+                      type:
+                        - string
+                        - "null"
                       format: date
-                      nullable: true
                       description: The date the document itself bears, which is not the date it arrived.
                 - type: object
                   required:
@@ -9984,9 +9829,10 @@ components:
                         resource: DocumentVersion
                         style: links-only
                     retentionDeadline:
-                      type: string
+                      type:
+                        - string
+                        - "null"
                       format: date-time
-                      nullable: true
                       readOnly: true
                       description: When this document becomes eligible for disposition.
                     metadata:
@@ -10352,7 +10198,7 @@ components:
                   programCount:
                     type: integer
                     readOnly: true
-                    x-derived: $this.programsAppliedFor.size()
+                    x-derived: this.programsAppliedFor.size()
                     description: How many programs this application covers, from programsAppliedFor.
                   confirmationNumber:
                     type: string
@@ -10371,15 +10217,17 @@ components:
                       - withdrawn
                       - closed
                   submittedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the application was formally submitted. Null until submitted.
                   openedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when a caseworker began active review. Null until the application is opened.
                   slaTypeCode:
@@ -10675,7 +10523,7 @@ components:
                                 programCount:
                                   type: integer
                                   readOnly: true
-                                  x-derived: $this.programsAppliedFor.size()
+                                  x-derived: this.programsAppliedFor.size()
                                   description: How many programs this application covers, from programsAppliedFor.
                               x-relationship:
                                 type: fk
@@ -10716,9 +10564,10 @@ components:
                             type: string
                             description: A human-readable name for the document.
                           documentDate:
-                            type: string
+                            type:
+                              - string
+                              - "null"
                             format: date
-                            nullable: true
                             description: The date the document itself bears, which is not the date it arrived.
                       - type: object
                         required:
@@ -10755,9 +10604,10 @@ components:
                               resource: DocumentVersion
                               style: links-only
                           retentionDeadline:
-                            type: string
+                            type:
+                              - string
+                              - "null"
                             format: date-time
-                            nullable: true
                             readOnly: true
                             description: When this document becomes eligible for disposition.
                           metadata:
@@ -11253,7 +11103,7 @@ components:
                 programCount:
                   type: integer
                   readOnly: true
-                  x-derived: $this.programsAppliedFor.size()
+                  x-derived: this.programsAppliedFor.size()
                   description: How many programs this application covers, from programsAppliedFor.
               x-relationship:
                 type: fk
@@ -11897,7 +11747,7 @@ components:
                       programCount:
                         type: integer
                         readOnly: true
-                        x-derived: $this.programsAppliedFor.size()
+                        x-derived: this.programsAppliedFor.size()
                         description: How many programs this application covers, from programsAppliedFor.
                     x-relationship:
                       type: fk
@@ -12087,9 +11937,10 @@ components:
               type: string
               readOnly: true
             itemId:
-              type: string
+              type:
+                - string
+                - "null"
               format: uuid
-              nullable: true
               readOnly: true
               x-relationship:
                 resource: Polymorphic
@@ -12138,9 +11989,10 @@ components:
                     type: string
                     readOnly: true
                   itemId:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: uuid
-                    nullable: true
                     readOnly: true
                     x-relationship:
                       resource: Polymorphic
@@ -12171,121 +12023,6 @@ components:
         - limit
         - offset
         - hasNext
-    InterviewPromptsRequest:
-      type: object
-      description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-      properties:
-        household:
-          type: object
-          description: Household composition and financial circumstances.
-          properties:
-            monthlyIncome:
-              type: number
-              description: Total monthly gross income reported by the household.
-            monthlyExpenses:
-              type: number
-              description: Total monthly expenses reported by the household.
-            members:
-              type: array
-              description: All individuals in the household.
-              items:
-                type: object
-                description: |
-                  A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
-                properties:
-                  age:
-                    type: integer
-                    description: Member's age in years.
-                  isEmployed:
-                    type: boolean
-                    description: Whether the member is currently employed.
-                  isStudent:
-                    type: boolean
-                    description: Whether the member is enrolled at least half-time in higher education.
-                  isNonCitizen:
-                    type: boolean
-                    description: Whether the member is a non-citizen subject to immigration screening.
-        application:
-          type: object
-          description: Application-level context relevant to the interview.
-          properties:
-            hasChangedCircumstances:
-              type: boolean
-              description: Whether the household reported changes since the application was submitted.
-    InterviewPromptsResponse:
-      allOf:
-        - type: array
-          description: |
-            Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-          items:
-            oneOf:
-              - type: object
-                required:
-                  - fact
-                  - state
-                  - value
-                properties:
-                  fact:
-                    type: string
-                    description: The fact name.
-                  state:
-                    type: string
-                    enum:
-                      - complete
-                  value:
-                    description: The computed value.
-              - type: object
-                required:
-                  - fact
-                  - state
-                  - value
-                properties:
-                  fact:
-                    type: string
-                    description: The fact name.
-                  state:
-                    type: string
-                    enum:
-                      - placeholder
-                  value:
-                    description: The computed value, derived using one or more schema defaults.
-              - type: object
-                required:
-                  - fact
-                  - state
-                  - missing
-                properties:
-                  fact:
-                    type: string
-                    description: The fact name.
-                  state:
-                    type: string
-                    enum:
-                      - missing
-                  missing:
-                    type: array
-                    description: Input paths required to resolve this fact.
-                    items:
-                      type: string
-              - type: object
-                required:
-                  - fact
-                  - state
-                  - message
-                properties:
-                  fact:
-                    type: string
-                    description: The fact name.
-                  state:
-                    type: string
-                    enum:
-                      - error
-                  message:
-                    type: string
-                    description: The reason evaluation failed.
-            discriminator:
-              propertyName: state
-      description: Evaluation result for interviewPrompts.
     Document:
       allOf:
         - type: object
@@ -12300,9 +12037,10 @@ components:
               type: string
               description: A human-readable name for the document.
             documentDate:
-              type: string
+              type:
+                - string
+                - "null"
               format: date
-              nullable: true
               description: The date the document itself bears, which is not the date it arrived.
         - type: object
           required:
@@ -12339,9 +12077,10 @@ components:
                 resource: DocumentVersion
                 style: links-only
             retentionDeadline:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: When this document becomes eligible for disposition.
             metadata:
@@ -12378,7 +12117,8 @@ components:
           type: string
           description: A human-readable name for the document.
         documentDate:
-          type: string
+          type:
+            - string
+            - "null"
           format: date
-          nullable: true
           description: The date the document itself bears, which is not the date it arrived.

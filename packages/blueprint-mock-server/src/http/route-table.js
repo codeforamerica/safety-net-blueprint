@@ -66,6 +66,43 @@ export function addRoute(routes, method, expressPath, handler, meta = {}) {
 }
 
 /**
+ * The route table as one contract document registers into it.
+ *
+ * Each route records the document it came from, and a route another document
+ * already registered refuses to start the mock, naming both. Every route has
+ * one source — a state machine's transition is served from the state machine,
+ * not also from the operation resolve generated for it — so a route arriving
+ * twice from two documents is two contracts claiming one URL, and first-wins
+ * would silently serve one of them. The same document registering a route
+ * again stays a no-op.
+ *
+ * @param {Map<string, object>} routes
+ * @param {string} source - Names the document, for the error
+ * @returns {Map<string, object>} Accepted wherever the table is
+ */
+export function routesFrom(routes, source) {
+  return {
+    has(key) {
+      const existing = routes.get(key);
+      if (existing?.source && existing.source !== source) {
+        throw new Error(`${key} is declared by two contracts: ${existing.source} and ${source}. Each route has one source.`);
+      }
+      return routes.has(key);
+    },
+    set(key, entry) {
+      routes.set(key, { ...entry, source });
+      return this;
+    },
+    get: (key) => routes.get(key),
+    keys: () => routes.keys(),
+    values: () => routes.values(),
+    entries: () => routes.entries(),
+    get size() { return routes.size; },
+    [Symbol.iterator]: () => routes[Symbol.iterator](),
+  };
+}
+
+/**
  * Tag every route `register` adds.
  *
  * For a registration path with many `addRoute` calls and one thing in common —

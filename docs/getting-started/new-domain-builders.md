@@ -78,6 +78,8 @@ This generates `permits-openapi.yaml` with full CRUD paths and schema variants (
 
 The convention is to put all resources for a domain into a single spec file. You can split across multiple files if needed, as long as each spec declares its domain via `x-domain` in the `info` block.
 
+The `x-domain` you give it is what makes `permits` a domain; there is no separate list to add it to. Every other file for the domain — schemas, mock data, a state machine — declares the same name as a top-level `domain`, and validation reports one naming a domain no OpenAPI, AsyncAPI or rules document declares, which is what catches a misspelled one.
+
 ### 2. Define your schemas
 
 The scaffolded spec gives you the endpoint and schema structure, but not the domain fields — those are yours to define. Define domain entity schemas in JSON Schema for anything used by non-OpenAPI artifacts (state machines, annotations, compositions); OpenAPI specs can then reference those rather than redefine them. See [Creating APIs — Where to define the writable base](../guides/creating-apis.md#where-to-define-the-writable-base) for the recommended pattern.
@@ -120,7 +122,7 @@ See [Resource Composition](../architecture/cross-cutting/resource-composition.md
 
 Rules contracts define domain logic as dependency graphs of named facts — eligibility criteria, screening probes, work requirement checks, income calculations, or any logic where the answer to "what do we need to know next?" depends on what's already known. The evaluator runs against partial data and returns not just what it resolved, but the specific inputs still needed to resolve what it couldn't. This makes progressive intake forms, adaptive interviews, and real-time eligibility screening possible without writing custom logic in every adapter.
 
-Rules can be invoked three ways: as an `evaluate:` step in a state machine action, as a generated standalone POST endpoint, or directly in the browser via `blueprint-rules-engine` — all returning the same evaluation contract. One ruleset, every context.
+Rules can be invoked three ways: as an `evaluate:` step in a state machine action, as a standalone POST endpoint every ruleset gets under its domain, or directly in the browser via `blueprint-rules-engine` — all returning the same evaluation contract. One ruleset, every context.
 
 Test a ruleset from the command line without starting the mock server:
 

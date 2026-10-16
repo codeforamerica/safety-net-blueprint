@@ -242,7 +242,7 @@ describe('generate(docs, \'artifact\', { domains })', () => {
         schemas: { Application: { type: 'object', properties: { fee: { $ref: '../../common/schemas/shared.yaml#/$defs/Money' } } } },
       },
     },
-    'domains/intake/intake-mock-data.yaml': { ApplicationExample1: { value: { fee: { cents: 1 } } } },
+    'domains/intake/intake-mock-data.yaml': { domain: 'intake', ApplicationExample1: { value: { fee: { cents: 1 } } } },
     'domains/billing/billing-openapi.yaml': {
       openapi: '3.1.0',
       info: { title: 'Billing', version: '1.0.0', 'x-domain': 'billing' },

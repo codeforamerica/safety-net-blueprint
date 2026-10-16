@@ -1,0 +1,10 @@
+overlay: '1.0.0'
+info:
+  title: Harness configuration
+  version: 1.0.0
+
+# The capabilities the framework provides that the harness includes, so its
+# tests and the standalone page exercise them.
+config:
+  x-capabilities:
+    - communication

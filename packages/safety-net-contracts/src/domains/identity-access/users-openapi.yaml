@@ -313,7 +313,7 @@ components:
               type: string
               format: uuid
               readOnly: true
-              x-derived: "$this.id"
+              x-derived: "this.id"
               description: |
                 Alias for id, used in JWT claims context (BackendAuthContext.userId).
                 Same value as id.

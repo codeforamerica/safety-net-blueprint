@@ -1,0 +1,424 @@
+arazzo: 1.0.1
+info:
+  title: A transcript, from start to close
+  version: 1.0.0
+  x-domain: communication
+  description: |
+    A caseworker's interview software transcribes an interview from start to close, then abandons a second transcript, exercising the transcription domain end to end:
+
+    - profiles, and what a transcript needs before it can start
+    - a timeline of lines, gaps and pauses, each judged by when it started
+    - retries recognized by their Idempotency-Key, and entries that never change
+    - closing, and the idle timeout, with the mock standing in for the scheduler
+sourceDescriptions:
+  - name: transcripts
+    url: ../base/domains/communication/communication-transcripts-openapi.yaml
+    type: openapi
+  - name: mock
+    url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+    transcript:
+      name: transcriptId
+      in: path
+      value: $steps.start.outputs.id
+workflows:
+  - workflowId: transcriptLifecycle
+    summary: Start, record, pause, resume and close a transcript, and see what it refuses.
+    steps:
+      - stepId: addProfile
+        description: |
+          Add a profile
+
+          - You sent a `TranscriptionProfileCreate` and got back a `TranscriptionProfile`: the shape an administrator writes, and the shape the system keeps.
+          - `provider` takes its values from the `transcription-services` registry, through `x-enum-source`. `aws-transcribe` is an entry there; a service no entry names is refused, and a contract set adds one with a registry file of its own.
+          - `source` is `user` for a profile added through the API, and `system` for the ones the config seeds.
+          - No `idleTimeout`, so transcripts under this profile never close for being idle.
+        operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
+        parameters:
+          - name: X-Caller-Id
+            in: header
+            value: admin-1
+        requestBody:
+          payload:
+            name: english-interview
+            provider: aws-transcribe
+            languages:
+              - en-US
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/source == 'user'
+        outputs:
+          id: $response.body#/id
+      - stepId: startWithoutAModel
+        description: |
+          Start without a model
+
+          - Refused with `409` by `modelGivenForTheService`: under a profile whose `provider` is a transcription service, a transcript has to say which `model` produced its lines.
+          - The refusal is the guard's description, written as a sentence. `profileExists` passed, so only the condition not met is named.
+          - A guard runs on a plain create because the state machine governs `Transcript` under `resources:`. No action is involved.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $steps.addProfile.outputs.id
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T10:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: startUnderAMissingProfile
+        description: |
+          Start under a profile that does not exist
+
+          - Refused with `409` by `profileExists`: the guard reads the profile `profileId` names, through the machine's context, and there isn't one.
+          - Both guards run, and each one not met is named. `modelGivenForTheService` passes here, since without a profile there is no service to need a model.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 00000000-0000-4000-8000-000000000000
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T10:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: start
+        description: |
+          Start the transcript
+
+          - `TranscriptCreate` requires `profileId`, `client` and `startedAt`. `model` is required by the guard, not the schema, because a profile whose `provider` is `none` needs none.
+          - `status` is `recording` because that is the state machine's initial state. Nothing in the request set it.
+          - `startedAt` is by the software's clock, and every time on the transcript's entries is compared on that same clock.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $steps.addProfile.outputs.id
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T10:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'recording'
+          - condition: $response.body#/profile/id == $steps.addProfile.outputs.id
+        outputs:
+          id: $response.body#/id
+      - stepId: firstLine
+        description: |
+          Add the first line
+
+          - `Idempotency-Key` is declared on this operation, from the shared parameters every domain uses. The mock remembers the key with its answer.
+          - The body is a `TranscriptLineCreate`, one of the kinds `TranscriptEntryCreate` chooses between by `kind`.
+          - `startedWhileRecording`, `endsAfterItStarts` and `gapOutsidePauses` all passed: the guards the machine puts on every new entry.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-1
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:05Z"
+            endedAt: "2026-10-12T10:00:06Z"
+            text: Can you tell me who lives with you?
+            speaker: staff
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: retryFirstLine
+        description: |
+          Send it again
+
+          - Same `Idempotency-Key`, same body: the mock answers with the line it already stored, with the same `id` and `Idempotent-Replayed: true`. No second line is written.
+          - The same key with a different body would be refused with `422`. A retry is the same request; a new request needs a new key.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-1
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:05Z"
+            endedAt: "2026-10-12T10:00:06Z"
+            text: Can you tell me who lives with you?
+            speaker: staff
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/id == $steps.firstLine.outputs.id
+          - condition: $response.header.Idempotent-Replayed == 'true'
+      - stepId: pause
+        description: |
+          Go off the record
+
+          - `pause` is an action of the transcript's state machine, from `recording` to `paused`, guarded by `atAfterStart`.
+          - Its steps write a `pause` entry with no `endedAt`, and emit `paused`, which resolve names `communication.transcript.paused`.
+          - `at` is by the software's clock too. `AtRequest` declares it, for pausing, resuming and closing alike.
+        operationId: $sourceDescriptions.transcripts.pauseTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload:
+            at: "2026-10-12T10:00:10Z"
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'paused'
+      - stepId: lineSaidBeforeThePause
+        description: |
+          A line said just before the pause
+
+          - It arrived after the pause, but its `startedAt` is before it, and `startedWhileRecording` judges an entry by when it started. Kept.
+          - Software sends a line once it is finished, so a line still being spoken when the pause came always arrives late.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-2
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:08Z"
+            endedAt: "2026-10-12T10:00:11Z"
+            text: My two kids and my mother.
+            speaker: client
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: lineSaidDuringThePause
+        description: |
+          A line said during the pause
+
+          - Refused with `409` by `startedWhileRecording`: a pause was open when the line started.
+          - The server refuses it, not the software. Nothing said off the record is kept, even from software that keeps sending.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-3
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:12Z"
+            endedAt: "2026-10-12T10:00:13Z"
+            text: Off the record.
+            speaker: client
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: gapOverlappingThePause
+        description: |
+          A lost stretch overlapping the pause
+
+          - Refused with `409` by `gapOutsidePauses`. A gap is time the software lost, and the pause already accounts for that stretch.
+          - `cause` says why the time was lost: `connection` here, one of the values `GapCause` declares.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: gap-1
+        requestBody:
+          payload:
+            kind: gap
+            startedAt: "2026-10-12T10:00:09Z"
+            endedAt: "2026-10-12T10:00:11Z"
+            cause: connection
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: resume
+        description: |
+          Back on the record
+
+          - `resume` goes from `paused` to `recording`, guarded by `aPauseIsOpen` and `atAfterPauseBegan`.
+          - It gives the open pause its `endedAt` with a `PATCH` the machine makes itself, then calls `requestIdleCheck`, which does nothing here: this profile has no `idleTimeout`.
+        operationId: $sourceDescriptions.transcripts.resumeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload:
+            at: "2026-10-12T10:00:20Z"
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'recording'
+      - stepId: lineSaidDuringThePastPause
+        description: |
+          A late line from inside the past pause
+
+          - Still refused by `startedWhileRecording`: the pause is over, but the line started inside it.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-4
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:15Z"
+            endedAt: "2026-10-12T10:00:16Z"
+            text: Still off the record.
+            speaker: client
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: timeline
+        description: |
+          Read the timeline
+
+          - A `TranscriptEntryList`: lines, gaps and pauses together, in the order they happened by `startedAt`.
+          - `total` is 3: the two lines kept, and the pause with the `endedAt` resuming gave it. The refused entries left nothing behind.
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 3
+          - condition: $response.body#/items/2/kind == 'pause'
+          - condition: $response.body#/items/2/endedAt == '2026-10-12T10:00:20Z'
+        outputs:
+          firstEntryId: $response.body#/items/0/id
+      - stepId: clientEditsAnEntry
+        description: |
+          Try to change an entry
+
+          - Refused with `403`: the machine lets only `system` update a `TranscriptEntry`, and the caller's role is checked before the body is.
+          - Resuming and closing end a pause through the machine's own steps, which are not held to this.
+        operationId: $sourceDescriptions.transcripts.updateTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: entryId
+            in: path
+            value: $steps.timeline.outputs.firstEntryId
+        requestBody:
+          payload:
+            endedAt: "2026-10-12T10:00:59Z"
+        successCriteria:
+          - condition: $statusCode == 403
+      - stepId: close
+        description: |
+          Close the transcript
+
+          - `close` goes from `recording` or `paused` to `closed`, and sets `closedAt` to the `at` sent.
+          - `lastActivityAt` is when the last line or gap ended, kept up to date by the machine's subscription to `communication.transcript_entry.created`. A pause doesn't count: it is the transcript's own entry, not the software's.
+        operationId: $sourceDescriptions.transcripts.closeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload:
+            at: "2026-10-12T10:00:30Z"
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+          - condition: $response.body#/lastActivityAt == '2026-10-12T10:00:11Z'
+      - stepId: lineAfterTheClose
+        description: |
+          A line after the close
+
+          - Refused with `409` by `startedWhileRecording`: the line started after `closedAt`.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-5
+        requestBody:
+          payload:
+            kind: line
+            startedAt: "2026-10-12T10:00:31Z"
+            endedAt: "2026-10-12T10:00:32Z"
+            text: Too late.
+            speaker: client
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: addTimedProfile
+        description: |
+          Add a profile with an idle timeout
+
+          - `idleTimeout` is an ISO 8601 duration, `PT30M`. A recording transcript under this profile that hears nothing for that long closes itself.
+        operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
+        parameters:
+          - name: X-Caller-Id
+            in: header
+            value: admin-1
+        requestBody:
+          payload:
+            name: english-timed
+            provider: aws-transcribe
+            languages:
+              - en-US
+            idleTimeout: PT30M
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: standInForTheScheduler
+        description: |
+          Stand in for the scheduler
+
+          - `requestIdleCheck` emits `scheduling.timer.requested`, asking the scheduler to send an `idle_check` once the profile's `idleTimeout` has passed.
+          - Nobody waits 30 minutes in a test. This stub, on the mock's own route, answers the next idle check request at once, as if the time had passed.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            "on": scheduling.timer.requested
+            match:
+              data.callback.event: communication.idle_check
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: startAndGoQuiet
+        description: |
+          Start a transcript and go quiet
+
+          - Creating it asks for the first idle check: the machine's subscription to `communication.transcript.created` calls `requestIdleCheck`.
+          - No line or gap ever arrives.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $steps.addTimedProfile.outputs.id
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T11:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: quietTranscriptClosedItself
+        description: |
+          It closed itself
+
+          - When the `idle_check` came, nothing had arrived since it was asked for, so the machine closed the transcript.
+          - It closed at `lastActivityAt`, or at `startedAt` when there was none, as here. An idle transcript closes when it was last heard from, not when the check ran.
+        operationId: $sourceDescriptions.transcripts.getTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.startAndGoQuiet.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+          - condition: $response.body#/closedAt == '2026-10-12T11:00:00Z'

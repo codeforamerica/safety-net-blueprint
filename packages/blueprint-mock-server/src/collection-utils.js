@@ -161,3 +161,30 @@ export function buildInlineRules(stateMachine, machine) {
   // Rules take precedence over procedures for same id (unlikely, but consistent)
   return mergeByPrecedence(procedures, rules);
 }
+
+/**
+ * A collection name made singular, for an event's object: `applications` →
+ * `application`, `transcript-entries` → `transcript-entry`. Stripping a final
+ * `s`, which this replaced, made the second `transcript-entrie`.
+ *
+ * @param {string} collectionName
+ * @returns {string}
+ */
+export function singularOf(collectionName) {
+  if (collectionName.endsWith('ies')) return `${collectionName.slice(0, -3)}y`;
+  if (collectionName.endsWith('ss')) return collectionName;
+  return collectionName.replace(/s$/, '');
+}
+
+/**
+ * The domain an API's events are named for: the one it declares, as written
+ * — `case-management`, not `case_management`. A document declaring none falls
+ * back to its server's base path, which is how the domain was read before
+ * documents had to declare one.
+ *
+ * @param {{ domain?: string|null, serverBasePath?: string }} apiMetadata
+ * @returns {string}
+ */
+export function eventDomainOf(apiMetadata) {
+  return apiMetadata.domain ?? (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
+}

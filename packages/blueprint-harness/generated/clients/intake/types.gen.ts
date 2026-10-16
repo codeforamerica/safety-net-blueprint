@@ -174,11 +174,11 @@ export type Application = {
     /**
      * Timestamp when the application was formally submitted. Null until submitted.
      */
-    readonly submittedAt?: string;
+    readonly submittedAt?: string | null;
     /**
      * Timestamp when a caseworker began active review. Null until the application is opened.
      */
-    readonly openedAt?: string;
+    readonly openedAt?: string | null;
     /**
      * SLA type governing the processing deadline for this application.
      */
@@ -384,7 +384,7 @@ export type Application = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -402,7 +402,7 @@ export type Application = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */
@@ -691,11 +691,11 @@ export type ApplicationList = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -901,7 +901,7 @@ export type ApplicationList = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -919,7 +919,7 @@ export type ApplicationList = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -1820,7 +1820,7 @@ export type ReviewProgress = {
 } & {
     readonly id: string;
     readonly section: string;
-    readonly itemId?: string;
+    readonly itemId?: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
 };
@@ -1840,7 +1840,7 @@ export type ReviewProgressListResponse = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     }>;
@@ -1849,101 +1849,6 @@ export type ReviewProgressListResponse = {
     offset: number;
     hasNext: boolean;
 };
-
-/**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export type InterviewPromptsRequest = {
-    /**
-     * Household composition and financial circumstances.
-     */
-    household?: {
-        /**
-         * Total monthly gross income reported by the household.
-         */
-        monthlyIncome?: number;
-        /**
-         * Total monthly expenses reported by the household.
-         */
-        monthlyExpenses?: number;
-        /**
-         * All individuals in the household.
-         */
-        members?: Array<{
-            /**
-             * Member's age in years.
-             */
-            age?: number;
-            /**
-             * Whether the member is currently employed.
-             */
-            isEmployed?: boolean;
-            /**
-             * Whether the member is enrolled at least half-time in higher education.
-             */
-            isStudent?: boolean;
-            /**
-             * Whether the member is a non-citizen subject to immigration screening.
-             */
-            isNonCitizen?: boolean;
-        }>;
-    };
-    /**
-     * Application-level context relevant to the interview.
-     */
-    application?: {
-        /**
-         * Whether the household reported changes since the application was submitted.
-         */
-        hasChangedCircumstances?: boolean;
-    };
-};
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export type InterviewPromptsResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
 
 export type Document = {
     /**
@@ -1957,7 +1862,7 @@ export type Document = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     readonly id: string;
     /**
@@ -1975,7 +1880,7 @@ export type Document = {
     /**
      * When this document becomes eligible for disposition.
      */
-    readonly retentionDeadline?: string;
+    readonly retentionDeadline?: string | null;
     /**
      * Arbitrary key-value metadata supplied at upload.
      */
@@ -2007,7 +1912,7 @@ export type DocumentWritable = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 };
 
 export type ApplicationWritableWritable = {
@@ -2284,7 +2189,7 @@ export type ApplicationWritable2 = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         /**
          * Arbitrary key-value metadata supplied at upload.
@@ -2634,7 +2539,7 @@ export type ApplicationListWritable = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             /**
              * Arbitrary key-value metadata supplied at upload.
@@ -2984,7 +2889,7 @@ export type DocumentWritable2 = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     /**
      * Arbitrary key-value metadata supplied at upload.
@@ -3252,11 +3157,11 @@ export type ListApplicationsResponses = {
             /**
              * Timestamp when the application was formally submitted. Null until submitted.
              */
-            readonly submittedAt?: string;
+            readonly submittedAt?: string | null;
             /**
              * Timestamp when a caseworker began active review. Null until the application is opened.
              */
-            readonly openedAt?: string;
+            readonly openedAt?: string | null;
             /**
              * SLA type governing the processing deadline for this application.
              */
@@ -3462,7 +3367,7 @@ export type ListApplicationsResponses = {
                 /**
                  * The date the document itself bears, which is not the date it arrived.
                  */
-                documentDate?: string;
+                documentDate?: string | null;
             } & {
                 readonly id: string;
                 /**
@@ -3480,7 +3385,7 @@ export type ListApplicationsResponses = {
                 /**
                  * When this document becomes eligible for disposition.
                  */
-                readonly retentionDeadline?: string;
+                readonly retentionDeadline?: string | null;
                 /**
                  * Arbitrary key-value metadata supplied at upload.
                  */
@@ -3746,11 +3651,11 @@ export type CreateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -3956,7 +3861,7 @@ export type CreateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -3974,7 +3879,7 @@ export type CreateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4187,11 +4092,11 @@ export type GetApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4397,7 +4302,7 @@ export type GetApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4415,7 +4320,7 @@ export type GetApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4675,11 +4580,11 @@ export type UpdateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4885,7 +4790,7 @@ export type UpdateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4903,7 +4808,7 @@ export type UpdateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -6169,6 +6074,9 @@ export type UpdateApplicationMemberResponse = UpdateApplicationMemberResponses[k
 export type SubmitApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -6354,11 +6262,11 @@ export type SubmitApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -6564,7 +6472,7 @@ export type SubmitApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -6582,7 +6490,7 @@ export type SubmitApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -6633,6 +6541,9 @@ export type SubmitApplicationResponse = SubmitApplicationResponses[keyof SubmitA
 export type OpenApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -6818,11 +6729,11 @@ export type OpenApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7028,7 +6939,7 @@ export type OpenApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7046,7 +6957,7 @@ export type OpenApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7106,6 +7017,9 @@ export type CloseApplicationData = {
         notes?: string;
     };
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7291,11 +7205,11 @@ export type CloseApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7501,7 +7415,7 @@ export type CloseApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7519,7 +7433,7 @@ export type CloseApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7570,6 +7484,9 @@ export type CloseApplicationResponse = CloseApplicationResponses[keyof CloseAppl
 export type WithdrawApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7755,11 +7672,11 @@ export type WithdrawApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7965,7 +7882,7 @@ export type WithdrawApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7983,7 +7900,7 @@ export type WithdrawApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -8712,7 +8629,7 @@ export type ListReviewProgressBySectionResponses = {
         } & {
             readonly id: string;
             readonly section: string;
-            readonly itemId?: string;
+            readonly itemId?: string | null;
             readonly createdAt: string;
             readonly updatedAt: string;
         }>;
@@ -8842,7 +8759,7 @@ export type UpdateReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -8967,7 +8884,7 @@ export type ReplaceReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9050,7 +8967,7 @@ export type GetReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9179,7 +9096,7 @@ export type UpdateReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9308,157 +9225,10 @@ export type ReplaceReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
 };
 
 export type ReplaceReviewProgressByItemResponse = ReplaceReviewProgressByItemResponses[keyof ReplaceReviewProgressByItemResponses];
-
-export type EvaluateInterviewPromptsData = {
-    /**
-     * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-     */
-    body: {
-        /**
-         * Household composition and financial circumstances.
-         */
-        household?: {
-            /**
-             * Total monthly gross income reported by the household.
-             */
-            monthlyIncome?: number;
-            /**
-             * Total monthly expenses reported by the household.
-             */
-            monthlyExpenses?: number;
-            /**
-             * All individuals in the household.
-             */
-            members?: Array<{
-                /**
-                 * Member's age in years.
-                 */
-                age?: number;
-                /**
-                 * Whether the member is currently employed.
-                 */
-                isEmployed?: boolean;
-                /**
-                 * Whether the member is enrolled at least half-time in higher education.
-                 */
-                isStudent?: boolean;
-                /**
-                 * Whether the member is a non-citizen subject to immigration screening.
-                 */
-                isNonCitizen?: boolean;
-            }>;
-        };
-        /**
-         * Application-level context relevant to the interview.
-         */
-        application?: {
-            /**
-             * Whether the household reported changes since the application was submitted.
-             */
-            hasChangedCircumstances?: boolean;
-        };
-    };
-    path?: never;
-    query?: never;
-    url: '/applications/evaluate-interview-prompts';
-};
-
-export type EvaluateInterviewPromptsErrors = {
-    /**
-     * The request is malformed or contains invalid parameters.
-     */
-    400: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof EvaluateInterviewPromptsErrors];
-
-export type EvaluateInterviewPromptsResponses = {
-    /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
-     */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
-};
-
-export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];

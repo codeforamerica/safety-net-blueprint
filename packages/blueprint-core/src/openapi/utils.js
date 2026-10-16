@@ -3,8 +3,6 @@
  * Not exported from the package public API.
  */
 
-import pluralize from 'pluralize';
-
 /**
  * Extract the schema name from any $ref string.
  *
@@ -124,22 +122,6 @@ export function buildPathEntry(path, method, operation, paramIndex = new Map(), 
  */
 export function toPascalCase(name) {
   return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-/**
- * Convert a kebab-case collection name to its PascalCase singular schema prefix.
- * Used to match example keys to collections (e.g., "queues" → "Queue",
- * "task-audit-events" → "TaskAuditEvent").
- * @param {string} collectionName - Database collection name
- * @returns {string} PascalCase schema prefix
- */
-export function collectionToSchemaPrefix(collectionName) {
-  const segments = collectionName.split('-');
-  return segments.map((seg, i) => {
-    // only the trailing segment is the plural noun, the earlier ones qualify it
-    const s = i === segments.length - 1 ? pluralize.singular(seg) : seg;
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }).join('');
 }
 
 /**

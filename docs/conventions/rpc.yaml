@@ -58,10 +58,12 @@ rpc_endpoints:
 #     Sets a field on the resource being operated on.
 #
 #   emit:
-#     event: <eventSuffix>          # e.g. "submitted" → emitted as domain.object.submitted
+#     event: <name>                 # e.g. "submitted" → emitted as intake.application.submitted
 #     data:
 #       <key>: <value expression>   # $now, $object.field, $request.field, etc.
-#     Emits a domain event from the resource's domain/object after the transition.
+#     Emits an event the machine declares under emits:, named {domain}.{resource}.{name} —
+#     the domain as declared, the resource's schema name in snake_case. With no data,
+#     write just `emit: <name>`.
 #
 #   evaluate: <ruleId>
 #     Evaluates a named rule from the state machine's rules: section. The rule
@@ -85,7 +87,27 @@ rpc_endpoints:
 #   $object.field   — value from the resource being operated on
 #   $request.field  — value from the operation request body
 #   $now            — current ISO timestamp
+#   $params.field   — an argument a procedure was called with (with:)
 #   <literal>       — string, number, boolean, or null
+#
+# To build a string from several values, embed expressions in braces, as
+# OpenAPI runtime expressions are embedded in strings:
+#   timerId: "workflow.{$params.timerType}.{$object.id}"
+# Each {$…} is looked up like a lone expression and the pieces joined. Nothing
+# is evaluated, so there are no operators; a missing value contributes nothing.
+#
+# Conditions are CEL, with no dialect: a guard's condition, if:, match:, a
+# context binding's where: string, a composition's filter:, and x-derived.
+# They are evaluated by a spec-compliant implementation (@bufbuild/cel), so an
+# expression that is not CEL is refused, not run some other way.
+#   - Names are unprefixed: caller, object, request, params, this (the event),
+#     now, and each context binding by its alias. `$` is value-expression
+#     syntax, above, and not CEL.
+#   - A field a record does not have is an error, not null: ask with has(),
+#     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
+#   - A binding that found no record is null; test the binding, not a field
+#     through it: reviewTask != null.
+#   - List membership is `x in list`; contains() is for strings.
 
 
 behavioral_contract_steps:

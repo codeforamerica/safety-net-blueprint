@@ -17,6 +17,7 @@
 import { existsSync } from 'fs';
 import { compileRuleset } from '../rules.js';
 import { resolverMap } from '../paths.js';
+import { celSyntaxError } from '../cel.js';
 
 // ── Full dependency scan ──────────────────────────────────────────────────────
 
@@ -85,25 +86,16 @@ export function detectUnreachable(facts, dependencies, outputs) {
 // ── CEL expression syntax ─────────────────────────────────────────────────────
 
 /**
- * Check whether a CEL expression is syntactically parseable.
- * Uses JavaScript's Function constructor as a lightweight parser — the
- * expressions used in rules are a CEL-compatible subset that is also
- * valid JavaScript (arithmetic, comparison, logical, ternary, member access).
+ * Check whether a CEL expression parses, with the CEL implementation the mock
+ * server and rules engine evaluate it with. This used to ask JavaScript
+ * whether the expression parsed as JavaScript, which passed `a?.b`,
+ * `new Date()` and `$this.name` — none of them CEL.
  *
  * @param {string} expression
  * @returns {string|null} error message if invalid, null if valid
  */
 export function checkCelSyntax(expression) {
-  if (!expression || typeof expression !== 'string' || !expression.trim()) {
-    return 'expression is empty';
-  }
-  try {
-    // eslint-disable-next-line no-new-func
-    new Function('return (' + expression + ')');
-    return null;
-  } catch (e) {
-    return e.message;
-  }
+  return celSyntaxError(expression);
 }
 
 // ── $ref resolution ───────────────────────────────────────────────────────────

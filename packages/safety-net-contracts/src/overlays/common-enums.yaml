@@ -16,23 +16,6 @@ actions:
         - events
         - tasks
 
-  - target: "$.$defs.Domain"
-    file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
-    description: Add safety net program domains
-    replace:
-      type: string
-      description: >
-        Safety Net domain identifier. Extends the blueprint-core base Domain enum
-        with domains specific to safety net benefits programs.
-      enum:
-        - client-management
-        - data-exchange
-        - document-management
-        - eligibility
-        - intake
-        - platform
-        - workflow
-
   - target: "$.$defs.RoleType"
     file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
     description: Add safety net program roles

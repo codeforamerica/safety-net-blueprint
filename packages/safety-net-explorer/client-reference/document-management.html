@@ -101,7 +101,7 @@
     </div>
     <div class="nav-section">
         <div class="nav-section-label">Constants</div>
-        <a href="#const-DocumentLifecycleState" class="nav-link">DocumentLifecycleState</a><a href="#const-RetentionTrigger" class="nav-link">RetentionTrigger</a>
+        <a href="#const-ConfigSource" class="nav-link">ConfigSource</a><a href="#const-DocumentLifecycleState" class="nav-link">DocumentLifecycleState</a><a href="#const-Domain" class="nav-link">Domain</a><a href="#const-Frequency" class="nav-link">Frequency</a><a href="#const-MetricCollection" class="nav-link">MetricCollection</a><a href="#const-RetentionTrigger" class="nav-link">RetentionTrigger</a><a href="#const-RoleType" class="nav-link">RoleType</a>
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
@@ -253,7 +253,7 @@
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.deleteDocumentMetadata({
-  path: { documentId: string, domain: enum (7 values) },
+  path: { documentId: string, domain: enum (11 values) },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -265,7 +265,7 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr><tr>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">domain</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#b5490a;">enum (7 values)</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#b5490a;">enum (11 values)</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr></tbody></table>
@@ -283,7 +283,7 @@
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.setDocumentMetadata({
-  path: { documentId: string, domain: enum (7 values) },
+  path: { documentId: string, domain: enum (11 values) },
   body: { ... },
 })</pre>
       
@@ -296,7 +296,7 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr><tr>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">domain</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#b5490a;">enum (7 values)</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#b5490a;">enum (11 values)</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr><tr>
@@ -619,8 +619,18 @@
   </details>
 </div>
       </section><section id="section-constants" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (2)</h2>
-        <div id="const-DocumentLifecycleState" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (7)</h2>
+        <div id="const-ConfigSource" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ConfigSource</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-ConfigSource" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'user'</span></div></div></div>
+  </details>
+</div><div id="const-DocumentLifecycleState" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
@@ -629,6 +639,36 @@
       <a href="#const-DocumentLifecycleState" class="permalink" title="Link to this constant">#</a>
     </summary>
     <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'active'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'retained'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'pending_disposition'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'destroyed'</span></div></div></div>
+  </details>
+</div><div id="const-Domain" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Domain</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (11 values)</span>
+      <a href="#const-Domain" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'case-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'client-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'communication'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'data-exchange'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'document-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'eligibility'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'identity-access'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'intake'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'platform'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'scheduling'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'workflow'</span></div></div></div>
+  </details>
+</div><div id="const-Frequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Frequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-Frequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'daily'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'variable'</span></div></div></div>
+  </details>
+</div><div id="const-MetricCollection" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">MetricCollection</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-MetricCollection" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'events'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tasks'</span></div></div></div>
   </details>
 </div><div id="const-RetentionTrigger" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
@@ -639,6 +679,16 @@
       <a href="#const-RetentionTrigger" class="permalink" title="Link to this constant">#</a>
     </summary>
     <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'case_closure'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'application_denial'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'document_date'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'submission_date'</span></div></div></div>
+  </details>
+</div><div id="const-RoleType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RoleType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-RoleType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'applicant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'case_worker'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'supervisor'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'county_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'state_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'partner_readonly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div></div></div>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">

@@ -181,12 +181,30 @@ declare integer cents.
 
 ## Endpoints
 
-A ruleset may declare a standalone POST endpoint:
+Every ruleset is evaluated at a POST endpoint under its domain, at the path it
+declares:
 
 ```yaml
 endpoint:
-  path: /applications/evaluate-interview-prompts
+  path: /applications/evaluate-interview-prompts   # → /intake/applications/evaluate-interview-prompts
 ```
+
+The endpoint is required, and there is no default path and no way to have
+none. A ruleset defined in the blueprint is reachable through its API, the same
+as a resource or a state machine action. To evaluate a ruleset without the
+blueprint's APIs, use its compiled graph with `@codeforamerica/blueprint-rules-engine`.
+
+The path is one or more segments with no trailing slash, takes no parameters — a ruleset is evaluated against
+the inputs in the request body, and nothing would bind a path segment — and
+must not be a route anything else in the set already has. Validation refuses a
+path another ruleset, composition, action or OpenAPI operation claims.
+
+The endpoints are documented in an OpenAPI document that resolve generates
+beside the rules file — `intake-rules-openapi.yaml` beside `intake-rules.yaml` —
+with the server `/{domain}`. Swagger, the API reference and the client
+generators read it like any other API. A rules file is not merged into its
+domain's OpenAPI document, so a domain can have any number of documents, and a
+rules file needs none.
 
 Path parameters are not permitted. Nothing binds a path segment to ruleset
 inputs, so a parameter would be accepted and silently ignored — the path would

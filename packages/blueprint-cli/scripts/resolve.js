@@ -397,19 +397,6 @@ async function main() {
 
   }
 
-  // Always include blueprint-core base contracts in the output
-  if (!existsSync(baseContractsDir)) {
-    console.error(`Error: blueprint-core base-contracts directory not found: ${baseContractsDir}`);
-    console.error('This usually means blueprint-core was installed from an incomplete tarball. Re-install @codeforamerica/blueprint-core.');
-    process.exit(1);
-  }
-
-  const baseDocs = discover(baseContractsDir)
-    .map((file) => load({ ...file, relativePath: `base/${file.relativePath}` }))
-
-  docs.push(...baseDocs);
-  console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s))`);
-
   let allWarnings = [];
 
   // Everything from here to the write is the core pipeline. The CLI's job is
@@ -430,11 +417,47 @@ async function main() {
 
     for (const file of overlayFiles) {
       const doc = load({ path: file, relativePath: relative(overlayIsFile ? dirname(overlayInput) : overlayInput, file) });
-      if (Array.isArray(doc.content?.actions)) authoredOverlays.push(doc.content);
+      // A file carrying only a `config:` block is an overlay too: skipping it
+      // dropped its settings without a word.
+      if (Array.isArray(doc.content?.actions) || doc.content?.config) authoredOverlays.push(doc.content);
     }
 
     console.log(`Overlay: ${overlayInput} (${authoredOverlays.length} document(s))`);
   }
+
+  // blueprint-core's base contracts. Shared schemas, components and the
+  // platform domain — infrastructure every set needs — always come along. A
+  // capability, any other domain the framework provides, comes along only when
+  // the set lists it in `x-capabilities`.
+  if (!existsSync(baseContractsDir)) {
+    console.error(`Error: blueprint-core base-contracts directory not found: ${baseContractsDir}`);
+    console.error('This usually means blueprint-core was installed from an incomplete tarball. Re-install @codeforamerica/blueprint-core.');
+    process.exit(1);
+  }
+
+  const allBaseDocs = discover(baseContractsDir)
+    .map((file) => load({ ...file, relativePath: `base/${file.relativePath}` }));
+  const isCapability = (doc) => doc.domain && doc.domain !== 'platform';
+  const available = [...new Set(allBaseDocs.filter(isCapability).map((doc) => doc.domain))].sort();
+  const wanted = authoredOverlays.map((overlay) => overlay.config?.['x-capabilities']).find(Array.isArray) ?? [];
+  const unknown = wanted.filter((name) => !available.includes(name));
+  if (unknown.length > 0) {
+    console.error(`Error: x-capabilities names ${unknown.map((n) => `"${n}"`).join(', ')}, which the framework does not provide. Available: ${available.join(', ') || 'none'}.`);
+    process.exit(1);
+  }
+
+  const baseDocs = allBaseDocs.filter((doc) => !isCapability(doc) || wanted.includes(doc.domain));
+  docs.push(...baseDocs);
+  console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s)${wanted.length ? `; capabilities: ${wanted.join(', ')}` : ''})`);
+
+  // Each rules file's endpoints are documented in an OpenAPI document of its
+  // own, generated beside it. Added before resolving, so it is resolved,
+  // validated and written like any other document.
+  docs.push(...generate(docs, 'rules-api'));
+  // The events each API's resources and their state machines send, documented
+  // in an AsyncAPI document beside it. Generated, like the rules endpoints, so
+  // it is validated and written like any other document.
+  docs.push(...generate(docs, 'events-asyncapi'));
 
   const generatedOverlays = generate(docs, 'overlay');
   const graphs = generate(docs, 'graph');
@@ -513,7 +536,7 @@ async function main() {
     console.log('\nBundling: inlining external $refs...');
     for (const [relativePath, spec] of currentResults) {
       const filePath = join(outDir, relativePath);
-      const dereferenced = await bundleSpec(filePath);
+      const dereferenced = await bundleSpec(filePath, { setDir: outDir });
       const output = yaml.dump(dereferenced, {
         lineWidth: -1,
         noRefs: true,

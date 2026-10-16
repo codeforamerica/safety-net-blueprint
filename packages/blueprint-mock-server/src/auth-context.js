@@ -81,6 +81,31 @@ export function callerHeader(req, name) {
   return headerOf(req, name) ?? null;
 }
 
+// The trace each request started, so every event one request causes shares it.
+const startedTraces = new WeakMap();
+
+/**
+ * The W3C trace context a request's events carry: the caller's `traceparent`
+ * when it sent one, otherwise a trace this request starts — as the first
+ * service a request reaches does. Asking twice for one request gives the same
+ * trace.
+ *
+ * @param {import('express').Request|Request} req
+ * @returns {string}
+ */
+export function traceparentOf(req) {
+  const sent = headerOf(req, 'traceparent');
+  if (sent) return sent;
+  if (!startedTraces.has(req)) {
+    startedTraces.set(req, `00-${randomHex(16)}-${randomHex(8)}-01`);
+  }
+  return startedTraces.get(req);
+}
+
+function randomHex(bytes) {
+  return Array.from(crypto.getRandomValues(new Uint8Array(bytes)), b => b.toString(16).padStart(2, '0')).join('');
+}
+
 /**
  * Decode a JWT payload without verifying the signature.
  * @param {string} token

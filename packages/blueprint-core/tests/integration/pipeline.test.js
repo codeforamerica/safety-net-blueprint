@@ -39,6 +39,12 @@ const CONTRACTS = {
         get: { operationId: 'listApplications', responses: { 200: {} } },
         post: { operationId: 'createApplication', responses: { 201: {} } },
       },
+      '/applications/{id}': {
+        get: {
+          operationId: 'getApplication',
+          responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Application' } } } } },
+        },
+      },
       '/applications/{id}/submit': {
         post: {
           operationId: 'submitApplication',

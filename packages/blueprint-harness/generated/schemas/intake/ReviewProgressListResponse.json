@@ -38,9 +38,11 @@
                 "readOnly": true
               },
               "itemId": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "format": "uuid",
-                "nullable": true,
                 "readOnly": true
               },
               "createdAt": {

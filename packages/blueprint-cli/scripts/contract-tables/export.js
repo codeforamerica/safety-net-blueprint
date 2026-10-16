@@ -243,7 +243,7 @@ function renderEvents(doc) {
   const rows = [];
 
   for (const machine of doc.machines || []) {
-    for (const evt of machine.events || []) {
+    for (const evt of machine.on || []) {
       const steps = (evt.steps || []).map(describeStepItem).filter(Boolean).join('; ');
       rows.push([machine.object, evt.name || '', steps]);
     }
@@ -836,7 +836,7 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
 
     for (const machine of smDoc.machines || []) {
-      const events = machine.events || [];
+      const events = machine.on || [];
       if (events.length === 0) continue;
       lines.push(`### ${machine.object}`);
       lines.push('');

@@ -148,8 +148,9 @@ paths:
       tags: [State]
       summary: Clear all data and stubs, keeping config-managed resources
       description: >
-        Leaves an empty store plus the catalog entries and policies the
-        contracts' config files declare. Does not reseed.
+        Leaves an empty store plus the catalog entries the contracts' config
+        files declare. Registries are served from the contracts and are not
+        stored, so a reset leaves them as they are. Does not reseed.
       responses:
         '204': { description: Reset. }
 

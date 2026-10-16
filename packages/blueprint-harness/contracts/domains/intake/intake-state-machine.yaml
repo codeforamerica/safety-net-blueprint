@@ -3,8 +3,6 @@ $schema: state-machine-schema.yaml
 extends: ../platform/platform-state-machine.yaml
 version: "1.0"
 domain: intake
-apiSpec: intake-openapi.yaml
-eventsSpec: intake-asyncapi.yaml
 machines:
   - object: Application
     states:
@@ -29,6 +27,15 @@ machines:
         description: >
           Fires when an application has been awaiting caseworker review for too long.
           The callback event (intake.review_reminder) triggers an escalation notice.
+    emits:
+      - id: submitted
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: closed
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: withdrawn
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: review-reminder
+        description: Emitted when an application has been awaiting caseworker review for too long.
     actions:
       - id: submit
         description: Formally submits a draft application, starting the regulatory processing clock.
@@ -41,7 +48,7 @@ machines:
               value: $now
               description: Record the submission timestamp (regulatory clock start).
           - emit:
-              type: intake.application.submitted
+              event: submitted
               # Carries the application, not just a type. A subscriber in
               # another domain cannot act on an empty payload, and eligibility
               # declares a subscription to this event below in
@@ -83,18 +90,19 @@ machines:
           from: under_review
           to: closed
         steps:
-          - emit:
-              type: intake.application.closed
-
+          - emit: closed
       - id: withdraw
         description: Withdraws the application at the household's request.
         transition:
           from: [draft, submitted, under_review]
           to: withdrawn
+        # Only the household or a case worker acting for it. The one action
+        # here limited by role, so a caller without one gets a 403.
+        guards:
+          - actors: [applicant, case_worker]
         steps:
-          - emit:
-              type: intake.application.withdrawn
-    events:
+          - emit: withdrawn
+    on:
       - type: intake.review_reminder
         description: >
           Escalates an application that has been awaiting caseworker review for too long.
@@ -103,7 +111,7 @@ machines:
           from: submitted
         steps:
           - emit:
-              type: intake.application.review-reminder
+              event: review-reminder
               description: Notify supervisors that this application needs immediate attention.
 
 $defs:

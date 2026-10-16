@@ -20,6 +20,7 @@
  */
 
 import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-lookup.js';
+import { buildApiModel } from './openapi/model.js';
 
 /**
  * Build a Doc from already-parsed document data.
@@ -43,9 +44,8 @@ export function toDoc({ path, relativePath = null, domain = null, type, content 
   return {
     path: path ?? relativePath,
     relativePath,
-    // discover() resolves this against the whole set, which is the only way
-    // the path-segment and filename fallbacks can work. Loading a file alone
-    // still gets the two answers the content itself provides.
+    // A domain is only ever declared: info.x-domain, or domain on anything
+    // that is not OpenAPI, AsyncAPI or Arazzo.
     domain: domain ?? content?.info?.['x-domain'] ?? content?.domain ?? null,
     type,
     content,
@@ -165,15 +165,17 @@ function resolvePointer(root, pointer) {
 /**
  * Build the normalized view for blueprint-authored contract types.
  *
- * Only state machines are normalized today. Rules and compositions get a model
- * when something needs to walk them — adding one is additive, since every Doc
- * already carries the field.
+ * State machines are normalized so every step has one shape; an OpenAPI
+ * document is read as the resources it serves (`openapi/model.js`). Rules and
+ * compositions get a model when something needs to walk them — adding one is
+ * additive, since every Doc already carries the field.
  *
  * @param {string} type - Contract type from detectType
  * @param {*} content - Parsed document
  * @returns {*|null} Normalized view, or null for standards-defined types
  */
 function buildModel(type, content) {
+  if (type === 'openapi') return content && typeof content === 'object' ? buildApiModel(content) : null;
   if (type !== 'state-machine') return null;
   if (!content || typeof content !== 'object') return null;
 
@@ -184,7 +186,7 @@ function buildModel(type, content) {
     machines: (content.machines ?? []).map((machine) => ({
       ...machine,
       actions: normalizeStepHolders(machine.actions),
-      events: normalizeStepHolders(machine.events),
+      on: normalizeStepHolders(machine.on),
       procedures: normalizeStepHolders(machine.procedures),
     })),
     procedures: normalizeStepHolders(content.procedures),
@@ -279,6 +281,8 @@ function normalizeStep(step) {
   // set and emit carry their own description inside the body, so spread last.
   const kind = Object.keys(step)[0] ?? 'unknown';
   const body = step[kind];
+  // `emit: paused` names an event of the machine by id.
+  if (kind === 'emit' && typeof body === 'string') return { kind, event: body, children: [] };
   return {
     kind,
     ...(body && typeof body === 'object' && !Array.isArray(body) ? body : {}),

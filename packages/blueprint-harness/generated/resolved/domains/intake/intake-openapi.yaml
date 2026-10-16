@@ -8,34 +8,6 @@ info:
 servers:
   - url: http://localhost:1080/intake
     description: Local development server
-x-events:
-  application.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.created
-    summary: Emitted when an application is created.
-  application.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
-    summary: Emitted when an application is updated via PATCH.
-  application.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
-    summary: Emitted when an application is deleted.
-  applicationMember.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
-    summary: Emitted when a household member is added to an application.
-  applicationMember.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
-    summary: Emitted when a household member is updated via PATCH.
-  applicationMember.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
-    summary: Emitted when a household member is removed from an application.
-  intake.application.submitted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
-  intake.application.withdrawn:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-    summary: Emitted when a household withdraws their application.
-  intake.application.closed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
-    summary: Emitted when intake is complete and the application is closed.
 paths:
   /applications:
     get:
@@ -282,11 +254,7 @@ paths:
           $ref: ../../common/components/responses.yaml#/InternalError
   /applications/{applicationId}/submit:
     parameters:
-      - name: applicationId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ApplicationIdParam"
     post:
       summary: Submit application
       description: Formally submits a draft application, starting the regulatory processing clock.
@@ -314,11 +282,7 @@ paths:
         id: submit
   /applications/{applicationId}/open:
     parameters:
-      - name: applicationId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ApplicationIdParam"
     post:
       summary: Open application
       description: Moves a submitted application into active caseworker review.
@@ -346,11 +310,7 @@ paths:
         id: open
   /applications/{applicationId}/close:
     parameters:
-      - name: applicationId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ApplicationIdParam"
     post:
       summary: Close application
       description: Closes the application once intake processing is complete.
@@ -384,11 +344,7 @@ paths:
         id: close
   /applications/{applicationId}/withdraw:
     parameters:
-      - name: applicationId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/ApplicationIdParam"
     post:
       summary: Withdraw application
       description: Withdraws the application at the household's request.
@@ -435,7 +391,7 @@ paths:
         - Applications
       x-relationship:
         type: composition
-        domain: domains/intake/intake
+        domain: intake
         id: applicationSummary
   /applications/{applicationId}/review:
     parameters:
@@ -458,7 +414,7 @@ paths:
         - Applications
       x-relationship:
         type: composition
-        domain: domains/intake/intake
+        domain: intake
         id: applicationReview
   /applications/{applicationId}/review/demographics:
     parameters:
@@ -652,33 +608,6 @@ paths:
           $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
-  /applications/evaluate-interview-prompts:
-    post:
-      summary: Evaluate interviewPrompts
-      operationId: evaluateInterviewPrompts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InterviewPromptsRequest"
-      responses:
-        "200":
-          description: interviewPrompts evaluation result.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewPromptsResponse"
-        "400":
-          $ref: ../../base/components/responses.yaml#/BadRequest
-        "500":
-          $ref: ../../base/components/responses.yaml#/InternalError
-      tags:
-        - Applications
-      x-relationship:
-        type: ruleset
-        domain: intake
-        id: interviewPrompts
 components:
   parameters:
     ApplicationIdParam:
@@ -775,7 +704,7 @@ components:
             programCount:
               type: integer
               readOnly: true
-              x-derived: $this.programsAppliedFor.size()
+              x-derived: this.programsAppliedFor.size()
               description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
@@ -794,15 +723,17 @@ components:
                 - withdrawn
                 - closed
             submittedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when the application was formally submitted. Null until submitted.
             openedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when a caseworker began active review. Null until the application is opened.
             slaTypeCode:
@@ -1005,7 +936,7 @@ components:
                 programCount:
                   type: integer
                   readOnly: true
-                  x-derived: $this.programsAppliedFor.size()
+                  x-derived: this.programsAppliedFor.size()
                   description: How many programs this application covers, from programsAppliedFor.
               x-relationship:
                 type: fk
@@ -1188,9 +1119,10 @@ components:
               type: string
               readOnly: true
             itemId:
-              type: string
+              type:
+                - string
+                - "null"
               format: uuid
-              nullable: true
               readOnly: true
               x-relationship:
                 resource: Polymorphic
@@ -1229,36 +1161,6 @@ components:
         - limit
         - offset
         - hasNext
-    InterviewPromptsRequest:
-      type: object
-      description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-      properties:
-        household:
-          type: object
-          description: Household composition and financial circumstances.
-          properties:
-            monthlyIncome:
-              type: number
-              description: Total monthly gross income reported by the household.
-            monthlyExpenses:
-              type: number
-              description: Total monthly expenses reported by the household.
-            members:
-              type: array
-              description: All individuals in the household.
-              items:
-                $ref: ./intake-schemas.yaml#/$defs/HouseholdMember
-        application:
-          type: object
-          description: Application-level context relevant to the interview.
-          properties:
-            hasChangedCircumstances:
-              type: boolean
-              description: Whether the household reported changes since the application was submitted.
-    InterviewPromptsResponse:
-      allOf:
-        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
-      description: Evaluation result for interviewPrompts.
     Document:
       allOf:
         - $ref: "#/components/schemas/DocumentWritable"
@@ -1297,9 +1199,10 @@ components:
                 resource: DocumentVersion
                 style: links-only
             retentionDeadline:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: When this document becomes eligible for disposition.
             metadata:
@@ -1336,7 +1239,8 @@ components:
           type: string
           description: A human-readable name for the document.
         documentDate:
-          type: string
+          type:
+            - string
+            - "null"
           format: date
-          nullable: true
           description: The date the document itself bears, which is not the date it arrived.

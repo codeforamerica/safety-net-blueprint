@@ -1,0 +1,68 @@
+# JSON Schema for communication-config.yaml
+# Extends the generic config envelope (schemas/config-schema.yaml)
+# with validation of the profile catalog's entries.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/base/domains/communication/communication-config-schema.yaml"
+title: Communication Config
+domain: communication
+description: Schema for communication-config.yaml. Validates the profile catalog's entries.
+
+allOf:
+  - $ref: "https://blueprint.codeforamerica.org/schemas/config-schema.yaml"
+
+type: object
+
+properties:
+  domain:
+    const: communication
+    description: Must be "communication".
+
+  profiles:
+    type: object
+    description: >
+      Profile catalog: the transcription service and languages to use for each
+      kind of conversation. Seeded where they do not exist yet; afterwards they
+      are changed through the API, and never deleted.
+    required: [resource, entries]
+    additionalProperties: false
+    properties:
+      resource:
+        const: TranscriptionProfile
+      entries:
+        type: array
+        items:
+          $ref: "#/$defs/ProfileConfig"
+
+unevaluatedProperties: false
+
+$defs:
+  ProfileConfig:
+    type: object
+    description: A profile, as the TranscriptionProfile resource has it.
+    required: [id, name, provider]
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: Stable identifier, so overlays and transcripts can refer to it.
+      name:
+        type: string
+        pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        description: A short handle people tell profiles apart by, e.g. `english-phone`.
+      description:
+        type: string
+      provider:
+        type: string
+        description: An entry of the `transcription-services` registry, or `none`.
+      languages:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
+      idleTimeout:
+        type: string
+        format: duration
+        description: How long a recording transcript may go without activity before it closes itself.
