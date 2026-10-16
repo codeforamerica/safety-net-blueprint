@@ -97,7 +97,10 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     }
 
     if (hasErrors) {
-      throw new Error('Validation failed. Run "npm run validate" for detailed errors.');
+      const msg = Object.entries(validationResults)
+        .flatMap(([apiName, result]) => result.spec.errors.map((e) => `  ${apiName}: ${e.message}`))
+        .join('\n');
+      throw new Error(`Spec validation failed:\n${msg}`);
     }
 
     if (verbose) {
