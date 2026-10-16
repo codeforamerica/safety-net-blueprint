@@ -28,8 +28,8 @@ const list = (name) => ({
 
 const API = {
   openapi: '3.1.0',
-  info: { title: 'Transcripts', version: '1.0.0', 'x-domain': 'transcription' },
-  servers: [{ url: 'http://localhost:1080/transcription' }],
+  info: { title: 'Transcripts', version: '1.0.0', 'x-domain': 'communication' },
+  servers: [{ url: 'http://localhost:1080/communication' }],
   paths: {
     '/transcripts': {
       get: { responses: { 200: json(ref('TranscriptList')) } },
@@ -66,15 +66,15 @@ const API = {
 };
 
 const FILES = {
-  'transcription-transcripts-openapi.yaml': API,
-  'transcription-mock-data.yaml': {
-    domain: 'transcription',
+  'communication-transcripts-openapi.yaml': API,
+  'communication-mock-data.yaml': {
+    domain: 'communication',
     TranscriptExample1: { id: 't1', profileId: 'p1' },
     TranscriptEntryExample1: { id: 'e1', transcriptId: 't1' },
   },
-  'transcription-config.yaml': {
+  'communication-config.yaml': {
     version: '1.0',
-    domain: 'transcription',
+    domain: 'communication',
     profiles: { resource: 'TranscriptionProfile', entries: [{ id: 'p1', name: 'english' }] },
   },
 };
@@ -105,16 +105,16 @@ describe('generate(docs, "postman")', () => {
   });
 
   test("each resource's requests use its own schema's records", () => {
-    assert.ok(urls(folders.Transcripts, 'GET').includes('/transcription/transcripts/t1'));
-    assert.ok(urls(folders.Profiles, 'GET').includes('/transcription/profiles/p1'));
+    assert.ok(urls(folders.Transcripts, 'GET').includes('/communication/transcripts/t1'));
+    assert.ok(urls(folders.Profiles, 'GET').includes('/communication/profiles/p1'));
     assert.ok(!urls(folders.Transcripts, 'GET').some((url) => url.includes('p1')),
       'a profile must not be used for a transcript');
   });
 
   test('a nested record is addressed under the parent it belongs to', () => {
     const gets = urls(folders.Transcripts, 'GET');
-    assert.ok(gets.includes('/transcription/transcripts/t1/entries/e1'));
-    assert.ok(!gets.includes('/transcription/transcripts/e1/entries'),
+    assert.ok(gets.includes('/communication/transcripts/t1/entries/e1'));
+    assert.ok(!gets.includes('/communication/transcripts/e1/entries'),
       'a sub-collection list is not a get-by-id');
 
     const entriesList = folders.Transcripts.find((r) => r.request.url.raw.endsWith('/t1/entries'));
@@ -131,6 +131,6 @@ describe('generate(docs, "postman")', () => {
   test('a config catalog entry is not deleted', () => {
     // The mock refuses: config-managed records answer 409.
     assert.deepEqual(urls(folders.Profiles, 'DELETE'), []);
-    assert.deepEqual(urls(folders.Transcripts, 'DELETE'), ['/transcription/transcripts/t1']);
+    assert.deepEqual(urls(folders.Transcripts, 'DELETE'), ['/communication/transcripts/t1']);
   });
 });

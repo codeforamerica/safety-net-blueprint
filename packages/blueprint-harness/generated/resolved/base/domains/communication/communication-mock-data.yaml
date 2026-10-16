@@ -1,0 +1,64 @@
+domain: communication
+TranscriptExample1:
+  id: 7a1e0c2d-0000-4000-8000-000000000001
+  subjectType: interview
+  subjectId: 7a1e0c2d-0000-4000-8000-0000000000a1
+  profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+  model: standard
+  client: interview-assistant/0.1.0
+  status: recording
+  startedAt: "2026-10-11T14:00:00Z"
+  createdAt: "2026-10-11T14:00:00Z"
+  updatedAt: "2026-10-11T14:00:00Z"
+TranscriptExample2:
+  id: 7a1e0c2d-0000-4000-8000-000000000002
+  subjectType: chat
+  subjectId: 7a1e0c2d-0000-4000-8000-0000000000a2
+  profileId: 7a1e0c2d-0000-4000-8000-0000000000b3
+  client: webchat/2.1.0
+  status: closed
+  startedAt: "2026-10-09T09:50:00Z"
+  closedAt: "2026-10-09T10:12:00Z"
+  createdAt: "2026-10-09T09:50:00Z"
+  updatedAt: "2026-10-09T10:12:00Z"
+TranscriptEntryExample1:
+  id: 7a1e0c2d-0000-4000-8000-0000000000e1
+  transcriptId: 7a1e0c2d-0000-4000-8000-000000000001
+  kind: line
+  startedAt: "2026-10-11T14:00:05Z"
+  endedAt: "2026-10-11T14:00:09Z"
+  text: Thanks for coming in. Can you tell me who lives in your household?
+  speaker: staff
+  speakerLabel: spk_0
+  confidence: 0.96
+  createdAt: "2026-10-11T14:00:10Z"
+  updatedAt: "2026-10-11T14:00:10Z"
+TranscriptEntryExample2:
+  id: 7a1e0c2d-0000-4000-8000-0000000000e2
+  transcriptId: 7a1e0c2d-0000-4000-8000-000000000001
+  kind: line
+  startedAt: "2026-10-11T14:00:11Z"
+  endedAt: "2026-10-11T14:00:16Z"
+  text: It's me and my two kids, and my mother stays with us most weeks.
+  speaker: client
+  speakerLabel: spk_1
+  confidence: 0.91
+  createdAt: "2026-10-11T14:00:17Z"
+  updatedAt: "2026-10-11T14:00:17Z"
+TranscriptEntryExample3:
+  id: 7a1e0c2d-0000-4000-8000-0000000000e3
+  transcriptId: 7a1e0c2d-0000-4000-8000-000000000001
+  kind: gap
+  startedAt: "2026-10-11T14:01:02Z"
+  endedAt: "2026-10-11T14:01:20Z"
+  cause: connection
+  createdAt: "2026-10-11T14:01:21Z"
+  updatedAt: "2026-10-11T14:01:21Z"
+TranscriptEntryExample4:
+  id: 7a1e0c2d-0000-4000-8000-0000000000e4
+  transcriptId: 7a1e0c2d-0000-4000-8000-000000000001
+  kind: pause
+  startedAt: "2026-10-11T14:03:00Z"
+  endedAt: "2026-10-11T14:04:30Z"
+  createdAt: "2026-10-11T14:03:00Z"
+  updatedAt: "2026-10-11T14:04:30Z"

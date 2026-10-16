@@ -1,0 +1,32 @@
+# Program terms a transcription service would otherwise get wrong — "SNAP" heard
+# as "Snap" — written the way each language writes them. A client builds each
+# service's vocabulary from the forms in its profile's languages. `spelled`
+# marks a term said letter by letter, which services write differently from one
+# said as a word.
+#
+# Here for trying transcription out. Program terms belong to the program's own
+# domains, which can each add a file of this type; the entries combine into one
+# list.
+$schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
+version: "1.0.0"
+domain: communication
+type: terms
+
+entries:
+  snap:
+    description: The Supplemental Nutrition Assistance Program.
+    forms: {en-US: SNAP, es-US: SNAP}
+  ebt:
+    description: Electronic Benefits Transfer — the card benefits are paid onto.
+    forms: {en-US: EBT, es-US: EBT}
+    spelled: true
+  tanf:
+    description: Temporary Assistance for Needy Families.
+    forms: {en-US: TANF, es-US: TANF}
+  wic:
+    description: The Special Supplemental Nutrition Program for Women, Infants, and Children.
+    forms: {en-US: WIC, es-US: WIC}
+    spelled: true
+  recertification:
+    description: Renewing a household's benefits at the end of a certification period.
+    forms: {en-US: recertification, es-US: recertificación}

@@ -36,7 +36,7 @@ export function eventType(domain, resource, event) {
  * A machine with every short-named emit given its full type.
  *
  * `emit: paused` and `emit: { event: paused, data: ... }` become
- * `{ event: paused, type: 'transcription.transcript.paused', ... }`. An emit
+ * `{ event: paused, type: 'communication.transcript.paused', ... }`. An emit
  * that already names a full `type` is left as written. The authored shape is
  * kept otherwise, since resolved output is written back out.
  *

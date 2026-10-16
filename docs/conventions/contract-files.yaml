@@ -59,7 +59,7 @@ contract_files:
       first one wins.
 
   framework_files:
-    rule: The framework's base contracts are copied into every set under base/. A capability's domain — transcription, say — is included only when the set's configuration lists it in x-capabilities.
+    rule: The framework's base contracts are copied into every set under base/. A capability's domain — communication, say — is included only when the set's configuration lists it in x-capabilities.
     rationale: >
       Every set gets the platform's infrastructure without writing it, and opts
       into a capability rather than carrying contracts it does not use.
