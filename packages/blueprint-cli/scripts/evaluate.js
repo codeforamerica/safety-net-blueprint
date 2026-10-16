@@ -2,40 +2,48 @@
 /**
  * Blueprint Evaluate CLI
  *
- * Evaluates a compiled graph or rules file against a set of inputs.
- * When given a rules-examples file, runs all rulesets/examples in batch mode.
+ * Evaluates a compiled rules graph — one `blueprint-resolve` built from the
+ * whole contract set — against inputs, or against each example a rules
+ * examples file declares for its ruleset.
+ *
+ * It never compiles a ruleset itself. A rules contract refers to schemas in
+ * other files, so compiling one file on its own missed them: a date declared
+ * in a shared schema reached CEL as a string. A graph is self-contained, so it
+ * is what gets evaluated. Examples are ruleset inputs, the same shape a graph
+ * takes, so they need no conversion.
  *
  * Usage:
- *   blueprint-evaluate --spec=<path> [--ruleset=<name>] [--input=<JSON>] [--engine=cel|fact-graph]
+ *   blueprint-evaluate --spec=<graph file>
+ *   blueprint-evaluate --spec=<graph file> --input=<JSON>
+ *   blueprint-evaluate --spec=<graph file> --examples=<rules examples file>
  *
  * Arguments:
- *   --spec=<path>      Path to a compiled graph (*-graph.yaml), rules file (*-rules.yaml),
- *                      or rules examples file (*-rules-examples.yaml).
- *                      Type is detected automatically from the file's $schema field.
- *   --input=<JSON>     Inline JSON string of named inputs (e.g. '{"household":{...}}').
- *                      Defaults to empty inputs when omitted.
- *   --ruleset=<name>   Which ruleset to evaluate (rules files only; defaults to the first).
- *   --engine=<name>    Evaluation engine: cel (default) or fact-graph.
+ *   --spec=<path>       A compiled graph (*-graph.yaml).
+ *   --input=<JSON>      Inline JSON string of named inputs (e.g. '{"household":{...}}').
+ *                       Defaults to empty inputs.
+ *   --examples=<path>   A rules examples file (*-rules-examples.yaml). Each example
+ *                       it declares for the graph's ruleset is evaluated in turn.
  *
  * Output:
- *   Graph/rules:         flat JSON map of fact names to typed nodes
- *   Rules-examples file: { [ruleset]: [ ...per-example node maps ] }
+ *   --input:     flat JSON map of fact names to typed nodes
+ *   --examples:  JSON array of those maps, one per example
+ *
+ * Exits 1 when any fact comes back in the `error` state, naming each, so a
+ * ruleset that can't evaluate an example fails rather than passing quietly.
  *
  * Examples:
- *   blueprint-evaluate --spec=snap-graph.yaml --input='{"household":{"size":4}}'
- *   blueprint-evaluate --spec=snap-rules.yaml --ruleset=snapProbes
- *   blueprint-evaluate --spec=snap-rules-examples.yaml
+ *   blueprint-evaluate --spec=resolved/domains/intake/intake-interviewFlags-graph.yaml --input='{...}'
+ *   blueprint-evaluate --spec=resolved/domains/intake/intake-interviewFlags-graph.yaml \
+ *                      --examples=resolved/domains/intake/intake-rules-examples.yaml
  */
 
-import { readFileSync } from 'fs';
 import { resolve, basename } from 'path';
-import yaml from 'js-yaml';
-import { generate, load } from '@codeforamerica/blueprint-core';
+import { load } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const options = { spec: null, input: null, ruleset: null, engine: 'cel', help: false };
+  const options = { spec: null, input: null, examples: null, help: false };
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') {
@@ -44,10 +52,8 @@ function parseArgs() {
       options.spec = arg.slice('--spec='.length);
     } else if (arg.startsWith('--input=')) {
       options.input = arg.slice('--input='.length);
-    } else if (arg.startsWith('--ruleset=')) {
-      options.ruleset = arg.slice('--ruleset='.length);
-    } else if (arg.startsWith('--engine=')) {
-      options.engine = arg.slice('--engine='.length);
+    } else if (arg.startsWith('--examples=')) {
+      options.examples = arg.slice('--examples='.length);
     } else {
       console.error(`Error: Unknown argument: ${arg}`);
       process.exit(1);
@@ -57,132 +63,101 @@ function parseArgs() {
   return options;
 }
 
-function loadFile(path) {
-  try {
-    return yaml.load(readFileSync(resolve(path), 'utf8'));
-  } catch (err) {
-    console.error(`Error: Could not read ${path}: ${err.message}`);
-    process.exit(1);
-  }
-}
-
-function evaluateGraph(graph, inputs) {
-  return evaluate(graph, inputs);
+function fail(message) {
+  console.error(`Error: ${message}`);
+  process.exit(1);
 }
 
 /**
- * The compiled graph for one ruleset.
+ * A contract file, identified by core from its `$schema`.
  *
- * Compilation is `generate`'s job; it returns a graph per ruleset with the
- * name it came from, so there is nothing to compile here.
- *
- * `generate` addresses documents by their position in a contract set and
- * refuses one that has none, so the file is loaded as what it is: a set of
- * one, sitting at its own basename.
- *
- * @param {string} rulesPath - Path to the rules contract
- * @param {string} rulesetName
- * @returns {object}
+ * @param {string} path
+ * @returns {{ type: string, content: object }}
  */
-function graphFor(rulesPath, rulesetName) {
-  const doc = load({ path: resolve(rulesPath), relativePath: basename(rulesPath) });
-  const graphs = generate([doc], 'graph');
-  const found = graphs.find((g) => g.graph.ruleset === rulesetName);
-  if (!found) {
-    console.error(`Error: Ruleset "${rulesetName}" produced no graph`);
-    process.exit(1);
+function read(path) {
+  const full = resolve(path);
+  try {
+    return load({ path: full, relativePath: basename(full) });
+  } catch (err) {
+    fail(`Could not read ${path}: ${err.message}`);
   }
-  return found.graph;
 }
 
-function evaluateRules(doc, specPath, inputs, rulesetName) {
-  const rulesets = doc.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-  if (!ruleset) {
-    console.error(`Error: Ruleset "${name}" not found`);
-    process.exit(1);
+/**
+ * The examples a rules examples file declares for a graph's ruleset, matched
+ * by what both declare — domain and ruleset name — not by where they sit.
+ *
+ * @param {object} examplesDoc
+ * @param {object} graph
+ * @param {string} path - For messages
+ * @returns {object[]}
+ */
+function examplesFor(examplesDoc, graph, path) {
+  if (examplesDoc.domain && graph.domain && examplesDoc.domain !== graph.domain) {
+    fail(`${path} declares examples for domain "${examplesDoc.domain}", but the graph is for "${graph.domain}".`);
   }
-  return evaluate(graphFor(specPath, name), inputs);
+  const examples = examplesDoc.rulesets?.[graph.ruleset]?.examples;
+  if (!examples?.length) fail(`${path} declares no examples for ruleset "${graph.ruleset}".`);
+  return examples;
 }
 
-function evaluateExamples(doc, specPath) {
-  // Discover companion *-rules.yaml in the same directory
-  const companionPath = specPath.replace(/-rules-examples\.yaml$/, '-rules.yaml');
-  const rulesDoc = loadFile(companionPath);
-  const rulesets = rulesDoc.rulesets ?? {};
-
-  const result = {};
-  for (const [rulesetName, rulesetExamples] of Object.entries(doc.rulesets ?? {})) {
-    const ruleset = rulesets[rulesetName];
-    if (!ruleset) {
-      console.error(`Error: Ruleset "${rulesetName}" not found in companion rules file`);
-      process.exit(1);
-    }
-    const graph = graphFor(companionPath, rulesetName);
-    const examples = rulesetExamples.examples ?? [];
-    result[rulesetName] = examples.map(example => evaluate(graph, example.inputs ?? {}));
-  }
-  return result;
+/** Each fact that came back as an error, with where it came from. */
+function errorsIn(runs) {
+  return runs.flatMap(({ label, nodes }) => Object.entries(nodes)
+    .filter(([, node]) => node?.state === 'error')
+    .map(([fact, node]) => `${label}: ${fact}: ${node.message ?? 'error'}`));
 }
 
 function main() {
   const options = parseArgs();
 
   if (options.help) {
-    console.log('Usage: blueprint-evaluate --spec=<path> [--input=<JSON>] [--ruleset=<name>] [--engine=cel|fact-graph]');
+    console.log('Usage: blueprint-evaluate --spec=<graph file> [--input=<JSON> | --examples=<rules examples file>]');
     process.exit(0);
   }
 
-  if (!options.spec) {
-    console.error('Error: <file> is required');
-    process.exit(1);
-  }
+  if (!options.spec) fail('--spec is required: a compiled graph (*-graph.yaml)');
+  if (options.input && options.examples) fail('--input and --examples can\'t be combined');
 
-  if (options.engine !== 'cel' && options.engine !== 'fact-graph') {
-    console.error(`Error: --engine must be "cel" or "fact-graph", got "${options.engine}"`);
-    process.exit(1);
+  const { type, content: graph } = read(options.spec);
+  if (type === 'rules' || type === 'rules-examples') {
+    fail(`${options.spec} is a ${type} file, which can't be evaluated on its own. Run blueprint-resolve over the contracts and point --spec at the ruleset's compiled graph (*-graph.yaml)${type === 'rules-examples' ? ', with this file as --examples' : ''}.`);
   }
-
-  // Identifying a contract from its $schema is core's job, and `load` has
-  // already done it — reading doc.type is the same answer the rest of the
-  // pipeline works from, rather than a second table of schema names here.
-  const specPath = resolve(options.spec);
-  let type, doc;
-  try {
-    ({ type, content: doc } = load({ path: specPath, relativePath: basename(specPath) }));
-  } catch (err) {
-    console.error(`Error: Could not read ${options.spec}: ${err.message}`);
-    process.exit(1);
-  }
-
-  if (!['graph', 'rules', 'rules-examples'].includes(type)) {
-    console.error(`Error: ${options.spec} is not a recognized blueprint contract file (no $schema field)`);
-    process.exit(1);
-  }
-
-  // Parse inputs (examples mode ignores --input; each example carries its own)
-  let inputs = {};
-  if (options.input) {
-    try {
-      inputs = JSON.parse(options.input);
-    } catch (err) {
-      console.error(`Error: --input is not valid JSON: ${err.message}`);
-      process.exit(1);
-    }
-  }
+  if (type !== 'graph') fail(`${options.spec} is not a compiled rules graph (*-graph.yaml)`);
 
   let result;
-  if (type === 'graph') {
-    result = evaluateGraph(doc, inputs);
-  } else if (type === 'rules') {
-    result = evaluateRules(doc, specPath, inputs, options.ruleset);
+  let runs;
+
+  if (options.examples) {
+    const { type: examplesType, content: examplesDoc } = read(options.examples);
+    if (examplesType !== 'rules-examples') fail(`${options.examples} is not a rules examples file (*-rules-examples.yaml)`);
+    const examples = examplesFor(examplesDoc, graph, options.examples);
+    runs = examples.map((example, i) => ({
+      label: `${graph.ruleset} example ${i + 1}${example.description ? ` (${example.description})` : ''}`,
+      nodes: evaluate(graph, example.inputs ?? {}),
+    }));
+    result = runs.map(({ nodes }) => nodes);
   } else {
-    // examples — batch mode
-    result = evaluateExamples(doc, specPath);
+    let inputs = {};
+    if (options.input) {
+      try {
+        inputs = JSON.parse(options.input);
+      } catch (err) {
+        fail(`--input is not valid JSON: ${err.message}`);
+      }
+    }
+    result = evaluate(graph, inputs);
+    runs = [{ label: graph.ruleset ?? basename(options.spec), nodes: result }];
   }
 
   console.log(JSON.stringify(result, null, 2));
+
+  const errors = errorsIn(runs);
+  if (errors.length > 0) {
+    console.error(`\n${errors.length} fact(s) could not be evaluated:`);
+    for (const line of errors) console.error(`  ${line}`);
+    process.exit(1);
+  }
 }
 
 main();

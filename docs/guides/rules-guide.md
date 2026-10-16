@@ -293,8 +293,16 @@ rulesets:
             monthlyExpenses: 1200
 ```
 
-`blueprint-evaluate` runs every ruleset and example in one pass, which is how a
-ruleset gets exercised without writing code. Examples carry inputs only —
+`blueprint-evaluate` runs a ruleset's examples against the graph resolve
+compiled for it, which is how a ruleset gets exercised without writing code:
+
+```bash
+blueprint-evaluate --spec=resolved/domains/intake/intake-interviewFlags-graph.yaml \
+                   --examples=resolved/domains/intake/intake-rules-examples.yaml
+```
+
+It prints one result per example, and exits 1 naming any fact that came back as
+an error. Examples carry inputs only —
 pinning expected results is the conformance corpus's job, and a second set of
 expectations would drift from it.
 
