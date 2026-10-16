@@ -25,7 +25,7 @@
     "mock:start": "node packages/blueprint-mock-server/cli/server.js",
     "mock:stop": "node packages/blueprint-mock-server/cli/server.js --stop",
     "mock:start:all": "node packages/blueprint-mock-server/cli/start-all.js --spec=packages/safety-net-contracts/src",
-    "mock:swagger": "node packages/blueprint-mock-server/cli/swagger/server.js --spec=packages/safety-net-contracts/src",
+    "mock:swagger": "node packages/blueprint-mock-server/cli/swagger/server.js --spec=packages/safety-net-contracts/src --spec=packages/blueprint-mock-server/contracts",
     "mock:seed": "node packages/blueprint-mock-server/cli/generate-mock-data.js --spec=packages/safety-net-contracts/src --out=packages/safety-net-contracts/mock-data",
     "validate:mock-data": "node packages/blueprint-mock-server/cli/validate-mock-data.js --spec=packages/generated/contracts",
     "mock:setup": "node packages/blueprint-mock-server/cli/setup.js --spec=packages/safety-net-contracts/src",

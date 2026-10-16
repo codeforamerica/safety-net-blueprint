@@ -1,0 +1,59 @@
+{
+  "$id": "https://blueprint.codeforamerica.org/schemas/forwarding-schema.json",
+  "title": "Forwarding",
+  "description": "Domains and endpoints the mock forwards to a real service instead of answering itself. Per-environment configuration, read at boot; never part of a contract set.",
+  "type": "object",
+  "required": ["forwarding"],
+  "additionalProperties": false,
+  "properties": {
+    "forwarding": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Forward" }
+    }
+  },
+  "definitions": {
+    "Forward": {
+      "description": "One domain or one endpoint, and where it goes. Exactly one of domain and endpoint.",
+      "type": "object",
+      "required": ["to"],
+      "oneOf": [
+        { "required": ["domain"] },
+        { "required": ["endpoint"] }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "description": "A domain the contracts declare, by the name of its directory. Every route it declares is forwarded.",
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "examples": ["intake", "document-management"]
+        },
+        "endpoint": {
+          "description": "One route the contracts declare, as its route key: method, a space, then the path with OpenAPI {param} templates. Overrides a domain entry for that route.",
+          "type": "string",
+          "pattern": "^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /",
+          "examples": ["POST /intake/applications", "GET /intake/applications/{applicationId}"]
+        },
+        "to": {
+          "description": "Absolute base URL of the real service. Its path, if any, is a prefix: the request's own path is appended to it. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
+          "type": "string",
+          "pattern": "^https?://[^/@?#]+([/?#].*)?$"
+        },
+        "includeHeaders": {
+          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+          }
+        },
+        "timeoutMs": {
+          "description": "How long to wait for the real service before answering 504. Defaults to 10000.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

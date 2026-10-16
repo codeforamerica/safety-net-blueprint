@@ -212,7 +212,9 @@ export function apiSpecsFromDocs(docs) {
     const name = specNameOf(doc.path);
     try {
       const resolve = resolverFor(doc, docs);
-      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath });
+      // The domain is the contract's directory, which is what a person names
+      // it by; the spec's own name comes from its file and can differ.
+      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath, domain: doc.domain ?? null });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }

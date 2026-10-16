@@ -240,8 +240,13 @@ export function validate(data, schema, schemaKey, source = null) {
     return { valid: true, errors: [] };
   }
   
-  // Log raw validation errors for debugging
-  if (process.env.DEBUG_VALIDATION) {
+  // Log raw validation errors for debugging.
+  //
+  // Reached through `globalThis` because this module is in the browser entry's
+  // graph: a bare `process` is a ReferenceError in a page, and this line sits
+  // on the validation-failure path, so every rejected request came back as a
+  // 500 "process is not defined" instead of the 422 naming the field.
+  if (globalThis.process?.env?.DEBUG_VALIDATION) {
     console.log('Validation failed for:', schemaKey);
     console.log('Raw Ajv errors:', JSON.stringify(validator.errors, null, 2));
   }

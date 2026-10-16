@@ -19,12 +19,13 @@
 
 import { createMemoryStore } from './stores/memory-store.js';
 import { apiSpecsFromDocs } from './spec-loader.js';
-import { registerPlatformRoutes, contractOverrides } from './platform-routes.js';
+import { registerPlatformRoutes, contractOverrides, refuseOwnRouteCollisions } from './platform-routes.js';
 import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
   registerRulesRoutes, buildRulesIndex,
 } from './route-generator.js';
 import { createDispatcher, overrideByOperationId } from './http/route-table.js';
+import { applyForwarding } from './forwarding.js';
 import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
@@ -47,6 +48,9 @@ import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-vi
  *   path: `basePath: location.pathname.replace(/\/[^/]*$/, '')`
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {boolean} [options.verifyHash] - Check the payload against its hash
+ * @param {Array} [options.forwarding] - Domains and endpoints to forward to a
+ *   real service, as `schemas/forwarding-schema.json` describes the entries.
+ *   Configuration for this page, not part of the contract set.
  * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
  */
 export async function createMockServer({
@@ -55,6 +59,7 @@ export async function createMockServer({
   baseUrl = '',
   basePath = '',
   seed = true,
+  forwarding = [],
 } = {}) {
   // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
   // wrote this and `extract(artifact, 'docs')` reads it back, rebuilding each
@@ -122,5 +127,12 @@ export async function createMockServer({
   registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
   overrideByOperationId(routes, contractOverrides({ store }));
 
-  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints };
+  // Last, so a route is forwarded whatever registered it, and before the
+  // dispatcher is built, so the first request is already answered the way
+  // the configuration says (#283).
+  refuseOwnRouteCollisions(routes, apiSpecs);
+  const forwarded = applyForwarding(routes, forwarding);
+  for (const key of forwarded) console.log(`  FORWARD ${key}`);
+
+  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints, forwarded };
 }

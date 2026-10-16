@@ -47,7 +47,9 @@ export function templateOf(expressPath) {
  * @param {string} method
  * @param {string} expressPath - Path in either `:param` or `{param}` form
  * @param {Function} handler - Fetch-shaped handler
- * @param {{ operationId?: string, description?: string }} [meta]
+ * @param {{ operationId?: string, description?: string, domain?: string, mock?: boolean }} [meta]
+ *   `domain` is the domain whose contract declared the route; `mock` marks one
+ *   the mock serves itself, which no contract declares.
  * @returns {boolean} Whether the route was added
  */
 export function addRoute(routes, method, expressPath, handler, meta = {}) {
@@ -56,10 +58,34 @@ export function addRoute(routes, method, expressPath, handler, meta = {}) {
   routes.set(key, {
     operationId: meta.operationId ?? null,
     description: meta.description ?? null,
-    expressPath,
+    domain: meta.domain ?? null,
+    mock: meta.mock ?? false,
     handler,
   });
   return true;
+}
+
+/**
+ * Tag every route `register` adds.
+ *
+ * For a registration path with many `addRoute` calls and one thing in common —
+ * the domain whose contract declared them, or that the mock serves them
+ * itself. A route that was already registered keeps its tags, because first
+ * registration wins and the tags belong to whoever registered it.
+ *
+ * @param {Map<string, object>} routes
+ * @param {{ domain?: string|null, mock?: boolean }} tags
+ * @param {() => T} register
+ * @returns {T} Whatever `register` returned
+ * @template T
+ */
+export function tagRoutesAddedBy(routes, tags, register) {
+  const before = new Set(routes.keys());
+  const result = register();
+  for (const [key, entry] of routes) {
+    if (!before.has(key)) Object.assign(entry, tags);
+  }
+  return result;
 }
 
 /**

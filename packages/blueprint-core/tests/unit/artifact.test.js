@@ -338,3 +338,49 @@ describe('generate(docs, \'artifact\', { domains })', () => {
     }
   });
 });
+
+describe('what the artifact leaves out', () => {
+  // The artifact is published — the harness one is inlined into a page anyone
+  // can open — so a file in the contracts directory that is not a contract
+  // must not ride along in it.
+
+  test('a document no contract type describes, and nothing references', () => {
+    const dir = contractsIn({
+      ...TREE,
+      'forwarding.yaml': { forwarding: [{ domain: 'intake', to: 'https://intake.example.gov', includeHeaders: ['X-Secret'] }] },
+    });
+    try {
+      const docs = discover(dir).map(load);
+      assert.ok(docs.some((d) => d.relativePath === 'forwarding.yaml'), 'discover still finds it');
+
+      const artifact = generate(docs, 'artifact');
+      assert.equal(artifact.docs.some((d) => d.relativePath === 'forwarding.yaml'), false);
+      assert.equal(JSON.stringify(artifact).includes('X-Secret'), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('but not one a contract references, which the set needs to resolve', () => {
+    const dir = contractsIn({
+      'domains/intake/intake-openapi.yaml': {
+        openapi: '3.1.0',
+        info: { title: 'Intake', version: '1.0.0', 'x-domain': 'intake' },
+        paths: {},
+        components: { schemas: { Program: { type: 'string', enum: { $ref: '../../shared/programs.yaml#/programs' } } } },
+      },
+      // A list rather than a map of objects, so no contract type claims it.
+      'shared/programs.yaml': { programs: ['snap', 'medicaid'] },
+    });
+    try {
+      const docs = discover(dir).map(load);
+      const shared = docs.find((d) => d.relativePath === 'shared/programs.yaml');
+      assert.equal(shared?.type, 'unknown', 'the case under test: a referenced file of no known type');
+
+      const artifact = generate(docs, 'artifact');
+      assert.ok(artifact.docs.some((d) => d.relativePath === 'shared/programs.yaml'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

@@ -23,7 +23,7 @@ async function testStubCrud() {
     method: 'POST',
     body: {
       on: 'data_exchange.service_call.created',
-      respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+      response: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
     }
   });
   assert(postRes.status === 201, `POST /mock/stubs/events → expected 201, got ${postRes.status}`);
@@ -43,7 +43,7 @@ async function testStubCrud() {
   // Register a second stub
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
+    body: { on: 'data_exchange.service_call.created', response: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
   });
 
   // DELETE /:id — remove a specific stub
@@ -88,7 +88,7 @@ async function testStubConsumedOnEvent() {
     method: 'POST',
     body: {
       on: 'data_exchange.service_call.created',
-      respond: {
+      response: {
         type: 'data_exchange.call.completed',
         data: { result: 'inconclusive' }
       }
@@ -118,11 +118,11 @@ async function testStubFifo() {
 
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } } }
+    body: { on: 'data_exchange.service_call.created', response: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } } }
   });
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
+    body: { on: 'data_exchange.service_call.created', response: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
   });
 
   assert((await (await fetch(`${BASE_URL}/mock/stubs/events`)).json()).total === 2, 'two stubs registered');
@@ -166,7 +166,7 @@ async function testTimerStub() {
   console.log('\n--- Timer stub ---');
   await clearStubs();
 
-  // Register a timer stub — no respond needed, callback comes from the event
+  // Register a timer stub — no response needed, callback comes from the event
   const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
@@ -178,7 +178,7 @@ async function testTimerStub() {
 
   const stub = await postRes.json();
   assert(stub.id, 'stub should have an id');
-  assert(stub.respond === undefined, 'timer stub should have no respond field');
+  assert(stub.response === undefined, 'timer stub should have no response field');
 
   // Inject a scheduling.timer.requested event with callback data
   const subjectId = 'task-timer-test-1';
@@ -228,7 +228,7 @@ async function testMatchFilter() {
     body: {
       on: 'data_exchange.service_call.created',
       match: { 'data.serviceType': 'fdsh_ssa' },
-      respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }
+      response: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }
     }
   });
 
@@ -259,7 +259,7 @@ async function testStubResponseCausationid() {
     method: 'POST',
     body: {
       on: 'data_exchange.service_call.created',
-      respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+      response: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
     }
   });
 

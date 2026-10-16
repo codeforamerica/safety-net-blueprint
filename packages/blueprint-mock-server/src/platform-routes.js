@@ -22,8 +22,50 @@ import {
 } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
-import { addRoute } from './http/route-table.js';
+import { addRoute, routeKey, tagRoutesAddedBy } from './http/route-table.js';
 import { jsonBody, readJsonBody, invalidJson } from './http/request.js';
+
+/**
+ * Register the routes the mock serves itself, tagged so nothing mistakes them
+ * for ones a contract declares: forwarding refuses them, and a contract that
+ * declares one of their paths is refused at boot.
+ *
+ * @param {Map<string, object>} routes
+ * @param {object} deps - As `registerOwnRoutes` takes them
+ */
+export function registerPlatformRoutes(routes, deps) {
+  tagRoutesAddedBy(routes, { mock: true }, () => registerOwnRoutes(routes, deps));
+}
+
+/**
+ * Refuse a contract that declares a path the mock serves itself.
+ *
+ * The mock's own routes are registered first and first registration wins, so
+ * a contract declaring `/mock/stubs/http` or `/health` would be shadowed:
+ * declared, listed in Swagger, and never served. Detected from the routes
+ * rather than a list of reserved prefixes, so a route the mock adds later is
+ * covered without anyone remembering to add it. The mock's own OpenAPI
+ * document is the likeliest cause — it describes these routes for Swagger,
+ * and passed to the mock as a contract it would collide with every one.
+ *
+ * @param {Map<string, object>} routes
+ * @param {Array} apiSpecs - As `apiSpecsFromDocs` returns them
+ */
+export function refuseOwnRouteCollisions(routes, apiSpecs) {
+  const collisions = [];
+  for (const spec of apiSpecs) {
+    for (const endpoint of spec.endpoints ?? []) {
+      const key = routeKey(endpoint.method, endpoint.path);
+      if (routes.get(key)?.mock) collisions.push(`${key} (${spec.relativePath ?? spec.name})`);
+    }
+  }
+  if (collisions.length === 0) return;
+  throw new Error(
+    'These contract routes are ones the mock serves itself, so they would never be reached:\n  '
+    + collisions.join('\n  ')
+    + '\nThe mock\'s own OpenAPI document is for Swagger; do not pass it to the mock as a contract.',
+  );
+}
 
 /**
  * Register the platform routes into a table.
@@ -40,7 +82,7 @@ import { jsonBody, readJsonBody, invalidJson } from './http/request.js';
  * @param {Record<string, object>} deps.policies - Registry entries restored by /mock/reset
  * @param {boolean} [deps.seeded] - Whether seed data was supplied at boot
  */
-export function registerPlatformRoutes(routes, { store, apiNames = [], readDocs, configs = [], policies = {}, seeded = true }) {
+function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [], policies = {}, seeded = true }) {
   // Health check endpoint
   addRoute(routes, 'GET', '/health', () =>
     Response.json({ status: 'ok', apis: apiNames }));
