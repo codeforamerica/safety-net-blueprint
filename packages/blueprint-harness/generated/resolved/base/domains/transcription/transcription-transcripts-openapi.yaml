@@ -402,6 +402,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TranscriptionProfile"
+              examples:
+                TranscriptionProfileExample1:
+                  $ref: "#/components/examples/TranscriptionProfileExample1"
         "404":
           $ref: ../../components/responses.yaml#/NotFound
         "500":
@@ -1068,10 +1071,33 @@ components:
         id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
         subjectType: interview
         subjectId: 5c1f8a2e-0d3b-4e6f-9a7c-2b4d6e8f0a1c
-        profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
         model: standard
         client: interview-assistant/0.1.0
         status: recording
         startedAt: "2026-10-11T14:00:00Z"
         createdAt: "2026-10-11T14:00:00Z"
         updatedAt: "2026-10-11T14:00:00Z"
+        profile:
+          id: 7a1e0c2d-0000-4000-8000-0000000000b1
+          name: english
+          description: An interview in English.
+          provider: aws-transcribe
+          languages:
+            - en-US
+          idleTimeout: PT30M
+          source: system
+          createdAt: "2026-10-01T00:00:00Z"
+          updatedAt: "2026-10-01T00:00:00Z"
+    TranscriptionProfileExample1:
+      summary: The English interview profile, as the config seeded it
+      value:
+        id: 7a1e0c2d-0000-4000-8000-0000000000b1
+        name: english
+        description: An interview in English.
+        provider: aws-transcribe
+        languages:
+          - en-US
+        idleTimeout: PT30M
+        source: system
+        createdAt: "2026-10-01T00:00:00Z"
+        updatedAt: "2026-10-01T00:00:00Z"

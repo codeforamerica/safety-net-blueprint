@@ -414,6 +414,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TranscriptionProfile"
+              examples:
+                TranscriptionProfileExample1:
+                  $ref: "#/components/examples/TranscriptionProfileExample1"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         "500":
@@ -885,3 +888,15 @@ components:
         startedAt: "2026-10-11T14:00:00Z"
         createdAt: "2026-10-11T14:00:00Z"
         updatedAt: "2026-10-11T14:00:00Z"
+    TranscriptionProfileExample1:
+      summary: The English interview profile, as the config seeded it
+      value:
+        id: "7a1e0c2d-0000-4000-8000-0000000000b1"
+        name: english
+        description: An interview in English.
+        provider: aws-transcribe
+        languages: [en-US]
+        idleTimeout: PT30M
+        source: system
+        createdAt: "2026-10-01T00:00:00Z"
+        updatedAt: "2026-10-01T00:00:00Z"

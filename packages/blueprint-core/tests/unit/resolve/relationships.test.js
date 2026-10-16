@@ -93,6 +93,79 @@ describe('resolveRelationshipAnnotations', () => {
     assert.match(result.warnings.join('\n'), /Ghost/);
   });
 
+  // An API that shows one example for its expanded read schema and one for
+  // the request body that still takes the key, and documents the related
+  // record as an example of its own.
+  const MEMBER_ID = '00000000-0000-4000-8000-000000000001';
+  const member = { id: MEMBER_ID, name: 'Ada' };
+  const withExamples = ({ documentMember = true } = {}) => doc({
+    openapi: '3.1.0',
+    info: { title: 'Intake', version: '1.0.0' },
+    paths: {
+      '/applications': {
+        post: {
+          requestBody: { content: { 'application/json': {
+            schema: { $ref: '#/components/schemas/ApplicationCreate' },
+            examples: { Create: { value: { memberId: MEMBER_ID } } },
+          } } },
+          responses: { 201: { content: { 'application/json': {
+            schema: { $ref: '#/components/schemas/Application' },
+            examples: { ApplicationExample1: { $ref: '#/components/examples/ApplicationExample1' } },
+          } } } },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        Member: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } },
+        Application: {
+          type: 'object',
+          properties: { id: { type: 'string' }, memberId: { type: 'string', 'x-relationship': { resource: 'Member' } } },
+        },
+        ApplicationCreate: { type: 'object', properties: { memberId: { type: 'string' } } },
+      },
+      examples: {
+        ApplicationExample1: { value: { id: 'a1', memberId: MEMBER_ID } },
+        ...(documentMember && { MemberExample1: { value: member } }),
+      },
+    },
+  }, { relativePath: 'domains/intake/intake-openapi.yaml', type: 'openapi' });
+
+  test('an example shown for an expanded schema gets the documented related record', () => {
+    const { examples } = content(resolveRelationshipAnnotations([withExamples()], 'expand')).components;
+
+    assert.deepEqual(examples.ApplicationExample1.value, { id: 'a1', member });
+  });
+
+  test('a request example for a schema that keeps the key is left alone', () => {
+    const create = content(resolveRelationshipAnnotations([withExamples()], 'expand'))
+      .paths['/applications'].post.requestBody.content['application/json'].examples.Create;
+
+    assert.deepEqual(create.value, { memberId: MEMBER_ID });
+  });
+
+  test('a related record that is only in seeds or config is warned about, not used', () => {
+    // Seeds and config entries are stored and input shapes for other
+    // purposes. Only documented examples fill in a documented example.
+    const seeds = doc({ domain: 'intake', MemberExample1: member },
+      { relativePath: 'domains/intake/intake-mock-data.yaml', type: 'mock-data' });
+    const config = doc({ domain: 'intake', version: '1.0', members: { resource: 'Member', entries: [member] } },
+      { relativePath: 'domains/intake/intake-config.yaml', type: 'config' });
+    const result = resolveRelationshipAnnotations([withExamples({ documentMember: false }), seeds, config], 'expand');
+
+    assert.notDeepEqual(content(result).components.examples.ApplicationExample1.value.member, member);
+    assert.match(result.warnings.join('\n'), new RegExp(`no example found with id "${MEMBER_ID}"`));
+  });
+
+  test('seed data keeps the key, the way the server stores it', () => {
+    const stored = { id: 'a1', memberId: MEMBER_ID };
+    const seeds = doc({ domain: 'intake', ApplicationExample1: stored },
+      { relativePath: 'domains/intake/intake-mock-data.yaml', type: 'mock-data' });
+    const result = resolveRelationshipAnnotations([withExamples(), seeds], 'expand');
+
+    assert.deepEqual(result.docs[1].content.ApplicationExample1, stored);
+  });
+
   test('every pass returns the same shape', () => {
     const result = resolveRelationshipAnnotations([withFk()], 'links-only');
 
