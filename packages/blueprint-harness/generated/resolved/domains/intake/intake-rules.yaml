@@ -108,12 +108,13 @@ rulesets:
       - path: inconsistencies.wagesDifferFromWageRecords
         type: boolean
         description: |
-          A member's monthly wages in the wage records differ by more than the allowed difference from their reported earned income, or they report no regular earned income.
+          A member's monthly wages in the wage records differ by more than the allowed difference from the total of their reported regular earned income, or they report none.
         expression: |
-          verified.exists(v, v.kind == 'wage_record' && !current.incomes.exists(i,
-            i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular'
-            && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - constants.differenceAllowed)
-            && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + constants.differenceAllowed)))
+          verified.exists(v, v.kind == 'wage_record' && !(
+            current.incomes.filter(i, i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular')
+              .map(i, i.amount * monthlyFactor[i.frequency]).sum() >= v.amount / 3.0 * (1.0 - constants.differenceAllowed)
+            && current.incomes.filter(i, i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular')
+              .map(i, i.amount * monthlyFactor[i.frequency]).sum() <= v.amount / 3.0 * (1.0 + constants.differenceAllowed)))
       - path: inconsistencies.incomeDiffersFromPayStub
         type: boolean
         description: A reported income differs by more than the allowed difference, a month at a time, from its verified pay stub.

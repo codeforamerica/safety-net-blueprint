@@ -119,4 +119,25 @@ describe('evaluate — intake/interviewFlags', () => {
     const result = outputValues(evaluate(graph, examples[1].inputs));
     assert.ok(Object.values(result).every((value) => value === false), JSON.stringify(result));
   });
+
+  it('a member with two jobs is checked against the total of both', () => {
+    // A wage record covers all of a member's wages, so comparing it with one
+    // job at a time flagged anyone with a second job. The partner keeps the
+    // clinic (950 semimonthly, 1900 a month) and adds 600 a month at a store;
+    // the quarter's record of 7500 is three months of the two together.
+    const inputs = structuredClone(examples[1].inputs);
+    inputs.current.jobs.push({ id: 'store', memberId: 'partner', employer: 'Corner Store' });
+    inputs.current.incomes.push({
+      id: 'store-pay', memberId: 'partner', jobId: 'store', source: 'earned',
+      amount: 600, frequency: 'monthly', paidInCash: false, amountVaries: false,
+    });
+    inputs.verified.find((v) => v.kind === 'wage_record').amount = 7500;
+
+    const result = outputValues(evaluate(graph, inputs));
+    assert.equal(result['inconsistencies.wagesDifferFromWageRecords'], false);
+
+    inputs.verified.find((v) => v.kind === 'wage_record').amount = 5700;
+    assert.equal(outputValues(evaluate(graph, inputs))['inconsistencies.wagesDifferFromWageRecords'], true,
+      'a record of only the clinic wages now differs from what the partner reports');
+  });
 });
