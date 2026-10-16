@@ -219,6 +219,11 @@ mom" a model can propose four members and their relationships, but not names or
 birth dates, because nobody said them — and partial evaluation then reports
 those as missing.
 
+The inputs and results in the table are a first guess, not a decision. What a
+call receives — one turn, the conversation so far, the current application —
+and what it returns — values, a patch to the application, flags for the worker
+to ask about — are open; see [Open questions](#open-questions).
+
 ### How a service call reaches a provider
 
 The catalog entry for each AI service declares how to call its provider: a
@@ -393,10 +398,11 @@ entry — see [How a service call reaches a provider](#how-a-service-call-reache
 
 - **Transcription** streams continuously; lines appear as people speak and are
   replaced as they firm up.
-- **An assistant's suggestions** follow finished *turns* — everything one
-  person said before the other spoke. A few seconds is fine, since the worker is
-  mid-conversation and glances at them. One model call per turn, rather than per
-  line, keeps the number of calls and their cost down.
+- **An assistant's suggestions** need only arrive within a few seconds, since
+  the worker is mid-conversation and glances at them. When they are made is
+  open: after each finished *turn* — everything one person said before the other
+  spoke — on a timer, or when the worker asks. Any of them keeps the number of
+  calls, and their cost, well below one per line.
 - **An agent's conversation loop** — speech in, model, speech out — has to
   answer in about a second, and stays inside the speech model's session.
 
@@ -433,6 +439,11 @@ declared in a state machine.
 
 A worker interviews an applicant. The page holds the worker's UI, audio capture,
 sign-in, and the mock.
+
+The walk-through picks one answer to each open question about AI calls — a call
+after each finished turn, sending that turn, returning values — to have
+something concrete to follow. Calls made on a timer, sending the whole
+conversation, or returning a patch or flags would travel the same path.
 
 1. **The worker starts the interview.** The page calls `record-consent`, then
    `start`, on the `Interview`. The interview requirements that apply to this household
@@ -908,6 +919,13 @@ Larger and later:
 
 ## Open questions
 
+- For an AI call: when it is made (after each finished turn, on a timer, when
+  the worker asks), what it receives (one turn, the conversation so far, the
+  current application), and what it returns (values, a patch to the
+  application, flags for the worker to ask about). Tools being prototyped send
+  the conversation so far, on a timer and on demand, because contradictions and
+  repeated facts cannot be seen in one turn; one returns a patch whose changes
+  cite the transcript lines they came from, the other returns flags.
 - Where the recertification interview lives, which waits on case management
   modeling recertification.
 - Where the transcription client lives: with the application that uses it, or
