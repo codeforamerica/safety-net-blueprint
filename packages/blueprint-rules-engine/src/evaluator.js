@@ -595,18 +595,7 @@ function comprehensionStates(node, deps, depState, scope, loop) {
   if (!Array.isArray(items)) return leafStates(node, deps, depState, scope, loop);
 
   const source = chain ? inputPathOf(chain, loop) : null;
-  const read = readFields(c.loopStep, c.iterVar);
-  const unknown = items.some((item) => read.some((path) => valueAt(item, path) == null));
-  if (!unknown) {
-    // A macro nested in the step — wage records against each member's
-    // incomes — can still meet an item missing a field; walking item by item
-    // is what finds it, so a failure here is retried that way.
-    try {
-      return leafStates(node, deps, depState, scope, loop);
-    } catch (err) {
-      if (!containsComprehension(c.loopStep)) throw err;
-    }
-  }
+  if (!hasUnknownItem(c, items, scope)) return leafStates(node, deps, depState, scope, loop);
 
   let result = statesOf(c.accuInit, deps, depState, scope, loop);
   for (const item of items) {
@@ -619,14 +608,50 @@ function comprehensionStates(node, deps, depState, scope, loop) {
   return statesOf(c.result, deps, depState, { ...scope, [c.accuVar]: result.value }, withResult(loop, c.accuVar, result));
 }
 
-function containsComprehension(node) {
-  const k = node.exprKind;
-  if (k.case === 'comprehensionExpr') return true;
-  if (k.case === 'selectExpr') return containsComprehension(k.value.operand);
-  if (k.case === 'callExpr') return [k.value.target, ...k.value.args].some((x) => x && containsComprehension(x));
-  if (k.case === 'listExpr') return k.value.elements.some(containsComprehension);
-  if (k.case === 'structExpr') return k.value.entries.some((e) => e.value && containsComprehension(e.value));
-  return false;
+/**
+ * Whether any item a macro walks — at its own level, or in a macro nested in
+ * its step, such as each wage record against the member's incomes — lacks a
+ * field the step reads. Decided before evaluating, from the data, so a macro
+ * with nothing unknown is evaluated whole and one with an unknown item is
+ * walked item by item.
+ *
+ * A nested macro over a list another expression computes can't be checked
+ * this way, since its items exist only once evaluated, so it is walked item
+ * by item: that is correct for any list, only slower.
+ *
+ * @param {object} c - The comprehension
+ * @param {unknown[]} items - The items it walks
+ * @param {object} scope
+ * @returns {boolean}
+ */
+function hasUnknownItem(c, items, scope) {
+  const read = readFields(c.loopStep, c.iterVar);
+  const nested = nestedComprehensions(c.loopStep);
+  return items.some((item) => {
+    if (read.some((path) => valueAt(item, path) == null)) return true;
+    const bound = { ...scope, [c.iterVar]: item };
+    return nested.some((n) => {
+      const inner = n.exprKind.value;
+      const chain = chainOf(inner.iterRange);
+      if (!chain) return true;
+      const innerItems = lookupChain(chain, bound);
+      return Array.isArray(innerItems) && hasUnknownItem(inner, innerItems, bound);
+    });
+  });
+}
+
+/** The macros directly in an expression: not those inside another macro, which their own check covers. */
+function nestedComprehensions(node) {
+  const found = [];
+  (function walk(n) {
+    const k = n.exprKind;
+    if (k.case === 'comprehensionExpr') { found.push(n); return; }
+    if (k.case === 'selectExpr') { walk(k.value.operand); return; }
+    if (k.case === 'callExpr') { if (k.value.target) walk(k.value.target); k.value.args.forEach(walk); return; }
+    if (k.case === 'listExpr') { k.value.elements.forEach(walk); return; }
+    if (k.case === 'structExpr') { k.value.entries.forEach((e) => e.value && walk(e.value)); }
+  })(node);
+  return found;
 }
 
 function withItem(loop, name, source) {
