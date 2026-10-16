@@ -403,6 +403,36 @@ test('executeTransition — emit: step stores event in database', () => {
   assert.strictEqual(emitted.data.resourceId, 'res-steps-2');
 });
 
+test('executeTransition — an emitted event records who acted and carries the trace', () => {
+  store.insertResource('testresources', { id: 'res-steps-auth', status: 'pending' });
+  const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+
+  const result = executeTransition({
+    store,
+    resourceName: 'testresources',
+    resourceId: 'res-steps-auth',
+    trigger: 'submit',
+    callerId: 'user-1',
+    callerRoles: [ROLES.CASE_WORKER],
+    stateMachine: makeStateMachine(),
+    machine: makeMachine([{
+      id: 'submit',
+      transition: { from: 'pending', to: 'submitted' },
+      steps: [{ emit: { type: 'test.testresource.submitted' } }]
+    }]),
+    traceparent,
+    now: '2025-01-01T00:00:00Z'
+  });
+
+  assert.strictEqual(result.success, true);
+  const emitted = store.findAll('events', {}).items.find(e => e.type === 'test.testresource.submitted');
+  assert.strictEqual(emitted.authid, 'user-1');
+  assert.strictEqual(emitted.authtype, 'user');
+  assert.strictEqual(emitted.traceparent, traceparent);
+  assert.ok(!('data' in emitted), 'an emit with no data carries none');
+  assert.ok(!('causationid' in emitted), 'a transition a request started has no causing event');
+});
+
 test('executeTransition — emit: subject override uses value expression instead of resourceId', () => {
   store.insertResource('testresources', { id: 'res-steps-2b', status: 'pending', parentId: 'parent-app-99' });
 
@@ -410,7 +440,7 @@ test('executeTransition — emit: subject override uses value expression instead
     id: 'complete',
     transition: { from: 'pending', to: 'completed' },
     guards: [],
-    steps: [{ emit: { type: 'eligibility.application.determination_completed', subject: '$object.parentId', data: {} } }]
+    steps: [{ emit: { type: 'eligibility.determination.completed', subject: '$object.parentId', data: {} } }]
   }]);
 
   const result = executeTransition({
@@ -428,8 +458,8 @@ test('executeTransition — emit: subject override uses value expression instead
 
   assert.strictEqual(result.success, true);
   const { items: events } = store.findAll('events', {});
-  const emitted = events.find(e => e.type && e.type.includes('determination_completed'));
-  assert.ok(emitted, 'determination_completed event should be stored');
+  const emitted = events.find(e => e.type === 'eligibility.determination.completed');
+  assert.ok(emitted, 'the completed event should be stored');
   assert.strictEqual(emitted.subject, 'parent-app-99', 'subject should be the overridden value, not the resource id');
 });
 
@@ -441,7 +471,7 @@ test('executeTransition — if: step runs correct branch based on resource state
     transition: { from: 'pending', to: 'routed' },
     guards: [],
     steps: [{
-      if: '$object.isExpedited == true',
+      if: 'has(object.isExpedited) && object.isExpedited == true',
       then: [{ set: { field: 'priority', value: 'high' } }],
       else: [{ set: { field: 'priority', value: 'normal' } }]
     }]
@@ -471,7 +501,7 @@ test('executeTransition — if: true branch runs when condition met', () => {
     transition: { from: 'pending', to: 'routed' },
     guards: [],
     steps: [{
-      if: '$object.isExpedited == true',
+      if: 'has(object.isExpedited) && object.isExpedited == true',
       then: [{ set: { field: 'priority', value: 'high' } }],
       else: [{ set: { field: 'priority', value: 'normal' } }]
     }]
@@ -491,4 +521,27 @@ test('executeTransition — if: true branch runs when condition met', () => {
 
   assert.strictEqual(result.success, true);
   assert.strictEqual(store.findById('testresources', 'res-steps-4').priority, 'high');
+});
+
+test('executeTransition — a body its schema refuses is 422, even when a condition reads it', () => {
+  store.insertResource('testresources', { id: 'res-order', status: 'pending' });
+  const stateMachine = { ...makeStateMachine(), guards: [{ id: 'atIsSet', condition: 'has(request.at)' }] };
+  const result = executeTransition({
+    store,
+    resourceName: 'testresources',
+    resourceId: 'res-order',
+    trigger: 'stamp',
+    callerId: 'user-1',
+    callerRoles: [ROLES.CASE_WORKER],
+    stateMachine,
+    machine: makeMachine([{
+      id: 'stamp',
+      guards: [{ conditions: ['atIsSet'] }],
+      schema: { request: { type: 'object', required: ['at'], properties: { at: { type: 'string' } } } },
+      steps: [{ set: { field: 'stampedAt', value: '$request.at' } }],
+    }]),
+    requestBody: {},
+    now: '2025-01-01T00:00:00Z',
+  });
+  assert.strictEqual(result.status, 422);
 });

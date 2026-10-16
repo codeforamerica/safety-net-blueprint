@@ -40,7 +40,7 @@ export type Determination = {
     /**
      * Timestamp when the determination was finalized. Null until complete.
      */
-    readonly determinedAt?: string;
+    readonly determinedAt?: string | null;
     /**
      * Timestamp when the determination was created.
      */
@@ -101,7 +101,7 @@ export type DeterminationList = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -146,11 +146,11 @@ export type Decision = {
     /**
      * Explanation of the eligibility decision.
      */
-    reason?: string;
+    reason?: string | null;
     /**
      * Estimated monthly benefit amount if eligible (dollars).
      */
-    benefitAmount?: number;
+    benefitAmount?: number | null;
     readonly createdAt: string;
     readonly updatedAt: string;
     /**
@@ -185,11 +185,11 @@ export type DecisionList = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -207,89 +207,6 @@ export type DecisionList = {
     offset: number;
     hasNext?: boolean;
 };
-
-/**
- * Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export type ExpeditedSnapRequest = {
-    /**
-     * Household financial circumstances at the time of application.
-     */
-    household?: {
-        /**
-         * Total monthly gross income for all household members (dollars).
-         */
-        monthlyGrossIncome?: number;
-        /**
-         * Total liquid resources (cash, bank accounts) available to the household (dollars).
-         */
-        liquidResources?: number;
-        /**
-         * Monthly shelter cost including rent/mortgage and utilities (dollars).
-         */
-        monthlyShelterCost?: number;
-        /**
-         * Whether any household member is a migrant or seasonal farmworker.
-         */
-        isMigrantFarmworker?: boolean;
-    };
-    policy?: {
-        /**
-         * Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-         */
-        incomeThreshold?: number;
-        /**
-         * Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-         */
-        resourceThreshold?: number;
-    };
-};
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export type ExpeditedSnapResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
 
 export type DeterminationWritableWritable = {
     /**
@@ -341,11 +258,11 @@ export type DecisionWritable = {
     /**
      * Explanation of the eligibility decision.
      */
-    reason?: string;
+    reason?: string | null;
     /**
      * Estimated monthly benefit amount if eligible (dollars).
      */
-    benefitAmount?: number;
+    benefitAmount?: number | null;
 };
 
 export type DecisionListWritable = {
@@ -365,11 +282,11 @@ export type DecisionListWritable = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
     }>;
     total: number;
     limit: number;
@@ -558,7 +475,7 @@ export type ListDeterminationsResponses = {
             /**
              * Timestamp when the determination was finalized. Null until complete.
              */
-            readonly determinedAt?: string;
+            readonly determinedAt?: string | null;
             /**
              * Timestamp when the determination was created.
              */
@@ -656,7 +573,7 @@ export type CreateDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -732,7 +649,7 @@ export type GetDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -822,7 +739,7 @@ export type UpdateDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -854,6 +771,73 @@ export type ListDecisionsData = {
         determinationId: string;
     };
     query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
         /**
          * Maximum number of items to return (1-100).
          */
@@ -908,11 +892,11 @@ export type ListDecisionsResponses = {
             /**
              * Explanation of the eligibility decision.
              */
-            reason?: string;
+            reason?: string | null;
             /**
              * Estimated monthly benefit amount if eligible (dollars).
              */
-            benefitAmount?: number;
+            benefitAmount?: number | null;
             readonly createdAt: string;
             readonly updatedAt: string;
             /**
@@ -991,11 +975,11 @@ export type GetDecisionResponses = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -1015,6 +999,9 @@ export type GetDecisionResponse = GetDecisionResponses[keyof GetDecisionResponse
 export type CompleteDeterminationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the determination.
+         */
         determinationId: string;
     };
     query?: never;
@@ -1126,7 +1113,7 @@ export type CompleteDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -1148,138 +1135,3 @@ export type CompleteDeterminationResponses = {
 };
 
 export type CompleteDeterminationResponse = CompleteDeterminationResponses[keyof CompleteDeterminationResponses];
-
-export type EvaluateExpeditedSnapData = {
-    /**
-     * Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
-     */
-    body: {
-        /**
-         * Household financial circumstances at the time of application.
-         */
-        household?: {
-            /**
-             * Total monthly gross income for all household members (dollars).
-             */
-            monthlyGrossIncome?: number;
-            /**
-             * Total liquid resources (cash, bank accounts) available to the household (dollars).
-             */
-            liquidResources?: number;
-            /**
-             * Monthly shelter cost including rent/mortgage and utilities (dollars).
-             */
-            monthlyShelterCost?: number;
-            /**
-             * Whether any household member is a migrant or seasonal farmworker.
-             */
-            isMigrantFarmworker?: boolean;
-        };
-        policy?: {
-            /**
-             * Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-             */
-            incomeThreshold?: number;
-            /**
-             * Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-             */
-            resourceThreshold?: number;
-        };
-    };
-    path?: never;
-    query?: never;
-    url: '/determinations/evaluate-expedited-snap';
-};
-
-export type EvaluateExpeditedSnapErrors = {
-    /**
-     * The request is malformed or contains invalid parameters.
-     */
-    400: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type EvaluateExpeditedSnapError = EvaluateExpeditedSnapErrors[keyof EvaluateExpeditedSnapErrors];
-
-export type EvaluateExpeditedSnapResponses = {
-    /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
-     */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
-};
-
-export type EvaluateExpeditedSnapResponse = EvaluateExpeditedSnapResponses[keyof EvaluateExpeditedSnapResponses];

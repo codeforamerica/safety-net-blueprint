@@ -8,8 +8,7 @@ import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { bindableContext } from '../cel-evaluator.js';
-
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Resolve a where clause value expression against the current resolution context.
@@ -33,13 +32,14 @@ function resolveWhereValue(val, resource, context, resolved) {
  * Resolve context bindings from a state machine procedure's `context:` array.
  * Each item is { alias: { from, where? } }.
  *
- * RETURN TYPE — single entity vs. array:
- *   where: { id: <value> }           → single entity (findById); null if not found
- *   where: { otherField: <value> }   → array of all matching records (may be empty)
- *   JSON Logic where:                → array of all records passing the condition
+ * RETURN TYPE — always one record, or null. A binding names one record; to work
+ * with every match, a step uses forEach:, which takes the same from:/where:.
+ *   where: { id: <value> }           → that record (findById)
+ *   where: { otherField: <value> }   → the first record matching
+ *   JSON Logic or CEL where:         → the first record the condition is true for
  *   (no where)                       → binding is skipped with a warning; alias resolves to null
  *
- * WHERE CLAUSE — two supported forms:
+ * WHERE CLAUSE — three supported forms:
  *
  *   (1) Field-value equality pairs. Values may be:
  *         $object.field  → field on the primary resource being evaluated
@@ -47,11 +47,17 @@ function resolveWhereValue(val, resource, context, resolved) {
  *         $alias.field   → field on a previously resolved binding (chaining)
  *         literal string → exact match value
  *
- *   (2) JSON Logic expression — evaluated per-candidate record; matching records are
- *       collected into an array. Variable references:
+ *   (2) JSON Logic expression — evaluated per candidate record. Variable references:
  *         { var: "fieldName" }        → field on the candidate record
  *         { var: "this.field" }       → field on the triggering event/context
  *         { var: "alias.field" }      → field on a previously resolved binding
+ *
+ *   (3) CEL expression — a string, evaluated per candidate record:
+ *         item      → the candidate record
+ *         object    → the primary resource
+ *         request   → the request body
+ *         this      → the triggering event/context
+ *         alias     → a previously resolved binding
  *
  * Bindings are resolved in order; each binding may reference previously resolved aliases.
  * A binding that finds no record resolves to null.
@@ -59,7 +65,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  * @param {Array} contextBindings - Array of single-key objects { alias: { from, where } }
  * @param {Object} resource - Primary resource for $object.field resolution
  * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
- * @returns {Object} Map of alias → entity|array|null
+ * @returns {Object} Map of alias → entity|null
  */
 function resolveContextBindings(contextBindings, resource, context, store) {
   const resolved = {};
@@ -78,11 +84,31 @@ function resolveContextBindings(contextBindings, resource, context, store) {
       continue;
     }
 
+    if (typeof where === 'string') {
+      const { items: candidates } = store.findAll(collection, {}, { limit: null });
+      const scope = {
+        ...(context?.entities ?? {}),
+        ...resolved,
+        object: resource,
+        request: context?.request ?? {},
+        this: context?.this ?? {},
+      };
+      const matches = (item) => {
+        try {
+          return evaluateCEL(where, { ...scope, item }) === true;
+        } catch {
+          return false; // A field the candidate does not have: not this record.
+        }
+      };
+      resolved[alias] = candidates.find(matches) ?? null;
+      continue;
+    }
+
     const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
     const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
 
     if (isJsonLogic) {
-      const { items: allItems } = store.findAll(collection, {});
+      const { items: allItems } = store.findAll(collection, {}, { limit: null });
       const logicData = {
         this: context?.this ?? {},
         object: resource,
@@ -185,28 +211,8 @@ function hasProcedureStepKey(proc) {
 }
 
 /**
- * Build the CEL/JS evaluation context from a step context.
- */
-function buildEvalCtx(context) {
-  return {
-    caller: context.caller || {},
-    object: context.object || {},
-    request: context.request || {},
-    params: context.params || {},
-    ...Object.fromEntries(
-      Object.entries(context.entities || {}).map(([k, v]) => [`$${k}`, v])
-    ),
-    $caller: context.caller || {},
-    $object: context.object || {},
-    $request: context.request || {},
-    $this: context.this || {},
-    $params: context.params || {},
-    $now: context.now || new Date().toISOString(),
-  };
-}
-
-/**
- * Resolve a single with: argument value against a step context.
+ * Resolve a single with: argument value against a step context. Objects are
+ * resolved field by field.
  */
 function resolveWithArgValue(val, context) {
   if (val === null || val === undefined) return val;
@@ -215,23 +221,9 @@ function resolveWithArgValue(val, context) {
     for (const [k, v] of Object.entries(val)) result[k] = resolveWithArgValue(v, context);
     return result;
   }
-  if (typeof val !== 'string') return val;
-
-  if (/^\$[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_.]*)?$/.test(val) || val === '$now') {
-    return resolveValue(val, context);
-  }
-
-  if (val.includes('$') || val.startsWith('"') || val.includes(' + ')) {
-    try {
-      const { names, values } = bindableContext(buildEvalCtx(context));
-      const fn = new Function(...names, `return (${val});`);
-      return fn(...values);
-    } catch (e) {
-      console.warn(`resolveWithArgValue: expression "${val}" failed — ${e.message}`);
-    }
-  }
-
-  return val;
+  // A value expression, a string with value expressions embedded in braces,
+  // or a literal: all resolved the same way as any step value.
+  return resolveValue(val, context);
 }
 
 /**

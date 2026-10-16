@@ -226,3 +226,127 @@ describe('injectEnumSources', () => {
     assert.deepEqual(field(result).enum, ['snap_standard', 'medicaid_standard']);
   });
 });
+
+describe('injectEnumSources — the domains the set defines', () => {
+  const declaring = (relativePath, type, domain) => doc(
+    type === 'openapi' || type === 'asyncapi'
+      ? { [type]: '3.0.0', info: { title: domain, version: '1.0.0', 'x-domain': domain } }
+      : { domain },
+    { relativePath, type, domain }
+  );
+
+  const enums = doc(
+    { $defs: { Domain: { type: 'string', 'x-enum-source': 'domains' } } },
+    { relativePath: 'base/schemas/enums.yaml', type: 'schema' }
+  );
+
+  const domainEnum = (result) =>
+    result.docs.find((d) => d.relativePath === 'base/schemas/enums.yaml').content.$defs.Domain;
+
+  test('every domain an OpenAPI, AsyncAPI or rules document declares, sorted', () => {
+    const result = injectEnumSources([
+      declaring('domains/workflow/workflow-openapi.yaml', 'openapi', 'workflow'),
+      declaring('domains/intake/intake-asyncapi.yaml', 'asyncapi', 'intake'),
+      declaring('domains/screening/screening-rules.yaml', 'rules', 'screening'),
+      enums,
+    ]);
+
+    assert.deepEqual(domainEnum(result).enum, ['intake', 'screening', 'workflow']);
+    assert.equal('x-enum-source' in domainEnum(result), false);
+  });
+
+  test('a document that only attaches to a domain adds none', () => {
+    // A misspelled domain on mock data must not become a value of the enum;
+    // validation reports it instead.
+    const result = injectEnumSources([
+      declaring('domains/intake/intake-openapi.yaml', 'openapi', 'intake'),
+      declaring('domains/intake/intake-mock-data.yaml', 'mock-data', 'intkae'),
+      enums,
+    ]);
+
+    assert.deepEqual(domainEnum(result).enum, ['intake']);
+  });
+
+  test('a set defining no domain leaves the annotation, and no enum', () => {
+    const result = injectEnumSources([enums]);
+
+    assert.equal(domainEnum(result)['x-enum-source'], 'domains');
+    assert.equal('enum' in domainEnum(result), false);
+  });
+
+  test('a set defining domains but nothing else to draw on still warns where one is missing', () => {
+    const result = injectEnumSources([
+      declaring('domains/intake/intake-openapi.yaml', 'openapi', 'intake'),
+      doc({ $defs: { Status: { type: 'string', 'x-enum-source': 'slaTypes[].id' } } },
+        { relativePath: 'common/schemas/status.yaml', type: 'schema' }),
+    ]);
+
+    assert.match(result.warnings.join('\n'), /no values found for "slaTypes"/);
+  });
+});
+
+describe('injectEnumSources — states named without a machine', () => {
+  test('come from the annotated document\'s own domain, whichever state machine was read last', () => {
+    // A set's workflow machine, then a framework machine in another domain
+    // read after it. The workflow schema names no machine, and must still get
+    // workflow's states.
+    const workflow = doc(
+      { domain: 'workflow', machines: [{ object: 'Task', states: [{ id: 'pending' }, { id: 'completed' }] }] },
+      { relativePath: 'domains/workflow/workflow-state-machine.yaml', type: 'state-machine' }
+    );
+    const transcripts = doc(
+      { domain: 'platform', machines: [{ object: 'Transcript', states: [{ id: 'recording' }, { id: 'closed' }] }] },
+      { relativePath: 'base/domains/platform/platform-transcripts-state-machine.yaml', type: 'state-machine' }
+    );
+    const schema = doc(
+      { domain: 'workflow', $defs: { Task: { properties: { status: { type: 'string', 'x-enum-source': 'states[].id' } } } } },
+      { relativePath: 'domains/workflow/workflow-schema.yaml', type: 'schema' }
+    );
+
+    const result = injectEnumSources([workflow, transcripts, schema]);
+    const status = result.docs.find((d) => d.relativePath === 'domains/workflow/workflow-schema.yaml').content.$defs.Task.properties.status;
+    assert.deepEqual(status.enum, ['pending', 'completed']);
+  });
+});
+
+describe('injectEnumSources — registry source', () => {
+  const registry = (relativePath, type, ids) => doc(
+    { type, domain: 'communication', entries: Object.fromEntries(ids.map((id) => [id, { description: id }])) },
+    { relativePath, type: 'registry' }
+  );
+
+  const api = doc(
+    { components: { schemas: { TranscriptWritable: { properties: { provider: { type: 'string', 'x-enum-source': { registry: 'transcription-services' } } } } } } },
+    { relativePath: 'base/domains/communication/communication-transcripts-openapi.yaml', type: 'openapi' }
+  );
+
+  const providers = (result) => result.docs
+    .find((d) => d.type === 'openapi').content.components.schemas.TranscriptWritable.properties.provider;
+
+  test('pools the entry ids of every registry of the type, sorted', () => {
+    // The framework's providers, and a state's own in a file of its own.
+    const result = injectEnumSources([
+      registry('base/domains/communication/communication-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
+      registry('domains/communication/state-registry-transcription-services.yaml', 'transcription-services', ['state-vendor']),
+      api,
+    ]);
+
+    assert.deepEqual(providers(result).enum, ['aws-transcribe', 'elevenlabs-scribe', 'state-vendor']);
+    assert.equal('x-enum-source' in providers(result), false);
+  });
+
+  test('takes only the named type', () => {
+    const result = injectEnumSources([
+      registry('a-registry-transcription-services.yaml', 'transcription-services', ['aws-transcribe']),
+      registry('a-registry-policies.yaml', 'policies', ['snap-clock']),
+      api,
+    ]);
+    assert.deepEqual(providers(result).enum, ['aws-transcribe']);
+  });
+
+  test('a type no registry declares warns and leaves the annotation', () => {
+    const result = injectEnumSources([registry('a-registry-policies.yaml', 'policies', ['snap-clock']), api]);
+    assert.equal(providers(result)['x-enum-source'].registry, 'transcription-services');
+    assert.match(result.warnings.join('\n'), /no registry entries of type "transcription-services"/);
+  });
+});

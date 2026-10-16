@@ -453,11 +453,11 @@ events:
     policies: [snap-notice-of-action]
     programs: [snap]
 
-  intake.determination.approval_needed:
+  intake.application.approval_needed:
     policies: [snap-supervisor-review]
     programs: [snap]
 
-  intake.determination.rejected:
+  intake.application.determination_rejected:
     policies: [snap-supervisor-review]
     programs: [snap]
 

@@ -22,14 +22,14 @@ async function testStubCrud() {
   const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
-      on: 'data_exchange.service_call.created',
-      respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+      on: 'data-exchange.external_service_call.created',
+      response: { type: 'data-exchange.call.completed', data: { result: 'conclusive' } }
     }
   });
   assert(postRes.status === 201, `POST /mock/stubs/events → expected 201, got ${postRes.status}`);
   const stub = await postRes.json();
   assert(stub.id, 'stub should have an id');
-  assert(stub.id.startsWith('service_call.created-'), `unexpected id format: ${stub.id}`);
+  assert(stub.id.startsWith('external_service_call.created-'), `unexpected id format: ${stub.id}`);
   console.log('  ✓ POST /mock/stubs/events registers a stub with human-readable ID');
 
   // GET — list stubs
@@ -43,7 +43,7 @@ async function testStubCrud() {
   // Register a second stub
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
+    body: { on: 'data-exchange.external_service_call.created', response: { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } } }
   });
 
   // DELETE /:id — remove a specific stub
@@ -87,9 +87,9 @@ async function testStubConsumedOnEvent() {
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
-      on: 'data_exchange.service_call.created',
-      respond: {
-        type: 'data_exchange.call.completed',
+      on: 'data-exchange.external_service_call.created',
+      response: {
+        type: 'data-exchange.call.completed',
         data: { result: 'inconclusive' }
       }
     }
@@ -99,7 +99,7 @@ async function testStubConsumedOnEvent() {
   assert(before.total === 1, 'stub should be registered');
 
   // Inject the trigger event — stub engine fires the response synchronously
-  const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-001');
+  const injectRes = await injectEvent('data-exchange.external_service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-001');
   assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
 
   // Stub should now be consumed
@@ -118,22 +118,22 @@ async function testStubFifo() {
 
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } } }
+    body: { on: 'data-exchange.external_service_call.created', response: { type: 'data-exchange.call.completed', data: { result: 'conclusive' } } }
   });
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'data_exchange.service_call.created', respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } } }
+    body: { on: 'data-exchange.external_service_call.created', response: { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } } }
   });
 
   assert((await (await fetch(`${BASE_URL}/mock/stubs/events`)).json()).total === 2, 'two stubs registered');
 
   // First injection consumes first stub
-  await injectEvent('data_exchange.service_call.created', {}, 'sc-001');
+  await injectEvent('data-exchange.external_service_call.created', {}, 'sc-001');
   const after1 = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(after1.total === 1, 'one stub should remain after first event');
 
   // Second injection consumes second stub
-  await injectEvent('data_exchange.service_call.created', {}, 'sc-002');
+  await injectEvent('data-exchange.external_service_call.created', {}, 'sc-002');
   const after2 = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(after2.total === 0, 'no stubs should remain after second event');
 
@@ -149,7 +149,7 @@ async function testNoStubNoError() {
   await clearStubs();
 
   // No stub registered — event fires cleanly, service call stays pending
-  const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'save' }, 'sc-003');
+  const injectRes = await injectEvent('data-exchange.external_service_call.created', { serviceType: 'save' }, 'sc-003');
   assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
 
   // Stub count should still be 0
@@ -166,7 +166,7 @@ async function testTimerStub() {
   console.log('\n--- Timer stub ---');
   await clearStubs();
 
-  // Register a timer stub — no respond needed, callback comes from the event
+  // Register a timer stub — no response needed, callback comes from the event
   const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
@@ -178,7 +178,7 @@ async function testTimerStub() {
 
   const stub = await postRes.json();
   assert(stub.id, 'stub should have an id');
-  assert(stub.respond === undefined, 'timer stub should have no respond field');
+  assert(stub.response === undefined, 'timer stub should have no response field');
 
   // Inject a scheduling.timer.requested event with callback data
   const subjectId = 'task-timer-test-1';
@@ -226,20 +226,20 @@ async function testMatchFilter() {
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
-      on: 'data_exchange.service_call.created',
+      on: 'data-exchange.external_service_call.created',
       match: { 'data.serviceType': 'fdsh_ssa' },
-      respond: { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }
+      response: { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } }
     }
   });
 
   // Inject with non-matching serviceType — stub should NOT be consumed
-  await injectEvent('data_exchange.service_call.created', { serviceType: 'save' }, 'sc-004');
+  await injectEvent('data-exchange.external_service_call.created', { serviceType: 'save' }, 'sc-004');
   const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(after.total === 1, 'stub should not be consumed when match criteria do not match');
   console.log('  ✓ Stub with match filter not consumed when criteria miss');
 
   // Inject with matching serviceType — stub should be consumed
-  await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-005');
+  await injectEvent('data-exchange.external_service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-005');
   const afterMatch = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(afterMatch.total === 0, 'stub should be consumed when match criteria satisfied');
   console.log('  ✓ Stub with match filter consumed when criteria satisfied');
@@ -258,18 +258,18 @@ async function testStubResponseCausationid() {
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
-      on: 'data_exchange.service_call.created',
-      respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+      on: 'data-exchange.external_service_call.created',
+      response: { type: 'data-exchange.call.completed', data: { result: 'conclusive' } }
     }
   });
 
-  const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-causation-1');
+  const injectRes = await injectEvent('data-exchange.external_service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-causation-1');
   assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
   const trigger = await injectRes.json();
   assert(trigger.id, 'injected trigger event should have an id');
 
   // The fired response event must be retrievable by the trigger's id via ?causationid=
-  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=data_exchange.call.completed&causationid=${trigger.id}`);
+  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=data-exchange.call.completed&causationid=${trigger.id}`);
   const events = await eventsRes.json();
   assert.strictEqual(events.items?.length, 1, `expected exactly 1 event for causationid=${trigger.id}, got ${events.items?.length}`);
   const fired = events.items[0];

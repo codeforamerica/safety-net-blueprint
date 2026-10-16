@@ -92,6 +92,7 @@ $defs:
     description: A named composition declaration.
     required:
       - resource
+      - endpoint
     additionalProperties: false
     properties:
       compositeType:
@@ -130,6 +131,9 @@ $defs:
       include:
         $ref: "#/$defs/IncludeMap"
       endpoint:
+        description: >
+          Where the composition is served. Every composition is reachable at the
+          path it declares; the path names which record the view is for.
         $ref: "#/$defs/Endpoint"
       state:
         $ref: "#/$defs/StateResource"
@@ -289,7 +293,13 @@ $defs:
     properties:
       path:
         type: string
-        description: URL path for the composition endpoint.
+        format: uri-template
+        # At least one segment, no trailing slash: "/" would be the API's root,
+        # and "/x/" differs from "/x" only by its slash.
+        pattern: "^(/[^/]+)+$"
+        description: >
+          URL path for the composition endpoint, within the server of the API
+          document that declares its resource, e.g. /applications/{applicationId}/review.
       methods:
         type: array
         items:

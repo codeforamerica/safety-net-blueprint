@@ -40,6 +40,12 @@ const CONFIG_SCHEMA = {
   },
   'x-event-type-prefix': {
     type: 'string'
+  },
+  // Domains the framework provides beyond platform — communication — that a
+  // contract set includes. The names are checked against what the framework
+  // provides when the set is resolved.
+  'x-capabilities': {
+    type: 'array'
   }
 };
 
@@ -158,6 +164,10 @@ function validateConfig(config) {
         errors.push(
           `Invalid value for "${key}": "${value}". Must be one of: ${schemaDef.values.join(', ')}`
         );
+      }
+    } else if (schemaDef.type === 'array') {
+      if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+        errors.push(`"${key}" must be a list of names`);
       }
     } else if (schemaDef.type === 'object') {
       if (typeof value !== 'object' || value === null) {

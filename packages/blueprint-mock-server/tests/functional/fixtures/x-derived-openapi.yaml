@@ -8,9 +8,9 @@ info:
   description: |
     Fixture spec for functional testing of x-derived field evaluation through
     the full mock server pipeline. Tests that fields annotated with x-derived
-    carry CEL expressions evaluated at read time with $this bound to the record.
+    carry CEL expressions evaluated at read time with `this` bound to the record.
 
-    Uses a Widget resource where widgetCode is derived from $this.id (mirrors the
+    Uses a Widget resource where widgetCode is derived from this.id (mirrors the
     users spec pattern where userId is derived from id).
 servers:
   - url: /x-derived
@@ -110,7 +110,7 @@ components:
         widgetCode:
           type: string
           readOnly: true
-          x-derived: "$this.id"
+          x-derived: "this.id"
           description: Stable alias for id, demonstrating x-derived CEL evaluation.
         label:
           type: string

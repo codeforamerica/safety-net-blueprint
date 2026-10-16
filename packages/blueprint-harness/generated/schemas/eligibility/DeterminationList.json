@@ -47,9 +47,11 @@
             "description": "Whether this household qualifies for expedited processing (7 CFR § 273.2(i))."
           },
           "determinedAt": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time",
-            "nullable": true,
             "readOnly": true,
             "description": "Timestamp when the determination was finalized. Null until complete."
           },

@@ -11,7 +11,12 @@ import { dirname, join, resolve } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { discoverApiSpecs } from '../../src/spec-discovery.js';
 
-function parseSpecDir() {
+/**
+ * The directories to read specs from. Repeatable, as it is for the mock
+ * server, so the mock's own spec can be shown beside a contract set without
+ * either being copied into the other.
+ */
+function parseSpecDirs() {
   const args = process.argv.slice(2);
 
   // Check for unknown arguments
@@ -21,13 +26,13 @@ function parseSpecDir() {
     process.exit(1);
   }
 
-  const specArg = args.find(a => a.startsWith('--spec='));
-  if (!specArg) {
-    console.error('Error: --spec=<dir> is required.\n');
-    console.error('Usage: node scripts/swagger/server.js --spec=<dir>');
+  const specDirs = args.filter(a => a.startsWith('--spec=')).map(a => resolve(a.split('=')[1]));
+  if (specDirs.length === 0) {
+    console.error('Error: --spec=<dir> is required (repeatable).\n');
+    console.error('Usage: blueprint-swagger --spec=<dir> [--spec=<dir> ...]');
     process.exit(1);
   }
-  return resolve(specArg.split('=')[1]);
+  return specDirs;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -165,8 +170,18 @@ async function startSwaggerServer() {
   
   try {
     // Discover all API specs
-    const specsDir = parseSpecDir();
-    const apiSpecs = discoverApiSpecs({ specsDir });
+    const apiSpecs = parseSpecDirs().flatMap((specsDir) => discoverApiSpecs({ specsDir }));
+
+    // Each spec is served at /<name>, so two of the same name would leave
+    // one of them unreachable behind the other.
+    const byName = Map.groupBy(apiSpecs, (api) => api.name);
+    const clashes = [...byName].filter(([, specs]) => specs.length > 1);
+    if (clashes.length > 0) {
+      for (const [name, specs] of clashes) {
+        console.error(`Error: more than one spec is named "${name}":\n  ${specs.map((s) => s.specPath).join('\n  ')}`);
+      }
+      process.exit(1);
+    }
     
     if (apiSpecs.length === 0) {
       console.error('\n❌ No API specifications found in specs directory');

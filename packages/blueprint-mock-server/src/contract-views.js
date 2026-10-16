@@ -1,7 +1,7 @@
 /**
  * Reading what the server needs out of a document set.
  *
- * Three small readers, shared by the two boot paths. `setup.js` walks a
+ * Small readers, shared by the two boot paths. `setup.js` walks a
  * directory and `browser.js` takes an artifact, but once either has `docs`
  * they ask the same questions — and were each answering them with their own
  * copy of these functions, one of which carried a comment saying it was "kept
@@ -10,26 +10,11 @@
  *
  * Everything here is a pure read over `docs`. What belongs here rather than in
  * `blueprint-core`'s `extract` is anything phrased in the *server's*
- * vocabulary: `contractsOfType` returns the `{ filePath, domain, doc }` shape
- * the route generator wants, and the graph readers encode a decision about
- * where compilation happens. Reading a contract type is `extract`'s remit —
- * registry entries used to be here and are now `extract(docs, 'registries')`.
+ * vocabulary: the graph readers encode a decision about where compilation
+ * happens. Reading a contract type is `extract`'s remit — registry entries,
+ * compositions and rules documents used to be read here and are now
+ * `extract(docs, 'registries' | 'compositions' | 'rules')`.
  */
-
-/**
- * Documents of one contract type that carry a given section.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Contract type, e.g. 'rules'
- * @param {string} section - A key the document must declare, e.g. 'rulesets'
- * @returns {{ filePath: string, domain: string, doc: object }[]}
- */
-export function contractsOfType(docs, type, section) {
-  return docs
-    .filter((doc) => doc.type === type && doc.content?.[section])
-    .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
-}
-
 
 /**
  * The compiled decision graphs in the set.
@@ -61,7 +46,7 @@ export function graphsOf(docs) {
  * rather than silently compiling on the server's behalf, which would put the
  * compiler back in two places.
  *
- * @param {{ domain: string }[]} rulesFiles - From `contractsOfType(docs, 'rules', 'rulesets')`
+ * @param {{ domain: string }[]} rulesFiles - From `extract(docs, 'rules')`
  * @param {object[]} graphs - From `graphsOf(docs)`
  * @returns {string|null} A message to warn with, or null when nothing is wrong
  */

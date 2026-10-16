@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/case-management/case-management-schema.yaml"
 title: CaseManagement
+domain: case-management
 description: >
   Shared case management domain types. These are the client-writable fields for
   case management entities. OpenAPI specs compose these with system fields

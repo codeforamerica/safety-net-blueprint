@@ -4,7 +4,7 @@
 
 import { executeTransition } from '../state-machine-runner.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { assertFetchShaped, jsonBody } from '../http/request.js';
 
 /**
@@ -16,7 +16,7 @@ import { assertFetchShaped, jsonBody } from '../http/request.js';
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Promise<Response>}
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store } = {}) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store, stepCalls = null } = {}) {
   return async (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createTransitionHandler').url);
 
@@ -38,10 +38,11 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
     const callerRoles = extractCallerRoles(request);
 
     const now = new Date().toISOString();
-    const traceparent = callerHeader(request, 'traceparent');
+    const traceparent = traceparentOf(request);
 
     const { success, result, status, error } = executeTransition({
       store,
+      stepCalls,
       resourceName,
       resourceId,
       trigger,

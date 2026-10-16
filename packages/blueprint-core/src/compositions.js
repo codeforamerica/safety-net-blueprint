@@ -252,7 +252,9 @@ export function validateFieldsArrays(compositionDoc, resourceSchemaIndex) {
       if (props) {
         const fields = Array.isArray(node.fields) ? node.fields : [];
         for (const field of fields) {
-          const topField = String(field).split('.')[0];
+          // `source as alias` names the field it projects by its source.
+          const topField = String(field).split(/\s+as\s+/)[0].split('.')[0];
+          if (topField === '*') continue;
           if (!props.has(topField)) {
             errors.push({
               message: `fields: "${field}" — field "${topField}" not found on resource "${node.resource}"`,
@@ -618,9 +620,8 @@ export function generateStateSchemas(stateConfig) {
     // cannot be declared statically. Without the annotation it reads as an
     // undeclared foreign key and fails pattern validation.
     itemId: {
-      type: 'string',
+      type: ['string', 'null'],
       format: 'uuid',
-      nullable: true,
       readOnly: true,
       'x-relationship': { resource: 'Polymorphic' },
     },
@@ -715,13 +716,14 @@ export function buildPathToSchemaMap(yamlFiles) {
  * The overlay uses `./components/responses.yaml#/...` for error response refs.
  * Callers that need a different prefix should rewrite refs after calling this.
  *
- * @param {Object} compositionFile - { filePath, domain, doc }
+ * @param {Object} compositionFile - { filePath, domain, doc, apiSpecFile? } — `apiSpecFile`, the
+ *   document the overlay patches, when the caller has worked it out
  * @param {Map<string, string>} paramIndex - from buildParameterIndex
  * @returns {Object|null} Overlay document, or null if no endpoints were declared
  */
 export function generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap = null) {
   const { domain, doc, filePath } = compositionFile;
-  const apiSpecFile = `${domain}-openapi.yaml`;
+  const apiSpecFile = compositionFile.apiSpecFile ?? `${domain}-openapi.yaml`;
 
   const pathsUpdate = {};
   const schemasUpdate = {};
@@ -895,7 +897,7 @@ export function generateCompositionOverlays(compositionFiles, yamlFiles) {
   for (const compositionFile of compositionFiles) {
     const overlay = generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap);
     if (overlay) {
-      result.push({ overlay, domain: compositionFile.domain });
+      result.push({ overlay, domain: compositionFile.domain, target: compositionFile.apiSpecFile ?? null });
     }
   }
 

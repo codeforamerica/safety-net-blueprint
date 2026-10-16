@@ -2728,23 +2728,20 @@ components:
               description: Whether the application qualifies for expedited processing (e.g., SNAP 7-day track). Set during caseworker expedited screening after submission. Null until screening is complete.
               readOnly: true
             submittedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
               description: When the application was formally submitted. Null until submitted.
               readOnly: true
-              nullable: true
             withdrawnAt:
-              type: string
+              type: [string, "null"]
               format: date-time
               description: When the application was withdrawn. Null unless withdrawn.
               readOnly: true
-              nullable: true
             closedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
               description: When the intake phase closed. Null until closed.
               readOnly: true
-              nullable: true
             createdAt:
               type: string
               format: date-time
@@ -2822,8 +2819,9 @@ components:
               readOnly: true
             personMatch:
               readOnly: true
-              nullable: true
-              $ref: "#/components/schemas/PersonMatch"
+              anyOf:
+                - $ref: "#/components/schemas/PersonMatch"
+                - type: "null"
             programDeterminations:
               type: array
               readOnly: true

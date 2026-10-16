@@ -17,7 +17,7 @@
  */
 
 import { fileNameOf } from './contract-types.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from './openapi/utils.js';
+import { extractIndividualResources } from './openapi/utils.js';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
@@ -68,25 +68,6 @@ export function examplesForSchema(examples, schema, schemas) {
 }
 
 /**
- * The examples belonging to one collection.
- *
- * Kept for the Postman builder, which works in collections and asks per
- * endpoint rather than taking the whole grouping.
- *
- * @param {Record<string, unknown>} examples - Every example for the API
- * @param {string} collection - The collection to select for
- * @param {string[]} collections - Every collection on the API, for disambiguation
- * @returns {Array<{ key: string, name: string, data: object }>}
- */
-export function examplesForCollection(examples, collection, collections) {
-  return examplesForSchema(
-    examples,
-    collectionToSchemaPrefix(collection),
-    collections.map(collectionToSchemaPrefix)
-  );
-}
-
-/**
  * Every example available to match against a collection.
  *
  * Three sources, in precedence order: a seed document named after the API,
@@ -106,7 +87,9 @@ function examplesOf(docs, name, spec) {
 
   const pooled = {};
   for (const doc of docs.filter((d) => d.type === 'mock-data')) {
-    Object.assign(pooled, doc.content ?? {});
+    // `domain` is the document's own declaration, not a record.
+    const { domain: _domain, ...records } = doc.content ?? {};
+    Object.assign(pooled, records);
   }
   if (Object.keys(pooled).length > 0) return pooled;
 

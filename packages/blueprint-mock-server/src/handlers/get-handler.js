@@ -56,7 +56,7 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
     const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
     const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
     let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
-    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
     if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
     // Composition parentLink registrations, merged rather than returned on

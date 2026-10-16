@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, EvaluateInterviewPromptsData, EvaluateInterviewPromptsErrors, EvaluateInterviewPromptsResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationReviewContactSectionData, GetApplicationReviewContactSectionErrors, GetApplicationReviewContactSectionResponses, GetApplicationReviewData, GetApplicationReviewDemographicsSectionData, GetApplicationReviewDemographicsSectionErrors, GetApplicationReviewDemographicsSectionResponses, GetApplicationReviewErrors, GetApplicationReviewResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, GetReviewProgressByItemData, GetReviewProgressByItemErrors, GetReviewProgressByItemResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, ListReviewProgressBySectionData, ListReviewProgressBySectionErrors, ListReviewProgressBySectionResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, ReplaceReviewProgressByItemData, ReplaceReviewProgressByItemErrors, ReplaceReviewProgressByItemResponses, ReplaceReviewProgressBySectionData, ReplaceReviewProgressBySectionErrors, ReplaceReviewProgressBySectionResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, UpdateReviewProgressByItemData, UpdateReviewProgressByItemErrors, UpdateReviewProgressByItemResponses, UpdateReviewProgressBySectionData, UpdateReviewProgressBySectionErrors, UpdateReviewProgressBySectionResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
-import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zEvaluateInterviewPromptsData, zEvaluateInterviewPromptsResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationReviewContactSectionData, zGetApplicationReviewContactSectionResponse, zGetApplicationReviewData, zGetApplicationReviewDemographicsSectionData, zGetApplicationReviewDemographicsSectionResponse, zGetApplicationReviewResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zGetReviewProgressByItemData, zGetReviewProgressByItemResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zListReviewProgressBySectionData, zListReviewProgressBySectionResponse, zOpenApplicationData, zOpenApplicationResponse, zReplaceReviewProgressByItemData, zReplaceReviewProgressByItemResponse, zReplaceReviewProgressBySectionData, zReplaceReviewProgressBySectionResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zUpdateReviewProgressByItemData, zUpdateReviewProgressByItemResponse, zUpdateReviewProgressBySectionData, zUpdateReviewProgressBySectionResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
+import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, CreateIncomeVerificationData, CreateIncomeVerificationErrors, CreateIncomeVerificationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationReviewContactSectionData, GetApplicationReviewContactSectionErrors, GetApplicationReviewContactSectionResponses, GetApplicationReviewData, GetApplicationReviewDemographicsSectionData, GetApplicationReviewDemographicsSectionErrors, GetApplicationReviewDemographicsSectionResponses, GetApplicationReviewErrors, GetApplicationReviewResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, GetIncomeVerificationData, GetIncomeVerificationErrors, GetIncomeVerificationResponses, GetInterviewFlagsInputsData, GetInterviewFlagsInputsErrors, GetInterviewFlagsInputsResponses, GetReviewProgressByItemData, GetReviewProgressByItemErrors, GetReviewProgressByItemResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, ListIncomeVerificationsData, ListIncomeVerificationsErrors, ListIncomeVerificationsResponses, ListReviewProgressBySectionData, ListReviewProgressBySectionErrors, ListReviewProgressBySectionResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, ReplaceReviewProgressByItemData, ReplaceReviewProgressByItemErrors, ReplaceReviewProgressByItemResponses, ReplaceReviewProgressBySectionData, ReplaceReviewProgressBySectionErrors, ReplaceReviewProgressBySectionResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, UpdateReviewProgressByItemData, UpdateReviewProgressByItemErrors, UpdateReviewProgressByItemResponses, UpdateReviewProgressBySectionData, UpdateReviewProgressBySectionErrors, UpdateReviewProgressBySectionResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
+import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zCreateIncomeVerificationData, zCreateIncomeVerificationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationReviewContactSectionData, zGetApplicationReviewContactSectionResponse, zGetApplicationReviewData, zGetApplicationReviewDemographicsSectionData, zGetApplicationReviewDemographicsSectionResponse, zGetApplicationReviewResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zGetIncomeVerificationData, zGetIncomeVerificationResponse, zGetInterviewFlagsInputsData, zGetInterviewFlagsInputsResponse, zGetReviewProgressByItemData, zGetReviewProgressByItemResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zListIncomeVerificationsData, zListIncomeVerificationsResponse, zListReviewProgressBySectionData, zListReviewProgressBySectionResponse, zOpenApplicationData, zOpenApplicationResponse, zReplaceReviewProgressByItemData, zReplaceReviewProgressByItemResponse, zReplaceReviewProgressBySectionData, zReplaceReviewProgressBySectionResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zUpdateReviewProgressByItemData, zUpdateReviewProgressByItemResponse, zUpdateReviewProgressBySectionData, zUpdateReviewProgressBySectionResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -79,6 +79,43 @@ export const updateApplication = <ThrowOnError extends boolean = false>(options:
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * List an application's income verifications
+ */
+export const listIncomeVerifications = <ThrowOnError extends boolean = false>(options: Options<ListIncomeVerificationsData, ThrowOnError>) => (options.client ?? client).get<ListIncomeVerificationsResponses, ListIncomeVerificationsErrors, ThrowOnError>({
+    requestValidator: async (data) => await zListIncomeVerificationsData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zListIncomeVerificationsResponse.parseAsync(data),
+    url: '/applications/{applicationId}/income-verifications',
+    ...options
+});
+
+/**
+ * Record an income verification
+ */
+export const createIncomeVerification = <ThrowOnError extends boolean = false>(options: Options<CreateIncomeVerificationData, ThrowOnError>) => (options.client ?? client).post<CreateIncomeVerificationResponses, CreateIncomeVerificationErrors, ThrowOnError>({
+    requestValidator: async (data) => await zCreateIncomeVerificationData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zCreateIncomeVerificationResponse.parseAsync(data),
+    url: '/applications/{applicationId}/income-verifications',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get an income verification
+ */
+export const getIncomeVerification = <ThrowOnError extends boolean = false>(options: Options<GetIncomeVerificationData, ThrowOnError>) => (options.client ?? client).get<GetIncomeVerificationResponses, GetIncomeVerificationErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetIncomeVerificationData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetIncomeVerificationResponse.parseAsync(data),
+    url: '/applications/{applicationId}/income-verifications/{incomeVerificationId}',
+    ...options
 });
 
 /**
@@ -211,6 +248,17 @@ export const getApplicationSummary = <ThrowOnError extends boolean = false>(opti
 });
 
 /**
+ * Get interviewFlagsInputs
+ */
+export const getInterviewFlagsInputs = <ThrowOnError extends boolean = false>(options: Options<GetInterviewFlagsInputsData, ThrowOnError>) => (options.client ?? client).get<GetInterviewFlagsInputsResponses, GetInterviewFlagsInputsErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetInterviewFlagsInputsData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetInterviewFlagsInputsResponse.parseAsync(data),
+    url: '/applications/{applicationId}/interview-flags-inputs',
+    ...options
+});
+
+/**
  * Get applicationReview
  */
 export const getApplicationReview = <ThrowOnError extends boolean = false>(options: Options<GetApplicationReviewData, ThrowOnError>) => (options.client ?? client).get<GetApplicationReviewResponses, GetApplicationReviewErrors, ThrowOnError>({
@@ -318,21 +366,6 @@ export const replaceReviewProgressByItem = <ThrowOnError extends boolean = false
     responseType: 'json',
     responseValidator: async (data) => await zReplaceReviewProgressByItemResponse.parseAsync(data),
     url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Evaluate interviewPrompts
- */
-export const evaluateInterviewPrompts = <ThrowOnError extends boolean = false>(options: Options<EvaluateInterviewPromptsData, ThrowOnError>) => (options.client ?? client).post<EvaluateInterviewPromptsResponses, EvaluateInterviewPromptsErrors, ThrowOnError>({
-    requestValidator: async (data) => await zEvaluateInterviewPromptsData.parseAsync(data),
-    responseType: 'json',
-    responseValidator: async (data) => await zEvaluateInterviewPromptsResponse.parseAsync(data),
-    url: '/applications/evaluate-interview-prompts',
     ...options,
     headers: {
         'Content-Type': 'application/json',

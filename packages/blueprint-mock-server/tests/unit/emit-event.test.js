@@ -59,11 +59,11 @@ test('emitEvent', async (t) => {
     console.log('  ✓ Derives type from domain + object + action');
   });
 
-  await t.test('normalizes hyphenated domain to underscores in event type', () => {
+  await t.test('keeps a hyphenated domain as declared in the event type', () => {
     store.clearAll('events');
     const stored = emitEvent({ store: store,
       domain: 'data-exchange',
-      object: 'service-call',
+      object: 'external_service_call',
       action: 'created',
       resourceId: 'sc-1',
       source: '/data-exchange',
@@ -71,8 +71,8 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.type, 'data_exchange.service_call.created');
-    console.log('  ✓ Normalizes hyphenated domain/object to underscores');
+    assert.strictEqual(stored.type, 'data-exchange.external_service_call.created');
+    console.log('  ✓ Keeps a hyphenated domain as declared');
   });
 
   await t.test('generates a unique id for each event', () => {
@@ -107,7 +107,7 @@ test('emitEvent', async (t) => {
     console.log('  ✓ Includes traceparent when provided');
   });
 
-  await t.test('sets traceparent to null when not provided', () => {
+  await t.test('leaves traceparent out when not provided', () => {
     store.clearAll('events');
     const stored = emitEvent({ store: store,
       domain: 'workflow',
@@ -119,8 +119,8 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.traceparent, null);
-    console.log('  ✓ Sets traceparent to null when not provided');
+    assert.ok(!('traceparent' in stored));
+    console.log('  ✓ Leaves traceparent out when not provided');
   });
 
   // ==========================================================================
@@ -159,7 +159,7 @@ test('emitEvent', async (t) => {
   // Data payload
   // ==========================================================================
 
-  await t.test('stores null data when not provided', () => {
+  await t.test('leaves data out when not provided', () => {
     store.clearAll('events');
     const stored = emitEvent({ store: store,
       domain: 'workflow',
@@ -171,8 +171,8 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.data, null);
-    console.log('  ✓ Stores null data when not provided');
+    assert.ok(!('data' in stored));
+    console.log('  ✓ Leaves data out when not provided');
   });
 
   await t.test('stores event payload in data field', () => {
@@ -260,6 +260,50 @@ test('emitEvent', async (t) => {
     console.log('  ✓ emitEventEnvelope generates id when not provided');
   });
 
+  await t.test('emitEventEnvelope - leaves out optional attributes given no value', () => {
+    store.clearAll('events');
+    const stored = emitEventEnvelope({
+      type: 'intake.interview.completed',
+      source: '/intake',
+      subject: 'interview-6',
+      traceparent: null,
+      causationid: undefined,
+      authid: null,
+      authtype: null,
+      data: null,
+    }, store);
+
+    for (const name of ['traceparent', 'causationid', 'authid', 'authtype', 'data']) {
+      assert.ok(!(name in stored), `${name} is left out`);
+    }
+  });
+
+  // ==========================================================================
+  // An event is not a resource
+  // ==========================================================================
+
+  await t.test('an event carries no createdAt or updatedAt, only its time', () => {
+    store.clearAll('events');
+    const built = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+      resourceId: 'abc123', source: '/workflow', now: '2024-01-01T00:00:00.000Z' });
+    const injected = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-1' }, store);
+
+    for (const event of [built, injected]) {
+      const stored = store.findById('events', event.id);
+      assert.ok(stored, 'stored under its own id');
+      assert.ok(!('createdAt' in stored) && !('updatedAt' in stored), `${stored.type} has no store timestamps`);
+      assert.ok(stored.time);
+    }
+  });
+
+  await t.test('a store without append still saves events, with its own timestamps', () => {
+    const { append, ...older } = createMemoryStore();
+    const stored = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-2' }, older);
+
+    assert.strictEqual(typeof append, 'function');
+    assert.ok(older.findById('events', stored.id), 'saved through insertResource');
+  });
+
   await t.test('emitEventEnvelope - defaults specversion and datacontenttype', () => {
     store.clearAll('events');
     const stored = emitEventEnvelope({
@@ -334,7 +378,24 @@ test('emitEvent', async (t) => {
     console.log('  ✓ Sets authtype to service_account');
   });
 
-  await t.test('sets authid and authtype to null when no callerId', () => {
+  await t.test('a caller with no role naming a kind is a user', () => {
+    store.clearAll('events');
+    const stored = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+      resourceId: 'abc123', source: '/workflow', callerId: 'the-explorer', now: '2024-01-01T00:00:00.000Z' });
+
+    assert.strictEqual(stored.authid, 'the-explorer');
+    assert.strictEqual(stored.authtype, 'user', 'authtype is required whenever authid is present');
+  });
+
+  await t.test("the mock's own system caller is a system actor", () => {
+    store.clearAll('events');
+    const stored = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+      resourceId: 'abc123', source: '/workflow', callerId: 'system', now: '2024-01-01T00:00:00.000Z' });
+
+    assert.strictEqual(stored.authtype, 'system');
+  });
+
+  await t.test('leaves authid and authtype out when no callerId', () => {
     store.clearAll('events');
     const stored = emitEvent({ store: store,
       domain: 'workflow',
@@ -346,9 +407,9 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.authid, null);
-    assert.strictEqual(stored.authtype, null);
-    console.log('  ✓ authid and authtype are null when no callerId');
+    assert.ok(!('authid' in stored));
+    assert.ok(!('authtype' in stored));
+    console.log('  ✓ authid and authtype are left out when no callerId');
   });
 
   // ==========================================================================

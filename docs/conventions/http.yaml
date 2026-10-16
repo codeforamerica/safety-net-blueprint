@@ -135,13 +135,24 @@ idempotency:
     Ensures that retrying a request (due to network issues, timeouts, etc.)
     does not cause duplicate side effects. Critical for RPC APIs.
 
-  applies_to:
-    rpc_apis: All POST operations (required)
-    rest_apis: POST operations that create resources
+  applies_to: |
+    Operations that declare the header, by listing the shared
+    IdempotencyKeyParam — today, adding an entry to a transcript. Whether every
+    create or action should require one is part of how contracts declare what a
+    caller must send (#473); requiring it of an operation that did not before is
+    a breaking change for its clients.
 
   mechanism:
     header_name: Idempotency-Key
-    format: Client-generated UUID v4
+    format: |
+      A client-generated string, up to 255 characters, unique to the operation;
+      a UUID is recommended. Not required to be a UUID, so a client can derive
+      one from a value it already has, and someone trying the API can type
+      `12345`.
+    declared_by: |
+      The shared IdempotencyKeyParam in the base components. An operation lists
+      it to require a key; the mock server honors the header only where an
+      operation declares it.
     required: true for applicable operations
     behavior: |
       1. Client generates unique key and includes in request header

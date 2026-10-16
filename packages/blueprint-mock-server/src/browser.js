@@ -19,19 +19,22 @@
 
 import { createMemoryStore } from './stores/memory-store.js';
 import { apiSpecsFromDocs } from './spec-loader.js';
-import { registerPlatformRoutes, contractOverrides } from './platform-routes.js';
+import { registerPlatformRoutes, contractOverrides, refuseOwnRouteCollisions } from './platform-routes.js';
 import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
   registerRulesRoutes, buildRulesIndex,
 } from './route-generator.js';
 import { createDispatcher, overrideByOperationId } from './http/route-table.js';
+import { applyForwarding } from './forwarding.js';
 import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
-import { subscribeStubDispatch } from './mock-stub-engine.js';
-import { registerConfigManaged } from './config-registry.js';
+import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
+import { seedConfigs } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
-import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { createStepCalls } from './step-calls.js';
+export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
 
 
 
@@ -47,6 +50,9 @@ import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-vi
  *   path: `basePath: location.pathname.replace(/\/[^/]*$/, '')`
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {boolean} [options.verifyHash] - Check the payload against its hash
+ * @param {Array} [options.forwarding] - Domains and endpoints to forward to a
+ *   real service, as `schemas/forwarding-schema.json` describes the entries.
+ *   Configuration for this page, not part of the contract set.
  * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
  */
 export async function createMockServer({
@@ -55,6 +61,7 @@ export async function createMockServer({
   baseUrl = '',
   basePath = '',
   seed = true,
+  forwarding = [],
 } = {}) {
   // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
   // wrote this and `extract(artifact, 'docs')` reads it back, rebuilding each
@@ -75,32 +82,25 @@ export async function createMockServer({
   const slaTypes = extract(docs, 'sla-types');
   const metrics = extract(docs, 'metrics');
   const configs = extract(docs, 'config');
-  const compositions = contractsOfType(docs, 'compositions', 'compositions');
-  const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
+  const compositions = extract(docs, 'compositions');
+  const rulesFiles = extract(docs, 'rules');
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`Warning: ${unresolved}`);
-  const policies = extract(docs, 'registries').policies ?? {};
+  // Served from the contracts, not stored. Read here so a duplicate entry id
+  // fails at boot.
+  const registries = extract(docs, 'registries');
 
   // Seed before routing so a list endpoint answers on the first request.
   if (seed) seedAllDatabases(docs, store, { seeded: true });
 
-  for (const config of configs) {
-    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-      for (const entry of entries) {
-        const data = { ...entry };
-        for (const key of Object.keys(data)) if (key.startsWith('x-')) delete data[key];
-        store.insertResource(catalogKey, { ...data, source: 'system' });
-        registerConfigManaged(catalogKey, data.id);
-      }
-    }
-  }
-  for (const [id, policy] of Object.entries(policies)) {
-    store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-    registerConfigManaged('registry-policies', id);
-  }
+  seedConfigs(configs, store);
 
-  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store);
+  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
+  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);
+  // Stubs are kept per module, not per server: a new server starts with none,
+  // so one registered on the server it replaces cannot answer here.
+  clearAllStubs();
   subscribeStubDispatch(store);
   if (rulesFiles.length > 0) buildRulesIndex(rulesFiles, graphs);
 
@@ -113,14 +113,20 @@ export async function createMockServer({
     // artifact carries. Node passes a function that walks the directory again.
     readDocs: () => docs,
     configs,
-    policies,
     seeded: seed,
   });
   if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store });
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
   const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
-  registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
-  overrideByOperationId(routes, contractOverrides({ store }));
+  registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });
+  overrideByOperationId(routes, contractOverrides({ store, registries }));
 
-  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints };
+  // Last, so a route is forwarded whatever registered it, and before the
+  // dispatcher is built, so the first request is already answered the way
+  // the configuration says (#283).
+  refuseOwnRouteCollisions(routes, apiSpecs);
+  const forwarded = applyForwarding(routes, forwarding);
+  for (const key of forwarded) console.log(`  FORWARD ${key}`);
+
+  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints, forwarded };
 }

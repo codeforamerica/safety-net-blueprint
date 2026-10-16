@@ -1,12 +1,13 @@
 # Example data for this domain, seeded into the mock server.
 # Validated against the schemas its collections hold.
 
+domain: identity-access
+
 UserExample1:
   id: 00000002-0000-4000-8000-000000000001
   userId: 00000002-0000-4000-8000-000000000001
   idpSubject: auth0|fixture000000000001
   email: jane.smith@fixture.test
-  role: case_worker
   roles:
     name: case_worker
     permissions:
@@ -21,7 +22,6 @@ UserExample2:
   userId: 00000002-0000-4000-8000-000000000002
   idpSubject: auth0|fixture000000000002
   email: john.doe@fixture.test
-  role: supervisor
   roles:
     name: supervisor
     permissions:

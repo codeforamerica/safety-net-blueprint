@@ -4,11 +4,14 @@ $defs:
   Domain:
     type: string
     description: |
-      Harness domain identifier. Extends the blueprint-core base Domain enum with the intake and eligibility domains exercised by these contracts.
+      Blueprint domain identifier. Used as the {domain} path parameter on metadata mutation endpoints and as the value type for x-domain annotations on domain OpenAPI specs. Its values are generated at resolve time: the domains the set's OpenAPI, AsyncAPI and rules documents declare.
     enum:
+      - communication
+      - document-management
       - eligibility
       - intake
       - platform
+      - scheduling
   MetricCollection:
     type: string
     description: |
@@ -33,14 +36,21 @@ $defs:
     type: string
     description: Preferred language (BCP 47 language tag).
     pattern: ^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$
+  ConfigSource:
+    type: string
+    readOnly: true
+    description: |
+      Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+    enum:
+      - system
+      - user
   RoleType:
     type: string
     description: |
-      Authorization roles that determine base permissions and data scoping. Used in state machine actors arrays and JWT role claims.
-      - readonly: Read-only access to allowed resources - readwrite: Read and write access to allowed resources - admin: Administrative access including configuration - system: Automated service account for background and inter-service operations
-      Domain packages extend this enum via overlay to add program-specific roles.
+      Harness authorization roles. Replaces the base RoleType with the roles the harness's state machine guards name.
+      - applicant: The household applying, acting on its own application - case_worker: Processes applications - supervisor: Oversees case workers - system: Automated service account for background and inter-service operations
     enum:
-      - readonly
-      - readwrite
-      - admin
+      - applicant
+      - case_worker
+      - supervisor
       - system

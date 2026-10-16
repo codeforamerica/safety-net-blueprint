@@ -636,7 +636,7 @@ function importTriggers(csvData, existingDoc) {
 
     // events — match by event name, update transition and guards.conditions
     const onEventRows = rows.filter(r => r[I.type] === 'onEvent');
-    const machineEvents = machine.events || [];
+    const machineEvents = machine.on || [];
     if (machineEvents.length > 0 && onEventRows.length > 0) {
       const updatedEvents = machineEvents.map(evt => {
         const row = onEventRows.find(r => r[I.nameEvent] === evt.name);
@@ -654,7 +654,7 @@ function importTriggers(csvData, existingDoc) {
         }
         return updated;
       });
-      return { ...machine, triggers, events: updatedEvents };
+      return { ...machine, triggers, on: updatedEvents };
     }
 
     // onTimer — match by after + relativeTo, update transition and calendarType

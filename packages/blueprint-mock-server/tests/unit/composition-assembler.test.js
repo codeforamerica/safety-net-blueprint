@@ -14,6 +14,7 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
 import {
+  assemblePlainComposition,
   assembleSectionIndex as assembleSectionIndexWithStore,
   assembleSectionPanel as assembleSectionPanelWithStore,
   deriveStateResource,
@@ -93,7 +94,7 @@ const SIMPLE_COMPOSITION = {
       verifications: {
         resource: 'verifications',
         bind: 'applicationId',
-        filter: "category == $section.name",
+        filter: "category == section.name",
       },
     },
   },
@@ -198,7 +199,7 @@ const INDEX_VIEW_COMPOSITION = {
       resource: 'application-members',
       bind: 'applicationId',
       index: {
-        filter: "roles.contains('primary_applicant')",
+        filter: "'primary_applicant' in roles",
         fields: ['id', 'firstName', 'lastName'],
       },
     },
@@ -386,7 +387,7 @@ describe('assembleSectionPanel — filter evaluation', () => {
     assert.strictEqual(result.include.verifications[0].category, 'identity');
   });
 
-  test('panel verifications filter uses $section.name substitution', () => {
+  test('panel verifications filter uses section.name', () => {
     // demographics section: panel.include.verifications filters category == 'demographics'
     // No verifications with that category exist → empty array
     const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
@@ -988,5 +989,18 @@ describe('assembleSectionPanel — sorting', () => {
     const panel = assembleSectionPanel(SORT_COMPOSITION, 'household', { applicationId: APP_ID }, {}, { queryParams: { sort: 'size' } });
     assert.ok(!panel.error, 'singleton does not return sort error');
     assert.ok('data' in panel, 'singleton returns data key');
+  });
+});
+
+describe('a plain composition with aliased fields', () => {
+  test('projects each source field under its alias, nested paths included', () => {
+    store.clearAll('alias-roots');
+    store.insertResource('alias-roots', { id: 'r1', interviewDate: '2026-10-01', household: { size: 4 }, status: 'open' });
+    const result = assemblePlainComposition(
+      { resource: 'alias-roots', fields: ['interviewDate as asOf', 'household.size as size', 'status'], endpoint: { path: '/alias-roots/{rootId}/view' } },
+      { rootId: 'r1' },
+      { store },
+    );
+    assert.deepStrictEqual(result, { asOf: '2026-10-01', size: 4, status: 'open' });
   });
 });

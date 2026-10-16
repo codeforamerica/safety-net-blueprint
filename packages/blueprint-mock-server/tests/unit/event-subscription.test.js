@@ -42,7 +42,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
   const machine = {
     object: 'Application',
     guards: [{ id: 'isUrgent', condition: 'object.isUrgent == true' }],
-    events: [{
+    on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted' },
       guards: { conditions: ['isUrgent'] },
@@ -79,7 +79,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
   const machine = {
     object: 'Application',
     guards: [{ id: 'isUrgent', condition: 'object.isUrgent == true' }],
-    events: [{
+    on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted' },
       guards: { conditions: ['isUrgent'] },
@@ -118,7 +118,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
 
   const machine = {
     object: 'Application',
-    events: [{
+    on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: [{ set: { field: 'reviewedAt', value: '$now' } }]
@@ -150,7 +150,7 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
 
   const machine = {
     object: 'Application',
-    events: [{
+    on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: []
@@ -181,7 +181,7 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
 
   const machine = {
     object: 'Application',
-    events: [{
+    on: [{
       type: 'intake.application.submitted',
       transition: { from: 'submitted', to: 'under_review' },
       steps: [{ set: { field: 'flag', value: 'set' } }]
@@ -225,7 +225,7 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
 
   const machine = {
     object: 'Application',
-    events: [{
+    on: [{
       type: 'intake.review_reminder',
       transition: { from: 'submitted' },
       steps: [{ emit: { type: 'intake.application.review-reminder' } }],

@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info:
+  title: Read-only fixture
+  version: 1.0.0
+  x-domain: read-only-domain
+paths:
+  /records/{recordId}:
+    get:
+      responses:
+        "200":
+          description: One record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+  /lookups/{kind}:
+    get:
+      responses:
+        "200":
+          description: A page of lookup entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupList"
+components:
+  schemas:
+    Record:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [open, closed] }
+    LookupList:
+      type: object
+      properties:
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }

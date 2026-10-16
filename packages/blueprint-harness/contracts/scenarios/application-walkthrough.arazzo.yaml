@@ -1,0 +1,379 @@
+# The demo page's walk-through: an application from creation to close, through
+# every kind of thing the contracts declare — resources, an upload, a
+# relationship, search, a lifecycle, a composition, rules, the event log, and
+# the mock's own controls. Each step's first line is its title in the page, and
+# its bullets are what the page shows under What to notice.
+arazzo: 1.0.1
+info:
+  title: The application walk-through
+  version: 1.0.0
+  x-domain: intake
+  description: |
+    A household applies for SNAP online and a caseworker takes the application from submission to close, showing what the mock does from the contracts alone:
+
+    - separate shapes for what a client writes and what the system keeps, and derived fields
+    - a file upload and an expanded relationship
+    - search, sorting and paging
+    - a lifecycle that refuses moves made out of turn
+    - a composed view, and rules that explain their answers
+    - one event log across every domain
+    - the mock's own stand-ins and reset
+sourceDescriptions:
+  - name: intake
+    url: ../domains/intake/intake-openapi.yaml
+    type: openapi
+  - name: intakeRules
+    url: ../domains/intake/intake-rules-openapi.yaml
+    type: openapi
+  - name: documents
+    url: ../domains/document-management/document-management-openapi.yaml
+    type: openapi
+  - name: eligibilityRules
+    url: ../domains/eligibility/eligibility-rules-openapi.yaml
+    type: openapi
+  - name: events
+    url: ../base/domains/platform/platform-events-openapi.yaml
+    type: openapi
+  - name: mock
+    url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: the-explorer
+workflows:
+  - workflowId: applicationWalkthrough
+    summary: An application from creation to close, through every kind of thing the contracts declare.
+    steps:
+      - stepId: createApplication
+        description: |
+          Create an application
+
+          - You sent an `ApplicationCreate` and got back an `Application` — two schemas, not one. The contract declares the shape a client may write separately from the shape the system keeps.
+          - `id`, `confirmationNumber`, `status`, `submittedAt`, `openedAt` are marked `readOnly`, so they are not on the shape you sent at all. The server filled them in because the contract says they exist.
+          - `programCount` is declared as a derived field, with the expression `this.programsAppliedFor.size()`. Nothing stores it: the mock evaluates that expression every time the record is read.
+          - `channel` is an enum in the contract — `online`, `phone`, `in_person`, `mail`. A value outside that list is refused by the schema, and no validation was written for this endpoint to do it.
+          - `201` and `400`, `422`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. None of them are canned.
+        operationId: $sourceDescriptions.intake.createApplication
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            programsAppliedFor:
+              - snap
+            channel: online
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: uploadDocument
+        description: |
+          Upload a document
+
+          - This body is `multipart/form-data`, not JSON. The contract declares `file` with `format: binary`, which is how an OpenAPI document says bytes, and `documentTypeId`, `title` alongside it as ordinary fields. One operation in the whole set sends something that is not JSON, and it is the one most mocks fall over on.
+          - What came back describes the upload and does not contain it. The bytes were hashed as they were read and then dropped — `contentHash` and `sizeBytes` are kept on the version this created, which `latestVersionId` names, and the file itself is nowhere. Nothing the mock holds can leak something nobody meant to share.
+        operationId: $sourceDescriptions.documents.uploadDocument
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          contentType: multipart/form-data
+          payload:
+            file:
+              fileName: april-pay-stub.txt
+              contentType: text/plain
+              content: |
+                Hashed on the way in, and then thrown away.
+            documentTypeId: proof-of-income
+            title: April pay stub
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: attachADocumentThatIsNotThere
+        description: |
+          Attach a document that isn't there
+
+          - Refused with `422`. `proofOfIncomeDocumentId` declares `x-relationship` to document management's `Document`, so the mock looked for that document and found none.
+          - The refusal names the field and the id, in the same shape as a schema error. The id is a valid uuid, so the schema had nothing to object to.
+          - The check crosses domains, from intake into document management, and nothing was written for it. Every field that declares a relationship is checked the same way, on every create and update.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            proofOfIncomeDocumentId: 00000000-0000-4000-8000-000000000000
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == 'proofOfIncomeDocumentId'
+      - stepId: attachTheDocument
+        description: |
+          Edit and attach the document
+
+          - A third shape: `ApplicationUpdate` is what you may send here, and it is not `Application` either.
+          - `proofOfIncomeDocumentId` is the id of the `Document` you uploaded a moment ago, and `proofOfIncomeDocument` is the whole record. The document-management domain declares that shape, this one declares a relationship to it, and the mock put what the id points at where the id was — one request rather than two, and nothing joining them in a client.
+          - `updatedAt` moved on its own. Everything the request did not mention is as it was.
+          - `id`, `confirmationNumber`, `status` are not on `ApplicationUpdate` at all, so there is no way to send them and nothing to reject.
+          - `200` and `400`, `404`, `422`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. None of them are canned.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            programsAppliedFor:
+              - snap
+            channel: online
+            proofOfIncomeDocumentId: $steps.uploadDocument.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: listApplications
+        description: |
+          List the applications
+
+          - `q`, `sort`, `limit` are in the request above, and `q`, `limit`, `offset`, `sort`, `status`, `channel` are all declared on the operation. Declaring them was the whole of the work — the searching, filtering and paging came with them.
+          - `x-sortable` lists `createdAt`, `updatedAt`, `submittedAt`, `status`, `channel` as the fields that may be sorted, and `-createdAt` as the order when a request does not say. Any other field is refused by name. The allowlist is that declaration — there is no check written for this endpoint.
+          - `items`, `total`, `limit`, `offset` — the page envelope is the contract's shape, not a convention the mock chose.
+        operationId: $sourceDescriptions.intake.listApplications
+        parameters:
+          - reference: $components.parameters.caller
+          - name: q
+            in: query
+            value: online
+          - name: sort
+            in: query
+            value: '-createdAt'
+          - name: limit
+            in: query
+            value: '5'
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: standInForTheScheduler
+        description: |
+          Stand in for the scheduler
+
+          - Nothing in the contract set implements a scheduler, and `submit` asks for one `72 hours` out. That gap is declared, not accidental.
+          - This registers a stand-in for `scheduling.timer.requested`, so the callback lands the moment it is asked for. The contract did not change — the thing on the other end of it did.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            'on': scheduling.timer.requested
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: submitApplication
+        description: |
+          Submit the application
+
+          - The contract declares this move as `draft → submitted`. From any other state the mock refuses it — not from a check somebody wrote for this endpoint, but by reading that line.
+          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `scheduling.timer.requested`. The stand-in you registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
+          - `slaTypeCode` and `slaInfo` are filled from an SLA contract: `snap_standard` runs 30 days, warns at 80% of it, and stops while `status` is `withdrawn`. The clock is a declaration, not a cron job somebody remembered to write.
+          - `submittedAt` is annotated with `snap-processing-clock`, which the shared policy registry resolves to 7 CFR § 273.2(g). SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
+          - `200` and `400`, `404`, `409`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. A `409` is declared here because the contract anticipates this call being made out of turn.
+        operationId: $sourceDescriptions.intake.submitApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: closeFromTheWrongState
+        description: |
+          Close it from the wrong state
+
+          - The contract declares this move as `under_review → closed`, and the record is not in that state yet. Nothing checked for this case on purpose — the mock reads that line and answers from it, the same line the moves that worked read.
+          - Every lifecycle in the set is enforced this way, so a state machine nobody implemented is still a state machine you cannot get around.
+        operationId: $sourceDescriptions.intake.closeApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            outcome: approved
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: openApplication
+        description: |
+          Open the application
+
+          - `openedAt` was null until now. The lifecycle declares `set: openedAt = $now` on this move, so the field is written because the state machine says so — there is no handler here that writes it.
+        operationId: $sourceDescriptions.intake.openApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: closeApplication
+        description: |
+          Close the application
+
+          - This move emits `intake.application.closed`, which the log a few steps on will have in it. Nothing subscribed to it and nothing called a publisher: the action declares an `emit` and the mock does it.
+        operationId: $sourceDescriptions.intake.closeApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            outcome: approved
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: buildAView
+        description: |
+          Build a view of the application
+
+          - Nothing stores this shape. The composition names `programsAppliedFor`, `status` and the mock reads those fields off the stored application when you ask for it.
+          - It also pulls in `members`, which live in their own collection. Reading this without the composition means a request for the application and 1 more for the rest, then assembling them in the client.
+          - This is where the `_links` on the application came from. `applicationSummary`, `applicationReview` set `parentLink`, so the mock added `/summary`, `/review` to every application it returns. The application's own schema says nothing about either of them.
+        operationId: $sourceDescriptions.intake.getApplicationReview
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: evaluateExpeditedSnap
+        description: |
+          Evaluate expeditedSnap
+
+          - The answer is not one expression but a chain of named facts. The last is `isExpeditedEligible = (isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources` — so the system can say which condition carried, not just what it concluded.
+          - `incomeThreshold` is an input with a default of `150`, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - `resourceThreshold` is an input with a default of `100`, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - Every fact comes back as a `state` and a `value` rather than a bare answer. `complete` means everything it needed was given to it; a fact that fell back to a declared default says `placeholder` instead, so a caller can tell a real conclusion from a provisional one.
+        operationId: $sourceDescriptions.eligibilityRules.evaluateExpeditedSnap
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            household:
+              monthlyGrossIncome: 120
+              liquidResources: 75
+              monthlyShelterCost: 800
+              isMigrantFarmworker: false
+            policy:
+              incomeThreshold: 150
+              resourceThreshold: 100
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: gatherWhatTheFlagsCompareAgainst
+        description: |
+          Gather what the interview flags compare against
+
+          - A renewal: a household already on SNAP recertifying.
+          - `previous` is the household as last certified, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
+          - The `interviewFlagsInputs` composition translates the data model into the ruleset's inputs by alias — `interviewDate as asOf`, `previousHousehold as previous` — so the rules speak their own vocabulary and nothing between them maps by hand.
+        operationId: $sourceDescriptions.intake.getInterviewFlagsInputs
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: 66666666-6666-4666-8666-666666666666
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          asOf: $response.body#/asOf
+          previous: $response.body#/previous
+          verified: $response.body#/verified
+          programsAppliedFor: $response.body#/programsAppliedFor
+      - stepId: evaluateInterviewFlags
+        description: |
+          Evaluate interviewFlags
+
+          - `current` is what the household is reporting in the interview, sent by the worker's screen: the client's mother has moved in with Social Security, warehouse hours were cut, there's cash work cleaning offices, rent went up, and the electric bill is in the client's name. Everything else came from the step before.
+          - One call answers in two groups: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree. `risks.householdChangedSincePrevious` is true — the mother is new — and so is `inconsistencies.wagesDifferFromWageRecords`: the wage records show about 1800 a month, and the household reports about 1100.
+          - Every flag is worked out from data, never a conclusion the caller sent: ages from dates of birth and the interview date, monthly amounts from what's paid and how often.
+          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from.
+        operationId: $sourceDescriptions.intakeRules.evaluateInterviewFlags
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            asOf: $steps.gatherWhatTheFlagsCompareAgainst.outputs.asOf
+            previous: $steps.gatherWhatTheFlagsCompareAgainst.outputs.previous
+            verified: $steps.gatherWhatTheFlagsCompareAgainst.outputs.verified
+            programsAppliedFor: $steps.gatherWhatTheFlagsCompareAgainst.outputs.programsAppliedFor
+            current:
+              size: 3
+              utilitiesIncludedInRent: true
+              monthlyIncome: 2200
+              monthlyExpenses: 2600
+              members:
+                - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
+                - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
+                - { id: son, dateOfBirth: "2018-01-15", isDisabled: false }
+                - { id: mother, dateOfBirth: "1958-05-20", isDisabled: false }
+              jobs:
+                - { id: warehouse, memberId: client, employer: Northgate Distribution }
+              incomes:
+                - { id: wages, memberId: client, jobId: warehouse, source: earned, amount: 510, frequency: biweekly, paidInCash: false, amountVaries: true }
+                - { id: cleaning, memberId: client, source: self_employment, amount: 200, frequency: irregular, paidInCash: true, amountVaries: true }
+                - { id: ss, memberId: mother, source: unearned, amount: 900, frequency: monthly, paidInCash: false, amountVaries: false }
+              expenses:
+                - { type: rent, amount: 1400, frequency: monthly }
+                - { type: utilities, amount: 128, frequency: monthly }
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/risks.householdChangedSincePrevious/value == true
+          - condition: $response.body#/inconsistencies.wagesDifferFromWageRecords/value == true
+      - stepId: seeWhatTheWalkEmitted
+        description: |
+          See what the walk emitted
+
+          - Every change you made emitted one of these, and nothing asked for them. Uploading a document wrote to this log; so did submitting, opening and closing.
+          - The types are declared as channels in the contract set — `communication.transcript.created`, `communication.transcript.updated`, `communication.transcript.deleted`, `communication.transcript_entry.created`, and the rest.
+          - One log, every domain. Nothing wired them together.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.caller
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: narrowTheLog
+        description: |
+          Narrow the log to one record
+
+          - `q` is full text over the whole log, narrowed here to the application you created. The document upload drops out — it happened, but to a different subject.
+          - What is left was written by more than one domain. Submitting the application is what made eligibility start a determination, and neither domain was wired to the other: each declares its own channel, and this log is all they share.
+          - `sort` works here for the same reason it worked on the applications — this operation declares its own `x-sortable`, over `time`, `type`, `source`. Nothing was written twice to make both endpoints sortable.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.caller
+          - name: q
+            in: query
+            value: $steps.createApplication.outputs.id
+          - name: sort
+            in: query
+            value: '-time'
+          - name: limit
+            in: query
+            value: '5'
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: emptyTheStore
+        description: |
+          Empty the store
+
+          - No contract declares this endpoint. It belongs to the mock, not to the system it is running.
+          - It clears records, never contracts — afterwards the API is exactly the API it was.
+        operationId: $sourceDescriptions.mock.resetMock
+        successCriteria:
+          - condition: $statusCode == 204
+      - stepId: putTheDataBack
+        description: |
+          Put the data back
+
+          - The records come from the contract set's own `*-mock-data.yaml`, and are checked against the same schemas as anything you send.
+        operationId: $sourceDescriptions.mock.reseedMock
+        successCriteria:
+          - condition: $statusCode == 204

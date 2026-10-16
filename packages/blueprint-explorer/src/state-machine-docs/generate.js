@@ -358,7 +358,8 @@ export function generate(sm, outputDir, eventIndex, allStateMachines) {
   lines.push('');
   const smFile = path.basename(sm.path);
   const contractsRel = '../../../contracts';
-  lines.push(`Domain: \`${sm.domain}\` | API spec: [${sm.apiSpec}](${contractsRel}/${sm.apiSpec}) | State machine: [${smFile}](${contractsRel}/${smFile})`);
+  const apiLinks = sm.apis.map((api) => `[${path.basename(api)}](${contractsRel}/${api})`).join(', ') || 'none';
+  lines.push(`Domain: \`${sm.domain}\` | API: ${apiLinks} | State machine: [${smFile}](${contractsRel}/${smFile})`);
   lines.push('');
 
   for (const machine of sm.machines) {
@@ -376,10 +377,10 @@ export function generate(sm, outputDir, eventIndex, allStateMachines) {
       lines.push('');
     }
 
-    if (machine.events?.length) {
+    if (machine.on?.length) {
       lines.push('### Event subscriptions');
       lines.push('');
-      for (const sub of machine.events) {
+      for (const sub of machine.on) {
         lines.push(renderEventSubLine(sub, sm, machine, eventIndex, allStateMachines));
       }
       lines.push('');

@@ -56,6 +56,15 @@ export type ApplicationWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -132,6 +141,15 @@ export type Application = {
      */
     proofOfIncomeDocumentId?: string;
     /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -157,6 +175,83 @@ export type Application = {
      */
     readonly id: string;
     /**
+     * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+     *
+     */
+    readonly previousHousehold?: {
+        /**
+         * The number of people who buy and prepare food together, as the household states it.
+         */
+        size?: number;
+        /**
+         * Whether the household says its utilities are included in the rent.
+         */
+        utilitiesIncludedInRent?: boolean;
+        /**
+         * Total monthly income, as the household states it.
+         */
+        monthlyIncome?: number;
+        /**
+         * Total monthly expenses, as the household states them.
+         */
+        monthlyExpenses?: number;
+        members?: Array<{
+            /**
+             * The member's key within the household.
+             */
+            id: string;
+            dateOfBirth?: string;
+            /**
+             * Whether the member is disabled.
+             */
+            isDisabled?: boolean;
+        }>;
+        jobs?: Array<{
+            /**
+             * The job's key within the household.
+             */
+            id: string;
+            /**
+             * The member who holds the job.
+             */
+            memberId: string;
+            employer?: string;
+        }>;
+        incomes?: Array<{
+            /**
+             * The income's key within the household.
+             */
+            id: string;
+            /**
+             * The member who receives it.
+             */
+            memberId: string;
+            /**
+             * The job it's paid for, when it's earned.
+             */
+            jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
+            /**
+             * The amount received each time it's paid, in dollars.
+             */
+            amount: number;
+            /**
+             * How often it's paid.
+             */
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
+            /**
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+             */
+            amountVaries?: boolean;
+        }>;
+        expenses?: Array<{
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        }>;
+    };
+    /**
      * How many programs this application covers, from programsAppliedFor.
      */
     readonly programCount: number;
@@ -174,11 +269,11 @@ export type Application = {
     /**
      * Timestamp when the application was formally submitted. Null until submitted.
      */
-    readonly submittedAt?: string;
+    readonly submittedAt?: string | null;
     /**
      * Timestamp when a caseworker began active review. Null until the application is opened.
      */
-    readonly openedAt?: string;
+    readonly openedAt?: string | null;
     /**
      * SLA type governing the processing deadline for this application.
      */
@@ -384,7 +479,7 @@ export type Application = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -402,7 +497,7 @@ export type Application = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */
@@ -499,6 +594,15 @@ export type ApplicationCreate = {
      */
     proofOfIncomeDocumentId?: string;
     /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -572,6 +676,15 @@ export type ApplicationUpdate = {
      */
     proofOfIncomeDocumentId?: string;
     /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -591,6 +704,154 @@ export type ApplicationUpdate = {
          */
         proofOfIncomeDocument?: string;
     };
+};
+
+export type IncomeVerificationWritable = {
+    /**
+     * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+     *
+     */
+    kind?: 'wage_record' | 'pay_stub';
+    /**
+     * The member it's about, by their key in the household.
+     */
+    memberId?: string;
+    /**
+     * For a pay stub, the income it's for, by its key in the household.
+     */
+    incomeId?: string;
+    /**
+     * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+     */
+    period?: string;
+    /**
+     * Gross wages for the quarter, or gross pay on the stub.
+     */
+    amount?: number;
+    /**
+     * For a pay stub, how often the pay it shows is paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+};
+
+export type IncomeVerification = {
+    /**
+     * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+     *
+     */
+    kind?: 'wage_record' | 'pay_stub';
+    /**
+     * The member it's about, by their key in the household.
+     */
+    memberId?: string;
+    /**
+     * For a pay stub, the income it's for, by its key in the household.
+     */
+    incomeId?: string;
+    /**
+     * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+     */
+    period?: string;
+    /**
+     * Gross wages for the quarter, or gross pay on the stub.
+     */
+    amount?: number;
+    /**
+     * For a pay stub, how often the pay it shows is paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+} & {
+    readonly id: string;
+    readonly applicationId: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Application resource.
+         */
+        application?: string;
+    };
+};
+
+export type IncomeVerificationCreate = {
+    /**
+     * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+     *
+     */
+    kind?: 'wage_record' | 'pay_stub';
+    /**
+     * The member it's about, by their key in the household.
+     */
+    memberId?: string;
+    /**
+     * For a pay stub, the income it's for, by its key in the household.
+     */
+    incomeId?: string;
+    /**
+     * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+     */
+    period?: string;
+    /**
+     * Gross wages for the quarter, or gross pay on the stub.
+     */
+    amount?: number;
+    /**
+     * For a pay stub, how often the pay it shows is paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+} & {
+    [key: string]: unknown;
+};
+
+export type IncomeVerificationList = {
+    items: Array<{
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
 };
 
 export type ApplicationList = {
@@ -649,6 +910,15 @@ export type ApplicationList = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -674,6 +944,83 @@ export type ApplicationList = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -691,11 +1038,11 @@ export type ApplicationList = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -901,7 +1248,7 @@ export type ApplicationList = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -919,7 +1266,7 @@ export type ApplicationList = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -1776,6 +2123,13 @@ export type ApplicationSummaryResponse = {
 };
 
 /**
+ * Generated composition response for interviewFlagsInputs.
+ */
+export type InterviewFlagsInputsResponse = {
+    [key: string]: unknown;
+};
+
+/**
  * Generated composition response for applicationReview.
  */
 export type ApplicationReviewResponse = {
@@ -1820,7 +2174,7 @@ export type ReviewProgress = {
 } & {
     readonly id: string;
     readonly section: string;
-    readonly itemId?: string;
+    readonly itemId?: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
 };
@@ -1840,7 +2194,7 @@ export type ReviewProgressListResponse = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     }>;
@@ -1849,101 +2203,6 @@ export type ReviewProgressListResponse = {
     offset: number;
     hasNext: boolean;
 };
-
-/**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export type InterviewPromptsRequest = {
-    /**
-     * Household composition and financial circumstances.
-     */
-    household?: {
-        /**
-         * Total monthly gross income reported by the household.
-         */
-        monthlyIncome?: number;
-        /**
-         * Total monthly expenses reported by the household.
-         */
-        monthlyExpenses?: number;
-        /**
-         * All individuals in the household.
-         */
-        members?: Array<{
-            /**
-             * Member's age in years.
-             */
-            age?: number;
-            /**
-             * Whether the member is currently employed.
-             */
-            isEmployed?: boolean;
-            /**
-             * Whether the member is enrolled at least half-time in higher education.
-             */
-            isStudent?: boolean;
-            /**
-             * Whether the member is a non-citizen subject to immigration screening.
-             */
-            isNonCitizen?: boolean;
-        }>;
-    };
-    /**
-     * Application-level context relevant to the interview.
-     */
-    application?: {
-        /**
-         * Whether the household reported changes since the application was submitted.
-         */
-        hasChangedCircumstances?: boolean;
-    };
-};
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export type InterviewPromptsResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
 
 export type Document = {
     /**
@@ -1957,7 +2216,7 @@ export type Document = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     readonly id: string;
     /**
@@ -1975,7 +2234,7 @@ export type Document = {
     /**
      * When this document becomes eligible for disposition.
      */
-    readonly retentionDeadline?: string;
+    readonly retentionDeadline?: string | null;
     /**
      * Arbitrary key-value metadata supplied at upload.
      */
@@ -2007,7 +2266,7 @@ export type DocumentWritable = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 };
 
 export type ApplicationWritableWritable = {
@@ -2061,6 +2320,15 @@ export type ApplicationWritableWritable = {
      * The uploaded document evidencing household income, if one is attached.
      */
     proofOfIncomeDocumentId?: string;
+    /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
     /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
@@ -2128,6 +2396,15 @@ export type ApplicationWritable2 = {
      * The uploaded document evidencing household income, if one is attached.
      */
     proofOfIncomeDocumentId?: string;
+    /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
     /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
@@ -2284,7 +2561,7 @@ export type ApplicationWritable2 = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         /**
          * Arbitrary key-value metadata supplied at upload.
@@ -2346,6 +2623,15 @@ export type ApplicationCreateWritable = {
      * The uploaded document evidencing household income, if one is attached.
      */
     proofOfIncomeDocumentId?: string;
+    /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
     /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
@@ -2411,6 +2697,15 @@ export type ApplicationUpdateWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
+     * A first application, or an application for recertification — the same kind of request.
+     *
+     */
+    type?: 'new' | 'renewal';
+    /**
+     * The date of the application's interview.
+     */
+    interviewDate?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -2421,6 +2716,68 @@ export type ApplicationUpdateWritable = {
      * County code for routing this application to the correct local office.
      */
     countyCode?: string;
+};
+
+export type IncomeVerificationWritable2 = {
+    /**
+     * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+     *
+     */
+    kind?: 'wage_record' | 'pay_stub';
+    /**
+     * The member it's about, by their key in the household.
+     */
+    memberId?: string;
+    /**
+     * For a pay stub, the income it's for, by its key in the household.
+     */
+    incomeId?: string;
+    /**
+     * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+     */
+    period?: string;
+    /**
+     * Gross wages for the quarter, or gross pay on the stub.
+     */
+    amount?: number;
+    /**
+     * For a pay stub, how often the pay it shows is paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+};
+
+export type IncomeVerificationListWritable = {
+    items: Array<{
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
 };
 
 export type ApplicationListWritable = {
@@ -2478,6 +2835,15 @@ export type ApplicationListWritable = {
          * The uploaded document evidencing household income, if one is attached.
          */
         proofOfIncomeDocumentId?: string;
+        /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
         /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
@@ -2634,7 +3000,7 @@ export type ApplicationListWritable = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             /**
              * Arbitrary key-value metadata supplied at upload.
@@ -2984,7 +3350,7 @@ export type DocumentWritable2 = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     /**
      * Arbitrary key-value metadata supplied at upload.
@@ -3210,6 +3576,15 @@ export type ListApplicationsResponses = {
              */
             proofOfIncomeDocumentId?: string;
             /**
+             * A first application, or an application for recertification — the same kind of request.
+             *
+             */
+            type?: 'new' | 'renewal';
+            /**
+             * The date of the application's interview.
+             */
+            interviewDate?: string;
+            /**
              * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
              *
              */
@@ -3235,6 +3610,83 @@ export type ListApplicationsResponses = {
              */
             readonly id: string;
             /**
+             * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+             *
+             */
+            readonly previousHousehold?: {
+                /**
+                 * The number of people who buy and prepare food together, as the household states it.
+                 */
+                size?: number;
+                /**
+                 * Whether the household says its utilities are included in the rent.
+                 */
+                utilitiesIncludedInRent?: boolean;
+                /**
+                 * Total monthly income, as the household states it.
+                 */
+                monthlyIncome?: number;
+                /**
+                 * Total monthly expenses, as the household states them.
+                 */
+                monthlyExpenses?: number;
+                members?: Array<{
+                    /**
+                     * The member's key within the household.
+                     */
+                    id: string;
+                    dateOfBirth?: string;
+                    /**
+                     * Whether the member is disabled.
+                     */
+                    isDisabled?: boolean;
+                }>;
+                jobs?: Array<{
+                    /**
+                     * The job's key within the household.
+                     */
+                    id: string;
+                    /**
+                     * The member who holds the job.
+                     */
+                    memberId: string;
+                    employer?: string;
+                }>;
+                incomes?: Array<{
+                    /**
+                     * The income's key within the household.
+                     */
+                    id: string;
+                    /**
+                     * The member who receives it.
+                     */
+                    memberId: string;
+                    /**
+                     * The job it's paid for, when it's earned.
+                     */
+                    jobId?: string;
+                    source: 'earned' | 'self_employment' | 'unearned';
+                    /**
+                     * The amount received each time it's paid, in dollars.
+                     */
+                    amount: number;
+                    /**
+                     * How often it's paid.
+                     */
+                    frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                    paidInCash?: boolean;
+                    /**
+                     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                     */
+                    amountVaries?: boolean;
+                }>;
+                expenses?: Array<{
+                    type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                    amount: number;
+                    frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+                }>;
+            };
+            /**
              * How many programs this application covers, from programsAppliedFor.
              */
             readonly programCount: number;
@@ -3252,11 +3704,11 @@ export type ListApplicationsResponses = {
             /**
              * Timestamp when the application was formally submitted. Null until submitted.
              */
-            readonly submittedAt?: string;
+            readonly submittedAt?: string | null;
             /**
              * Timestamp when a caseworker began active review. Null until the application is opened.
              */
-            readonly openedAt?: string;
+            readonly openedAt?: string | null;
             /**
              * SLA type governing the processing deadline for this application.
              */
@@ -3462,7 +3914,7 @@ export type ListApplicationsResponses = {
                 /**
                  * The date the document itself bears, which is not the date it arrived.
                  */
-                documentDate?: string;
+                documentDate?: string | null;
             } & {
                 readonly id: string;
                 /**
@@ -3480,7 +3932,7 @@ export type ListApplicationsResponses = {
                 /**
                  * When this document becomes eligible for disposition.
                  */
-                readonly retentionDeadline?: string;
+                readonly retentionDeadline?: string | null;
                 /**
                  * Arbitrary key-value metadata supplied at upload.
                  */
@@ -3598,6 +4050,15 @@ export type CreateApplicationData = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3704,6 +4165,15 @@ export type CreateApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3729,6 +4199,83 @@ export type CreateApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -3746,11 +4293,11 @@ export type CreateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -3956,7 +4503,7 @@ export type CreateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -3974,7 +4521,7 @@ export type CreateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4145,6 +4692,15 @@ export type GetApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -4170,6 +4726,83 @@ export type GetApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -4187,11 +4820,11 @@ export type GetApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4397,7 +5030,7 @@ export type GetApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4415,7 +5048,7 @@ export type GetApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4515,6 +5148,15 @@ export type UpdateApplicationData = {
          * The uploaded document evidencing household income, if one is attached.
          */
         proofOfIncomeDocumentId?: string;
+        /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
         /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
@@ -4633,6 +5275,15 @@ export type UpdateApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -4658,6 +5309,83 @@ export type UpdateApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -4675,11 +5403,11 @@ export type UpdateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4885,7 +5613,7 @@ export type UpdateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4903,7 +5631,7 @@ export type UpdateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4950,6 +5678,363 @@ export type UpdateApplicationResponses = {
 };
 
 export type UpdateApplicationResponse = UpdateApplicationResponses[keyof UpdateApplicationResponses];
+
+export type ListIncomeVerificationsData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+    };
+    url: '/applications/{applicationId}/income-verifications';
+};
+
+export type ListIncomeVerificationsErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type ListIncomeVerificationsError = ListIncomeVerificationsErrors[keyof ListIncomeVerificationsErrors];
+
+export type ListIncomeVerificationsResponses = {
+    /**
+     * The income verifications gathered for this application.
+     */
+    200: {
+        items: Array<{
+            /**
+             * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+             *
+             */
+            kind?: 'wage_record' | 'pay_stub';
+            /**
+             * The member it's about, by their key in the household.
+             */
+            memberId?: string;
+            /**
+             * For a pay stub, the income it's for, by its key in the household.
+             */
+            incomeId?: string;
+            /**
+             * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+             */
+            period?: string;
+            /**
+             * Gross wages for the quarter, or gross pay on the stub.
+             */
+            amount?: number;
+            /**
+             * For a pay stub, how often the pay it shows is paid.
+             */
+            frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        } & {
+            readonly id: string;
+            readonly applicationId: string;
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+        hasNext?: boolean;
+    };
+};
+
+export type ListIncomeVerificationsResponse = ListIncomeVerificationsResponses[keyof ListIncomeVerificationsResponses];
+
+export type CreateIncomeVerificationData = {
+    body: {
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    } & {
+        [key: string]: unknown;
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/income-verifications';
+};
+
+export type CreateIncomeVerificationErrors = {
+    /**
+     * Bad request — validation failed
+     */
+    400: {
+        message?: string;
+    };
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Unprocessable entity — business rule validation failed
+     */
+    422: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type CreateIncomeVerificationError = CreateIncomeVerificationErrors[keyof CreateIncomeVerificationErrors];
+
+export type CreateIncomeVerificationResponses = {
+    /**
+     * Income verification recorded.
+     */
+    201: {
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type CreateIncomeVerificationResponse = CreateIncomeVerificationResponses[keyof CreateIncomeVerificationResponses];
+
+export type GetIncomeVerificationData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        incomeVerificationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/income-verifications/{incomeVerificationId}';
+};
+
+export type GetIncomeVerificationErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type GetIncomeVerificationError = GetIncomeVerificationErrors[keyof GetIncomeVerificationErrors];
+
+export type GetIncomeVerificationResponses = {
+    /**
+     * Income verification retrieved.
+     */
+    200: {
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type GetIncomeVerificationResponse = GetIncomeVerificationResponses[keyof GetIncomeVerificationResponses];
 
 export type ListApplicationMembersData = {
     body?: never;
@@ -6169,6 +7254,9 @@ export type UpdateApplicationMemberResponse = UpdateApplicationMemberResponses[k
 export type SubmitApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -6312,6 +7400,15 @@ export type SubmitApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -6337,6 +7434,83 @@ export type SubmitApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -6354,11 +7528,11 @@ export type SubmitApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -6564,7 +7738,7 @@ export type SubmitApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -6582,7 +7756,7 @@ export type SubmitApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -6633,6 +7807,9 @@ export type SubmitApplicationResponse = SubmitApplicationResponses[keyof SubmitA
 export type OpenApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -6776,6 +7953,15 @@ export type OpenApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -6801,6 +7987,83 @@ export type OpenApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -6818,11 +8081,11 @@ export type OpenApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7028,7 +8291,7 @@ export type OpenApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7046,7 +8309,7 @@ export type OpenApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7106,6 +8369,9 @@ export type CloseApplicationData = {
         notes?: string;
     };
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7249,6 +8515,15 @@ export type CloseApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -7274,6 +8549,83 @@ export type CloseApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -7291,11 +8643,11 @@ export type CloseApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7501,7 +8853,7 @@ export type CloseApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7519,7 +8871,7 @@ export type CloseApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7570,6 +8922,9 @@ export type CloseApplicationResponse = CloseApplicationResponses[keyof CloseAppl
 export type WithdrawApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7713,6 +9068,15 @@ export type WithdrawApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
+         * A first application, or an application for recertification — the same kind of request.
+         *
+         */
+        type?: 'new' | 'renewal';
+        /**
+         * The date of the application's interview.
+         */
+        interviewDate?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -7738,6 +9102,83 @@ export type WithdrawApplicationResponses = {
          */
         readonly id: string;
         /**
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+         *
+         */
+        readonly previousHousehold?: {
+            /**
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * How many programs this application covers, from programsAppliedFor.
          */
         readonly programCount: number;
@@ -7755,11 +9196,11 @@ export type WithdrawApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7965,7 +9406,7 @@ export type WithdrawApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7983,7 +9424,7 @@ export type WithdrawApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -8096,6 +9537,72 @@ export type GetApplicationSummaryResponses = {
 };
 
 export type GetApplicationSummaryResponse = GetApplicationSummaryResponses[keyof GetApplicationSummaryResponses];
+
+export type GetInterviewFlagsInputsData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interview-flags-inputs';
+};
+
+export type GetInterviewFlagsInputsErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetInterviewFlagsInputsError = GetInterviewFlagsInputsErrors[keyof GetInterviewFlagsInputsErrors];
+
+export type GetInterviewFlagsInputsResponses = {
+    /**
+     * Generated composition response for interviewFlagsInputs.
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetInterviewFlagsInputsResponse = GetInterviewFlagsInputsResponses[keyof GetInterviewFlagsInputsResponses];
 
 export type GetApplicationReviewData = {
     body?: never;
@@ -8712,7 +10219,7 @@ export type ListReviewProgressBySectionResponses = {
         } & {
             readonly id: string;
             readonly section: string;
-            readonly itemId?: string;
+            readonly itemId?: string | null;
             readonly createdAt: string;
             readonly updatedAt: string;
         }>;
@@ -8842,7 +10349,7 @@ export type UpdateReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -8967,7 +10474,7 @@ export type ReplaceReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9050,7 +10557,7 @@ export type GetReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9179,7 +10686,7 @@ export type UpdateReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9308,157 +10815,10 @@ export type ReplaceReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
 };
 
 export type ReplaceReviewProgressByItemResponse = ReplaceReviewProgressByItemResponses[keyof ReplaceReviewProgressByItemResponses];
-
-export type EvaluateInterviewPromptsData = {
-    /**
-     * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-     */
-    body: {
-        /**
-         * Household composition and financial circumstances.
-         */
-        household?: {
-            /**
-             * Total monthly gross income reported by the household.
-             */
-            monthlyIncome?: number;
-            /**
-             * Total monthly expenses reported by the household.
-             */
-            monthlyExpenses?: number;
-            /**
-             * All individuals in the household.
-             */
-            members?: Array<{
-                /**
-                 * Member's age in years.
-                 */
-                age?: number;
-                /**
-                 * Whether the member is currently employed.
-                 */
-                isEmployed?: boolean;
-                /**
-                 * Whether the member is enrolled at least half-time in higher education.
-                 */
-                isStudent?: boolean;
-                /**
-                 * Whether the member is a non-citizen subject to immigration screening.
-                 */
-                isNonCitizen?: boolean;
-            }>;
-        };
-        /**
-         * Application-level context relevant to the interview.
-         */
-        application?: {
-            /**
-             * Whether the household reported changes since the application was submitted.
-             */
-            hasChangedCircumstances?: boolean;
-        };
-    };
-    path?: never;
-    query?: never;
-    url: '/applications/evaluate-interview-prompts';
-};
-
-export type EvaluateInterviewPromptsErrors = {
-    /**
-     * The request is malformed or contains invalid parameters.
-     */
-    400: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof EvaluateInterviewPromptsErrors];
-
-export type EvaluateInterviewPromptsResponses = {
-    /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
-     */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
-};
-
-export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];

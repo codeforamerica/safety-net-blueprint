@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/identity-access/identity-access-schema.yaml"
 title: IdentityAccess
+domain: identity-access
 description: >
   Identity and access domain types. Covers user account management,
   authentication context, and authorization schemas.
@@ -46,6 +47,8 @@ $defs:
         type: string
         format: uuid
         description: User Service identifier. Same value as User.id on the REST resource.
+        x-relationship:
+          resource: User
       roles:
         $ref: "#/$defs/Role"
 

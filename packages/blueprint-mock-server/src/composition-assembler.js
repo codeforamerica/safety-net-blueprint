@@ -14,7 +14,7 @@
  * Filter expressions use the same CEL syntax as state machine conditions.
  */
 
-import { evaluateCEL } from './cel-evaluator.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 import { deriveCollectionName, extractPrimaryParam, resolveDotPath, toKebabCase } from './collection-utils.js';
 import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
@@ -54,9 +54,18 @@ export function registerParentLink(parentPath, compositionName, compositionEndpo
 
 // $present(v) — true if value is non-null, non-undefined, non-empty string.
 // Injected into every filter and derive expression context for compositions.
-const COMPOSITION_HELPERS = {
-  $present: (v) => v !== null && v !== undefined && v !== '',
-};
+/**
+ * Whether a record passes a composition `filter:`, a CEL expression over the
+ * record's fields and `section`. One that does not evaluate — a field the
+ * record does not have — does not pass.
+ */
+function passesFilter(filter, item, context) {
+  try {
+    return evaluateCEL(filter, { ...item, section: { name: context.sectionName } }) === true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Build a _links.self URL for a resource item.
@@ -100,7 +109,7 @@ function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap, st
   const { items } = store.findAll(collectionName, filterObj, { limit: null });
 
   const filtered = filter
-    ? items.filter(item => Boolean(evaluateCEL(filter, { ...COMPOSITION_HELPERS, ...item, $section: { name: context.sectionName } })))
+    ? items.filter(item => passesFilter(filter, item, context))
     : items;
 
   const projected = fields ? filtered.map(item => projectFields(item, fields)) : filtered;
@@ -121,7 +130,15 @@ function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap, st
  */
 function projectFields(record, fields) {
   const out = {};
-  for (const field of fields) {
+  for (const entry of fields) {
+    // `source as alias` projects the source field under another name, so a
+    // composition can translate the data model into what a consumer reads.
+    const [field, alias] = String(entry).split(/\s+as\s+/);
+    if (alias) {
+      const value = field.includes('.') ? resolveDotPath(record, field) : record[field];
+      if (value !== undefined && value !== null) out[alias] = value;
+      continue;
+    }
     if (field.includes('.')) {
       // Dot-notation: resolve the value and set it at the top-level key (first segment).
       // e.g. "person.firstName" → out.person = { firstName: <value> }

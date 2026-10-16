@@ -32,7 +32,7 @@ function applyQueryFilters(records, queryFilters, collection) {
   if (queryFilters.from) {
     const fromMs = new Date(queryFilters.from).getTime();
     filtered = filtered.filter(r => {
-      const ts = collection === 'events' ? r.occurredAt : r.createdAt;
+      const ts = collection === 'events' ? r.time : r.createdAt;
       return ts && new Date(ts).getTime() >= fromMs;
     });
   }
@@ -40,7 +40,7 @@ function applyQueryFilters(records, queryFilters, collection) {
   if (queryFilters.to) {
     const toMs = new Date(queryFilters.to).getTime();
     filtered = filtered.filter(r => {
-      const ts = collection === 'events' ? r.occurredAt : r.createdAt;
+      const ts = collection === 'events' ? r.time : r.createdAt;
       return ts && new Date(ts).getTime() <= toMs;
     });
   }
@@ -86,14 +86,15 @@ function collectionNamesIn(entries) {
 }
 
 /**
- * Get all records from a named collection.
+ * Every record in a named collection.
+ *
+ * Read with no limit: a store pages by default, so a metric read through the
+ * default would count the first page only. And not wrapped in a try: this read
+ * once named a store it was never given, and the catch turned the error into an
+ * empty collection, so every metric computed zero.
  */
-function getCollection(name) {
-  try {
-    return store.findAll(name).items || [];
-  } catch {
-    return [];
-  }
+function getCollection(name, store) {
+  return store.findAll(name, {}, { limit: null }).items;
 }
 
 /**
@@ -129,14 +130,14 @@ function computeScalar(metric, collections, queryFilters) {
       const fromEvents = applyFilter(fromCol, metric.from.filter);
       const toEvents = applyFilter(toCol, metric.to.filter);
 
-      const pairBy = metric.pairBy || 'objectId';
+      const pairBy = metric.pairBy || 'subject';
 
       // Build a map of pairBy value → first from-event timestamp
       const fromMap = new Map();
       for (const e of fromEvents) {
         const key = e[pairBy];
         if (key && !fromMap.has(key)) {
-          fromMap.set(key, new Date(e.occurredAt ?? e.createdAt).getTime());
+          fromMap.set(key, new Date(e.time ?? e.createdAt).getTime());
         }
       }
 
@@ -145,7 +146,7 @@ function computeScalar(metric, collections, queryFilters) {
       for (const e of toEvents) {
         const key = e[pairBy];
         if (key && fromMap.has(key)) {
-          const toMs = new Date(e.occurredAt ?? e.createdAt).getTime();
+          const toMs = new Date(e.time ?? e.createdAt).getTime();
           const fromMs = fromMap.get(key);
           if (toMs > fromMs) {
             durations.push(toMs - fromMs);
@@ -189,11 +190,10 @@ function computeBreakdown(metric, collections, groupBy, queryFilters) {
 
   const breakdown = {};
   for (const groupValue of groupValues) {
-    // Filter collections to this group value
-    const groupedCollections = {
-      tasks: collections.tasks.filter(r => r[groupBy] === groupValue),
-      events: collections.events.filter(r => r[groupBy] === groupValue)
-    };
+    // Every collection the metrics name, narrowed to this group value
+    const groupedCollections = Object.fromEntries(
+      Object.entries(collections).map(([name, records]) => [name, records.filter(r => r[groupBy] === groupValue)])
+    );
     breakdown[groupValue] = computeScalar(metric, groupedCollections, queryFilters);
   }
 
@@ -247,7 +247,7 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
       // request rather than per metric, which is why it is a map and not a
       // call inside the aggregation.
       const collections = Object.fromEntries(
-        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name)])
+        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name, store)])
       );
 
       // Collect all metric definitions, optionally filtered by domain
@@ -338,7 +338,7 @@ export function createMetricsGetHandler(allMetrics, { store } = {}) {
       // request rather than per metric, which is why it is a map and not a
       // call inside the aggregation.
       const collections = Object.fromEntries(
-        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name)])
+        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name, store)])
       );
 
       const breakdown = groupBy

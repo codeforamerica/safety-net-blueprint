@@ -1,0 +1,11 @@
+{
+  "type": "string",
+  "enum": [
+    "line",
+    "gap",
+    "pause"
+  ],
+  "description": "`line`: something said or typed. `gap`: a stretch where nothing was\ncaptured — a dropped connection, a provider failure. `pause`: the\nconversation off the record, by choice.\n",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptEntryKind"
+}

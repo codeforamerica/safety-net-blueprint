@@ -1,5 +1,6 @@
 asyncapi: 3.0.0
 info:
+  x-domain: communication
   title: Communication Domain Events
   version: 0.1.0
   x-status: alpha
@@ -7,7 +8,7 @@ info:
     Event catalog for the Communication domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
 
-    Event types follow the convention: communication.{entity}.{action}.
+    Event types follow the convention: communication.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
@@ -15,6 +16,7 @@ info:
 channels:
   communication.notice.sent:
     address: communication.notice.sent
+    description: "Placeholder: generated once the communication domain declares the notice resource and state machine that send it."
     messages:
       noticeSent:
         $ref: '#/components/messages/NoticeSentMessage'
@@ -59,7 +61,7 @@ components:
             - document_request_income_verification
             - document_request_residency_verification
         metadata:
-          type: object
+          type: [object, "null"]
           description: >
             Domain-keyed correlation context. Keys are domain names; values are
             arbitrary objects defined by the triggering domain. Treated as opaque
@@ -68,4 +70,3 @@ components:
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true

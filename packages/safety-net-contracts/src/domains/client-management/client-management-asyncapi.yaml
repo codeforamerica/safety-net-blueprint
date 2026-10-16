@@ -8,14 +8,15 @@ info:
     Event catalog for the Client Management domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
 
-    Event types follow the convention: client_management.{entity}.{action}.
+    Event types follow the convention: client-management.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
 
 channels:
-  client_management.person.match_resolved:
-    address: client_management.person.match_resolved
+  client-management.person.match_resolved:
+    address: client-management.person.match_resolved
+    description: "Placeholder: generated once client management declares the identity matching resource and state machine that send it."
     messages:
       personMatchResolved:
         $ref: '#/components/messages/PersonMatchResolvedMessage'
@@ -23,7 +24,7 @@ channels:
 components:
   messages:
     PersonMatchResolvedMessage:
-      name: client_management.person.match_resolved
+      name: client-management.person.match_resolved
       summary: Emitted once per applying member after Client Management attempts to match against existing person records.
       payload:
         $ref: '#/components/schemas/PersonMatchResolvedEvent'
@@ -37,7 +38,7 @@ components:
           properties:
             type:
               type: string
-              const: client_management.person.match_resolved
+              const: client-management.person.match_resolved
             data:
               $ref: '#/components/schemas/PersonMatchResolvedData'
 

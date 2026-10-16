@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/eligibility/eligibility-schema.yaml"
 title: Eligibility
+domain: eligibility
 description: >
   Shared eligibility types used by the eligibility domain and the eligibility
   adapter interface. Referenced by both so states can overlay the adapter spec

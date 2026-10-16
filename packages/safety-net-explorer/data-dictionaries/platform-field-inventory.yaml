@@ -1,0 +1,18 @@
+# platform field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=platform
+
+# ── Event ───────────────────────────────────────────────────────────────────────
+
+event.subject: { type: uuid }
+event.causationid: { type: uuid }
+event.id: { type: uuid }
+event.type: { type: string }
+event.description: { type: string }
+event.data: { type: object }
+event.specversion: { type: string }
+event.source: { type: string }
+event.time: { type: datetime }
+event.datacontenttype: { type: string }
+event.traceparent: { type: [string, 'null'] }
+event.authid: { type: [string, 'null'] }
+event.authtype: { type: enum, values: [user, service_account, api_key, system, unauthenticated, unknown, null] }

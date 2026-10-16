@@ -9,10 +9,13 @@
  * breaks the link between publisher and subscriber.
  *
  * Three document types name event types, each differently:
- *   state machines  emit steps, and the type of each event handler
+ *   state machines  emit steps (short names are expanded first), and the type
+ *                   of each event handler
  *   asyncapi        channel addresses, message names, payload type consts
  *   annotations     the keys of the events section
  */
+
+import { expandEmits } from '../event-names.js';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
@@ -20,6 +23,14 @@
  * @returns {{ docs: object[], warnings: string[], applied: string[] }}
  */
 export function prefixEventTypes(docs, prefix = null) {
+  // Short-named emits get their full types first, prefix or not: resolved
+  // contracts carry every event's full name, and a prefix has to reach them.
+  const expanded = docs.map((doc) => {
+    if (doc.type !== 'state-machine' || !Array.isArray(doc.content?.machines) || !doc.content.domain) return doc;
+    const machines = doc.content.machines.map((m) => expandEmits(m, doc.content.domain));
+    return machines.every((m, i) => m === doc.content.machines[i]) ? doc : { ...doc, content: { ...doc.content, machines } };
+  });
+  if (expanded.some((doc, i) => doc !== docs[i])) docs = expanded;
   if (!prefix) return { docs, warnings: [], applied: [] };
 
   const applied = [];
@@ -94,7 +105,7 @@ function prefixStateMachine(content, prefix) {
     machines: content.machines.map((machine) => ({
       ...machine,
       ...prefixSection(machine, 'actions', false),
-      ...prefixSection(machine, 'events', true),
+      ...prefixSection(machine, 'on', true),
       ...prefixSection(machine, 'procedures', false),
     })),
   };

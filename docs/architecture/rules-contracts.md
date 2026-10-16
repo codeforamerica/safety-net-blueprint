@@ -35,8 +35,9 @@ That only works if "we haven't asked yet" is distinguishable from "we asked, and
 | absent | not yet asked | `missing`, naming the path |
 | `null` | asked; none | resolves — an empty collection, `placeholder` |
 | `[]` | asked; none | resolves — `complete` |
+| a field one list item doesn't have | not yet asked, for that item | `missing`, naming the item path (`$.household.members[].age`) — unless the answer is settled without it: `exists` with another item true, `all` with another item false, or a predicate decided by its other operands |
 
-The distinction is deliberate, and it is the one an engine is most likely to collapse. Reading an uncollected list as empty makes `exists(m, m.age >= 18)` answer `false` for a household whose members were never asked about — a confident wrong answer, and one that leaves a progressive interview with nothing to ask for. Absent is a question; null is an answer.
+The distinction is deliberate, and it is the one an engine is most likely to collapse. Reading an uncollected list as empty makes `exists(m, m.age >= 18)` answer `false` for a household whose members were never asked about — a confident wrong answer, and one that leaves a progressive interview with nothing to ask for. Absent is a question; null is an answer. The same holds inside a list: a member added before their age is known leaves "is anyone an adult" unanswered, not "no", until another member settles it.
 
 An engine that does not draw this distinction will produce different determinations from the same inputs, so it is part of the evaluation contract rather than an implementation detail. The executable form lives in `packages/blueprint-rules-engine/tests/conformance/cases.json` — a graph, inputs, and the nodes any engine must produce — which is what a replacement engine checks itself against (see [Decision 4](#decision-4-reference-implementation-not-a-mandated-engine)).
 
@@ -68,7 +69,7 @@ Rules contracts produce two artifacts:
 
 **`*-graph.yaml`** — The compiled artifact produced by the resolve pipeline. Contains the fully resolved dependency graph — all nodes, edges, and expressions — with no references to blueprint-specific types or tooling. This is what the evaluator runs against. Any rules engine that implements the graph schema can evaluate it, which is what makes the reference evaluator replaceable. States deploy the graph; they author the rules file.
 
-A ruleset can optionally declare a standalone HTTP endpoint, which the resolver generates into the resolved OpenAPI spec — callable from any HTTP client, served by the mock server, no additional wiring required. Rules contracts are otherwise orthogonal to OpenAPI specs: an OpenAPI spec never references a rules file. Rules inputs and outputs reference the same shared schemas as OpenAPI specs, giving both a common type baseline without coupling the contract types to each other.
+Every ruleset has a standalone HTTP endpoint under its domain, at the path it declares; the endpoint is required, so a ruleset defined in the blueprint is always reachable through its API. The resolver documents a rules file's endpoints in an OpenAPI document generated beside it, so they are callable from any HTTP client and served by the mock server with no additional wiring. Rules contracts are otherwise orthogonal to OpenAPI specs: an OpenAPI spec never references a rules file, and a rules file needs no OpenAPI document to exist. Rules inputs and outputs reference the same shared schemas as OpenAPI specs, giving both a common type baseline without coupling the contract types to each other.
 
 ---
 
@@ -78,7 +79,7 @@ Three invocation modes, one evaluation contract:
 
 1. **State machine `evaluate:` step** — Evaluation embedded in a workflow. The step references a ruleset, maps context data to input paths, and binds the result for use in subsequent steps and guards.
 
-2. **Standalone endpoint** — A ruleset that declares an endpoint block gets a generated POST endpoint in the resolved OpenAPI spec. Useful for direct integration from a frontend or adapter, or for testing with curl.
+2. **Standalone endpoint** — Every ruleset is evaluated at a POST endpoint under its domain, documented in the OpenAPI document resolve generates from its rules file. See the [rules guide](../guides/rules-guide.md#endpoints) for where it is and how to move or remove it. Useful for direct integration from a frontend or adapter, or for testing with curl.
 
 3. **Browser client** — The `blueprint-rules-engine` package includes a browser-compatible evaluator that runs the same compiled graph client-side with no server required. The same API works identically on the server and in the browser.
 
@@ -209,6 +210,7 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 - Several states already have Corticon or IBM Cúram licenses. Mandating a different engine would block adoption.
 - The dependency graph model and evaluation contract (flat nodes map output shape — each fact keyed by name with `state`, `value`, and optional `missing` or `message` fields — and `$.path` input format) are the stable interfaces. The evaluator is an implementation of those interfaces. A state that uses Corticon in production can still use the reference evaluator in the browser and in development.
 - The reference implementation proves the model is sound and provides a working evaluator for development, testing, and browser-side use cases where a vendor engine isn't available.
+- Standard CEL is what any engine can be expected to evaluate, so baseline contracts use only standard CEL. Where it can't express something rules routinely need, Blueprint adds a function — today `list.sum()`, defined as Kubernetes defines it, since standard CEL can't total a list. Using an added function in an expression is what declares the dependency; a graph carries no separate flag. An engine that doesn't implement a function a graph uses must refuse the graph rather than approximate it, which standard CEL already does for an unknown function. Each added function is documented in the [Rules Guide](../guides/rules-guide.md#functions-blueprint-adds) precisely enough to implement elsewhere.
 
 **Options:**
 - **(A)** Mandate `blueprint-rules-engine` as the production evaluator

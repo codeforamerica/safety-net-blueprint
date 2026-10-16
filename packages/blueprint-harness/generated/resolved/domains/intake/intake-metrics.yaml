@@ -28,7 +28,7 @@ metrics:
         "==":
           - var: type
           - intake.application.closed
-    pairBy: resourceId
+    pairBy: subject
     targets:
       - stat: p50
         operator: <
@@ -65,9 +65,11 @@ metrics:
     source:
       collection: applications
       filter:
-        in:
-          - breached
-          - var: slaInfo.*.status
+        some:
+          - var: slaInfo
+          - "==":
+              - var: status
+              - breached
     total:
       collection: applications
     targets:

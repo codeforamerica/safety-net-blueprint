@@ -66,29 +66,51 @@ describe('extract(docs, "metrics")', () => {
 });
 
 describe('extract(docs, "config")', () => {
-  test('every top-level array is a catalog; the envelope is not', () => {
+  test('a catalog declares the resource it seeds; the envelope is not a catalog', () => {
     const docs = setOf({
       'intake-config.yaml': {
         $schema: 'config-schema.yaml',
         version: '2.0',
         domain: 'intake',
-        'document-types': [{ id: 'paystub' }],
-        'denial-reasons': [{ id: 'overIncome' }],
+        'document-types': { resource: 'DocumentType', entries: [{ id: 'paystub' }] },
         somethingScalar: 'ignored',
+        aBareList: [{ id: 'not a catalog' }],
       },
     });
 
-    assert.deepEqual(extract(docs, 'config'), [
-      {
-        domain: 'intake',
-        version: '2.0',
-        catalogs: {
-          'document-types': [{ id: 'paystub' }],
-          'denial-reasons': [{ id: 'overIncome' }],
+    const [config] = extract(docs, 'config');
+    assert.equal(config.domain, 'intake');
+    assert.equal(config.version, '2.0');
+    assert.deepEqual(Object.keys(config.catalogs), ['document-types']);
+    assert.equal(config.catalogs['document-types'].resourceName, 'DocumentType');
+    assert.deepEqual(config.catalogs['document-types'].entries, [{ id: 'paystub' }]);
+  });
+
+  test('a catalog reports the resource it seeds, found by name in its domain, not by its key', () => {
+    const docs = setOf({
+      'intake-openapi.yaml': {
+        openapi: '3.1.0',
+        info: { title: 'Intake', version: '1', 'x-domain': 'intake' },
+        servers: [{ url: 'http://localhost:1080/intake' }],
+        paths: {
+          '/kinds-of-document': { get: { responses: {} } },
+          '/kinds-of-document/{id}': {
+            get: { responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/DocumentType' } } } } } },
+          },
         },
-        relativePath: 'intake-config.yaml',
+        components: { schemas: { DocumentType: { type: 'object' } } },
       },
-    ]);
+      'intake-config.yaml': {
+        version: '1', domain: 'intake',
+        'document-types': { resource: 'DocumentType', entries: [] },
+        missing: { resource: 'NoSuchThing', entries: [] },
+      },
+    });
+
+    const { catalogs } = extract(docs, 'config')[0];
+    assert.equal(catalogs['document-types'].resource.path('collection'), '/kinds-of-document');
+    assert.equal(catalogs['document-types'].api.relativePath, 'intake-openapi.yaml');
+    assert.equal(catalogs.missing.resource, null);
   });
 
   test('a config schema is not a config', () => {
@@ -336,25 +358,43 @@ describe('extract(docs, "registries")', () => {
     assert.equal(registries.taskQueues.intake.title, 'Intake queue');
   });
 
-  test('merges entries declared across documents, later winning', () => {
-    // How an overlay adds to a registry it did not author. Order is discovery
-    // order, so a set holding two documents of one type gets both.
+  test('combines entries declared across documents of a type', () => {
+    // How a state adds to a registry it did not author: a file of its own.
     const docs = setOf({
       'registries/a-policies.yaml': {
         $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
         type: 'policies',
-        entries: { shared: { title: 'from a' }, onlyA: { title: 'a' } },
+        entries: { onlyA: { title: 'a' } },
       },
       'registries/b-policies.yaml': {
         $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
         type: 'policies',
-        entries: { shared: { title: 'from b' }, onlyB: { title: 'b' } },
+        entries: { onlyB: { title: 'b' } },
       },
     });
 
     const { policies } = extract(docs, 'registries');
-    assert.deepEqual(Object.keys(policies).sort(), ['onlyA', 'onlyB', 'shared']);
-    assert.equal(policies.shared.title, 'from b', 'the later document wins');
+    assert.deepEqual(Object.keys(policies).sort(), ['onlyA', 'onlyB']);
+  });
+
+  test('refuses an entry id two documents of a type define, naming both', () => {
+    // Changing an existing entry is an overlay's job. A second file defining
+    // the same id would replace the first without a word.
+    const docs = setOf({
+      'registries/a-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from a' } },
+      },
+      'registries/b-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from b' } },
+      },
+    });
+
+    assert.throws(() => extract(docs, 'registries'),
+      /"shared" of type "policies" is defined in both registries\/a-policies\.yaml and registries\/b-policies\.yaml/);
   });
 
   test('does not require a domain, since platform registries are cross-domain', () => {

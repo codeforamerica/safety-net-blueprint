@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "description"
+  ],
+  "additionalProperties": true,
+  "description": "An entry, with its id and the fields its type defines.",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The entry's stable id."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable text for the entry."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/RegistryEntry"
+}

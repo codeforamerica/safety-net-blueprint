@@ -13,7 +13,7 @@
  *             at read time with $this bound to the record.
  */
 
-import { evaluateCEL } from '../cel-evaluator.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Every property map a schema contributes, following refs on the way.
@@ -32,7 +32,7 @@ import { evaluateCEL } from '../cel-evaluator.js';
  * @param {(schema: *) => *} follow
  * @returns {object[]} Property maps, outermost first
  */
-function propertiesOf(schema, follow = (x) => x) {
+export function propertiesOf(schema, follow = (x) => x) {
   const resolved = follow(schema);
   if (!resolved || typeof resolved !== 'object') return [];
 
@@ -63,6 +63,7 @@ export function extractExpandFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -76,6 +77,9 @@ export function extractExpandFields(schema, follow = (x) => x) {
           fkField,
           resource: rel.resource,
           collection: resourceToCollection(rel.resource),
+          // The schema keeps the key too when it is writable (the Writable
+          // pattern); otherwise the expanded record replaces it.
+          keepFk: declared.has(fkField),
         });
       }
     }
@@ -91,7 +95,8 @@ export function extractExpandFields(schema, follow = (x) => x) {
  * For each expand field:
  *   - reads the FK value from record[fkField]
  *   - calls lookup(collection, fkValue) to fetch the related object
- *   - if found: removes fkField, sets fieldName to the related object
+ *   - if found: sets fieldName to the related object, and removes fkField
+ *     unless the schema declares it too (keepFk)
  *   - if not found: leaves the record unchanged for that field
  *
  * @param {object} record - Raw DB record
@@ -104,13 +109,14 @@ export function applyExpand(record, expandFields, lookup) {
 
   const result = { ...record };
 
-  for (const { fieldName, fkField, collection } of expandFields) {
+  for (const { fieldName, fkField, collection, keepFk } of expandFields) {
     const fkValue = result[fkField];
     if (!fkValue) continue;
 
     const related = lookup(collection, fkValue);
     if (related) {
       result[fieldName] = related;
+      if (!keepFk && fkField !== fieldName) delete result[fkField];
     }
   }
 
@@ -160,15 +166,46 @@ export function getItemSchema(listSchema, schemas, follow = (x) => x) {
 }
 
 /**
- * Convert a PascalCase resource name to a kebab-case plural collection name.
- * e.g. ApplicationMember → application-members
+ * Where each resource's records are kept, by resource name, read from core's
+ * model of the API documents when they are loaded (spec-loader.js) — so a
+ * TranscriptionProfile served at /profiles is found in `profiles`.
  *
- * This mirrors the convention used by deriveCollectionName for sub-resources.
+ * @type {Map<string, string>}
  */
-function resourceToCollection(resource) {
-  return resource
+const collectionsByResource = new Map();
+
+/**
+ * Where each resource is read, by resource name: its item path with the server
+ * base in front, and the parameter naming the record itself — so a link to a
+ * member is `/intake/applications/{applicationId}/members/{memberId}`, in the
+ * API that serves members, not a path under whichever API holds the link.
+ *
+ * @type {Map<string, { path: string, parameter: string }>}
+ */
+const itemPathsByResource = new Map();
+
+/**
+ * @param {Map<string, string>} collections - Resource name → collection
+ * @param {Map<string, { path: string, parameter: string }>} [itemPaths] - Resource name → where it is read
+ */
+export function registerResourceCollections(collections, itemPaths = new Map()) {
+  // A server starting replaces what the last one registered: a resource only it
+  // served would otherwise still look served here.
+  collectionsByResource.clear();
+  itemPathsByResource.clear();
+  for (const [name, collection] of collections) collectionsByResource.set(name, collection);
+  for (const [name, item] of itemPaths) itemPathsByResource.set(name, item);
+}
+
+/**
+ * The collection a resource's records are kept in. One the model names is
+ * found there; otherwise the name is converted by convention — ApplicationMember
+ * → application-members — which is how it was found before the model said.
+ */
+export function resourceToCollection(resource) {
+  return collectionsByResource.get(resource) ?? (resource
     .replace(/([A-Z])/g, (_, c, i) => (i === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`))
-    + 's';
+    + 's');
 }
 
 /**
@@ -185,6 +222,7 @@ export function extractLinksFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -206,28 +244,60 @@ export function extractLinksFields(schema, follow = (x) => x) {
 }
 
 /**
+ * Where a related record is read: its resource's item path, with the record's
+ * own id and any parent ids filled in. Parent ids come from the related record
+ * itself — a member carries its `applicationId`.
+ *
+ * Null when there's no route to point at: a resource no loaded API serves, as
+ * when only one domain's contracts are deployed, or a nested record that isn't
+ * here to say who its parent is. A link that can't be right is left out.
+ *
+ * @param {string} resource
+ * @param {string} id
+ * @param {string} collection
+ * @param {(collection: string, id: string) => object|null} lookup
+ * @returns {string|null}
+ */
+function linkTo(resource, id, collection, lookup) {
+  const item = itemPathsByResource.get(resource);
+  if (!item) return null;
+  let related;
+  let unresolved = false;
+  const path = item.path.replace(/\{([^}]+)\}/g, (_, name) => {
+    if (name === item.parameter) return encodeURIComponent(id);
+    related ??= lookup?.(collection, id) ?? null;
+    const value = related?.[name];
+    if (value === undefined || value === null) unresolved = true;
+    return encodeURIComponent(value ?? '');
+  });
+  return unresolved ? null : path;
+}
+
+/**
  * Apply links-only substitutions to a single DB record.
  * Returns a new object — does not mutate the original.
  *
- * For each linksField, if the FK value exists on the record:
- *   - Adds a `links` entry: links[linkName] = serverBasePath/collection/fkValue
- *   - Does NOT remove the FK field (unlike expand)
+ * For each linksField with an id on the record, adds `links[linkName]`: where
+ * the related record is read, in the API that serves it. The id field stays
+ * (unlike expand).
  *
  * @param {object} record - Raw DB record (or already-expanded record)
- * @param {Array<{ fkField, linkName, collection }>} linksFields
- * @param {string} [serverBasePath=''] - e.g. '/x-relationship'
+ * @param {Array<{ fkField, linkName, resource, collection }>} linksFields
+ * @param {(collection: string, id: string) => object|null} [lookup] - Finds a related record, for its parent ids
  * @returns {object}
  */
-export function applyLinks(record, linksFields, serverBasePath = '') {
+export function applyLinks(record, linksFields, lookup) {
   if (!linksFields || linksFields.length === 0) return record;
 
   const links = record.links ? { ...record.links } : {};
   let hasLinks = false;
 
-  for (const { fkField, linkName, collection } of linksFields) {
+  for (const { fkField, linkName, resource, collection } of linksFields) {
     const fkValue = record[fkField];
     if (!fkValue) continue;
-    links[linkName] = `${serverBasePath}/${collection}/${fkValue}`;
+    const href = linkTo(resource, fkValue, collection, lookup);
+    if (!href) continue;
+    links[linkName] = href;
     hasLinks = true;
   }
 
@@ -248,6 +318,7 @@ export function extractDerivedFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -264,7 +335,8 @@ export function extractDerivedFields(schema, follow = (x) => x) {
  * Apply x-derived field computations to a record.
  * Returns a new object — does not mutate the original.
  *
- * Each x-derived expression is evaluated with $this bound to the record.
+ * Each x-derived expression is CEL, evaluated with `this` bound to the record.
+ * One that does not evaluate leaves the field out, and says why.
  *
  * @param {object} record - DB record (after expand/links have been applied)
  * @param {Array<{ fieldName: string, expr: string }>} derivedFields
@@ -275,8 +347,11 @@ export function applyDerivedFields(record, derivedFields) {
 
   const result = { ...record };
   for (const { fieldName, expr } of derivedFields) {
-    const value = evaluateCEL(expr, { $this: record });
-    if (value !== undefined) result[fieldName] = value;
+    try {
+      result[fieldName] = evaluateCEL(expr, { this: record });
+    } catch (e) {
+      console.warn(`x-derived ${fieldName} "${expr}" did not evaluate: ${e.message}`);
+    }
   }
   return result;
 }

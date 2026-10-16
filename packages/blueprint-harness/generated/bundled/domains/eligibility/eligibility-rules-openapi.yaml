@@ -1,0 +1,286 @@
+openapi: 3.1.0
+info:
+  title: Eligibility rules
+  version: 1.0.0
+  description: Evaluation endpoints for the eligibility rulesets, generated from their rules document.
+  x-domain: eligibility
+servers:
+  - url: /eligibility
+paths:
+  /determinations/evaluate-expedited-snap:
+    post:
+      summary: Evaluate expeditedSnap
+      operationId: evaluateExpeditedSnap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              properties:
+                household:
+                  type: object
+                  description: Household financial circumstances at the time of application.
+                  properties:
+                    monthlyGrossIncome:
+                      type: number
+                      description: Total monthly gross income for all household members (dollars).
+                    liquidResources:
+                      type: number
+                      description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+                    monthlyShelterCost:
+                      type: number
+                      description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+                    isMigrantFarmworker:
+                      type: boolean
+                      description: Whether any household member is a migrant or seasonal farmworker.
+                policy:
+                  type: object
+                  properties:
+                    incomeThreshold:
+                      type: number
+                      default: 150
+                      description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+                    resourceThreshold:
+                      type: number
+                      default: 100
+                      description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+      responses:
+        "200":
+          description: expeditedSnap evaluation result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: array
+                    description: |
+                      Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
+                    items:
+                      oneOf:
+                        - type: object
+                          required:
+                            - fact
+                            - state
+                            - value
+                          properties:
+                            fact:
+                              type: string
+                              description: The fact name.
+                            state:
+                              type: string
+                              enum:
+                                - complete
+                            value:
+                              description: The computed value.
+                        - type: object
+                          required:
+                            - fact
+                            - state
+                            - value
+                          properties:
+                            fact:
+                              type: string
+                              description: The fact name.
+                            state:
+                              type: string
+                              enum:
+                                - placeholder
+                            value:
+                              description: The computed value, derived using one or more schema defaults.
+                        - type: object
+                          required:
+                            - fact
+                            - state
+                            - missing
+                          properties:
+                            fact:
+                              type: string
+                              description: The fact name.
+                            state:
+                              type: string
+                              enum:
+                                - missing
+                            missing:
+                              type: array
+                              description: Input paths required to resolve this fact.
+                              items:
+                                type: string
+                        - type: object
+                          required:
+                            - fact
+                            - state
+                            - message
+                          properties:
+                            fact:
+                              type: string
+                              description: The fact name.
+                            state:
+                              type: string
+                              enum:
+                                - error
+                            message:
+                              type: string
+                              description: The reason evaluation failed.
+                      discriminator:
+                        propertyName: state
+                description: Evaluation result for expeditedSnap.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+      tags:
+        - Determinations
+      x-relationship:
+        type: ruleset
+        domain: eligibility
+        id: expeditedSnap
+components:
+  schemas:
+    ExpeditedSnapRequest:
+      type: object
+      description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        household:
+          type: object
+          description: Household financial circumstances at the time of application.
+          properties:
+            monthlyGrossIncome:
+              type: number
+              description: Total monthly gross income for all household members (dollars).
+            liquidResources:
+              type: number
+              description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+            monthlyShelterCost:
+              type: number
+              description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+            isMigrantFarmworker:
+              type: boolean
+              description: Whether any household member is a migrant or seasonal farmworker.
+        policy:
+          type: object
+          properties:
+            incomeThreshold:
+              type: number
+              default: 150
+              description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+            resourceThreshold:
+              type: number
+              default: 100
+              description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+    ExpeditedSnapResponse:
+      allOf:
+        - type: array
+          description: |
+            Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
+          items:
+            oneOf:
+              - type: object
+                required:
+                  - fact
+                  - state
+                  - value
+                properties:
+                  fact:
+                    type: string
+                    description: The fact name.
+                  state:
+                    type: string
+                    enum:
+                      - complete
+                  value:
+                    description: The computed value.
+              - type: object
+                required:
+                  - fact
+                  - state
+                  - value
+                properties:
+                  fact:
+                    type: string
+                    description: The fact name.
+                  state:
+                    type: string
+                    enum:
+                      - placeholder
+                  value:
+                    description: The computed value, derived using one or more schema defaults.
+              - type: object
+                required:
+                  - fact
+                  - state
+                  - missing
+                properties:
+                  fact:
+                    type: string
+                    description: The fact name.
+                  state:
+                    type: string
+                    enum:
+                      - missing
+                  missing:
+                    type: array
+                    description: Input paths required to resolve this fact.
+                    items:
+                      type: string
+              - type: object
+                required:
+                  - fact
+                  - state
+                  - message
+                properties:
+                  fact:
+                    type: string
+                    description: The fact name.
+                  state:
+                    type: string
+                    enum:
+                      - error
+                  message:
+                    type: string
+                    description: The reason evaluation failed.
+            discriminator:
+              propertyName: state
+      description: Evaluation result for expeditedSnap.

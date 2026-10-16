@@ -258,9 +258,8 @@ export function buildRegistryEntryIndex(docs) {
 /**
  * Index the event channels each AsyncAPI document declares.
  *
- * `bySpec` is keyed by filename so a state machine's `eventsSpec:` reference
- * resolves to its own domain's catalog; `all` is every channel in the set, for
- * subscriptions, which may cross domains.
+ * `bySpec` is keyed by filename; `all` is every channel in the set, for
+ * checking that an event a machine names is documented somewhere.
  *
  * @param {import('../types.js').Doc[]} docs
  * @returns {{ bySpec: Map<string, Set<string>>, all: Set<string> }}

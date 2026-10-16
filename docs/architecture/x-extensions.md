@@ -15,12 +15,12 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 
 | Extension | Category | File type(s) | Location within file |
 |---|---|---|---|
+| `x-capabilities` | Config | `overlays/config.yaml` | `config:` section |
 | `x-casing` | Config | `overlays/config.yaml` | `config:` section |
 | `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
 | `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
 | `x-domain` | Spec | `*-openapi.yaml` | `info` level or operation level |
 | `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
-| `x-events` | Spec | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
 | `x-enum-source` | Spec | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
 | `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property (FK fields) or operation level (generated endpoints); or `config:` for default style |
 | `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
@@ -28,6 +28,23 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
 
 ---
+
+---
+
+## x-capabilities
+
+**File type:** `overlays/config.yaml` — `config:` section.
+
+The capabilities a contract set includes. A capability is a domain the framework provides beyond platform — today, `communication`, which holds transcripts. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
+
+```yaml
+# overlays/config.yaml
+config:
+  x-capabilities:
+    - communication
+```
+
+A name the framework does not provide stops resolve, listing the ones it does.
 
 ---
 
@@ -60,14 +77,14 @@ config:
 
 **File type:** `*-openapi.yaml` — schema property level, on computed read-only fields.
 
-Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `$this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
+Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
 
 ```yaml
 # users-openapi.yaml
 userId:
   type: string
   format: uuid
-  x-derived: "$this.id"
+  x-derived: "this.id"
   description: Alias for id, used in JWT claims context.
 ```
 
@@ -75,11 +92,11 @@ userId:
 
 | Variable | Value |
 |---|---|
-| `$this` | The full resource record being returned |
+| `this` | The full resource record being returned |
 
 **Evaluation scope:** item-scope only — the expression is evaluated once per record. Collection-scope expressions (operating across the full result set) are not currently supported.
 
-**Supported expressions:** the mock server's evaluator translates a subset of CEL — `has()`, `.size()`, `.contains()`, `in`, `.filter()`, `.map()`, `.all()` and `.exists()` — and nothing else. Anything outside that subset is handed to JavaScript unchanged, so `$this.id.substring(0, 8).toUpperCase()` evaluates here and would be rejected by a real CEL runtime. Keep expressions inside the subset: `$this.programsAppliedFor.size()`, not string manipulation. Note also that `has()` is matched as `has(identifier)`, so `has($this.field)` is *not* translated and silently yields no value.
+**Supported expressions:** any CEL, evaluated by a spec-compliant implementation (`@bufbuild/cel`): `this.programsAppliedFor.size()`, `has(this.middleName) ? this.middleName : ""`. An expression that does not evaluate — a field the record does not have, say — leaves the field out of the response, and the mock server logs why.
 
 The mock server evaluates `x-derived` fields on all response paths: GET single, GET list, POST create, and PATCH update.
 
@@ -87,9 +104,11 @@ The mock server evaluates `x-derived` fields on all response paths: GET single, 
 
 ## x-domain
 
-**File type:** `*-openapi.yaml` — `info` level (entire API) or operation level (multi-domain specs). Required on all API specs.
+**File type:** `*-openapi.yaml` and `*-asyncapi.yaml` — `info` level (entire API) or operation level (multi-domain specs). Required on every OpenAPI and AsyncAPI document.
 
 The business domain this API belongs to. Enables filtering, domain-specific documentation generation, and future folder reorganization without changing file locations.
+
+A domain is never inferred from a document's folder or filename. Other documents that belong to a domain — state machines, rules, compositions, annotations, registries, config, mock data and the like — declare it as a top-level `domain`. Shared building blocks, such as common schemas, components and state machine libraries, declare none.
 
 ```yaml
 # workflow-openapi.yaml
@@ -98,7 +117,7 @@ info:
   x-domain: workflow
 ```
 
-Valid values: `case-management`, `client-management`, `communication`, `data-exchange`, `document-management`, `eligibility`, `identity-access`, `intake`, `platform`, `reporting`, `scheduling`, `search`, `workflow`.
+A contract set's domains are the ones its OpenAPI, AsyncAPI and rules documents declare; there is no separate list. Every other document attaches to one of those domains, and one naming a domain none of them declare fails validation.
 
 ---
 
@@ -124,29 +143,15 @@ See [Resolve Pipeline Architecture](resolve-pipeline.md#7-environment-filtering)
 
 ## x-events
 
-**File type:** `*-openapi.yaml` — top-level (peer to `info:`, `paths:`).
-
-Declares the domain events emitted by an API. Each key is an event name in dot notation (e.g., `task.created`). AsyncAPI specs and event documentation are generated from this section combined with the domain's state machine YAML.
-
-APIs that emit no events should declare `x-events: {}` to make the intent explicit.
-
-```yaml
-# workflow-openapi.yaml
-x-events:
-  task.created:
-    type: org.codeforamerica.safety-net-blueprint.workflow.task.created
-    summary: Emitted when a task is first created
-    payload:
-      $ref: "#/components/schemas/TaskCreatedEvent"
-```
+**Removed.** It declared an API's events beside AsyncAPI, and nothing read it. The events an API sends are now generated into an AsyncAPI document beside it, from its resources and each attached state machine's `emits:` — see the [events conventions](../conventions/events.yaml). Validation warns where `x-events` remains.
 
 ---
 
 ## x-enum-source
 
-**File type:** `*-openapi.yaml` — schema property level, on string fields whose valid values come from another contract artifact.
+**File type:** `*-openapi.yaml` and JSON Schema files — on a string schema property, or on a named string schema such as `$defs.Domain`, whose valid values come from another contract artifact.
 
-Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
+Declares that a field's enum values are derived from another contract (state machine, SLA types, a registry, the set's domains) rather than hardcoded in the spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
 
 **String form** — for single-machine state files or SLA types:
 
@@ -184,6 +189,27 @@ status:
   description: Current status of the verification obligation.
 ```
 
+**Registry form** — the entry ids of every registry of a type in the set, pooled and sorted, so a list several files contribute to is written nowhere as one:
+
+```yaml
+# communication-transcripts-openapi.yaml
+provider:
+  type: string
+  x-enum-source:
+    registry: transcription-services
+```
+
+A contract set adds a value with a registry file of its own; the framework's file is not edited.
+
+**`domains`** — the domains the set defines, those its OpenAPI, AsyncAPI and rules documents declare, sorted:
+
+```yaml
+# base/schemas/enums.yaml
+Domain:
+  type: string
+  x-enum-source: domains
+```
+
 **Fields (object form):**
 
 | Field | Required | Description |
@@ -202,7 +228,7 @@ status:
 Declares a relationship between a spec element and another contract artifact. Used in two contexts:
 
 - **FK fields** (`type: fk`, the default): annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`.
-- **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally.
+- **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally. A generated operation documents its source artifact; servers serve it from that artifact — the mock serves a transition from its state machine, a ruleset from its rules document, a composition from its compositions document — never from the operation itself, so each route has one source.
 
 Omitting `type` is equivalent to `type: fk` for backward compatibility.
 
@@ -234,11 +260,11 @@ post:
 
 # Operation — generated from a rules contract ruleset
 post:
-  operationId: evaluateInterviewPrompts
+  operationId: evaluateInterviewFlags
   x-relationship:
     type: ruleset
     domain: intake
-    id: interviewPrompts
+    id: interviewFlags
 
 # Operation — generated from a compositions contract
 get:
@@ -256,7 +282,7 @@ get:
 | `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`. |
 | `resource` | FK only | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Required when `type` is `fk` or absent. |
 | `domain` | FK: optional; others: required | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
-| `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource alongside the FK field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource, named without the `Id` suffix, in place of the FK field — which stays as well where it is a writable field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | FK only | Subset of fields to include when `style: expand`. Supports dot notation. Must be non-empty when specified. |
 | `id` | Non-FK only | Identifier of the artifact within its domain contract. For `state-machine-action`: the action `id`. For `ruleset`: the ruleset name. For `composition`: the composition name. |
 

@@ -29,7 +29,7 @@ import { makeRequest, readResponse } from '../helpers/fetch.js';
 function listRoutes(table) {
   return [...table].map(([key, entry]) => ({
     method: key.slice(0, key.indexOf(' ')),
-    path: entry.expressPath,
+    path: key.slice(key.indexOf(' ') + 1),
     handler: entry.handler,
   }));
 }

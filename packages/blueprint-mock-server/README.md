@@ -21,6 +21,7 @@ A mock API server that reads resolved OpenAPI specs and state machine definition
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
 - **Seeding** — populates databases from example files; generates faker-based seed data when none exists
 - **State machine enforcement** — validates RPC transitions against guard conditions, actor restrictions, and current state
+- **Rules and compositions** — serves every ruleset's and composition's endpoint, at the path it declares
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
 - **Event streaming** — SSE endpoints emit domain events on state transitions
 - **Event and HTTP stubbing** — simulate downstream responses for testing event-driven flows
@@ -184,6 +185,7 @@ the default adapter in place.
 | `basePath` | `''` | A path prefix to strip before matching |
 | `baseUrl` | `''` | Base for `Location` headers |
 | `seed` | `true` | Seed from the artifact's mock-data documents |
+| `forwarding` | `[]` | Domains and endpoints to send to a real service — see [Forwarding](../../docs/guides/mock-server.md#forwarding-to-a-real-service) |
 
 `basePath` matters when the page is not at the root of its origin. GitHub Pages
 serves a project site from `/<repo>/`, so a request for `/intake/applications`
@@ -221,12 +223,14 @@ because the fixtures were dereferenced and so had no refs to resolve.
 
 ## Simulating Events
 
-The mock server supports event stubs for testing event-driven behavior without a real event bus. Stub an event and it will fire on the next matching subscription trigger:
+The mock server supports event stubs for testing event-driven behavior without a real event bus. A stub answers the next event of the type it names with the event it carries:
 
 ```
 POST /mock/stubs/events
-{ "name": "scheduler.timer.fired", "data": { "subject": "task-123", "timerType": "creation_deadline" } }
+{ "on": "data-exchange.external_service_call.created", "response": { "type": "data-exchange.call.completed", "data": { "result": "conclusive" } } }
 ```
+
+Stubs are checked against [`schemas/stubs-schema.json`](schemas/stubs-schema.json). See the [mock server guide](../../docs/guides/mock-server.md#event-stubs) for both kinds of stub.
 
 ## Programmatic Use
 

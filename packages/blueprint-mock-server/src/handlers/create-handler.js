@@ -7,12 +7,13 @@ import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
+import { missingReferences, parentsOf } from '../references.js';
 
 
 /**
@@ -24,6 +25,9 @@ import { assertFetchShaped, readJsonBody } from '../http/request.js';
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
+  // The resource created, in the API's model, for the records it's made under.
+  const model = apiMetadata.doc?.model?.();
+  const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
   return async (request, ctx = {}) => {
     const { params = {}, enrichmentData, body: bodyOverride } = ctx;
     const { pathname } = new URL(assertFetchShaped(request, 'createCreateHandler').url);
@@ -33,6 +37,16 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const httpStub = matchAndPopHttp(request.method, pathname);
       if (httpStub) {
         return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
+      }
+
+      // A POST to a path with no list and no item is a call, not a create — an
+      // adapter's evaluate endpoint, say. The mock cannot work out its answer
+      // and keeps nothing for it; a stub stands in for it.
+      if (endpoint.isCall) {
+        return Response.json({
+          code: 'NOT_IMPLEMENTED',
+          message: `${request.method} ${pathname} is a call the mock cannot answer itself. Register an HTTP stub for it: POST /mock/stubs/http with match { method: "${request.method}", url: "${pathname}" }.`,
+        }, { status: 501 });
       }
 
       // A sub-resource POST passes its parent path params already merged in.
@@ -59,6 +73,14 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         if (!valid) {
           return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
+      }
+
+      // An id that names no record is refused, like any other invalid value.
+      const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
+        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
+      });
+      if (missing.length > 0) {
+        return Response.json(createErrorResponse(missing, 422), { status: 422 });
       }
 
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
@@ -90,13 +112,12 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
-      const traceparent = callerHeader(request, 'traceparent');
-      // A spec with no localhost server URL has no domain prefix, and
-      // prefixing with an empty string produced ".application.created" — a
-      // malformed CloudEvents type with a leading dot. Better to emit an
-      // unprefixed type than a broken one (#448).
-      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
-      const object = endpoint.collectionName.replace(/s$/, '');
+      const traceparent = traceparentOf(request);
+      // Named for the domain as declared and the resource the create acts on:
+      // `intake.application_member.created`. A path that is no resource's
+      // emits none.
+      const domain = eventDomainOf(apiMetadata);
+      const object = endpoint.resource?.eventName ?? null;
 
       const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
 
@@ -174,7 +195,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Auto-emit created event with full resource snapshot (after effects applied)
       const callerRoles = extractCallerRoles(request);
-      try {
+      if (object) try {
         emitEvent({
         store,
           domain,
@@ -206,7 +227,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
       return Response.json(responseBody, { status: 201, headers: { Location: location } });

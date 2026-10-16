@@ -95,7 +95,7 @@ let createDocumentType: any, getDocumentType: any, deleteDocumentType: any;
 let listDeterminations: any, listDecisions: any, getDetermination: any, getDecision: any;
 
 // Platform SDK functions (initialized in before())
-let listPolicies: any, getPolicy: any, listEvents: any, getEvent: any, publishEvent: any;
+let listRegistryEntries: any, getRegistryEntry: any, listEvents: any, getEvent: any, publishEvent: any;
 
 // Data exchange SDK functions (initialized in before())
 let listServices: any, getService: any, createServiceCall: any, listServiceCalls: any, getServiceCall: any;
@@ -129,7 +129,10 @@ before(async () => {
   const docMgmtClientMod    = await import(`${clientsDir}/document-management/client/index.js`);
   const eligibilitySdk      = await import(`${clientsDir}/eligibility/sdk.gen.js`);
   const eligibilityClientMod = await import(`${clientsDir}/eligibility/client/index.js`);
-  const platformSdk         = await import(`${clientsDir}/platform/sdk.gen.js`);
+  // Events and registries are the framework's platform domain, each its own
+  // contract and so its own client, served under the same /platform prefix.
+  const platformEventsSdk   = await import(`${clientsDir}/platform-events/sdk.gen.js`);
+  const platformRegistriesSdk = await import(`${clientsDir}/platform-registries/sdk.gen.js`);
   const platformClientMod   = await import(`${clientsDir}/platform/client/index.js`);
   const dataExchangeSdk     = await import(`${clientsDir}/data-exchange/sdk.gen.js`);
   const dataExchangeClientMod = await import(`${clientsDir}/data-exchange/client/index.js`);
@@ -203,7 +206,8 @@ before(async () => {
   ({ listAppointments, createAppointment, getAppointment, updateAppointment } = schedulingSdk);
   ({ listDocuments, listDocumentTypes, createDocumentType, getDocumentType, deleteDocumentType } = docMgmtSdk);
   ({ listDeterminations, listDecisions, getDetermination, getDecision } = eligibilitySdk);
-  ({ listPolicies, getPolicy, listEvents, getEvent, publishEvent } = platformSdk);
+  ({ listEvents, getEvent, publishEvent } = platformEventsSdk);
+  ({ listRegistryEntries, getRegistryEntry } = platformRegistriesSdk);
   ({ listServices, getService, createServiceCall, listServiceCalls, getServiceCall } = dataExchangeSdk);
 });
 
@@ -576,12 +580,12 @@ describe('Zod sweep — eligibility', () => {
 describe('Zod sweep — platform', () => {
   before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
 
-  it('listPolicies — response validates against schema and returns seeded policies', async () => {
-    const res = await listPolicies({ client: platformClient });
+  it('listRegistryEntries — response validates against schema and returns the declared policies', async () => {
+    const res = await listRegistryEntries({ client: platformClient, path: { type: 'policies' } });
     assert.equal(res.status, 200);
     const items = (res.data as { items: { id: string }[] }).items;
     assert.ok(Array.isArray(items));
-    assert.ok(items.length > 0, 'registry-policies should be seeded from platform-registry-policies.yaml');
+    assert.ok(items.length > 0, 'policies are served from platform-registry-policies.yaml');
     const ids = items.map(p => p.id);
     assert.ok(ids.includes('aca-employer-coverage-affordability'), 'aca-employer-coverage-affordability should be present');
     assert.ok(ids.includes('aca-minimum-essential-coverage'), 'aca-minimum-essential-coverage should be present');
@@ -1744,8 +1748,8 @@ describe('Zod sweep — platform (extended)', () => {
     await fetch(`${BASE_URL}/mock/reseed`, { method: 'POST' });
   });
 
-  it('getPolicy — response validates against schema', async () => {
-    const res = await getPolicy({ client: platformClient, path: { policyId: SEED_POLICY_ID } });
+  it('getRegistryEntry — response validates against schema', async () => {
+    const res = await getRegistryEntry({ client: platformClient, path: { type: 'policies', entryId: SEED_POLICY_ID } });
     assert.equal(res.status, 200);
     assert.equal((res.data as { id: string }).id, SEED_POLICY_ID);
   });

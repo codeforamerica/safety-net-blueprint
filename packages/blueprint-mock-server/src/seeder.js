@@ -30,9 +30,10 @@ function itemSchemaName(listSchema) {
  * Which schema each collection holds, from the contracts.
  *
  * A collection endpoint's list response names the schema its records are, so
- * this is read rather than inferred. `/registry/policies` is collection
- * `registry-policies` and holds `Policy` — no naming convention connects
- * those two, and guessing one is how records went unvalidated.
+ * this is read rather than inferred. `/workflow/queues` is collection
+ * `queues` and holds `Queue` only because its list response says so — no
+ * naming convention connects the two, and guessing one is how records went
+ * unvalidated.
  *
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
  * @returns {Map<string, string>} Collection name to schema name

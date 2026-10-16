@@ -58,7 +58,7 @@ test('Platform routes', async (t) => {
   await t.test('stubs can be registered, listed and cleared through the routes', async () => {
     const routes = platformTable(createMemoryStore());
     const fetch = createDispatcher(routes);
-    const stub = { on: 'thing.happened', emit: { type: 'test.other' } };
+    const stub = { on: 'thing.happened', response: { type: 'test.other' } };
 
     const created = await fetch(new Request('http://x/mock/stubs/events', {
       method: 'POST',
@@ -130,5 +130,45 @@ test('Platform routes', async (t) => {
       'the generated list handler would have returned JSON');
     controller.abort();
     await response.body?.cancel().catch(() => {});
+  });
+});
+
+test('contractOverrides — registries are served from the contracts, every type', async (t) => {
+  const { contractOverrides } = await import('../../src/platform-routes.js');
+  const registries = {
+    policies: { 'snap-clock': { description: 'SNAP processing clock' }, 'chip-age': { description: 'CHIP age limit' } },
+    sources: { a: { description: 'FNS-1104' } },
+  };
+  const handlers = contractOverrides({ store: {}, registries });
+  const call = async (operationId, url, params = {}) => {
+    const response = await handlers[operationId](new Request(`http://m${url}`), { params });
+    return { status: response.status, body: await response.json() };
+  };
+
+  await t.test('lists every registry type, with its entry count', async () => {
+    const { body } = await call('listRegistryTypes', '/platform/registry');
+    assert.deepStrictEqual(body.items, [{ type: 'policies', total: 2 }, { type: 'sources', total: 1 }]);
+  });
+
+  await t.test('lists a type\'s entries in id order, paged', async () => {
+    const { body } = await call('listRegistryEntries', '/platform/registry/policies?limit=1', { type: 'policies' });
+    assert.deepStrictEqual(body.items, [{ id: 'chip-age', description: 'CHIP age limit' }]);
+    assert.strictEqual(body.total, 2);
+    assert.strictEqual(body.hasNext, true);
+  });
+
+  await t.test('q matches an id or a description', async () => {
+    const { body } = await call('listRegistryEntries', '/platform/registry/policies?q=processing', { type: 'policies' });
+    assert.deepStrictEqual(body.items.map((e) => e.id), ['snap-clock']);
+  });
+
+  await t.test('returns one entry, with its id', async () => {
+    const { body } = await call('getRegistryEntry', '/platform/registry/sources/a', { type: 'sources', entryId: 'a' });
+    assert.deepStrictEqual(body, { id: 'a', description: 'FNS-1104' });
+  });
+
+  await t.test('an unknown type or entry is 404', async () => {
+    assert.strictEqual((await call('listRegistryEntries', '/platform/registry/nope', { type: 'nope' })).status, 404);
+    assert.strictEqual((await call('getRegistryEntry', '/platform/registry/sources/z', { type: 'sources', entryId: 'z' })).status, 404);
   });
 });

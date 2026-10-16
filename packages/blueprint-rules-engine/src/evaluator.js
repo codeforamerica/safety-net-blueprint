@@ -28,10 +28,11 @@
  * @module evaluator
  */
 
-import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { timestampFromDate, TimestampSchema } from '@bufbuild/protobuf/wkt';
+import { reflect } from '@bufbuild/protobuf/reflect';
 
 import { parse } from '@bufbuild/cel';
-import { evaluateCELNode } from './cel.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
 
@@ -78,6 +79,13 @@ function buildNullCollectionPaths(graphInputs, inputs) {
  */
 function setScopePath(scope, inputs, parts, value) {
   const namespace = parts[0];
+  // A top-level input is the value itself, not an object holding it — a date
+  // declared as an input of its own, say. Cloning it as an object spread a
+  // string into a map and left the converted value inside it.
+  if (parts.length === 1) {
+    scope[namespace] = value;
+    return;
+  }
   // Shallow-clone the namespace so we don't mutate the user's object
   if (scope[namespace] === inputs[namespace]) {
     scope[namespace] = { ...inputs[namespace] };
@@ -251,7 +259,11 @@ function coerceDeclared(spec, value) {
     const date = new Date(text);
     // An unparseable value is left alone so it is reported as a bad input
     // rather than silently becoming an epoch date.
-    return Number.isNaN(date.getTime()) ? undefined : timestampFromDate(date);
+    // Bound already reflected. A bare Timestamp message is reflected by CEL each
+    // time it's read, which looks its type up in a registry only an evaluation
+    // has — so a date read afterwards failed: a fact returning the members
+    // whose date of birth passes a test could not be converted back.
+    return Number.isNaN(date.getTime()) ? undefined : reflect(TimestampSchema, timestampFromDate(date));
   }
 
   return undefined;
@@ -339,6 +351,16 @@ export function evaluate(graph, inputs) {
 
   // Last, so it also covers values written in by the two passes above.
   coerceDeclaredInputs(scope, inputs, graph.inputs);
+
+  // The ruleset's constants, from the graph — given values, not inputs, so
+  // nothing a caller sends replaces them and nothing resting on them is a
+  // placeholder.
+  if (graph.constants) {
+    scope.constants = Object.fromEntries(Object.entries(graph.constants).map(([name, { value, type }]) => [
+      name,
+      coerceDeclared({ type }, value) ?? value,
+    ]));
+  }
 
   const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
   const resolved = {};
@@ -477,16 +499,27 @@ const lessSettled = (a, b) => (STANDING[a] >= STANDING[b] ? a : b);
  */
 function evaluateWithStates(expr, deps, depState, scope) {
   const parsed = parse(expr);
-  return statesOf(parsed.expr, deps, depState, scope);
+  return statesOf(parsed.expr, deps, depState, scope, NO_LOOP);
 }
 
-function statesOf(node, deps, depState, scope) {
+/**
+ * What a part of an expression is evaluated inside: the loop variables of the
+ * list macros around it, each with the input path its items come from, and
+ * the state of each macro's running result.
+ *
+ * @typedef {{ items: Map<string, string|null>, results: Map<string, object> }} LoopContext
+ */
+const NO_LOOP = { items: new Map(), results: new Map() };
+
+function statesOf(node, deps, depState, scope, loop) {
+  if (node.exprKind.case === 'comprehensionExpr') return comprehensionStates(node, deps, depState, scope, loop);
+
   const call = node.exprKind.case === 'callExpr' ? node.exprKind.value : null;
   const fn = call?.function;
 
   if (fn === '_&&_' || fn === '_||_') {
     const settles = fn === '_&&_' ? false : true;
-    const sides = call.args.map((a) => statesOf(a, deps, depState, scope));
+    const sides = call.args.map((a) => statesOf(a, deps, depState, scope, loop));
     // A complete operand that settles the result decides it outright.
     if (sides.some((s) => s.state === 'complete' && s.value === settles)) {
       return { state: 'complete', value: settles };
@@ -507,19 +540,170 @@ function statesOf(node, deps, depState, scope) {
   }
 
   if (fn === '!_') {
-    const inner = statesOf(call.args[0], deps, depState, scope);
+    const inner = statesOf(call.args[0], deps, depState, scope, loop);
     return inner.state === 'missing' ? inner : { state: inner.state, value: !inner.value };
   }
 
   if (fn === '_?_:_') {
-    const cond = statesOf(call.args[0], deps, depState, scope);
+    const cond = statesOf(call.args[0], deps, depState, scope, loop);
     if (cond.state === 'missing') return cond;
-    const branch = statesOf(cond.value ? call.args[1] : call.args[2], deps, depState, scope);
+    const branch = statesOf(cond.value ? call.args[1] : call.args[2], deps, depState, scope, loop);
     if (branch.state === 'missing') return branch;
     return { state: lessSettled(cond.state, branch.state), value: branch.value };
   }
 
-  return leafStates(node, deps, depState, scope);
+  return leafStates(node, deps, depState, scope, loop);
+}
+
+// ── States through the list macros ───────────────────────────────────────────
+
+/**
+ * A list macro — `exists`, `all`, `exists_one`, `filter`, `map` — given the
+ * standing its result rests on, item by item.
+ *
+ * An absent input is missing, never an error and never a guess, and that
+ * holds for a field one item of a list doesn't have as much as for an input
+ * at the top: a household member added before their birth date is known
+ * leaves the question "is anyone 60 or older" unanswered, not failed and not
+ * "no". So an item's field that isn't there is unknown for that item, and the
+ * macro's answer is missing only when that item could change it: `exists`
+ * with another item already true is true, `all` with one already false is
+ * false, and a predicate that is settled without the field — a guard on
+ * `has()`, or `isDisabled || age >= 60` for a disabled member — settles that
+ * item. Which items come first doesn't matter.
+ *
+ * The parser expands every macro into one loop: a starting result, a step
+ * combining the running result with each item, a condition to stop early, and
+ * a final result. `exists` steps with `@result || p`, `all` with `@result && p`,
+ * `filter` with `p ? @result + [m] : @result`. Walking that loop with states,
+ * through the `&&`, `||` and `? :` rules above, gives each macro the right
+ * answer without naming any of them.
+ *
+ * When every item has every field the step reads, the macro is evaluated
+ * whole, as before, so a complete list gives exactly the answer it always did.
+ * What remains unknown past a macro — an unknown list's size, say — is #493.
+ */
+function comprehensionStates(node, deps, depState, scope, loop) {
+  const c = node.exprKind.value;
+  const range = statesOf(c.iterRange, deps, depState, scope, loop);
+  if (range.state === 'missing') return range;
+
+  // The items as the scope holds them, so a declared date is still a date.
+  // A range that is computed — another macro's result — has only its value.
+  const chain = chainOf(c.iterRange);
+  const items = (chain && lookupChain(chain, scope)) ?? range.value;
+  if (!Array.isArray(items)) return leafStates(node, deps, depState, scope, loop);
+
+  const source = chain ? inputPathOf(chain, loop) : null;
+  const read = readFields(c.loopStep, c.iterVar);
+  const unknown = items.some((item) => read.some((path) => valueAt(item, path) == null));
+  if (!unknown) {
+    // A macro nested in the step — wage records against each member's
+    // incomes — can still meet an item missing a field; walking item by item
+    // is what finds it, so a failure here is retried that way.
+    try {
+      return leafStates(node, deps, depState, scope, loop);
+    } catch (err) {
+      if (!containsComprehension(c.loopStep)) throw err;
+    }
+  }
+
+  let result = statesOf(c.accuInit, deps, depState, scope, loop);
+  for (const item of items) {
+    const inside = withResult(withItem(loop, c.iterVar, source), c.accuVar, result);
+    const bound = { ...scope, [c.iterVar]: item, [c.accuVar]: result.value };
+    const proceed = statesOf(c.loopCondition, deps, depState, bound, inside);
+    if (proceed.state !== 'missing' && proceed.value === false) break;
+    result = statesOf(c.loopStep, deps, depState, bound, inside);
+  }
+  return statesOf(c.result, deps, depState, { ...scope, [c.accuVar]: result.value }, withResult(loop, c.accuVar, result));
+}
+
+function containsComprehension(node) {
+  const k = node.exprKind;
+  if (k.case === 'comprehensionExpr') return true;
+  if (k.case === 'selectExpr') return containsComprehension(k.value.operand);
+  if (k.case === 'callExpr') return [k.value.target, ...k.value.args].some((x) => x && containsComprehension(x));
+  if (k.case === 'listExpr') return k.value.elements.some(containsComprehension);
+  if (k.case === 'structExpr') return k.value.entries.some((e) => e.value && containsComprehension(e.value));
+  return false;
+}
+
+function withItem(loop, name, source) {
+  return { items: new Map(loop.items).set(name, source), results: loop.results };
+}
+
+function withResult(loop, name, state) {
+  return { items: loop.items, results: new Map(loop.results).set(name, state) };
+}
+
+/** `household.members` for an expression that is just a dotted name, else null. */
+function chainOf(node) {
+  const parts = [];
+  let cur = node;
+  while (cur.exprKind.case === 'selectExpr' && !cur.exprKind.value.testOnly) {
+    parts.unshift(cur.exprKind.value.field);
+    cur = cur.exprKind.value.operand;
+  }
+  return cur.exprKind.case === 'identExpr' ? [cur.exprKind.value.name, ...parts].join('.') : null;
+}
+
+function lookupChain(chain, scope) {
+  return valueAt(scope, chain.split('.'));
+}
+
+function valueAt(value, path) {
+  let node = value;
+  for (const part of path) {
+    if (node == null || typeof node !== 'object') return undefined;
+    node = node[part];
+  }
+  return node;
+}
+
+/**
+ * The input path a list's items come from, as the graph names it:
+ * `$.current.members[]` for `current.members`, and `$.a[].b[]` for `x.b` when
+ * `x` is an item of `a`. Null when the list isn't an input.
+ */
+function inputPathOf(chain, loop) {
+  const [head, ...rest] = chain.split('.');
+  if (loop.items.has(head)) {
+    const outer = loop.items.get(head);
+    return outer ? `${outer}.${rest.join('.')}[]` : null;
+  }
+  return `$.${chain}[]`;
+}
+
+/**
+ * The fields of a loop's item a step reads, as paths below the item: `m.a.b`
+ * reads ['a', 'b']. A field read only to ask whether it is there — `has(m.a)` —
+ * isn't one: absence is what it asks about.
+ */
+function readFields(node, itemVar) {
+  const found = [];
+  (function walk(n) {
+    const k = n.exprKind;
+    if (k.case === 'selectExpr') {
+      if (k.value.testOnly) return;
+      const chain = chainOf(n);
+      if (chain) {
+        const [head, ...path] = chain.split('.');
+        if (head === itemVar && path.length) found.push(path);
+        return;
+      }
+      walk(k.value.operand);
+      return;
+    }
+    if (k.case === 'callExpr') { if (k.value.target) walk(k.value.target); k.value.args.forEach(walk); return; }
+    if (k.case === 'listExpr') { k.value.elements.forEach(walk); return; }
+    if (k.case === 'structExpr') { k.value.entries.forEach((e) => e.value && walk(e.value)); return; }
+    if (k.case === 'comprehensionExpr') {
+      const c = k.value;
+      [c.iterRange, c.accuInit, c.loopCondition, c.loopStep, c.result].forEach((x) => x && walk(x));
+    }
+  })(node);
+  return found;
 }
 
 /**
@@ -532,16 +716,24 @@ function statesOf(node, deps, depState, scope) {
  * `$.household.members[]` path. Over-matching only ever makes a part less
  * settled than it could be, never gives it a wrong value.
  */
-function leafStates(node, deps, depState, scope) {
+function leafStates(node, deps, depState, scope, loop = NO_LOOP) {
   const chains = new Set();
+  // Names read for their value, not only asked about with has(): what an
+  // item of a list macro must have for this part to be evaluated.
+  const needed = new Set();
   (function walk(n) {
     const k = n.exprKind;
-    if (k.case === 'identExpr') { chains.add(k.value.name); return; }
+    if (k.case === 'identExpr') { chains.add(k.value.name); needed.add(k.value.name); return; }
     if (k.case === 'selectExpr') {
       const parts = [];
       let cur = n;
       while (cur.exprKind.case === 'selectExpr') { parts.unshift(cur.exprKind.value.field); cur = cur.exprKind.value.operand; }
-      if (cur.exprKind.case === 'identExpr') { chains.add([cur.exprKind.value.name, ...parts].join('.')); return; }
+      if (cur.exprKind.case === 'identExpr') {
+        const chain = [cur.exprKind.value.name, ...parts].join('.');
+        chains.add(chain);
+        if (!k.value.testOnly) needed.add(chain);
+        return;
+      }
       walk(cur);
       return;
     }
@@ -570,8 +762,23 @@ function leafStates(node, deps, depState, scope) {
     if (s.state === 'missing') missing.push(...s.missing);
     else state = lessSettled(state, s.state);
   }
-  if (missing.length) return { state: 'missing', missing };
-  return { state, value: evaluateCELNode(node, scope) };
+
+  // Inside a list macro: a running result carries its own state, and a field
+  // this item doesn't have is missing, named by the input path it comes from.
+  for (const chain of needed) {
+    const [head, ...path] = chain.split('.');
+    if (loop.results.has(head)) {
+      const s = loop.results.get(head);
+      if (s.state === 'missing') missing.push(...s.missing);
+      else state = lessSettled(state, s.state);
+    } else if (loop.items.has(head) && path.length && valueAt(scope[head], path) == null) {
+      const source = loop.items.get(head);
+      missing.push(source ? `${source}.${path.join('.')}` : chain);
+    }
+  }
+
+  if (missing.length) return { state: 'missing', missing: [...new Set(missing)] };
+  return { state, value: evaluateCEL(node, scope) };
 }
 
 // ── Internal fluent API (intra-package use only; not exported from index.js) ──

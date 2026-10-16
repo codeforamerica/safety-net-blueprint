@@ -1,0 +1,64 @@
+openapi: 3.1.0
+info:
+  title: Intake rules
+  version: 1.0.0
+  description: Evaluation endpoints for the intake rulesets, generated from their rules document.
+  x-domain: intake
+servers:
+  - url: /intake
+paths:
+  /applications/evaluate-interview-flags:
+    post:
+      summary: Evaluate interviewFlags
+      operationId: evaluateInterviewFlags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewFlagsRequest"
+      responses:
+        "200":
+          description: interviewFlags evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewFlagsResponse"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: ruleset
+        domain: intake
+        id: interviewFlags
+components:
+  schemas:
+    InterviewFlagsRequest:
+      type: object
+      description: Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        current:
+          $ref: ../../common/schemas/household.yaml#/$defs/Household
+        previous:
+          $ref: ../../common/schemas/household.yaml#/$defs/Household
+        verified:
+          type: array
+          description: What outside records show for this application.
+          items:
+            $ref: ./intake-openapi.yaml#/components/schemas/IncomeVerificationWritable
+        asOf:
+          type: string
+          format: date
+          description: The date ages are measured from — the interview date.
+        programsAppliedFor:
+          type: array
+          items:
+            type: string
+          description: The programs the household applied for.
+    InterviewFlagsResponse:
+      allOf:
+        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
+      description: Evaluation result for interviewFlags.

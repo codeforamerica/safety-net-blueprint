@@ -7,9 +7,75 @@
 import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
+
+/**
+ * Check guard clauses, as an action's or a governed resource's create.
+ *
+ * OR semantics: the caller passes if ANY clause is satisfied. Within a clause,
+ * actors AND conditions must both pass. Named conditions come from the platform,
+ * the state machine document and the machine, the innermost winning.
+ *
+ * Checked in this order: who is calling (403), then the request body (422,
+ * through `checkBody`), then the conditions (409). Conditions often read the
+ * body — when a line was spoken, say — so a body missing a field is reported
+ * as that, not as a condition that failed.
+ *
+ * @param {Object} options
+ * @param {Array}  options.guardItems  - Guard clauses
+ * @param {Object} options.stateMachine
+ * @param {Object} options.machine
+ * @param {string[]} options.callerRoles
+ * @param {Object} options.resource    - The record the conditions read as `object`
+ * @param {Object} options.context     - Condition context: caller, object, request, now, entities
+ * @param {string} options.label       - Names what is guarded, for the refusal
+ * @param {Function} [options.checkBody] - `() => refusal|null`, run after the role check and before the conditions
+ * @returns {{ status: number, error: string, details?: object[] }|null} The refusal, or null when the caller passes
+ */
+export function checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label, checkBody }) {
+  if (!guardItems || guardItems.length === 0) return checkBody?.() ?? null;
+
+  const guardsMap = Object.fromEntries(
+    [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
+  );
+
+  const allActors = guardItems.flatMap(g => g.actors || []);
+  const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
+  if (!callerHasAnyRole) {
+    const uniqueActors = [...new Set(allActors)];
+    return { status: 403, error: `Only ${listed(uniqueActors, 'or')} can ${label}.` };
+  }
+
+  const invalid = checkBody?.();
+  if (invalid) return invalid;
+
+  // Which condition stopped each clause, so the refusal can say why.
+  const failed = [];
+  const clausePassed = guardItems.some(g => {
+    const clauseActors = g.actors || [];
+    if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
+    const clauseConditions = g.conditions || [];
+    if (clauseConditions.length === 0) return true;
+    const result = evaluateGuards(clauseConditions, guardsMap, resource, context);
+    if (!result.pass && result.failedGuard) failed.push(result.failedGuard);
+    return result.pass;
+  });
+
+  if (clausePassed) return null;
+  // Each condition not met, as its guard describes it — or by its id where it
+  // has no description.
+  const reasons = [...new Set(failed)].map((id) => (guardsMap[id]?.description ?? `the ${id} condition holds`).replace(/\.$/, ''));
+  return { status: 409, error: `Can't ${label}.${reasons.length ? ` It requires that ${reasons.join(', and that ')}.` : ''}` };
+}
+
+/** `['a', 'b', 'c']` → `a, b or c`. */
+const listed = (items, conjunction) => (items.length < 2 ? items.join('')
+  : `${items.slice(0, -1).join(', ')} ${conjunction} ${items.at(-1)}`);
+
+/** `TranscriptEntry` → `transcript entry`, for a refusal a person reads. */
+export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
 
 /**
  * Execute a state machine transition programmatically.
@@ -42,7 +108,8 @@ export function executeTransition({
   requestBody = {},
   traceparent = null,
   causationid = null,
-  store
+  store,
+  stepCalls = null
 }) {
   const timestamp = now || new Date().toISOString();
 
@@ -80,40 +147,13 @@ export function executeTransition({
   }
   const context = { ...baseContext, entities };
 
-  // OR semantics: caller passes if ANY guard clause is satisfied.
-  // Within a clause: actors AND conditions must both pass.
-  if (guardItems.length > 0) {
-    const guardsMap = Object.fromEntries(
-      [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
-    );
-
-    const allActors = guardItems.flatMap(g => g.actors || []);
-    const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
-    if (!callerHasAnyRole) {
-      const uniqueActors = [...new Set(allActors)];
-      return { success: false, status: 403, error: `Action "${trigger}" requires one of: ${uniqueActors.join(', ')}` };
-    }
-
-    const clausePassed = guardItems.some(g => {
-      const clauseActors = g.actors || [];
-      if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
-      const clauseConditions = g.conditions || [];
-      if (clauseConditions.length === 0) return true;
-      return evaluateGuards(clauseConditions, guardsMap, resource, context).pass;
-    });
-
-    if (!clausePassed) {
-      return { success: false, status: 409, error: `No guard clause passed for action "${trigger}"` };
-    }
-  }
-
-  // Request body validation: runs after authorization (403) and guard checks (409)
-  if (operation?.schema?.request) {
+  const checkBody = () => {
+    if (!operation?.schema?.request) return null;
     const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
-    if (!valid) {
-      return { success: false, status: 422, error: 'Request body validation failed', details: errors };
-    }
-  }
+    return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
+  };
+  const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
+  if (refused) return { success: false, ...refused };
 
   const updated = { ...resource };
   if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
@@ -145,6 +185,43 @@ export function executeTransition({
     catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
   }
 
+  // Calls that name a record — a nested create, an update, another action —
+  // mean what the API's route at that method and path means (step-calls.js).
+  if (stepCalls) {
+    const calls = [
+      ...pendingOperations.map(({ path, body }) => ({ method: 'POST', path, body })),
+      ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
+    ];
+    for (const call of calls) {
+      try {
+        stepCalls.apply(call, {
+          caller: { id: callerId, roles: callerRoles },
+          traceparent,
+          causationid,
+          now: timestamp,
+          runAction: ({ entry, collection, id, action, body }) => executeTransition({
+            resourceName: collection,
+            resourceId: id,
+            trigger: action,
+            callerId,
+            callerRoles,
+            now: timestamp,
+            stateMachine: entry.stateMachine,
+            machine: entry.machine,
+            slaTypes: stepCalls.slaTypesFor(entry.domain),
+            requestBody: body,
+            traceparent,
+            causationid,
+            store,
+            stepCalls,
+          }),
+        });
+      } catch (e) {
+        console.error(`Action "${trigger}": ${e.message}`);
+      }
+    }
+  }
+
   const domain = stateMachine.domain;
   const allEvents = [...pendingEvents, ...(ruleEvents || [])];
   for (const event of allEvents) {
@@ -157,6 +234,7 @@ export function executeTransition({
         time: timestamp,
         traceparent,
         causationid: event.causationid || causationid || undefined,
+        ...authContext(callerId, callerRoles),
       }, store);
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);

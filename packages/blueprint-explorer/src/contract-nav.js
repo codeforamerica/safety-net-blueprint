@@ -111,7 +111,7 @@ export function buildEventIndex(stateMachines) {
           emitters[eventType] = { domain: sm.domain, object: machine.object };
         }
       }
-      for (const sub of machine.events || []) {
+      for (const sub of machine.on || []) {
         if (!subscribers[sub.type]) subscribers[sub.type] = [];
         subscribers[sub.type].push({ domain: sm.domain, object: machine.object });
       }

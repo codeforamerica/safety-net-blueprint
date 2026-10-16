@@ -99,7 +99,10 @@
       <div class="nav-section-label">Methods</div>
       <a href="#group-queues" class="nav-link">Queues <span class="nav-count">5</span></a><a href="#group-tasks" class="nav-link">Tasks <span class="nav-count">5</span></a><a href="#group-metrics" class="nav-link">Metrics <span class="nav-count">2</span></a><a href="#group-claim" class="nav-link">Claim <span class="nav-count">1</span></a><a href="#group-complete" class="nav-link">Complete <span class="nav-count">1</span></a><a href="#group-release" class="nav-link">Release <span class="nav-count">1</span></a><a href="#group-escalate" class="nav-link">Escalate <span class="nav-count">1</span></a><a href="#group-de-escalate" class="nav-link">De Escalate <span class="nav-count">1</span></a><a href="#group-cancel" class="nav-link">Cancel <span class="nav-count">1</span></a><a href="#group-reopen" class="nav-link">Reopen <span class="nav-count">1</span></a><a href="#group-await-client" class="nav-link">Await Client <span class="nav-count">1</span></a><a href="#group-await-verification" class="nav-link">Await Verification <span class="nav-count">1</span></a><a href="#group-resume" class="nav-link">Resume <span class="nav-count">1</span></a><a href="#group-auto-resume" class="nav-link">Auto Resume <span class="nav-count">1</span></a><a href="#group-sla-escalate" class="nav-link">Sla Escalate <span class="nav-count">1</span></a><a href="#group-auto-cancel" class="nav-link">Auto Cancel <span class="nav-count">1</span></a><a href="#group-submit-for-review" class="nav-link">Submit For Review <span class="nav-count">1</span></a><a href="#group-approve" class="nav-link">Approve <span class="nav-count">1</span></a><a href="#group-return-to-worker" class="nav-link">Return To Worker <span class="nav-count">1</span></a><a href="#group-assign" class="nav-link">Assign <span class="nav-count">1</span></a><a href="#group-set-priority" class="nav-link">Set Priority <span class="nav-count">1</span></a>
     </div>
-    
+    <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-ConfigSource" class="nav-link">ConfigSource</a><a href="#const-Domain" class="nav-link">Domain</a><a href="#const-Frequency" class="nav-link">Frequency</a><a href="#const-MetricCollection" class="nav-link">MetricCollection</a><a href="#const-RoleType" class="nav-link">RoleType</a>
+      </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-Queue" class="nav-link">Queue</a><a href="#type-QueueCreate" class="nav-link">QueueCreate</a><a href="#type-QueueList" class="nav-link">QueueList</a><a href="#type-QueueUpdate" class="nav-link">QueueUpdate</a><a href="#type-Task" class="nav-link">Task</a><a href="#type-TaskCreate" class="nav-link">TaskCreate</a><a href="#type-TaskList" class="nav-link">TaskList</a><a href="#type-TaskUpdate" class="nav-link">TaskUpdate</a><a href="#type-Metric" class="nav-link">Metric</a><a href="#type-MetricList" class="nav-link">MetricList</a><a href="#type-MetricTarget" class="nav-link">MetricTarget</a><a href="#type-CompleteTaskRequest" class="nav-link">CompleteTaskRequest</a><a href="#type-ReleaseTaskRequest" class="nav-link">ReleaseTaskRequest</a><a href="#type-EscalateTaskRequest" class="nav-link">EscalateTaskRequest</a><a href="#type-DeEscalateTaskRequest" class="nav-link">DeEscalateTaskRequest</a><a href="#type-CancelTaskRequest" class="nav-link">CancelTaskRequest</a><a href="#type-ReopenTaskRequest" class="nav-link">ReopenTaskRequest</a><a href="#type-AwaitClientRequest" class="nav-link">AwaitClientRequest</a><a href="#type-AwaitVerificationRequest" class="nav-link">AwaitVerificationRequest</a><a href="#type-SystemResumeTaskRequest" class="nav-link">SystemResumeTaskRequest</a><a href="#type-SystemEscalateTaskRequest" class="nav-link">SystemEscalateTaskRequest</a><a href="#type-ApproveTaskRequest" class="nav-link">ApproveTaskRequest</a><a href="#type-ReturnToWorkerRequest" class="nav-link">ReturnToWorkerRequest</a><a href="#type-AssignTaskRequest" class="nav-link">AssignTaskRequest</a><a href="#type-SetPriorityRequest" class="nav-link">SetPriorityRequest</a><a href="#type-QueueWritable" class="nav-link">QueueWritable</a><a href="#type-QueueListWritable" class="nav-link">QueueListWritable</a><a href="#type-TaskWritable" class="nav-link">TaskWritable</a><a href="#type-TaskListWritable" class="nav-link">TaskListWritable</a><a href="#type-MetricListWritable" class="nav-link">MetricListWritable</a>
@@ -1047,6 +1050,59 @@
     </div>
   </details>
 </div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (5)</h2>
+        <div id="const-ConfigSource" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ConfigSource</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-ConfigSource" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'user'</span></div></div></div>
+  </details>
+</div><div id="const-Domain" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Domain</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (11 values)</span>
+      <a href="#const-Domain" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'case-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'client-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'communication'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'data-exchange'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'document-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'eligibility'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'identity-access'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'intake'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'platform'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'scheduling'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'workflow'</span></div></div></div>
+  </details>
+</div><div id="const-Frequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Frequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-Frequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'daily'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'variable'</span></div></div></div>
+  </details>
+</div><div id="const-MetricCollection" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">MetricCollection</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-MetricCollection" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'events'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tasks'</span></div></div></div>
+  </details>
+</div><div id="const-RoleType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RoleType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-RoleType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'applicant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'case_worker'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'supervisor'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'county_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'state_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'partner_readonly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div></div></div>
+  </details>
+</div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (30)</h2>
         <div id="type-Queue" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
@@ -1609,6 +1665,11 @@
         if (!hash) return;
         const el = document.getElementById(decodeURIComponent(hash.slice(1)));
         if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
         const content = document.getElementById('content');
         if (!content) { el.scrollIntoView(); return; }
         const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;

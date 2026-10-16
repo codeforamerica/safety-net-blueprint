@@ -30,7 +30,7 @@ Client Management subscribes to this event. The event carries `applicationId` an
 
 Client Management does not receive PII from the event. It calls `GET /intake/applications/{applicationId}/members/{memberId}` with appropriate authorization to retrieve the data it needs for matching (name, DOB, SSN, address). PII is kept off the event bus because the event bus is lower-trust infrastructure: broader fan-out, longer retention, more consumers. Direct authenticated API calls carry PII only to the consumer that needs it.
 
-### Outbound: `client_management.person.match_resolved`
+### Outbound: `client-management.person.match_resolved`
 
 Client Management emits one event per applying member after attempting to match:
 
@@ -106,7 +106,7 @@ Intake's Application state machine handles both the initial and follow-up events
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | Alpha | `persons-openapi.yaml` — Person CRUD. Declares `person.match_resolved` in `x-events`. |
-| Event schemas | Defined | `schemas/client-management-events.yaml` — `PersonMatchResolvedEvent` and `PersonMatchCandidate` |
+| OpenAPI spec | Alpha | `client-management-openapi.yaml` — Person CRUD. |
+| Event schemas | Defined | `client-management-asyncapi.yaml` — `client-management.person.match_resolved` is a placeholder channel, with `PersonMatchResolvedEvent` and `PersonMatchCandidate`, until the matching resource and its state machine exist. |
 | Event subscriptions | TBD | `intake.application.submitted` |
-| Event publications | Defined | `client_management.person.match_resolved` |
+| Event publications | Defined | `client-management.person.match_resolved` |

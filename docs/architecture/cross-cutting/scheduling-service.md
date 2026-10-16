@@ -64,7 +64,7 @@ timers:
 The state machine subscribes to each timer event by its full name:
 
 ```yaml
-events:
+on:
   - name: intake.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, body: {reason: snap_deadline_exceeded}}
@@ -75,12 +75,12 @@ Timers are scheduled and cancelled using the shared `requestTimer` and `cancelTi
 ```yaml
 - call: requestTimer
   with:
-    timerId: '"intake.snap_deadline." + $object.id'
+    timerId: "intake.snap_deadline.{$object.id}"
     fireAfter: P30D
     calendarType: calendar
-    callback: {event: '"intake.snap_deadline"', data: {}}
+    callback: {event: intake.snap_deadline, data: {}}
 - call: cancelTimer
-  with: {timerId: '"intake.snap_deadline." + $object.id'}
+  with: {timerId: "intake.snap_deadline.{$object.id}"}
 ```
 
 ## Key design decisions

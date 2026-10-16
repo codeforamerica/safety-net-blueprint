@@ -552,7 +552,7 @@ async function testInitiateServiceCallsRule() {
 
 // ---------------------------------------------------------------------------
 // update-verification-on-call-result-rule + create-document-verification-on-inconclusive-rule
-// Triggered by: data_exchange.call.completed
+// Triggered by: data-exchange.call.completed
 // REQUIRES: /verifications in spec
 // ---------------------------------------------------------------------------
 
@@ -567,7 +567,7 @@ async function testCallCompletedRules() {
     })).json();
 
     const serviceCallId = `sc-${verificationId}`;
-    await injectEvent('data_exchange.call.completed', {
+    await injectEvent('data-exchange.call.completed', {
       metadata: { intake: { verificationId } },
       result: 'conclusive',
       serviceCallId,
@@ -590,7 +590,7 @@ async function testCallCompletedRules() {
     })).json();
 
     const serviceCallId = `sc-${verificationId}`;
-    await injectEvent('data_exchange.call.completed', {
+    await injectEvent('data-exchange.call.completed', {
       metadata: { intake: { verificationId } },
       result: 'inconclusive',
       serviceCallId,
@@ -615,7 +615,7 @@ async function testCallCompletedRules() {
     const { total: countBefore } = await beforeRes.json();
 
     const serviceCallId = `sc-${verificationId}`;
-    await injectEvent('data_exchange.call.completed', {
+    await injectEvent('data-exchange.call.completed', {
       metadata: { intake: { verificationId } },
       result: 'inconclusive',
       serviceCallId,
@@ -634,7 +634,7 @@ async function testCallCompletedRules() {
   });
 
   await test('call.completed for unknown verificationId — no error, no change', async () => {
-    await injectEvent('data_exchange.call.completed', {
+    await injectEvent('data-exchange.call.completed', {
       metadata: { intake: { verificationId: 'nonexistent-id' } },
       result: 'conclusive',
       serviceCallId: 'sc-unknown',
@@ -646,7 +646,7 @@ async function testCallCompletedRules() {
 
 // ---------------------------------------------------------------------------
 // satisfy-verification-on-document-upload-rule
-// Triggered by: document_management.document.uploaded
+// Triggered by: document-management.document.uploaded
 // REQUIRES: /verifications in spec
 // ---------------------------------------------------------------------------
 
@@ -661,7 +661,7 @@ async function testDocumentUploadRule() {
     })).json();
 
     const documentId = 'doc-001';
-    await injectEvent('document_management.document_version.uploaded', {
+    await injectEvent('document-management.document_version.created', {
       metadata: { intake: { verificationId } },
       documentId,
       documentVersionId: 'ver-001',
@@ -682,7 +682,7 @@ async function testDocumentUploadRule() {
       body: { applicationId: appId, category: 'income', verificationType: 'document' },
     })).json();
 
-    await injectEvent('document_management.document_version.uploaded', {
+    await injectEvent('document-management.document_version.created', {
       metadata: { intake: { verificationId: 'nonexistent-id' } },
       documentId: 'doc-002',
       documentVersionId: 'ver-002',
@@ -696,7 +696,7 @@ async function testDocumentUploadRule() {
 
 // ---------------------------------------------------------------------------
 // link-appointment-rule
-// Triggered by: scheduling.appointment.scheduled
+// Triggered by: scheduling.appointment.created
 // REQUIRES: interview endpoint (intake/applications/{id}/interview — already in spec)
 // ---------------------------------------------------------------------------
 
@@ -715,7 +715,7 @@ async function testLinkAppointmentRule() {
     const interview = await interviewRes.json();
 
     const appointmentId = 'appt-001';
-    await injectEvent('scheduling.appointment.scheduled', {
+    await injectEvent('scheduling.appointment.created', {
       subjectType: 'interview',
       subjectId: interview.id,
     }, appointmentId);
@@ -735,7 +735,7 @@ async function testLinkAppointmentRule() {
     const interview = await interviewRes.json();
     const apptsBefore = interview.appointments ?? [];
 
-    await injectEvent('scheduling.appointment.scheduled', {
+    await injectEvent('scheduling.appointment.created', {
       subjectType: 'task',
       subjectId: 'task-001',
     }, 'appt-002');
@@ -747,7 +747,7 @@ async function testLinkAppointmentRule() {
 
 // ---------------------------------------------------------------------------
 // record-determination-rule
-// Triggered by: eligibility.application.decision_completed
+// Triggered by: eligibility.decision.completed
 // REQUIRES: /application-members in spec
 // ---------------------------------------------------------------------------
 
@@ -758,7 +758,7 @@ async function testRecordDeterminationRule() {
     const { id: appId } = await createOpenApp(['snap']);
     const member = await createMember(appId, ['snap']);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: member.id,
       program: 'snap',
       status: 'approved',
@@ -780,7 +780,7 @@ async function testRecordDeterminationRule() {
     const { id: appId } = await createOpenApp(['snap']);
     const member = await createMember(appId, ['snap']);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: member.id,
       program: 'snap',
       status: 'denied',
@@ -800,12 +800,12 @@ async function testRecordDeterminationRule() {
     const { id: appId } = await createOpenApp(['snap', 'medicaid']);
     const member = await createMember(appId, ['snap', 'medicaid']);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: member.id, program: 'snap', status: 'approved',
       decidedAt: new Date().toISOString(), decisionId: 'dec-003', determinationId: 'det-003', applicationId: appId,
     }, appId);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: member.id, program: 'medicaid', status: 'denied',
       decidedAt: new Date().toISOString(), decisionId: 'dec-004', determinationId: 'det-003', applicationId: appId,
     }, appId);
@@ -823,12 +823,12 @@ async function testRecordDeterminationRule() {
     const memberA = await createMember(appId, ['snap']);
     const memberB = await createMember(appId, ['snap']);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: memberA.id, program: 'snap', status: 'approved',
       decidedAt: new Date().toISOString(), decisionId: 'dec-005', determinationId: 'det-004', applicationId: appId,
     }, appId);
 
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: memberB.id, program: 'snap', status: 'denied',
       decidedAt: new Date().toISOString(), decisionId: 'dec-006', determinationId: 'det-004', applicationId: appId,
     }, appId);
@@ -842,7 +842,7 @@ async function testRecordDeterminationRule() {
 
   await test('decision_completed with unknown memberId — no error, no change', async () => {
     const { id: appId } = await createOpenApp(['snap']);
-    await injectEvent('eligibility.application.decision_completed', {
+    await injectEvent('eligibility.decision.completed', {
       memberId: 'nonexistent-member',
       program: 'snap', status: 'approved',
       decidedAt: new Date().toISOString(), decisionId: 'dec-007', determinationId: 'det-005', applicationId: appId,
@@ -853,7 +853,7 @@ async function testRecordDeterminationRule() {
 
 // ---------------------------------------------------------------------------
 // close-application-on-all-determined-rule
-// Triggered by: eligibility.application.determination_completed
+// Triggered by: eligibility.determination.completed
 // ---------------------------------------------------------------------------
 
 async function testCloseOnAllDeterminedRule() {
@@ -862,7 +862,7 @@ async function testCloseOnAllDeterminedRule() {
   await test('determination_completed → application transitions to closed', async () => {
     const { id: appId } = await createOpenApp(['snap']);
 
-    await injectEvent('eligibility.application.determination_completed', {}, appId);
+    await injectEvent('eligibility.determination.completed', {}, appId);
 
     const app = await (await fetch(`${BASE_URL}${APP}/${appId}`)).json();
     assert.strictEqual(app.status, 'closed', 'application should be closed after determination_completed');
@@ -873,7 +873,7 @@ async function testCloseOnAllDeterminedRule() {
     const { id: appId } = await createAndSubmitApp(['snap']);
     // Application is in 'submitted', not 'under_review' — close operation should reject
 
-    await injectEvent('eligibility.application.determination_completed', {}, appId);
+    await injectEvent('eligibility.determination.completed', {}, appId);
 
     const app = await (await fetch(`${BASE_URL}${APP}/${appId}`)).json();
     assert.strictEqual(app.status, 'submitted', 'submitted application should not be affected by determination_completed');

@@ -1,4 +1,4 @@
-# Common query parameters used across multiple APIs
+# Common parameters used across multiple APIs
 LimitParam:
   name: limit
   in: query
@@ -180,3 +180,23 @@ SortParam:
     nestedField:
       summary: Sort by a nested field
       value: "name.lastName"
+
+IdempotencyKeyParam:
+  name: Idempotency-Key
+  in: header
+  required: true
+  description: |
+    A key the client makes for one create, so a retry is not a second create.
+    Send the same key with every retry of the same request: the first is
+    created, and a repeat gets the same response back. The same key with a
+    different request is refused with 422. Keys are scoped to the caller.
+
+    Any value unique to the operation works; a UUID is recommended. An
+    operation that lists this parameter requires it. Follows the IETF HTTP API
+    working group's `Idempotency-Key` header draft, and the convention Stripe
+    and others use.
+  schema:
+    type: string
+    minLength: 1
+    maxLength: 255
+  example: 6f1c2e8a-3b5d-4c7e-9a10-2d4f6b8c0e12

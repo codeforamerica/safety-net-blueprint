@@ -104,15 +104,35 @@ $defs:
       A named ruleset. Declares its inputs, outputs, and the facts that
       compute outputs from inputs via CEL expressions.
     required:
+      - endpoint
       - inputs
       - outputs
       - facts
     additionalProperties: false
     properties:
       endpoint:
+        description: >
+          Where the ruleset is evaluated. Every ruleset in the blueprint is
+          reachable through its API, at the path it declares — there is no
+          default, and no way to have none.
         $ref: "#/$defs/Endpoint"
       inputs:
         $ref: "#/$defs/SchemaMap"
+      constants:
+        description: >
+          Named values the ruleset's facts read as `constants.<name>` — a
+          conversion factor, a threshold, a choice a state makes. They are not
+          data: a caller doesn't send them, and a result resting on one is
+          complete, not a placeholder. Fixed in the contract; a state changes
+          one with an overlay. Each is an object so that where a value comes
+          from can be declared later without changing its shape — evaluators
+          read the value from the compiled graph, never from here.
+        type: object
+        minProperties: 1
+        propertyNames:
+          pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+        additionalProperties:
+          $ref: "#/$defs/Constant"
       outputs:
         $ref: "#/$defs/SchemaMap"
       facts:
@@ -125,6 +145,28 @@ $defs:
         minItems: 1
         items:
           $ref: "#/$defs/Fact"
+
+  Constant:
+    # Example:
+    #   differenceAllowed:
+    #     value: 0.1
+    #     description: How far apart two amounts can be, as a fraction, before they count as different.
+    type: object
+    description: One named value a ruleset's facts read.
+    required: [value]
+    additionalProperties: false
+    properties:
+      value:
+        description: The value, of any JSON type.
+      type:
+        type: string
+        enum: [integer, number, string, boolean, array, object]
+        description: >
+          What CEL sees the value as. `integer` is a whole number in integer
+          arithmetic — compare it with another integer, such as an age; a
+          number without a type is a double.
+      description:
+        type: string
 
   Fact:
     # Example — derived fact:
@@ -149,7 +191,14 @@ $defs:
         description: >
           The fact's name within the ruleset graph. Used to reference this fact
           in other expressions. camelCase by convention.
-        pattern: "^[a-zA-Z][a-zA-Z0-9.]*$"
+
+          A dot groups facts: `risks.earnedIncomeVaries` is the fact
+          `earnedIncomeVaries` in the group `risks`. The fact keeps its whole
+          path everywhere — other expressions refer to it by it, and the
+          ruleset's answer names it by it — so a consumer reads the group from
+          the name, whatever the ruleset. A path can't be both a fact and a
+          group: `risks` and `risks.earnedIncomeVaries` in one ruleset is refused.
+        pattern: "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*$"
       expression:
         type: string
         description: >
@@ -178,10 +227,11 @@ $defs:
     #     path: /assess-work-requirements
     type: object
     description: >
-      Declares a standalone POST endpoint for this ruleset. The resolver generates
-      the full path from the file-level domain field and derives the request/response
-      schema from the ruleset's inputs and outputs. Same endpoint block syntax as
-      compositions.
+      Places the ruleset's POST endpoint. The full path is the file-level domain
+      followed by `path` — /intake/applications/evaluate-interview-flags. The request and
+      response schemas are derived from the ruleset's inputs and outputs, and
+      the endpoints are documented in an OpenAPI document resolve generates
+      beside the rules file.
     required:
       - path
     additionalProperties: false
@@ -189,15 +239,18 @@ $defs:
       path:
         type: string
         description: >
-          Action-specific path segment. The resolver prefixes this with the domain
-          base path (e.g., /intake) to form the full endpoint path.
+          The path within the domain. The full endpoint path is /{domain}
+          followed by this, e.g. /intake for the intake domain.
 
           Path parameters are not permitted. A ruleset is evaluated against the
           inputs in the request body and nothing binds a path segment to them, so
           a parameter in the path would be accepted and silently ignored — the
           path would promise resource hydration the endpoint does not perform.
           Pass the identifier as an input instead.
-        pattern: "^/[^{}]*$"
+        format: uri-template
+        # At least one segment, no parameters, no trailing slash: "/" would be
+        # the domain's root, and "/x/" differs from "/x" only by its slash.
+        pattern: "^(/[^/{}]+)+$"
 
   SchemaMap:
     type: object

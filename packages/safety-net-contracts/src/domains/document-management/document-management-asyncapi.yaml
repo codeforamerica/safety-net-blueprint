@@ -8,14 +8,14 @@ info:
     Event catalog for the Document Management domain. Covers document and version
     lifecycle events.
 
-    Event types follow the convention: document_management.{entity}.{action}.
+    Event types follow the convention: document-management.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
 
 channels:
-  document_management.document_version.uploaded:
-    address: document_management.document_version.uploaded
+  document-management.document_version.created:
+    address: document-management.document_version.created
     messages:
       documentVersionUploaded:
         $ref: '#/components/messages/DocumentVersionUploadedMessage'
@@ -23,7 +23,7 @@ channels:
 components:
   messages:
     DocumentVersionUploadedMessage:
-      name: document_management.document_version.uploaded
+      name: document-management.document_version.created
       summary: Emitted when a new document version is uploaded; intake subscribes to check whether the upload satisfies a pending verification obligation.
       payload:
         $ref: '#/components/schemas/DocumentVersionUploadedEvent'
@@ -37,7 +37,7 @@ components:
           properties:
             type:
               type: string
-              const: document_management.document_version.uploaded
+              const: document-management.document_version.created
             data:
               $ref: '#/components/schemas/DocumentVersionUploadedData'
 

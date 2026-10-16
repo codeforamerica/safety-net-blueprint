@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "at"
+  ],
+  "properties": {
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it happened, by the client's clock."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/AtRequest"
+}

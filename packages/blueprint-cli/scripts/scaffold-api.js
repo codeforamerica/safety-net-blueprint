@@ -175,22 +175,6 @@ servers:
 tags:
 - name: ${resourcePlural}
   description: Manage ${resourcePluralLower}.
-x-events:
-  ${resourceKebab}.created:
-    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.created
-    summary: Emitted when a ${resourceLower} is created
-    payload:
-      $ref: "#/components/schemas/${resource}CreatedEvent"
-  ${resourceKebab}.updated:
-    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.updated
-    summary: Emitted when a ${resourceLower} is updated via PATCH
-    payload:
-      $ref: "#/components/schemas/${resource}UpdatedEvent"
-  ${resourceKebab}.deleted:
-    type: org.codeforamerica.safety-net-blueprint.${xDomain}.${resourceKebab}.deleted
-    summary: Emitted when a ${resourceLower} is deleted
-    payload:
-      $ref: "#/components/schemas/${resource}DeletedEvent"
 paths:
   "/${resourcePluralLower}":
     get:
@@ -420,17 +404,6 @@ components:
         hasNext:
           type: boolean
           description: Indicates whether more ${resourcePluralLower} are available beyond the current page.
-
-    # Event payload schemas — referenced by x-events section above
-    ${resource}CreatedEvent:
-      description: Snapshot of the newly created ${resourceLower} resource.
-      $ref: "#/components/schemas/${resource}"
-
-    ${resource}UpdatedEvent:
-      $ref: "${componentsPrefix}/../schemas/events.yaml#/ResourceUpdatedEvent"
-
-    ${resource}DeletedEvent:
-      $ref: "${componentsPrefix}/../schemas/events.yaml#/ResourceDeletedEvent"
 
   examples:
     ${resource}Example1:

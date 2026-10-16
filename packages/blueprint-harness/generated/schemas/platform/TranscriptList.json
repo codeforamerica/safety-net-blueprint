@@ -1,0 +1,111 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "description": "A transcript, including server-managed fields.",
+        "unevaluatedProperties": false,
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Client-writable fields of a transcript.",
+            "properties": {
+              "subjectType": {
+                "type": "string",
+                "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+              },
+              "provider": {
+                "type": "string",
+                "description": "The transcription provider that produced its lines, e.g. `aws-transcribe`."
+              },
+              "client": {
+                "type": "string",
+                "description": "The client that wrote to it, and its version."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true,
+                "description": "Unique identifier (server-generated)."
+              },
+              "status": {
+                "type": "string",
+                "readOnly": true,
+                "description": "`recording` while the conversation is on the record, `paused`\nwhile it is off it, and `closed` once it has ended.\n",
+                "enum": [
+                  "recording",
+                  "paused",
+                  "closed"
+                ]
+              },
+              "closedAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true,
+                "description": "When the transcript was closed."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true,
+                "description": "When the transcript was started."
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true,
+                "description": "When the transcript last changed."
+              }
+            }
+          }
+        ]
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of transcripts available."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of transcripts requested."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of items skipped before the current page."
+    },
+    "hasNext": {
+      "type": "boolean",
+      "description": "Whether more transcripts are available beyond this page."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptList"
+}

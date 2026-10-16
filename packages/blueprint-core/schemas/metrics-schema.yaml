@@ -83,7 +83,8 @@ $defs:
       pairBy:
         type: string
         description: >
-          Field to correlate from/to events for duration metrics (e.g., objectId).
+          Field to correlate from/to records for duration metrics. Defaults to
+          `subject`, where an event names the record it is about.
           Distinct from the groupBy query parameter, which controls result breakdown.
       targets:
         type: array

@@ -34,7 +34,7 @@ test('buildEventIndex', async (t) => {
         id: 'submit',
         steps: [{ emit: { type: 'intake.application.submitted' } }],
       }],
-      events: [],
+      on: [],
     }],
   });
 
@@ -43,7 +43,7 @@ test('buildEventIndex', async (t) => {
     machines: [{
       object: 'Determination',
       actions: [],
-      events: [{ type: 'intake.application.submitted' }],
+      on: [{ type: 'intake.application.submitted' }],
     }],
   });
 
@@ -86,7 +86,7 @@ test('buildEventIndex', async (t) => {
       machines: [{
         object: 'Task',
         actions: [],
-        events: [{ type: 'intake.application.submitted' }],
+        on: [{ type: 'intake.application.submitted' }],
       }],
     });
     const { subscribers } = buildEventIndex([eligibilitySM, workflowSM]);

@@ -226,9 +226,10 @@ paths:
                               type: string
                               description: A human-readable name for the document.
                             documentDate:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date
-                              nullable: true
                               description: The date the document itself bears, which is not the date it arrived.
                         - type: object
                           required:
@@ -265,9 +266,10 @@ paths:
                                 resource: DocumentVersion
                                 style: links-only
                             retentionDeadline:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date-time
-                              nullable: true
                               readOnly: true
                               description: When this document becomes eligible for disposition.
                             metadata:
@@ -355,9 +357,10 @@ paths:
                         type: string
                         description: A human-readable name for the document.
                       documentDate:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date
-                        nullable: true
                         description: The date the document itself bears, which is not the date it arrived.
                   - type: object
                     required:
@@ -394,9 +397,10 @@ paths:
                           resource: DocumentVersion
                           style: links-only
                       retentionDeadline:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: When this document becomes eligible for disposition.
                       metadata:
@@ -461,9 +465,10 @@ paths:
                         type: string
                         description: A human-readable name for the document.
                       documentDate:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date
-                        nullable: true
                         description: The date the document itself bears, which is not the date it arrived.
                   - type: object
                     required:
@@ -500,9 +505,10 @@ paths:
                           resource: DocumentVersion
                           style: links-only
                       retentionDeadline:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: When this document becomes eligible for disposition.
                       metadata:
@@ -550,9 +556,10 @@ components:
           type: string
           description: A human-readable name for the document.
         documentDate:
-          type: string
+          type:
+            - string
+            - "null"
           format: date
-          nullable: true
           description: The date the document itself bears, which is not the date it arrived.
     Document:
       allOf:
@@ -568,9 +575,10 @@ components:
               type: string
               description: A human-readable name for the document.
             documentDate:
-              type: string
+              type:
+                - string
+                - "null"
               format: date
-              nullable: true
               description: The date the document itself bears, which is not the date it arrived.
         - type: object
           required:
@@ -607,9 +615,10 @@ components:
                 resource: DocumentVersion
                 style: links-only
             retentionDeadline:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: When this document becomes eligible for disposition.
             metadata:
@@ -714,9 +723,10 @@ components:
                     type: string
                     description: A human-readable name for the document.
                   documentDate:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date
-                    nullable: true
                     description: The date the document itself bears, which is not the date it arrived.
               - type: object
                 required:
@@ -753,9 +763,10 @@ components:
                       resource: DocumentVersion
                       style: links-only
                   retentionDeadline:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: When this document becomes eligible for disposition.
                   metadata:

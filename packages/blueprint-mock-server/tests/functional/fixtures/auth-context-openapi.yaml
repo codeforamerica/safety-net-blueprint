@@ -145,7 +145,7 @@ components:
           type: string
           format: uuid
           readOnly: true
-          x-derived: "$this.id"
+          x-derived: "this.id"
 
     UserCreate:
       type: object

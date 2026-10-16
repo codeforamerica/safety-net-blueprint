@@ -57,7 +57,7 @@ function makeMachine(overrides = {}) {
     guards: [],
     actions: [],
     procedures: [],
-    events: [],
+    on: [],
     ...overrides,
   };
 }
@@ -596,14 +596,14 @@ describe('validateWithinFile — string call references', () => {
   test('passes when call: references a declared procedure', () => {
     const doc = makeDoc({
       procedures: [{ id: 'doWork', steps: [] }],
-      events: [{ type: 'some.event', steps: [{ call: 'doWork' }] }],
+      on: [{ type: 'some.event', steps: [{ call: 'doWork' }] }],
     });
     assert.equal(validateWithinFile('/fake/path.yaml', doc).length, 0);
   });
 
   test('errors when call: references an undeclared callable', () => {
     const doc = makeDoc({
-      events: [{ type: 'some.event', steps: [{ call: 'undeclaredProc' }] }],
+      on: [{ type: 'some.event', steps: [{ call: 'undeclaredProc' }] }],
     });
     assert.ok(hasRule(validateWithinFile('/fake/path.yaml', doc), 'unknown-callable'));
   });
@@ -611,14 +611,14 @@ describe('validateWithinFile — string call references', () => {
   test('passes when call: references a declared action', () => {
     const doc = makeDoc({
       actions: [{ id: 'open', guards: [], transition: { from: 'draft', to: 'submitted' } }],
-      events: [{ type: 'some.event', steps: [{ call: 'open' }] }],
+      on: [{ type: 'some.event', steps: [{ call: 'open' }] }],
     });
     assert.equal(validateWithinFile('/fake/path.yaml', doc).length, 0);
   });
 
   test('detects bad call: in nested then: block', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         steps: [{ if: 'true', then: [{ call: 'missingProc' }] }],
       }],
@@ -747,7 +747,7 @@ describe('validateCrossArtifact — $variable.field exists on schema', () => {
 
   test('errors when $contextVar.field does not exist on bound schema', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '$application.nonExistentField == "x"', then: [] }],
@@ -759,7 +759,7 @@ describe('validateCrossArtifact — $variable.field exists on schema', () => {
 
   test('passes when $contextVar.field exists on bound schema', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '$application.status == "draft"', then: [] }],
@@ -771,7 +771,7 @@ describe('validateCrossArtifact — $variable.field exists on schema', () => {
 
   test('does not error on system variables ($this, $caller, $now)', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         steps: [{ if: '$this.subject != null', then: [] }],
       }],
@@ -788,7 +788,7 @@ describe('validateCrossArtifact — $variable.field exists on schema', () => {
 describe('validateCrossArtifact — enum string literal values', () => {
   test('passes when "value" in $var.field matches enum', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '"snap" in $application.programsAppliedFor', then: [] }],
@@ -800,7 +800,7 @@ describe('validateCrossArtifact — enum string literal values', () => {
 
   test('errors when "value" in $var.field is not a valid enum', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '"invalidProgram" in $application.programsAppliedFor', then: [] }],
@@ -812,7 +812,7 @@ describe('validateCrossArtifact — enum string literal values', () => {
 
   test('passes when $var.field == "value" matches enum', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '$application.status == "submitted"', then: [] }],
@@ -824,7 +824,7 @@ describe('validateCrossArtifact — enum string literal values', () => {
 
   test('errors when $var.field == "value" is not a valid enum', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [{ if: '$application.status == "not_a_real_status"', then: [] }],
@@ -986,7 +986,7 @@ describe('scenario: field rename — overlay renames programsAppliedFor → prog
   }
 
   test('catches stale $application.programsAppliedFor (old field name)', () => {
-    const doc = makeDoc({ events: eventWithGuard('"snap" in $application.programsAppliedFor') });
+    const doc = makeDoc({ on: eventWithGuard('"snap" in $application.programsAppliedFor') });
     const errors = validateCrossArtifact('/fake.yaml', doc, schemaIndex, endpointIndex);
     assert.ok(
       hasRule(errors, 'unknown-field'),
@@ -995,7 +995,7 @@ describe('scenario: field rename — overlay renames programsAppliedFor → prog
   });
 
   test('passes with $application.programs (updated field name)', () => {
-    const doc = makeDoc({ events: eventWithGuard('"snap" in $application.programs') });
+    const doc = makeDoc({ on: eventWithGuard('"snap" in $application.programs') });
     const errors = validateCrossArtifact('/fake.yaml', doc, schemaIndex, endpointIndex);
     assert.equal(errors.filter(e => e.rule === 'unknown-field').length, 0);
   });
@@ -1036,7 +1036,7 @@ describe('scenario: enum value rename — overlay changes "snap" → "calfresh"'
   }
 
   test('catches stale "snap" enum value (old value)', () => {
-    const doc = makeDoc({ events: eventWithGuard('"snap" in $application.programsAppliedFor') });
+    const doc = makeDoc({ on: eventWithGuard('"snap" in $application.programsAppliedFor') });
     const errors = validateCrossArtifact('/fake.yaml', doc, schemaIndex, endpointIndex);
     assert.ok(
       hasRule(errors, 'invalid-enum-value'),
@@ -1045,7 +1045,7 @@ describe('scenario: enum value rename — overlay changes "snap" → "calfresh"'
   });
 
   test('passes with "calfresh" enum value (updated value)', () => {
-    const doc = makeDoc({ events: eventWithGuard('"calfresh" in $application.programsAppliedFor') });
+    const doc = makeDoc({ on: eventWithGuard('"calfresh" in $application.programsAppliedFor') });
     const errors = validateCrossArtifact('/fake.yaml', doc, schemaIndex, endpointIndex);
     assert.equal(errors.filter(e => e.rule === 'invalid-enum-value').length, 0);
   });
@@ -1061,7 +1061,7 @@ describe('scenario: endpoint rename — overlay renames intake/applications → 
 
   test('catches stale context from: intake/applications (old endpoint)', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/applications', where: {} } }],
         steps: [],
@@ -1076,7 +1076,7 @@ describe('scenario: endpoint rename — overlay renames intake/applications → 
 
   test('passes with context from: intake/intake-submissions (updated endpoint)', () => {
     const doc = makeDoc({
-      events: [{
+      on: [{
         type: 'some.event',
         context: [{ application: { from: 'intake/intake-submissions', where: {} } }],
         steps: [],

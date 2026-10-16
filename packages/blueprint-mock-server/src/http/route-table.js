@@ -47,7 +47,9 @@ export function templateOf(expressPath) {
  * @param {string} method
  * @param {string} expressPath - Path in either `:param` or `{param}` form
  * @param {Function} handler - Fetch-shaped handler
- * @param {{ operationId?: string, description?: string }} [meta]
+ * @param {{ operationId?: string, description?: string, domain?: string, mock?: boolean }} [meta]
+ *   `domain` is the domain whose contract declared the route; `mock` marks one
+ *   the mock serves itself, which no contract declares.
  * @returns {boolean} Whether the route was added
  */
 export function addRoute(routes, method, expressPath, handler, meta = {}) {
@@ -56,10 +58,71 @@ export function addRoute(routes, method, expressPath, handler, meta = {}) {
   routes.set(key, {
     operationId: meta.operationId ?? null,
     description: meta.description ?? null,
-    expressPath,
+    domain: meta.domain ?? null,
+    mock: meta.mock ?? false,
     handler,
   });
   return true;
+}
+
+/**
+ * The route table as one contract document registers into it.
+ *
+ * Each route records the document it came from, and a route another document
+ * already registered refuses to start the mock, naming both. Every route has
+ * one source — a state machine's transition is served from the state machine,
+ * not also from the operation resolve generated for it — so a route arriving
+ * twice from two documents is two contracts claiming one URL, and first-wins
+ * would silently serve one of them. The same document registering a route
+ * again stays a no-op.
+ *
+ * @param {Map<string, object>} routes
+ * @param {string} source - Names the document, for the error
+ * @returns {Map<string, object>} Accepted wherever the table is
+ */
+export function routesFrom(routes, source) {
+  return {
+    has(key) {
+      const existing = routes.get(key);
+      if (existing?.source && existing.source !== source) {
+        throw new Error(`${key} is declared by two contracts: ${existing.source} and ${source}. Each route has one source.`);
+      }
+      return routes.has(key);
+    },
+    set(key, entry) {
+      routes.set(key, { ...entry, source });
+      return this;
+    },
+    get: (key) => routes.get(key),
+    keys: () => routes.keys(),
+    values: () => routes.values(),
+    entries: () => routes.entries(),
+    get size() { return routes.size; },
+    [Symbol.iterator]: () => routes[Symbol.iterator](),
+  };
+}
+
+/**
+ * Tag every route `register` adds.
+ *
+ * For a registration path with many `addRoute` calls and one thing in common —
+ * the domain whose contract declared them, or that the mock serves them
+ * itself. A route that was already registered keeps its tags, because first
+ * registration wins and the tags belong to whoever registered it.
+ *
+ * @param {Map<string, object>} routes
+ * @param {{ domain?: string|null, mock?: boolean }} tags
+ * @param {() => T} register
+ * @returns {T} Whatever `register` returned
+ * @template T
+ */
+export function tagRoutesAddedBy(routes, tags, register) {
+  const before = new Set(routes.keys());
+  const result = register();
+  for (const [key, entry] of routes) {
+    if (!before.has(key)) Object.assign(entry, tags);
+  }
+  return result;
 }
 
 /**

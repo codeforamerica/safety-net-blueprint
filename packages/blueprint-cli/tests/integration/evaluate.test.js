@@ -1,36 +1,43 @@
 /**
  * Integration tests for the blueprint-evaluate CLI.
  *
- * Tests evaluate-specific behaviors: output structure, batch mode, ruleset
- * selection, and engine flag handling.
+ * Tests evaluate-specific behaviors: a graph file with inputs or with a rules
+ * examples file, refusing files that can't be evaluated on their own, and
+ * failing on facts that come back as errors.
  *
  * For generic CLI behaviors (missing args, unknown flags), see cli-behavior.test.js.
  * For golden output comparison, see golden/evaluate.test.js.
  *
- * Contract inputs: packages/blueprint-harness/contracts/domains/eligibility/
+ * Contract inputs: packages/blueprint-harness/generated/resolved/
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
+import { generate, load } from '@codeforamerica/blueprint-core';
 
-import { contractsDir } from '../paths.js';
+import { contractsDir, resolvedDir } from '../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/evaluate.js');
-const ELIGIBILITY = join(contractsDir, 'domains/eligibility');
-const RULES = join(ELIGIBILITY, 'eligibility-rules.yaml');
-const EXAMPLES = join(ELIGIBILITY, 'eligibility-rules-examples.yaml');
+const GRAPH = join(resolvedDir, 'domains/eligibility/eligibility-expeditedSnap-graph.yaml');
+const FLAGS_GRAPH = join(resolvedDir, 'domains/intake/intake-interviewFlags-graph.yaml');
+const FLAGS_EXAMPLES = join(resolvedDir, 'domains/intake/intake-rules-examples.yaml');
+const RULES = join(contractsDir, 'domains/eligibility/eligibility-rules.yaml');
+const EXAMPLES = join(contractsDir, 'domains/eligibility/eligibility-rules-examples.yaml');
 
 function run(...args) {
   return spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
 }
 
-describe('blueprint-evaluate CLI — rules doc', () => {
+describe('blueprint-evaluate CLI — a graph file', () => {
   it('outputs a flat nodes map where each fact has type and state', () => {
-    const { status, stdout, stderr } = run(`--spec=${RULES}`, '--ruleset=expeditedSnap');
+    const { status, stdout, stderr } = run(`--spec=${GRAPH}`);
     assert.equal(status, 0, `script failed:\n${stderr}`);
     const nodes = JSON.parse(stdout);
     assert.ok(Object.keys(nodes).length > 0, 'output should have at least one fact');
@@ -41,81 +48,108 @@ describe('blueprint-evaluate CLI — rules doc', () => {
   });
 
   it('missing inputs produce state: missing on dependent facts', () => {
-    const { status, stdout } = run(`--spec=${RULES}`, '--ruleset=expeditedSnap');
+    const { status, stdout } = run(`--spec=${GRAPH}`);
     assert.equal(status, 0);
-    const nodes = JSON.parse(stdout);
-    const missingFacts = Object.values(nodes).filter(n => n.state === 'missing');
-    assert.ok(missingFacts.length > 0, 'some facts should be missing with no inputs');
+    assert.ok(Object.values(JSON.parse(stdout)).some((n) => n.state === 'missing'));
   });
 
   it('provided inputs produce complete facts', () => {
     const input = JSON.stringify({
       household: { monthlyGrossIncome: 120, liquidResources: 75, monthlyShelterCost: 800, isMigrantFarmworker: false },
-      policy: { incomeThreshold: 150, resourceThreshold: 100 },
     });
-    const { status, stdout } = run(`--spec=${RULES}`, '--ruleset=expeditedSnap', `--input=${input}`);
+    const { status, stdout } = run(`--spec=${GRAPH}`, `--input=${input}`);
     assert.equal(status, 0);
-    const nodes = JSON.parse(stdout);
-    const completeFacts = Object.values(nodes).filter(n => n.state === 'complete');
-    assert.ok(completeFacts.length > 0, 'some facts should be complete with valid inputs');
+    assert.ok(Object.values(JSON.parse(stdout)).some((n) => n.state === 'complete'));
   });
 
-  it('--input as inline JSON string is accepted', () => {
-    const { status } = run(`--spec=${RULES}`, '--ruleset=expeditedSnap', '--input={}');
-    assert.equal(status, 0);
-  });
-
-  it('defaults to first ruleset when --ruleset is omitted', () => {
-    const { status, stdout, stderr } = run(`--spec=${RULES}`);
-    assert.equal(status, 0, `script failed:\n${stderr}`);
-    const nodes = JSON.parse(stdout);
-    assert.ok(Object.keys(nodes).length > 0, 'should return facts for the first ruleset');
-  });
-
-  it('exits 1 when --ruleset names a ruleset that does not exist', () => {
-    const { status, stderr } = run(`--spec=${RULES}`, '--ruleset=nonexistent');
-    assert.equal(status, 1);
-    assert.match(stderr, /not found/);
-  });
-
-  it('exits 1 when file does not exist', () => {
+  it('exits 1 when the file does not exist', () => {
     const { status, stderr } = run('--spec=nonexistent.yaml');
     assert.equal(status, 1);
     assert.match(stderr, /Could not read/);
   });
 
-  it('exits 1 for an unknown --engine value', () => {
-    const { status, stderr } = run(`--spec=${RULES}`, '--ruleset=expeditedSnap', '--engine=unknown');
+  it('exits 1 for an argument it doesn\'t take', () => {
+    const { status, stderr } = run(`--spec=${GRAPH}`, '--engine=cel');
     assert.equal(status, 1);
-    assert.match(stderr, /--engine must be/);
+    assert.match(stderr, /Unknown argument: --engine=cel/);
   });
 });
 
-describe('blueprint-evaluate CLI — rules examples file (batch mode)', () => {
-  it('outputs one object per ruleset with an array of node maps per example', () => {
-    const { status, stdout, stderr } = run(`--spec=${EXAMPLES}`);
+describe('blueprint-evaluate CLI — a graph with examples', () => {
+  it('evaluates each example declared for the graph\'s ruleset, one result per example', () => {
+    const { status, stdout, stderr } = run(`--spec=${FLAGS_GRAPH}`, `--examples=${FLAGS_EXAMPLES}`);
     assert.equal(status, 0, `script failed:\n${stderr}`);
-    const output = JSON.parse(stdout);
-    assert.ok(typeof output === 'object' && output !== null, 'output should be an object');
-    const rulesets = Object.keys(output);
-    assert.ok(rulesets.length > 0, 'output should have at least one ruleset');
-    for (const [ruleset, examples] of Object.entries(output)) {
-      assert.ok(Array.isArray(examples), `${ruleset} output should be an array`);
-      assert.ok(examples.length > 0, `${ruleset} should have at least one example`);
-    }
+    const results = JSON.parse(stdout);
+    assert.equal(results.length, 2);
+    for (const nodes of results) assert.ok('risks.earnedIncomeVaries' in nodes);
   });
 
-  it('each example result contains facts with type and state', () => {
-    const { status, stdout } = run(`--spec=${EXAMPLES}`);
+  it('evaluates a date from a schema another file declares as a date', () => {
+    // Compiled from the rules file alone, the shared household's dateOfBirth
+    // reached CEL as a string and both age flags came back as errors.
+    const { status, stdout } = run(`--spec=${FLAGS_GRAPH}`, `--examples=${FLAGS_EXAMPLES}`);
     assert.equal(status, 0);
-    const output = JSON.parse(stdout);
-    for (const [, examples] of Object.entries(output)) {
-      for (const exampleResult of examples) {
-        for (const [name, node] of Object.entries(exampleResult)) {
-          assert.ok('type' in node, `fact ${name} should have a type`);
-          assert.ok('state' in node, `fact ${name} should have a state`);
-        }
-      }
-    }
+    const [first] = JSON.parse(stdout);
+    assert.equal(first['risks.elderlyOrDisabledWithoutMedicalCosts'].state, 'complete');
+    assert.equal(first['risks.childrenAndEarnersWithoutDependentCare'].state, 'complete');
+  });
+
+  it('refuses an examples file with none for the graph\'s ruleset', () => {
+    const { status, stderr } = run(`--spec=${GRAPH}`, `--examples=${FLAGS_EXAMPLES}`);
+    assert.equal(status, 1);
+    assert.match(stderr, /declares examples for domain "intake", but the graph is for "eligibility"|declares no examples for ruleset "expeditedSnap"/);
+  });
+
+  it('refuses --input and --examples together', () => {
+    const { status, stderr } = run(`--spec=${FLAGS_GRAPH}`, `--examples=${FLAGS_EXAMPLES}`, '--input={}');
+    assert.equal(status, 1);
+    assert.match(stderr, /can't be combined/);
+  });
+});
+
+describe('blueprint-evaluate CLI — files that can\'t be evaluated on their own', () => {
+  it('refuses a rules file, pointing at its graphs', () => {
+    const { status, stderr } = run(`--spec=${RULES}`);
+    assert.equal(status, 1);
+    assert.match(stderr, /rules file, which can't be evaluated on its own/);
+  });
+
+  it('refuses a rules examples file, saying to pass it as --examples with a graph', () => {
+    const { status, stderr } = run(`--spec=${EXAMPLES}`);
+    assert.equal(status, 1);
+    assert.match(stderr, /with this file as --examples/);
+  });
+});
+
+describe('blueprint-evaluate CLI — a fact that errors', () => {
+  let dir;
+  before(() => {
+    // Compiled by core, as resolve compiles one, from a ruleset whose fact
+    // multiplies a string — which parses, and fails when evaluated.
+    dir = mkdtempSync(join(tmpdir(), 'evaluate-errors-'));
+    const rulesPath = join(dir, 'demo-rules.yaml');
+    writeFileSync(rulesPath, yaml.dump({
+      $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+      domain: 'demo',
+      rulesets: {
+        broken: {
+          endpoint: { path: '/evaluate-broken' },
+          inputs: { name: { type: 'string' } },
+          facts: [{ path: 'doubled', expression: 'name * 2', type: { type: 'number' } }],
+          outputs: { doubled: { type: 'number' } },
+        },
+      },
+    }));
+    const [{ graph }] = generate([load({ path: rulesPath, relativePath: 'demo-rules.yaml' })], 'graph');
+    writeFileSync(join(dir, 'broken-graph.yaml'), yaml.dump(graph));
+  });
+  after(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('is named on stderr, and the run exits 1', () => {
+    const { status, stdout, stderr } = run(`--spec=${join(dir, 'broken-graph.yaml')}`, '--input={"name":"Ada"}');
+    assert.equal(status, 1);
+    assert.ok(JSON.parse(stdout).doubled, 'the answer is still printed');
+    assert.match(stderr, /1 fact\(s\) could not be evaluated/);
+    assert.match(stderr, /broken: doubled:/);
   });
 });

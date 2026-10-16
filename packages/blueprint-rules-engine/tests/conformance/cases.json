@@ -357,6 +357,53 @@
           "$.p.pregnant"
         ]
       }
+    },
+    "itemFields": {
+      "outputs": [
+        "anyAdult",
+        "allAdults",
+        "anyAdultOrExempt",
+        "adults"
+      ],
+      "inputs": {
+        "$.h.people[]": {
+          "type": "array"
+        },
+        "$.h.people[].age": {
+          "type": "integer"
+        },
+        "$.h.people[].isExempt": {
+          "type": "boolean"
+        }
+      },
+      "facts": {
+        "anyAdult": {
+          "expression": "h.people.exists(p, p.age >= 18)"
+        },
+        "allAdults": {
+          "expression": "h.people.all(p, p.age >= 18)"
+        },
+        "anyAdultOrExempt": {
+          "expression": "h.people.exists(p, (has(p.isExempt) && p.isExempt) || p.age >= 18)"
+        },
+        "adults": {
+          "expression": "h.people.filter(p, p.age >= 18)"
+        }
+      },
+      "dependencies": {
+        "anyAdult": [
+          "$.h.people[]"
+        ],
+        "allAdults": [
+          "$.h.people[]"
+        ],
+        "anyAdultOrExempt": [
+          "$.h.people[]"
+        ],
+        "adults": [
+          "$.h.people[]"
+        ]
+      }
     }
   },
   "cases": [
@@ -1074,6 +1121,151 @@
         "defaultSettlesOr": {
           "state": "placeholder",
           "value": true
+        }
+      }
+    },
+    {
+      "name": "a field one item does not have is missing, naming the item path",
+      "graph": "itemFields",
+      "note": "Absent is a question, not an error and not a no, inside a list as at the top: a person added before their age is known leaves \"is anyone an adult\" unanswered when no one else settles it.",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": 10
+            },
+            {}
+          ]
+        }
+      },
+      "expect": {
+        "anyAdult": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[].age"
+          ]
+        },
+        "allAdults": {
+          "state": "complete",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "another item settles exists, and all",
+      "graph": "itemFields",
+      "note": "The unknown item cannot change an answer another item has already decided, so the answer is given.",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": 30
+            },
+            {}
+          ]
+        }
+      },
+      "expect": {
+        "anyAdult": {
+          "state": "complete",
+          "value": true
+        },
+        "allAdults": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[].age"
+          ]
+        }
+      }
+    },
+    {
+      "name": "which item comes first does not matter",
+      "graph": "itemFields",
+      "note": "The unknown item first and the deciding one second gives the same answer as the other order.",
+      "inputs": {
+        "h": {
+          "people": [
+            {},
+            {
+              "age": 30
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyAdult": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "an item settled without the field is not missing it",
+      "graph": "itemFields",
+      "note": "An exempt person is true without an age, since or is decided by one true side; a field read only by has() is asked about, never needed.",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "isExempt": true
+            },
+            {
+              "age": 10
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyAdultOrExempt": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "an item not settled without the field is missing it",
+      "graph": "itemFields",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": 10
+            },
+            {
+              "isExempt": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyAdultOrExempt": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[].age"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a filter over an item it cannot place is missing",
+      "graph": "itemFields",
+      "note": "Whether the unknown item belongs in the result is not known, so neither is the result.",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": 30
+            },
+            {}
+          ]
+        }
+      },
+      "expect": {
+        "adults": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[].age"
+          ]
         }
       }
     }

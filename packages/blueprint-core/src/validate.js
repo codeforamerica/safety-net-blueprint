@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, isDeprecated, isReservedResource } from './contract-types.js';
+import { stemOf, isDeprecated, isReservedResource, requiresDomain, definedDomains, CONTRACT_TYPES } from './contract-types.js';
 import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
@@ -37,6 +37,11 @@ import {
   buildRegistryEntryIndex,
 } from './indexes.js';
 import { resolverMap } from './paths.js';
+import { governedResource } from './attachment.js';
+import { readConfigs } from './contract-readers.js';
+import { duplicateRoutes } from './validator/route-validator.js';
+import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
+import { generate } from './generate.js';
 
 /**
  * Contract types with no validator of their own.
@@ -46,7 +51,7 @@ import { resolverMap } from './paths.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'asyncapi', 'schema', 'components', 'registry', 'config',
+  'schema', 'components', 'registry',
   'overlay', 'rules-examples', 'graph',
 ]);
 
@@ -82,8 +87,13 @@ export function validate(docs) {
 
   const schemaIndex = buildSchemaIndex(docs);
   const collectionIndex = buildCollectionIndex(docs);
+  const events = eventIndex(docs);
 
   const context = {
+    docs,
+    // Computed once, and only when the set has scenarios to check.
+    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, generate) : null,
+    definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
     collectionIndex,
@@ -95,19 +105,23 @@ export function validate(docs) {
     // needs every document registered before any can be validated against a
     // sibling's $id. Results are indexed so each document collects its own.
     schemaConformance: schemaConformanceByPath(yamlFiles),
-    channels: buildChannelIndex(docs),
+    channels: events.channels,
+    generatedEvents: events.generated,
     annotations: {
       specsByDomain: buildSpecsByDomain(docs),
       byRelativePath,
       actions: buildActionIndex(docs),
-      channels: buildChannelIndex(docs).all,
+      channels: events.channels.all,
       graphs: buildGraphIndex(docs),
       registryEntryIds: buildRegistryEntryIndex(docs),
     },
   };
 
+  const routeErrors = duplicateRoutes(docs);
+
   const results = docs.map((doc) => {
     const { errors, warnings } = validateDoc(doc, context);
+    errors.push(...(routeErrors.get(doc.path) ?? []));
     return {
       path: doc.path,
       type: doc.type,
@@ -290,6 +304,61 @@ function unresolvedRelationshipResources(doc, schemaIndex) {
 }
 
 /**
+ * Writable id fields that never say what they point at.
+ *
+ * A field named `…Id` holding a uuid is a link to another record, and only
+ * `x-relationship` says which. Without it, nothing can follow the link: the
+ * resolver adds no `links`, the mock cannot check the record exists, and a
+ * service reading the contracts has to keep its own list of foreign keys —
+ * which is what the transcript analysis experiment did (#481).
+ *
+ * A uuid is the test because every declared relationship in the blueprint is
+ * one, while the ids that point outside it — a Medicare number, a CMS plan
+ * code, a timer key — are plain strings. Fields nobody writes are skipped:
+ * `readOnly` and `x-derived` ones are set by the server, such as `userId` on
+ * the users API, an alias for the record's own id. Overlays are skipped too;
+ * what they add is checked once resolved, where the whole field is visible.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function undeclaredRelationships(doc) {
+  if (doc.type === 'overlay') return [];
+  const findings = [];
+
+  const walk = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, `${path}/${i}`));
+      return;
+    }
+
+    const properties = node.properties;
+    if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+      for (const [name, field] of Object.entries(properties)) {
+        if (!/Id$/.test(name) || !field || typeof field !== 'object') continue;
+        if (field.format !== 'uuid' || field.readOnly || field['x-derived'] || field['x-relationship']) continue;
+        findings.push({
+          rule: 'id-without-relationship',
+          message:
+            `"${name}" holds a uuid but declares no x-relationship, so nothing can follow it ` +
+            `or check that the record it names exists. Add x-relationship with the schema it ` +
+            `points at, or "External" if it names something outside the contract set.`,
+          path: `${path}/properties/${name}`,
+        });
+      }
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key !== 'examples' && key !== 'example') walk(value, `${path}/${key}`);
+    }
+  };
+
+  walk(doc.content, doc.relativePath ?? doc.path);
+  return findings;
+}
+
+/**
  * Give every finding the same shape: { rule, message, path }.
  *
  * `rule` falls back to the contract type, so a finding from a validator that
@@ -400,13 +469,249 @@ function sortDeclaredWithoutAllowlist(doc) {
   return findings;
 }
 
+/**
+ * A document of a type that always belongs to a domain, declaring none.
+ *
+ * Nothing infers a domain any more — not the folder, the filename or the
+ * Domain enum — so a document that does not say which domain it belongs to
+ * belongs to none, and every route, event and seed record it carries would be
+ * filed nowhere.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function missingDomain(doc) {
+  if (!requiresDomain(doc) || doc.domain || isDeprecated(doc.content)) return [];
+  const where = doc.type === 'openapi' || doc.type === 'asyncapi' ? '`info.x-domain`' : 'a top-level `domain`';
+  return [{
+    rule: 'missing-domain',
+    message: `A ${doc.type} document belongs to a domain, and this one declares none. Add ${where}.`,
+    path: doc.path,
+  }];
+}
+
+/**
+ * A document attaching to a domain that nothing defines.
+ *
+ * A domain exists because an OpenAPI, AsyncAPI or rules document declares it;
+ * every other document — a state machine, mock data, annotations, config —
+ * attaches to one of those. Attaching to a domain nothing defines is almost
+ * always a typo, which would otherwise start a domain of its own and quietly
+ * split the one meant. A set that defines no domain at all is not checked.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @param {string[]} defined
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function undefinedDomain(doc, defined) {
+  if (defined.length === 0 || !doc.domain || CONTRACT_TYPES[doc.type]?.definesDomain) return [];
+  if (defined.includes(doc.domain) || isDeprecated(doc.content)) return [];
+  return [{
+    rule: 'undefined-domain',
+    message: `Declares domain "${doc.domain}", which no OpenAPI, AsyncAPI or rules document declares. ` +
+      `Defined: ${defined.join(', ')}. Fix the name, or define the domain.`,
+    path: doc.path,
+  }];
+}
+
+/**
+ * Resources a machine governs that are neither its own object nor nested under it.
+ *
+ * A machine's guards run with `object` its own record, found from the path of
+ * the resource being created — so a resource it governs has to sit under that
+ * record's item path, at any depth, or there is no record to guard with. Its
+ * own object is the exception: creating one is guarded with no record yet.
+ *
+ * @param {import('../types.js').Doc} doc - A state machine document
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {object[]}
+ */
+function resourcesNotNested(doc, docs) {
+  const errors = [];
+  for (const machine of doc.content?.machines ?? []) {
+    const names = Object.keys(machine.resources ?? {});
+    if (names.length === 0) continue;
+
+    let governed;
+    try {
+      governed = governedResource(docs, doc.content.domain, machine.object);
+    } catch {
+      continue; // Two resources named for the object: reported where attachment is decided.
+    }
+
+    const nested = new Set();
+    const walk = (resource) => {
+      for (const child of resource.children) {
+        if (child.name) nested.add(child.name);
+        walk(child);
+      }
+    };
+    if (governed) walk(governed.resource);
+
+    for (const name of names.filter((n) => n !== machine.object && !nested.has(n))) {
+      errors.push({
+        rule: 'resource-not-nested',
+        message: `The ${machine.object} machine governs "${name}", which is not a resource nested under ` +
+          `${machine.object}` + (nested.size ? ` (nested: ${[...nested].join(', ')})` : ', which has none') +
+          '. A machine guards only its own object and the resources under it.',
+        path: `${doc.path}#machines[${machine.object}].resources`,
+      });
+    }
+  }
+  return errors;
+}
+
+/**
+ * Catalogs that seed no resource, or one that cannot say where a record came from.
+ *
+ * A catalog names the resource its entries are. A name no OpenAPI document of
+ * the domain serves is almost always a typo, and its entries would be seeded
+ * nowhere. And the seeded records carry `source`, so the resource's schema
+ * has to declare it, or responses carry a field the contract never mentions.
+ *
+ * @param {import('../types.js').Doc} doc - A config document
+ * @param {import('../types.js').Doc[]} docs
+ * @param {Map<string, { properties: Map<string, object> }>} schemaIndex
+ * @returns {object[]}
+ */
+function configCatalogs(doc, docs, schemaIndex) {
+  const errors = [];
+  // Anything past the envelope is a catalog. One in another shape — a bare
+  // list, as catalogs once were — would otherwise seed nothing, silently.
+  for (const [key, value] of Object.entries(doc.content ?? {})) {
+    if (['$schema', 'version', 'domain'].includes(key)) continue;
+    if (typeof value?.resource !== 'string' || !Array.isArray(value?.entries)) {
+      errors.push({
+        rule: 'not-a-catalog',
+        message: `"${key}" is not a catalog. A catalog names the resource it seeds and lists its entries: ` +
+          `\`${key}: { resource: <Resource>, entries: [...] }\`.`,
+        path: `${doc.path}#${key}`,
+      });
+    }
+  }
+  const [config] = readConfigs([doc, ...docs.filter((d) => d !== doc && d.type === 'openapi')]);
+  for (const [key, catalog] of Object.entries(config?.catalogs ?? {})) {
+    const where = `${doc.path}#${key}`;
+    if (!catalog.resource) {
+      errors.push({
+        rule: 'unknown-config-resource',
+        message: `Catalog "${key}" seeds ${catalog.resourceName}, which no OpenAPI document in domain "${config.domain}" serves.`,
+        path: where,
+      });
+      continue;
+    }
+    if (!schemaIndex.get(catalog.resourceName)?.properties?.has('source')) {
+      errors.push({
+        rule: 'config-resource-without-source',
+        message: `${catalog.resourceName} is seeded by catalog "${key}" but does not declare \`source\`. ` +
+          'Add `source: { $ref: https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource }`.',
+        path: where,
+      });
+    }
+  }
+  return errors;
+}
+
+/**
+ * `nullable`, which OpenAPI 3.1 removed.
+ *
+ * The documents declare OpenAPI 3.1, whose schemas are JSON Schema 2020-12:
+ * a field that may be null says `type: [string, "null"]`. `nullable: true` is
+ * the 3.0 spelling. A validator implementing 2020-12 either ignores it, so a
+ * null is refused, or — beside `allOf` with no `type` — refuses the schema.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {object[]}
+ */
+function removedNullable(doc) {
+  if (!['openapi', 'asyncapi', 'schema', 'components', 'compositions'].includes(doc.type)) return [];
+  const errors = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.nullable === true) {
+      errors.push({
+        rule: 'nullable-keyword',
+        message: `${at || '/'} uses \`nullable\`, which OpenAPI 3.1 removed. Write \`type: [<type>, "null"]\`, ` +
+          'or for a $ref, `anyOf: [{ $ref: ... }, { type: "null" }]`.',
+        path: `${doc.path}#${at}`,
+      });
+    }
+    for (const [key, value] of Object.entries(node)) {
+      // A property named `nullable` is a field, not the keyword.
+      if (key === 'properties' && value && typeof value === 'object') {
+        for (const [name, schema] of Object.entries(value)) walk(schema, `${at}/properties/${name}`);
+      } else {
+        walk(value, `${at}/${key}`);
+      }
+    }
+  };
+  walk(doc.content, '');
+  return errors;
+}
+
+/**
+ * The events a set documents: every AsyncAPI channel, and every event resolve
+ * generates from the set's APIs and state machines, whether or not the set has
+ * been resolved yet.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ channels: { bySpec: Map<string, Set<string>>, all: Set<string> }, generated: Map<string, string> }}
+ *   `generated`: each generated event's type, to the path of the document it is generated into
+ */
+function eventIndex(docs) {
+  const channels = buildChannelIndex(docs);
+  const generated = new Map();
+  let catalogs = [];
+  try {
+    catalogs = generate(docs.filter((d) => d.relativePath !== null), 'events-asyncapi');
+  } catch {
+    // The set does not generate; that is reported where it fails.
+  }
+  for (const catalog of catalogs) {
+    for (const type of Object.keys(catalog.content.channels)) {
+      generated.set(type, catalog.relativePath);
+      channels.all.add(type);
+    }
+  }
+  return { channels, generated };
+}
+
+/**
+ * Channels written by hand that resolve generates.
+ *
+ * An event generated from the contracts has one source. A hand-written channel
+ * for it would be a second description that can drift from what is sent.
+ *
+ * @param {import('../types.js').Doc} doc - An AsyncAPI document
+ * @param {Map<string, string>} generated - From eventIndex
+ * @returns {object[]}
+ */
+function channelsGenerated(doc, generated) {
+  const errors = [];
+  for (const type of Object.keys(doc.content?.channels ?? {})) {
+    const into = generated?.get(type);
+    if (!into || into === doc.relativePath) continue;
+    errors.push({
+      rule: 'channel-generated',
+      message: `Channel "${type}" is generated into ${into} from the contracts. Remove it here.`,
+      path: `${doc.path}#channels.${type}`,
+    });
+  }
+  return errors;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
 
+  errors.push(...missingDomain(doc));
+  errors.push(...undefinedDomain(doc, context.definedDomains));
   errors.push(...brokenFragmentRefs(doc));
   errors.push(...brokenExternalRefs(doc, context.byRelativePath));
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));
+  errors.push(...undeclaredRelationships(doc));
+  errors.push(...removedNullable(doc));
   const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
   if (conformance) {
     errors.push(...conformance.errors);
@@ -425,10 +730,38 @@ function validateDoc(doc, context) {
         (finding.severity === 'warning' ? warnings : errors).push(finding);
       }
       warnings.push(...sortDeclaredWithoutAllowlist(doc));
+      if (doc.content?.['x-events'] !== undefined) {
+        warnings.push({
+          rule: 'x-events-ignored',
+          message: '`x-events` is ignored: the events an API sends are generated into an AsyncAPI document beside it, ' +
+            'from its resources and their state machines\' `emits:`. Remove it.',
+          path: `${doc.path}#x-events`,
+        });
+      }
       break;
     }
 
+    case 'asyncapi':
+      errors.push(...channelsGenerated(doc, context.generatedEvents));
+      break;
+
     case 'state-machine':
+      if (doc.content?.eventsSpec !== undefined) {
+        warnings.push({
+          rule: 'deprecated-events-spec',
+          message: '`eventsSpec` is ignored: the events a machine sends are declared under its `emits:`, and ' +
+            'resolve documents them in the AsyncAPI document it generates beside the API. Remove it.',
+          path: doc.path,
+        });
+      }
+      if (doc.content?.apiSpec !== undefined) {
+        warnings.push({
+          rule: 'deprecated-api-spec',
+          message: '`apiSpec` is ignored: each machine attaches to the resource in its domain named for its object, ' +
+            'in whichever OpenAPI document declares it. Remove it.',
+          path: doc.path,
+        });
+      }
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -444,10 +777,19 @@ function validateDoc(doc, context) {
         ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex)
       );
       errors.push(...validateEvents(doc, context.channels));
+      errors.push(...resourcesNotNested(doc, context.docs));
       break;
 
     case 'rules':
       errors.push(...validateRulesDoc(doc.content));
+      break;
+
+    case 'config':
+      errors.push(...configCatalogs(doc, context.docs, context.schemaIndex));
+      break;
+
+    case 'arazzo':
+      errors.push(...validateArazzo(doc, context.operationIds));
       break;
 
     case 'sla-types':
@@ -463,10 +805,10 @@ function validateDoc(doc, context) {
       break;
 
     case 'compositions': {
-      // The composition validators take { domain, doc }; domain is the stem of
-      // the relative path, which is how a composition names its target spec.
+      // The composition validators take { domain, doc }; the domain names the
+      // compositions in messages.
       const compositionDoc = {
-        domain: stemOf(doc.relativePath ?? doc.path, 'compositions'),
+        domain: doc.domain ?? stemOf(doc.relativePath ?? doc.path, 'compositions'),
         doc: doc.content,
       };
       errors.push(

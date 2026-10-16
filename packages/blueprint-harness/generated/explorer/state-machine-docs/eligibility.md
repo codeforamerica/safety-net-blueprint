@@ -1,6 +1,6 @@
 # Eligibility State Machine
 
-Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/eligibility-openapi.yaml) | State machine: [eligibility-state-machine.yaml](../../../contracts/eligibility-state-machine.yaml)
+Domain: `eligibility` | API: [eligibility-openapi.yaml](../../../contracts/domains/eligibility/eligibility-openapi.yaml) | State machine: [eligibility-state-machine.yaml](../../../contracts/eligibility-state-machine.yaml)
 
 ---
 

@@ -10,7 +10,7 @@ info:
     that call external agencies and data sources on behalf of the blueprint.
 
     This spec documents the result payload schemas adapters must return for each
-    service type. The blueprint emits a `data_exchange.call.completed` event
+    service type. The blueprint emits a `data-exchange.call.completed` event
     carrying a `ServiceCallResult` whose `serviceResult` field conforms to the
     schema for the corresponding service type defined here.
 

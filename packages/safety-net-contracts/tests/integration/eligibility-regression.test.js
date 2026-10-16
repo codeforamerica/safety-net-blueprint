@@ -24,6 +24,15 @@ const CASEWORKER = caller('worker-1', ROLES.CASE_WORKER);
 const DETERMINATIONS = '/eligibility/determinations';
 const SERVICE_CALLS = '/data-exchange/service-calls';
 
+// A real application, since the mock creates nothing under one that isn't there.
+async function newApplication() {
+  const res = await fetch(`${BASE_URL}/intake/applications`, {
+    method: 'POST',
+    body: { programsAppliedFor: ['snap'], channel: 'online' },
+  });
+  return (await res.json()).id;
+}
+
 async function createApplicationMember(appId, programs = []) {
   return fetch(`${BASE_URL}/intake/applications/${appId}/members`, {
     method: 'POST',
@@ -46,7 +55,7 @@ async function testQueryEndpoints() {
   });
 
   await test('GET /eligibility/determinations/{id}/decisions returns 200', async () => {
-    const appId = `app-qe-${Date.now()}`;
+    const appId = await newApplication();
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
     assert.ok(dets.length > 0, 'Determination should exist for query test');
@@ -64,7 +73,7 @@ async function testQueryEndpoints() {
 async function testDeterminationCreation() {
   section('Determination — created on intake.application.submitted');
 
-  const appId = `app-elig-${Date.now()}`;
+  const appId = await newApplication();
 
   await test('intake.application.submitted → Determination created with status in_progress', async () => {
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
@@ -78,7 +87,7 @@ async function testDeterminationCreation() {
   });
 
   await test('intake.application.submitted → one Decision created per program', async () => {
-    const appId2 = `app-elig-${Date.now()}-2`;
+    const appId2 = await newApplication();
     await createApplicationMember(appId2, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId2);
 
@@ -96,7 +105,7 @@ async function testDeterminationCreation() {
   });
 
   await test('Medicaid submission creates a Medicaid Decision', async () => {
-    const appId3 = `app-elig-${Date.now()}-3`;
+    const appId3 = await newApplication();
     await createApplicationMember(appId3, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId3);
 
@@ -119,7 +128,7 @@ async function testDeterminationTransitions() {
   section('Determination — transitions');
 
   async function createDetermination(programs = ['snap']) {
-    const appId = `app-det-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const appId = await newApplication();
     await injectEvent('intake.application.submitted', { programs }, appId);
     const { items } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
     assert.ok(items.length > 0, 'Determination should exist');
@@ -189,7 +198,7 @@ async function testDecisionTransitions() {
   section('Decision — transitions');
 
   async function createDecision(program = 'snap') {
-    const appId = `app-dec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, [program]);
     await injectEvent('intake.application.submitted', { programs: [program] }, appId);
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -285,7 +294,7 @@ async function testMedicaidServiceCalls() {
   section('Medicaid — data exchange service calls created on Decision');
 
   await test('Medicaid submission creates two data-exchange service calls (fdsh_fti and fdsh_medicare_vci)', async () => {
-    const appId = `app-med-${Date.now()}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
 
@@ -304,7 +313,7 @@ async function testMedicaidServiceCalls() {
   });
 
   await test('SNAP submission does not create data-exchange service calls', async () => {
-    const appId = `app-snap-sc-${Date.now()}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
@@ -341,7 +350,7 @@ async function testSnapExpeditedScreeningStub() {
 
     // Submit SNAP application — triggers Decision creation → eligibility.decision.created →
     // evaluateSnapExpedited → POST /eligibility-adapter/evaluate/expedited-screening → stub intercepts
-    const appId = `app-snap-stub-${Date.now()}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
@@ -389,7 +398,7 @@ async function testCrossDomainWriteBack() {
     });
     assert.strictEqual(flagRes.status, 200, `flag-expedited should return 200, got ${flagRes.status}`);
 
-    // The eligibility state machine emits eligibility.application.expedited with
+    // The eligibility state machine emits eligibility.determination.expedited with
     // subject: $object.applicationId. The intake state machine subscribes and PATCHes
     // the application. Assert the write-back landed on the correct application.
     const updatedApp = await (await fetch(`${BASE_URL}/intake/applications/${appId}`)).json();
@@ -440,8 +449,8 @@ async function testCrossDomainWriteBack() {
 async function testDeterminationCompletion() {
   section('Determination — completes when all Decisions resolved');
 
-  await test('eligibility.application.decision_completed with no pending Decisions → Determination completes', async () => {
-    const appId = `app-comp-${Date.now()}`;
+  await test('eligibility.decision.completed with no pending Decisions → Determination completes', async () => {
+    const appId = await newApplication();
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
@@ -461,7 +470,7 @@ async function testDeterminationCompletion() {
   });
 
   await test('second Decision still pending — Determination stays in_progress', async () => {
-    const appId = `app-partial-${Date.now()}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, ['snap', 'medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['snap', 'medicaid'] }, appId);
 
@@ -491,7 +500,7 @@ async function testWithdrawal() {
   section('Determination — withdrawn on application.withdrawn');
 
   await test('intake.application.withdrawn → Determination withdrawn', async () => {
-    const appId = `app-with-${Date.now()}`;
+    const appId = await newApplication();
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     const { items: dets } = await (await fetch(`${BASE_URL}${DETERMINATIONS}?applicationId=${appId}`)).json();
@@ -510,13 +519,13 @@ async function testWithdrawal() {
 }
 
 // ---------------------------------------------------------------------------
-// Medicaid ex parte — triggered by data_exchange.call.completed
+// Medicaid ex parte — triggered by data-exchange.call.completed
 // ---------------------------------------------------------------------------
 
 async function testMedicaidExParteEvaluation() {
-  section('Medicaid ex parte — triggered by data_exchange.call.completed');
+  section('Medicaid ex parte — triggered by data-exchange.call.completed');
 
-  await test('data_exchange.call.completed with no pending service calls triggers medicaid-ex-parte adapter call', async () => {
+  await test('data-exchange.call.completed with no pending service calls triggers medicaid-ex-parte adapter call', async () => {
     await clearHttpStubs();
 
     // Intercept both data-exchange service call creates so the DB has no pending calls.
@@ -527,7 +536,7 @@ async function testMedicaidExParteEvaluation() {
     // Register the ex parte adapter stub
     await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/medicaid-ex-parte' } });
 
-    const appId = `app-exparte-${Date.now()}`;
+    const appId = await newApplication();
     await createApplicationMember(appId, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
 
@@ -536,8 +545,8 @@ async function testMedicaidExParteEvaluation() {
     const { items: decisions } = await (await fetch(`${BASE_URL}${DETERMINATIONS}/${dets[0].id}/decisions`)).json();
     const decision = decisions[0];
 
-    // Fire data_exchange.call.completed — no pending service calls in DB, guard passes
-    await injectEvent('data_exchange.call.completed', { decisionId: decision.id, result: 'conclusive' }, `sc-${Date.now()}`);
+    // Fire data-exchange.call.completed — no pending service calls in DB, guard passes
+    await injectEvent('data-exchange.call.completed', { decisionId: decision.id, result: 'conclusive' }, `sc-${Date.now()}`);
 
     // ex parte stub should be consumed
     const { items } = await (await fetch(`${BASE_URL}/mock/stubs/http`)).json();
@@ -555,7 +564,7 @@ async function testFinalDetermination() {
   await test('intake.application.review_completed triggers evaluate/determination for each pending Decision', async () => {
     await clearHttpStubs();
 
-    const appId = `app-final-${Date.now()}`;
+    const appId = await newApplication();
 
     // Stub out the expedited screening call triggered when the SNAP Decision is created
     await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } });

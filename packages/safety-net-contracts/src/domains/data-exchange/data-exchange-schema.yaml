@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/data-exchange/data-exchange-schema.yaml"
 title: DataExchange
+domain: data-exchange
 description: >
   Shared data exchange types used across the eligibility adapter interface and
   data exchange domain events. Define once here so both consumers stay in sync.

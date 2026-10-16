@@ -9,9 +9,9 @@ import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
 import { initSchemaRegistry } from './validator.js';
-import { registerConfigManaged } from './config-registry.js';
+import { seedConfigs } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
-import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -97,7 +97,10 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     }
 
     if (hasErrors) {
-      throw new Error('Validation failed. Run "npm run validate" for detailed errors.');
+      const msg = Object.entries(validationResults)
+        .flatMap(([apiName, result]) => result.spec.errors.map((e) => `  ${apiName}: ${e.message}`))
+        .join('\n');
+      throw new Error(`Spec validation failed:\n${msg}`);
     }
 
     if (verbose) {
@@ -120,7 +123,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
   }
 
   // Discover composition definitions
-  const compositions = contractsOfType(docs, 'compositions', 'compositions');
+  const compositions = extract(docs, 'compositions');
   if (verbose && compositions.length > 0) {
     console.log(`\n✓ Discovered ${compositions.length} composition file(s):`);
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
@@ -130,7 +133,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
   // one per ruleset beside its rules document, so recompiling produced the
   // identical bytes — and could stop doing so if the two ran under different
   // versions of the compiler.
-  const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
+  const rulesFiles = extract(docs, 'rules');
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`\nWarning: ${unresolved}`);
@@ -155,59 +158,29 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
-  for (const config of configs) {
-    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-      for (const entry of entries) {
-        // Strip x- extension fields before storing — they are config artifact metadata
-        const { ...data } = entry;
-        for (const key of Object.keys(data)) {
-          if (key.startsWith('x-')) delete data[key];
-        }
-        store.insertResource(catalogKey, { ...data, source: 'system' });
-        registerConfigManaged(catalogKey, data.id);
-      }
-      if (verbose) {
-        console.log(`✓ Seeded ${entries.length} config-managed ${catalogKey} (${config.domain})`);
-      }
-    }
-  }
+  seedConfigs(configs, store, { verbose });
 
-  // Seed platform policy registry into the mock database
-  const policies = extract(docs, 'registries').policies ?? {};
-  const policyEntries = Object.entries(policies);
-  for (const [id, policy] of policyEntries) {
-    store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-    registerConfigManaged('registry-policies', id);
-  }
-  if (verbose && policyEntries.length > 0) {
-    console.log(`✓ Seeded ${policyEntries.length} config-managed registry-policies (platform)`);
-  }
+  // Registries are served from the contracts, not stored: every type, every
+  // file of it combined. Read here so a duplicate entry id fails at boot.
+  const registries = extract(docs, 'registries');
 
   // Validate seed data against schemas
   if (!skipValidation) {
-    const seedErrors = validateMockData(docs, apiSpecs);
+    // Checked after seeding, against the store, so a record is checked the
+    // way it's served: an expanded relationship inlined, as a GET does.
+    const seedErrors = validateMockData(docs, apiSpecs, { lookup: (collection, id) => store.findById(collection, id) });
     if (seedErrors.length > 0) {
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
         .join('\n');
-      const looksLikeExpandMismatch = seedErrors.some(e =>
-        e.message.includes("must have required property") ||
-        e.message.includes("must NOT have additional properties")
-      );
-      const hint = looksLikeExpandMismatch
-        ? '\n\nHint: If you are using an overlay with x-relationship.style: expand, ' +
-          'your seed data must use the post-expansion field names (e.g., "person" not "personId"). ' +
-          'Regenerate seed data from your resolved specs:\n' +
-          `  npm run mock:seed -- --spec=${specsDir} --out=<seed-dir>`
-        : '';
-      throw new Error(`Seed data validation failed:\n${msg}${hint}`);
+      throw new Error(`Seed data validation failed:\n${msg}`);
     }
     if (verbose) {
       console.log('✓ Seed data valid');
     }
   }
 
-  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
+  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries, summary };
 }
 
 

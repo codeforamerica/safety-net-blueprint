@@ -29,7 +29,8 @@ metrics:
         "==":
           - var: type
           - intake.application.closed
-    pairBy: resourceId
+    # An event names the record it is about in `subject`.
+    pairBy: subject
     targets:
       - stat: p50
         operator: <
@@ -67,10 +68,14 @@ metrics:
     aggregate: ratio
     source:
       collection: applications
+      # Any SLA entry breached. JSON Logic has no path wildcard, so
+      # `slaInfo.*.status` read as missing and matched nothing.
       filter:
-        in:
-          - breached
-          - var: slaInfo.*.status
+        some:
+          - var: slaInfo
+          - "==":
+              - var: status
+              - breached
     total:
       collection: applications
     targets:

@@ -18,7 +18,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import yaml from 'js-yaml';
-import { generate, load } from '@codeforamerica/blueprint-core';
+import { generate, load, extract } from '@codeforamerica/blueprint-core';
 import { registerRoutes, registerAllRoutes, registerRulesRoutes } from '../../src/route-generator.js';
 
 /**
@@ -45,6 +45,18 @@ function graphsFor(rulesDoc) {
   }
 }
 
+/** The rules entry core reports for a document — what the mock serves from. */
+function rulesEntry(rulesDoc) {
+  const dir = mkdtempSync(join(tmpdir(), 'rules-entry-'));
+  try {
+    const path = join(dir, `${rulesDoc.domain}-rules.yaml`);
+    writeFileSync(path, yaml.dump(rulesDoc));
+    return extract([load({ path, relativePath: basename(path) })], 'rules');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 /**
  * Read a route table back in registration order.
  *
@@ -55,7 +67,7 @@ function graphsFor(rulesDoc) {
 function listRoutes(table) {
   return [...table].map(([key, entry]) => ({
     method: key.slice(0, key.indexOf(' ')),
-    path: entry.expressPath,
+    path: key.slice(key.indexOf(' ') + 1),
     template: key.slice(key.indexOf(' ') + 1),
     operationId: entry.operationId,
     handler: entry.handler,
@@ -75,10 +87,10 @@ function createTestMetadata(endpoints) {
 test('Route Generator Tests', async (t) => {
 
   // ==========================================================================
-  // Path Format Conversion (OpenAPI to Express)
+  // Path params survive registration, in the contract's own syntax
   // ==========================================================================
 
-  await t.test('registerRoutes - converts OpenAPI path params to Express format', () => {
+  await t.test('registerRoutes - keys a path parameter by the contract template', () => {
     const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
@@ -88,8 +100,8 @@ test('Route Generator Tests', async (t) => {
     const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 1);
-    assert.strictEqual(routes[0].path, '/persons/:personId');
-    console.log('  ✓ Converts {personId} to :personId');
+    assert.strictEqual(routes[0].path, '/persons/{personId}');
+    console.log('  ✓ Keys /persons/{personId} by its template');
   });
 
   await t.test('registerRoutes - handles multiple path parameters', () => {
@@ -101,7 +113,7 @@ test('Route Generator Tests', async (t) => {
     registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     const routes = listRoutes(table);
 
-    assert.strictEqual(routes[0].path, '/orgs/:orgId/users/:userId');
+    assert.strictEqual(routes[0].path, '/orgs/{orgId}/users/{userId}');
     console.log('  ✓ Converts multiple path parameters');
   });
 
@@ -265,7 +277,6 @@ test('Route Generator Tests', async (t) => {
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].method, 'GET');
     assert.strictEqual(registered[0].path, '/persons');
-    assert.strictEqual(registered[0].expressPath, '/persons');
     assert.strictEqual(registered[0].operationId, 'listPersons');
     assert.ok(registered[0].description);
 
@@ -387,7 +398,7 @@ test('Route Generator Tests', async (t) => {
     registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     const routes = listRoutes(table);
 
-    assert.strictEqual(routes[0].path, '/api/v1/users/:userId/posts/:postId');
+    assert.strictEqual(routes[0].path, '/api/v1/users/{userId}/posts/{postId}');
 
     console.log('  ✓ Handles complex nested paths');
   });
@@ -415,7 +426,7 @@ test('Route Generator Tests', async (t) => {
     // All routes should be registered at the full prefixed path
     const paths = routes.map(r => r.path);
     assert.ok(paths.includes('/intake/applications'), 'List route registered at prefixed path');
-    assert.ok(paths.includes('/intake/applications/:applicationId'), 'Get route registered at prefixed path');
+    assert.ok(paths.includes('/intake/applications/{applicationId}'), 'Get route registered at prefixed path');
 
     console.log('  ✓ Routes registered at prefixed paths with correct collection names');
   });
@@ -432,7 +443,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'List sub-resources');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents');
     console.log('  ✓ Sub-collection GET registered as list sub-resources');
   });
 
@@ -455,7 +466,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get sub-resource by ID');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents/:documentId');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents/{documentId}');
     console.log('  ✓ Sub-item GET registered as get sub-resource by ID');
   });
 
@@ -487,7 +498,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get singleton sub-resource');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/interview');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/interview');
     console.log('  ✓ Singleton GET registered as get singleton sub-resource');
   });
 
@@ -554,6 +565,30 @@ test('Route Generator Tests', async (t) => {
     console.log('  ✓ Sub-collection GET returns 404 when parent does not exist');
   });
 
+  await t.test('registerRoutes - sub-collection GET searches with q, as a top-level list does', async () => {
+    // A nested list declares `q` like any other, and the handler used to drop
+    // it, answering every search with the whole list.
+    const table = new Map();
+    const metadata = createTestMetadata([
+      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
+    ]);
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    store.clearAll('applications');
+    store.clearAll('application-documents');
+    store.insertResource('applications', { id: 'app-q' });
+    store.insertResource('application-documents', { id: 'd1', applicationId: 'app-q', category: 'income', receivedAt: '2026-10-01T09:00:00.000Z' });
+    store.insertResource('application-documents', { id: 'd2', applicationId: 'app-q', category: 'identity', receivedAt: '2026-10-01T10:00:00.000Z' });
+
+    const list = async (q) => (await readResponse(listRoutes(table)[0].handler(
+      makeRequest(`/applications/app-q/documents?q=${encodeURIComponent(q)}`), { params: { applicationId: 'app-q' } }
+    ))).body;
+
+    assert.deepStrictEqual((await list('category:income')).items.map(d => d.id), ['d1']);
+    const since = await list('receivedAt:>=2026-10-01T09:30:00.000Z');
+    assert.deepStrictEqual(since.items.map(d => d.id), ['d2']);
+    assert.strictEqual(since.total, 1, 'total counts the matches, not every record under the parent');
+  });
+
   await t.test('registerRoutes - sub-collection POST injects parent ID into body', async () => {
     const table = new Map();
     const metadata = createTestMetadata([
@@ -566,6 +601,8 @@ test('Route Generator Tests', async (t) => {
     // ctx rather than by mutating req.body. Assert the outcome instead: the
     // created resource carries the parent FK.
     store.clearAll('application-documents');
+    // The parent has to exist: nothing is created under one that isn't there.
+    if (!store.findById('applications', 'app-456')) store.insertResource('applications', { id: 'app-456' });
     const request = makeRequest('/applications/app-456/documents', { method: 'POST', body: { category: 'income' } });
     const { status, body: created } = await readResponse(
       routes[0].handler(request, { params: { applicationId: 'app-456' } })
@@ -626,7 +663,8 @@ const minimalRulesDoc = {
       outputs: { eligible: { type: 'boolean' } },
       facts: [{ path: 'eligible', expression: 'household.monthlyIncome < 1500' }],
     },
-    noEndpointRuleset: {
+    grossIncome: {
+      endpoint: { path: '/assess-gross-income' },
       inputs: { x: { type: 'object', properties: { v: { type: 'number' } } } },
       outputs: { result: { type: 'boolean' } },
       facts: [{ path: 'result', expression: 'x.v > 0' }],
@@ -643,33 +681,18 @@ test('registerRulesRoutes', async (t) => {
     assert.strictEqual(result.length, 0);
   });
 
-  await t.test('skips rulesets without an endpoint declaration', () => {
+  await t.test('serves every ruleset, at /{domain} and the path it declares', () => {
     const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    // Only snapEligibility has endpoint; noEndpointRuleset is skipped
-    assert.strictEqual(listRoutes(table).length, 1);
-  });
-
-  await t.test('falls back to /domain prefix when no apiSpec found', () => {
-    const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    const routes = listRoutes(table);
-    assert.strictEqual(routes.length, 1);
-    assert.strictEqual(routes[0].method, 'POST');
-    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
-  });
-
-  await t.test('uses serverBasePath from apiSpec when available', () => {
-    const table = new Map();
-    const apiSpecs = [{ name: 'eligibility', serverBasePath: '/eligibility' }];
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs, graphsFor(minimalRulesDoc));
-    const routes = listRoutes(table);
-    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
+    registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
+    assert.deepStrictEqual(listRoutes(table).map((r) => `${r.method} ${r.path}`), [
+      'POST /eligibility/assess-snap-eligibility',
+      'POST /eligibility/assess-gross-income',
+    ]);
   });
 
   await t.test('handler returns evaluate result as JSON for complete inputs', async () => {
     const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
     const handler = listRoutes(table)[0].handler;
 
     const { status: statusCode, body: responseBody } = await readResponse(
@@ -696,7 +719,7 @@ test('registerRulesRoutes', async (t) => {
         },
       },
     };
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: brokenDoc }], [], graphsFor(brokenDoc));
+    registerRulesRoutes(table, rulesEntry(brokenDoc), [], graphsFor(brokenDoc));
     const handler = listRoutes(table)[0].handler;
 
     const { status: statusCode, body: responseBody } = await readResponse(
@@ -709,8 +732,8 @@ test('registerRulesRoutes', async (t) => {
 
   await t.test('returns registered endpoint descriptors', () => {
     const table = new Map();
-    const result = registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    assert.strictEqual(result.length, 1);
+    const result = registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
+    assert.strictEqual(result.length, 2, 'both rulesets: one at its declared path, one at the default');
     assert.strictEqual(result[0].method, 'POST');
     assert.ok(result[0].path.includes('assess-snap-eligibility'));
     assert.ok(result[0].description.includes('snapEligibility'));

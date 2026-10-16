@@ -16,7 +16,7 @@ export type DocumentWritable = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 };
 
 export type Document = {
@@ -31,7 +31,7 @@ export type Document = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     readonly id: string;
     /**
@@ -49,7 +49,7 @@ export type Document = {
     /**
      * When this document becomes eligible for disposition.
      */
-    readonly retentionDeadline?: string;
+    readonly retentionDeadline?: string | null;
     /**
      * Arbitrary key-value metadata supplied at upload.
      */
@@ -118,7 +118,7 @@ export type DocumentList = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -136,7 +136,7 @@ export type DocumentList = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */
@@ -173,7 +173,7 @@ export type DocumentWritable2 = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     /**
      * Arbitrary key-value metadata supplied at upload.
@@ -200,7 +200,7 @@ export type DocumentListWritable = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         /**
          * Arbitrary key-value metadata supplied at upload.
@@ -353,7 +353,7 @@ export type ListDocumentsResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -371,7 +371,7 @@ export type ListDocumentsResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -447,7 +447,7 @@ export type UploadDocumentResponses = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -465,7 +465,7 @@ export type UploadDocumentResponses = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */
@@ -524,7 +524,7 @@ export type GetDocumentResponses = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -542,7 +542,7 @@ export type GetDocumentResponses = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */

@@ -1,0 +1,52 @@
+{
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Client-writable fields of a transcript.",
+      "properties": {
+        "subjectType": {
+          "type": "string",
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+        },
+        "subjectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+        },
+        "model": {
+          "type": "string",
+          "description": "The transcription service's identifier for the model that produced\nits lines — e.g. `scribe_v2`. Services change the model behind the\nsame name, so this is what tells two transcripts made a month apart\napart. Where a service does not report a version, the model the\nclient requested — e.g. `standard`. Required unless the profile's\nservice is `none`.\n"
+        },
+        "client": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$",
+          "description": "The software that wrote its lines, as `name/version` — a transcription client, or a chat."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "Payload to start a transcript. What produced it is required — the\nprofile, which says the transcription service; the client; and the\nmodel unless the profile's service is `none` — so every transcript\nsays where its lines came from — and when it started, by the\nclient's clock. id, status, createdAt and updatedAt are set by the\nserver.\n",
+      "required": [
+        "profileId",
+        "client",
+        "startedAt"
+      ],
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The profile to start it under."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the conversation began, by the client's clock."
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptCreate"
+}

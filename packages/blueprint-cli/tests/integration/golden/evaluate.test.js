@@ -13,33 +13,31 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { generate } from '@codeforamerica/blueprint-core';
+import { generate, discover, load } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
-import { contractsDir } from '../../paths.js';
+import { contractsDir, harnessDir } from '../../paths.js';
 
 /**
- * Compile one ruleset through `generate`, the way the pipeline does.
- *
- * Kept local to the test rather than importing a compiler: compiling is a
- * build step core performs, not something consumers call.
+ * The compiled graph for one ruleset, the way the pipeline compiles it.
  */
 function graphFor(rulesDoc, rulesetName) {
   const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
-  const graphs = generate([{
-    path: 'rules.yaml',
-    relativePath: 'rules.yaml',
-    type: 'rules',
-    domain: rulesDoc.domain ?? null,
-    content: rulesDoc,
-    refs: () => new Map(),
-    model: () => null,
-    resolved: false,
-    provenance: null,
-  }], 'graph');
-  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  const found = compiledGraphs().find(({ graph }) => graph.ruleset === name);
   if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
   return found.graph;
+}
+
+/**
+ * Every graph in the resolved harness, compiled once. Compiled from the whole
+ * set rather than one file, so an input that `$ref`s a shared schema is
+ * followed down to its fields — which is what makes a date inside a `$ref`'d
+ * household a date.
+ */
+let graphs;
+function compiledGraphs() {
+  graphs ??= generate(discover(join(harnessDir, 'generated/resolved')).map(load), 'graph');
+  return graphs;
 }
 
 function loadExamplesAndRules(domain, rulesetName) {
@@ -90,36 +88,56 @@ describe('evaluate — eligibility/expeditedSnap', () => {
 });
 
 // ---------------------------------------------------------------------------
-// intake — interviewPrompts
+// intake — interviewFlags
 // ---------------------------------------------------------------------------
 
-describe('evaluate — intake/interviewPrompts', () => {
-  const { graph, examples } = loadExamplesAndRules('intake', 'interviewPrompts');
+describe('evaluate — intake/interviewFlags', () => {
+  const { graph, examples } = loadExamplesAndRules('intake', 'interviewFlags');
 
-  it('income gap and unemployed members — multiple prompts triggered', () => {
+  it('a renewal where much has changed and the answers don\'t agree', () => {
     const result = outputValues(evaluate(graph, examples[0].inputs));
-    assert.equal(result.incomeInconsistencyPrompt, true);
-    assert.equal(result.workRequirementPrompt,     true);
-    assert.equal(result.studentEligibilityPrompt,  false);
-    assert.equal(result.immigrationStatusPrompt,   false);
-    assert.equal(result.changeVerificationPrompt,  false);
+    assert.deepEqual(result, {
+      'risks.earnedIncomeVaries':                     true,
+      'risks.cashOrSelfEmploymentIncome':             true,
+      'risks.incomeChangedSincePrevious':             true,
+      'risks.householdChangedSincePrevious':          true,
+      'risks.shelterCostsCarriedOver':                false,
+      'risks.elderlyOrDisabledWithoutMedicalCosts':   true,
+      'risks.childrenAndEarnersWithoutDependentCare': true,
+      'risks.multipleProgramsApplied':                false,
+      'inconsistencies.incomeBelowExpenses':             true,
+      'inconsistencies.wagesDifferFromWageRecords':      true,
+      'inconsistencies.incomeDiffersFromPayStub':        true,
+      'inconsistencies.householdSizeDiffersFromMembers': true,
+      'inconsistencies.jobWithoutEarnedIncome':          false,
+      'inconsistencies.earnedIncomeWithoutJob':          false,
+      'inconsistencies.utilitiesIncludedButBilled':      true,
+    });
   });
 
-  it('non-citizen student with changed circumstances', () => {
+  it('nothing changed, nothing error-prone, and everything agrees — no flags raised', () => {
     const result = outputValues(evaluate(graph, examples[1].inputs));
-    assert.equal(result.incomeInconsistencyPrompt, false);
-    assert.equal(result.workRequirementPrompt,     false);
-    assert.equal(result.studentEligibilityPrompt,  true);
-    assert.equal(result.immigrationStatusPrompt,   true);
-    assert.equal(result.changeVerificationPrompt,  true);
+    assert.ok(Object.values(result).every((value) => value === false), JSON.stringify(result));
   });
 
-  it('all members employed — no prompts triggered', () => {
-    const result = outputValues(evaluate(graph, examples[2].inputs));
-    assert.equal(result.incomeInconsistencyPrompt, false);
-    assert.equal(result.workRequirementPrompt,     false);
-    assert.equal(result.studentEligibilityPrompt,  false);
-    assert.equal(result.immigrationStatusPrompt,   false);
-    assert.equal(result.changeVerificationPrompt,  false);
+  it('a member with two jobs is checked against the total of both', () => {
+    // A wage record covers all of a member's wages, so comparing it with one
+    // job at a time flagged anyone with a second job. The partner keeps the
+    // clinic (950 semimonthly, 1900 a month) and adds 600 a month at a store;
+    // the quarter's record of 7500 is three months of the two together.
+    const inputs = structuredClone(examples[1].inputs);
+    inputs.current.jobs.push({ id: 'store', memberId: 'partner', employer: 'Corner Store' });
+    inputs.current.incomes.push({
+      id: 'store-pay', memberId: 'partner', jobId: 'store', source: 'earned',
+      amount: 600, frequency: 'monthly', paidInCash: false, amountVaries: false,
+    });
+    inputs.verified.find((v) => v.kind === 'wage_record').amount = 7500;
+
+    const result = outputValues(evaluate(graph, inputs));
+    assert.equal(result['inconsistencies.wagesDifferFromWageRecords'], false);
+
+    inputs.verified.find((v) => v.kind === 'wage_record').amount = 5700;
+    assert.equal(outputValues(evaluate(graph, inputs))['inconsistencies.wagesDifferFromWageRecords'], true,
+      'a record of only the clinic wages now differs from what the partner reports');
   });
 });

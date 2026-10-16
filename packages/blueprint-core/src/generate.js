@@ -7,6 +7,8 @@
  *   overlay   OpenAPI Overlays that add the endpoints and schemas a
  *             composition, ruleset or state machine action implies
  *   graph     compiled decision graphs, one per ruleset
+ *   events-asyncapi  an AsyncAPI document beside each OpenAPI document, of the
+ *             events its resources and their state machines send
  *   postman   a Postman collection exercising every endpoint
  *   artifact  the whole contract set as one serializable object
  *
@@ -25,25 +27,31 @@
  */
 
 import { generateCompositionOverlays } from './compositions.js';
-import { resolveRef } from './ref-lookup.js';
+import { followRef, indexByRelativePath, normalizeRefPath, splitRef } from './ref-lookup.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
 import { buildPostman } from './generate/postman.js';
+import { buildEventCatalogs } from './generate/events.js';
 import { buildArtifact } from './artifact.js';
-import { stemOf, siblingPath, fileNameOf } from './contract-types.js';
+import { fileNameOf } from './contract-types.js';
+import { declaredResource } from './attachment.js';
+import { toDoc } from './doc.js';
 
 /** What `generate` knows how to produce. */
 const BUILDERS = {
   overlay: buildOverlays,
   graph: buildGraphs,
+  'rules-api': buildRulesApis,
+  'events-asyncapi': (positioned) => buildEventCatalogs(positioned)
+    .map(({ relativePath, content }) => toDoc({ path: relativePath, relativePath, type: 'asyncapi', content })),
   postman: buildPostman,
   artifact: buildArtifact,
 };
 
 /**
  * @param {import('../types.js').Doc[]} docs
- * @param {'overlay'|'graph'|'postman'|'artifact'} type - Which artifact to build
+ * @param {'overlay'|'graph'|'rules-api'|'events-asyncapi'|'postman'|'artifact'} type - Which artifact to build
  * @param {object} [options] - Passed to the builder that needs them
  * @returns {*} Whatever that artifact is
  */
@@ -76,14 +84,29 @@ function buildOverlays(positioned) {
   const inputFiles = specsOf(positioned);
 
   // RPC overlays align their own refs, because finding the target spec is
-  // part of generating them — the state machine names it in apiSpec:.
+  // part of generating them — each machine attaches to the resource it governs.
   const rpc = generateRpcOverlays(positioned).map((entry) => entry.overlay);
-  const rules = rulesArtifacts(positioned, inputFiles);
-
-  return [
+  const overlays = [
     ...rpc,
-    ...alignRefs([...compositionOverlays(positioned, inputFiles), ...rules.overlays], positioned),
+    ...alignRefs(compositionOverlays(positioned, inputFiles), positioned),
   ];
+
+  refuseHandWritten(overlays, positioned);
+  return overlays;
+}
+
+/**
+ * The API document each rules file's endpoints are documented in, as Docs
+ * positioned beside it — `intake-rules-openapi.yaml` beside `intake-rules.yaml`.
+ * A caller adds them to the set it resolves, so they are validated, written
+ * and served like any other OpenAPI document.
+ *
+ * @param {import('../types.js').Doc[]} positioned
+ * @returns {import('../types.js').Doc[]}
+ */
+function buildRulesApis(positioned) {
+  const { apis } = rulesArtifacts(positioned, specsOf(positioned));
+  return [...apis].map(([relativePath, content]) => toDoc({ path: relativePath, relativePath, type: 'openapi', content }));
 }
 
 /**
@@ -109,28 +132,71 @@ function specsOf(positioned) {
 }
 
 /**
+ * Refuse an operation written by hand that a generated one would replace.
+ *
+ * A state machine's transitions and a composition's endpoints are generated
+ * into the OpenAPI document that declares their resource, and setting a path
+ * replaces whatever the document had there. An operation the author also wrote
+ * by hand at that path would vanish from the published document without a
+ * word — and either way the route would have two sources. So it is an error,
+ * caught here, before the generated operation overwrites it. An operation that
+ * already carries the same generated marker is one resolve wrote earlier.
+ *
+ * @param {object[]} overlays - Generated overlays, each action naming its target `file`
+ * @param {import('../types.js').Doc[]} docs
+ * @throws {Error} Naming every operation written by hand that a generated one would replace
+ */
+function refuseHandWritten(overlays, docs) {
+  const byPath = new Map(docs.map((doc) => [doc.relativePath, doc]));
+  const conflicts = [];
+
+  for (const overlay of overlays) {
+    for (const action of overlay.actions ?? []) {
+      if (action.target !== '$.paths' || !action.update) continue;
+      const target = byPath.get(action.file);
+      if (!target) continue;
+
+      for (const [path, generated] of Object.entries(action.update)) {
+        for (const [method, operation] of Object.entries(generated ?? {})) {
+          const written = target.content?.paths?.[path]?.[method];
+          const source = operation?.['x-relationship'];
+          if (!written || !source?.type || written['x-relationship']?.type === source.type) continue;
+          conflicts.push(`${method.toUpperCase()} ${path} is written in ${target.relativePath} and also generated from ${describeSource(source)}.`);
+        }
+      }
+    }
+  }
+
+  if (conflicts.length > 0) {
+    throw new Error(
+      `${conflicts.join('\n')}\nAn endpoint generated from another contract comes from that contract; remove it from the OpenAPI document.`
+    );
+  }
+}
+
+/** "the intake state machine's submit action", from a generated operation's marker. */
+function describeSource({ type, domain, id }) {
+  if (type === 'state-machine-action') return `the ${domain} state machine's "${id}" action`;
+  if (type === 'composition') return `the ${domain} composition "${id}"`;
+  return `${type} "${id}"`;
+}
+
+/**
  * Point each generated overlay at the document it actually patches.
  *
- * A generator names its target by filename, and derives that filename from
- * whatever it knows — compositions from the stem of their own path, rules
- * from the declared `domain:`. Only the first happens to be a full relative
- * path. Overlay targeting matches `file:` against the exact relativePath, so
- * a bare filename resolves to nothing and the overlay silently applies
- * nowhere.
+ * Each composition overlay carries the relative path of the
+ * document it attaches to (`target`, from `declaredResource`). Overlay
+ * targeting matches `file:` against that exact path, so every action naming
+ * the target's filename is rewritten to it, and refs are aligned to the prefix
+ * the target uses, since a generator has no idea where it sits.
  *
- * Both are rewritten to the target's real path, and refs are aligned to the
- * prefix that target uses, since a generator has no idea where it sits.
- *
- * @param {{ domain: string, overlay: object }[]} generated
+ * @param {{ domain: string, overlay: object, target: string|null }[]} generated
  * @param {import('../types.js').Doc[]} docs
  * @returns {object[]} Overlay documents
  */
 function alignRefs(generated, docs) {
-  return generated.map(({ domain: stem, overlay }) => {
-    const target =
-      docs.find((doc) => doc.relativePath === siblingPath(stem, 'openapi')) ??
-      docs.find((doc) => fileNameOf(doc.relativePath ?? '') === fileNameOf(siblingPath(stem, 'openapi') ?? ''));
-
+  return generated.map(({ overlay, target: targetPath }) => {
+    const target = targetPath ? docs.find((doc) => doc.relativePath === targetPath) : null;
     if (!target) return overlay;
 
     for (const action of overlay.actions ?? []) {
@@ -141,6 +207,21 @@ function alignRefs(generated, docs) {
 
     return rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content));
   });
+}
+
+/**
+ * The relative path of the OpenAPI document a compositions document attaches
+ * to: the one declaring the resource its compositions name. Null when its
+ * domain declares none of them.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @param {import('../types.js').Doc} doc
+ * @returns {string|null}
+ */
+function hostPath(docs, doc) {
+  const collections = Object.values(doc.content.compositions ?? {}).map((c) => c?.resource).filter(Boolean);
+  const declared = declaredResource(docs, doc.content.domain, collections, doc.relativePath ?? doc.path);
+  return declared ? declared.api.relativePath ?? null : null;
 }
 
 /**
@@ -180,10 +261,9 @@ function compositionOverlays(docs, inputFiles) {
     .filter((doc) => doc.type === 'compositions' && doc.content?.compositions)
     .map((doc) => ({
       filePath: doc.path,
-      // The stem of the relative path, which is how the generated overlay
-      // addresses the sibling OpenAPI spec it patches.
-      domain: stemOf(doc.relativePath, 'compositions'),
+      domain: doc.content.domain,
       doc: doc.content,
+      apiSpecFile: hostPath(docs, doc),
     }));
 
   return compositionFiles.length > 0
@@ -194,14 +274,14 @@ function compositionOverlays(docs, inputFiles) {
 /**
  * @param {import('../types.js').Doc[]} docs
  * @param {{ relativePath: string, spec: object }[]} inputFiles
- * @returns {{ graphs: object[], overlays: object[] }}
+ * @returns {{ graphs: Map<string, object>, apis: Map<string, object> }}
  */
 function rulesArtifacts(docs, inputFiles) {
   const rulesFiles = docs
     .filter((doc) => doc.type === 'rules' && doc.content?.rulesets)
     .map((doc) => ({ relativePath: doc.relativePath, doc: doc.content }));
 
-  if (rulesFiles.length === 0) return { graphs: [], overlays: [] };
+  if (rulesFiles.length === 0) return { graphs: new Map(), apis: new Map() };
 
   const byRelativePath = new Map(docs.map((d) => [d.relativePath, d]));
 
@@ -226,8 +306,40 @@ function rulesArtifacts(docs, inputFiles) {
     }
 
     const owner = docs.find((d) => d.content === rulesDoc);
-    return resolveRef(ref, docs, owner?.relativePath) ?? null;
+    const found = followRef(ref, byPath, owner?.relativePath);
+    // The schema is handed back with its own refs pointing where they did in
+    // the document it came from: a household's `#/$defs/HouseholdMember` means
+    // that file's definition, not the rules file's. Without this the compiler
+    // followed the first ref and stopped at the next, so a member's fields —
+    // a date of birth among them — were never declared.
+    return found ? rebaseRefs(found.node, found.relativePath) : null;
   };
+  const byPath = indexByRelativePath(docs);
 
   return generateRulesResults(rulesFiles, inputFiles, resolve);
+}
+
+/**
+ * A copy of a schema whose `$ref`s name their targets by path within the set,
+ * worked out from the document the schema was read from — so they still
+ * resolve once the schema is read from somewhere else. Canonical https refs
+ * are left alone; they resolve through the registry.
+ *
+ * @param {*} node
+ * @param {string} fromPath - relativePath of the document `node` came from
+ * @returns {*}
+ */
+function rebaseRefs(node, fromPath) {
+  if (Array.isArray(node)) return node.map((item) => rebaseRefs(item, fromPath));
+  if (!node || typeof node !== 'object') return node;
+  const out = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' && typeof value === 'string' && !/^https?:/.test(value)) {
+      const { file, pointer } = splitRef(value);
+      out[key] = `${file ? normalizeRefPath(file, fromPath) : fromPath}#${pointer ?? ''}`;
+    } else {
+      out[key] = rebaseRefs(value, fromPath);
+    }
+  }
+  return out;
 }

@@ -11,7 +11,7 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'fs';
-import { dirname, join, resolve, relative } from 'path';
+import { basename, dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { load } from 'js-yaml';
@@ -118,7 +118,17 @@ for (const af of annotationFiles) {
 
 // ── Build endpoint index and registry types ───────────────────────────────────
 
-const endpointIndex = extract(discover(resolvedDir, 'openapi').map(loadDoc), 'relationships');
+const openapiDocs = discover(resolvedDir, 'openapi').map(loadDoc);
+const endpointIndex = extract(openapiDocs, 'relationships');
+
+// The API reference has a page per OpenAPI document, and a ruleset's endpoint
+// is in the rules API's document ({domain}-rules-openapi.yaml), not the
+// domain's own — so the page is found, not assumed from the domain.
+const apiPageFor = (domain, { path, method }) => {
+  const doc = openapiDocs.find((d) =>
+    d.content?.info?.['x-domain'] === domain && d.content?.paths?.[path]?.[method]);
+  return doc ? basename(doc.path).replace('-openapi.yaml', '') : domain;
+};
 const registryTypes = registryAnnotationTypes(contractFileMap(resolvedDir));
 
 // ── Copy browser bundle ───────────────────────────────────────────────────────
@@ -150,7 +160,8 @@ for (const graphFile of graphFiles) {
   const examples = examplesByDomainRuleset[domain]?.[rulesetName] ?? [];
   const rulesetInputs = rulesetInputsByDomainRuleset[domain]?.[rulesetName] ?? {};
   const slug = `${domain}-${rulesetName}`;
-  const endpointInfo = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
+  const endpoint = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
+  const endpointInfo = endpoint && { ...endpoint, page: apiPageFor(domain, endpoint) };
   const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes });
   writeFileSync(join(outputDir, `${slug}.html`), html);
   allRulesets.push({ domain, rulesetName, slug });

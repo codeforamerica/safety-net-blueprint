@@ -34,24 +34,25 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
 domain: intake
 
 rulesets:
-  interviewPrompts:
+  interviewFlags:
     endpoint:
-      path: /applications/evaluate-interview-prompts
+      path: /applications/evaluate-interview-flags
 
     inputs:
       household:
         type: object
         properties:
           monthlyIncome: { type: number }
+          monthlyExpenses: { type: number }
 
     outputs:
-      incomeInconsistencyProbe: { type: boolean }
+      inconsistencies.incomeBelowExpenses: { type: boolean }
 
     facts:
-      - path: incomeGapExists
-        expression: household.monthlyIncome < household.monthlyExpenses
-      - path: incomeInconsistencyProbe
-        expression: incomeGapExists
+      - path: shortfall
+        expression: household.monthlyExpenses - household.monthlyIncome
+      - path: inconsistencies.incomeBelowExpenses
+        expression: shortfall > 0
 ```
 
 `inputs` are values the caller supplies. `facts` are computed. `outputs` names
@@ -123,6 +124,36 @@ What none of these do yet is connect at runtime: a rules endpoint evaluates
 whatever body it is given. A composition documents and validates the mapping;
 it does not enforce it.
 
+## Constants: values no one sends
+
+A conversion factor, a threshold, an age a state picks — values the facts
+need that aren't about the case. They go in `constants`, not `inputs`:
+
+```yaml
+constants:
+  weeklyToMonthly:
+    value: 4.3
+    description: What weekly pay is multiplied by for a month.
+  childCareAgeUnder:
+    value: 13
+    type: integer
+
+facts:
+  - path: monthlyPay
+    expression: job.weeklyPay * constants.weeklyToMonthly
+```
+
+A fact reads one as `constants.<name>`. The caller doesn't send it and can't
+replace it, and a result resting on one is complete. An input with a default
+works out to the same number but comes back as a `placeholder`, which means
+"we assumed this, please confirm" — the wrong message for 4.3.
+
+A state changes a constant with an overlay. Its value is written into the
+compiled graph, and evaluators read it from there, so where the value comes
+from can change later without any evaluator changing. A number without a
+`type` is a double in CEL; declare `type: integer` for one compared with an
+integer, such as an age.
+
 ## Facts
 
 A fact is a [CEL][cel] expression over inputs and other facts — the same
@@ -136,6 +167,39 @@ what the Explorer's graph view displays, so `abawdScreeningPrompt` reads and
 `promptWR02` does not. Identifiers belong on annotations.
 
 Facts may be declared in any order.
+
+### Functions Blueprint adds
+
+Standard CEL can test every item of a list but can't total one, and benefits
+rules total things all the time. Blueprint adds one function for it, defined
+the way [Kubernetes' CEL list library][k8s-cel-lists] defines it, so it is a
+known function rather than an invented one:
+
+| Function | Result |
+|---|---|
+| `list.sum()` | The total of a list of ints, uints or doubles, as the same type. An empty list sums to 0. A list mixing types is an error, not a promotion. |
+
+It composes with CEL's own macros — a member's earned income across all their
+jobs is
+`incomes.filter(i, i.memberId == m.id && i.source == 'earned').map(i, i.amount).sum()`.
+
+A ruleset that uses an added function can't be evaluated by an engine that has
+only standard CEL; see [Decision 4](../architecture/rules-contracts.md#decision-4-reference-implementation-not-a-mandated-engine).
+
+### Grouping facts
+
+A ruleset with many outputs can group them with a dot, the way an input's
+fields are written: `risks.earnedIncomeVaries` is the fact `earnedIncomeVaries`
+in the group `risks`. The fact keeps its whole path everywhere — another
+expression refers to it as `risks.earnedIncomeVaries`, the answer names it
+that way, and an annotation is keyed `interviewFlags.risks.earnedIncomeVaries`
+— so a consumer reads the group from the name, whatever the ruleset.
+
+Every name in an expression's scope means one thing, so a fact can't repeat
+another, start with an input's name, or be a group too: `risks` and
+`risks.earnedIncomeVaries` in one ruleset is refused. An overlay that targets a
+grouped fact's key quotes it, as JSONPath needs for any key with a dot:
+`$.rulesets.interviewFlags.outputs['risks.earnedIncomeVaries']`.
 
 ## Types
 
@@ -181,12 +245,30 @@ declare integer cents.
 
 ## Endpoints
 
-A ruleset may declare a standalone POST endpoint:
+Every ruleset is evaluated at a POST endpoint under its domain, at the path it
+declares:
 
 ```yaml
 endpoint:
-  path: /applications/evaluate-interview-prompts
+  path: /applications/evaluate-interview-flags   # → /intake/applications/evaluate-interview-flags
 ```
+
+The endpoint is required, and there is no default path and no way to have
+none. A ruleset defined in the blueprint is reachable through its API, the same
+as a resource or a state machine action. To evaluate a ruleset without the
+blueprint's APIs, use its compiled graph with `@codeforamerica/blueprint-rules-engine`.
+
+The path is one or more segments with no trailing slash, takes no parameters — a ruleset is evaluated against
+the inputs in the request body, and nothing would bind a path segment — and
+must not be a route anything else in the set already has. Validation refuses a
+path another ruleset, composition, action or OpenAPI operation claims.
+
+The endpoints are documented in an OpenAPI document that resolve generates
+beside the rules file — `intake-rules-openapi.yaml` beside `intake-rules.yaml` —
+with the server `/{domain}`. Swagger, the API reference and the client
+generators read it like any other API. A rules file is not merged into its
+domain's OpenAPI document, so a domain can have any number of documents, and a
+rules file needs none.
 
 Path parameters are not permitted. Nothing binds a path segment to ruleset
 inputs, so a parameter would be accepted and silently ignored — the path would
@@ -202,17 +284,25 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yam
 domain: intake
 
 rulesets:
-  interviewPrompts:
+  interviewFlags:
     examples:
-      - description: Income gap and unemployed members
+      - description: Income below expenses
         inputs:
           household:
             monthlyIncome: 800
             monthlyExpenses: 1200
 ```
 
-`blueprint-evaluate` runs every ruleset and example in one pass, which is how a
-ruleset gets exercised without writing code. Examples carry inputs only —
+`blueprint-evaluate` runs a ruleset's examples against the graph resolve
+compiled for it, which is how a ruleset gets exercised without writing code:
+
+```bash
+blueprint-evaluate --spec=resolved/domains/intake/intake-interviewFlags-graph.yaml \
+                   --examples=resolved/domains/intake/intake-rules-examples.yaml
+```
+
+It prints one result per example, and exits 1 naming any fact that came back as
+an error. Examples carry inputs only —
 pinning expected results is the conformance corpus's job, and a second set of
 expectations would drift from it.
 
@@ -222,10 +312,13 @@ ruleset reports as missing, which is usually the more interesting case.
 ## What validation checks
 
 `blueprint-validate` reports cycles, facts that are never used and not declared
-as outputs, CEL expressions that do not parse, and `$.path` references that do
-not match the declared inputs. It does not check that an expression computes
+as outputs, CEL expressions that do not parse, `$.path` references that do not
+match the declared inputs, and names that would mean two things: a fact
+declared twice, a fact starting with an input's name, a path that's both a
+fact and a group, and an input named `constants` alongside a `constants` block. It does not check that an expression computes
 the right answer — that is what examples and the conformance corpus are for.
 
 [cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions
 [cel]: https://cel.dev/
 [cel-langdef]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
+[k8s-cel-lists]: https://kubernetes.io/docs/reference/using-api/cel/#kubernetes-list-library

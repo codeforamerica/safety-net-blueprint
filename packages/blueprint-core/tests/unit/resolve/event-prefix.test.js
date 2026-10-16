@@ -26,13 +26,13 @@ describe('prefixEventTypes — state machines', () => {
     const result = prefixEventTypes([stateMachine({
       machines: [{
         object: 'Widget',
-        events: [{ type: 'test.widget.submitted', steps: [] }],
+        on: [{ type: 'test.widget.submitted', steps: [] }],
         actions: [{ id: 'submit', steps: [{ emit: { type: 'test.widget.submitted', data: {} } }] }],
       }],
     })], PREFIX);
 
     const machine = only(result).machines[0];
-    assert.equal(machine.events[0].type, 'org.example.test.widget.submitted');
+    assert.equal(machine.on[0].type, 'org.example.test.widget.submitted');
     assert.equal(machine.actions[0].steps[0].emit.type, 'org.example.test.widget.submitted');
   });
 
@@ -79,7 +79,7 @@ describe('prefixEventTypes — state machines', () => {
   });
 
   test('prefixes the handler type but not an action id', () => {
-    // Only `events` holders name an event type; an action id is an identifier.
+    // Only `on` holders name an event type; an action id is an identifier.
     const result = prefixEventTypes([stateMachine({
       machines: [{ object: 'Widget', actions: [{ id: 'submit', type: 'not-an-event', steps: [] }] }],
     })], PREFIX);
@@ -90,7 +90,7 @@ describe('prefixEventTypes — state machines', () => {
   test('does not add sections the document never declared', () => {
     // Mapping over `?? []` would write `procedures: []` into resolved output.
     const result = prefixEventTypes([stateMachine({
-      machines: [{ object: 'Widget', events: [{ type: 'test.widget.submitted', steps: [] }] }],
+      machines: [{ object: 'Widget', on: [{ type: 'test.widget.submitted', steps: [] }] }],
     })], PREFIX);
 
     const machine = only(result).machines[0];
@@ -190,7 +190,7 @@ describe('prefixEventTypes — annotations', () => {
 
 describe('prefixEventTypes — pass contract', () => {
   test('no prefix configured is a no-op', () => {
-    const input = [stateMachine({ machines: [{ events: [{ type: 'test.widget.submitted', steps: [] }] }] })];
+    const input = [stateMachine({ machines: [{ on: [{ type: 'test.widget.submitted', steps: [] }] }] })];
     const result = prefixEventTypes(input, null);
 
     assert.equal(result.docs, input);
@@ -207,7 +207,7 @@ describe('prefixEventTypes — pass contract', () => {
 
   test('reports each document it prefixed', () => {
     const result = prefixEventTypes([
-      stateMachine({ machines: [{ events: [{ type: 'a.b', steps: [] }] }] }),
+      stateMachine({ machines: [{ on: [{ type: 'a.b', steps: [] }] }] }),
       asyncApi({ channels: { 'a.b': {} } }),
     ], PREFIX);
 

@@ -21,15 +21,23 @@
  * pairs the two, once per document, rather than having each renderer reach
  * into both and call `model()` again on every event link it draws.
  *
+ * `apis` are the OpenAPI documents its machines attach to, as core reports
+ * them (`extract(docs, 'state-machines')`): a document's machines can govern
+ * resources in more than one.
+ *
  * @param {import('@codeforamerica/blueprint-core').Doc} doc
- * @returns {{ path: string, domain: string, apiSpec: string, machines: object[], procedures: object[] }}
+ * @param {{ relativePath: string|null, api: object|null }[]} entries - Every state machine entry in the set
+ * @returns {{ path: string, domain: string, apis: string[], machines: object[], procedures: object[] }}
  */
-export function stateMachineView(doc) {
+export function stateMachineView(doc, entries = []) {
   const model = doc.model();
+  const apis = entries
+    .filter((entry) => entry.relativePath === doc.relativePath && entry.api)
+    .map((entry) => entry.api.relativePath ?? entry.api.path);
   return {
     path: doc.path,
     domain: doc.domain,
-    apiSpec: doc.content?.apiSpec,
+    apis: [...new Set(apis)],
     machines: model?.machines ?? [],
     procedures: model?.procedures ?? [],
   };

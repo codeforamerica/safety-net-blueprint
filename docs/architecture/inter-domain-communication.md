@@ -66,10 +66,10 @@ State partners may overlay the `type` prefix to match their own namespace.
 
 Event contracts for each domain live in two artifacts:
 
-- **OpenAPI spec** (`x-events` section) — declares each event's CloudEvents type name and payload schema reference
-- **State machine** — declares which events cause the machine to emit further events. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `events:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
+- **OpenAPI spec** — every resource it writes sends a created, updated and deleted event, named for the resource, with no declaration needed
+- **State machine** — declares the other events its resource sends under `emits:`, each with the shape of its data, and reacts to events in `on:`. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `on:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
 
-AsyncAPI specs are generated from these two sources. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
+Resolve generates the AsyncAPI documents from these two sources, one beside each API. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
 
 ### Event emission model
 
@@ -130,7 +130,7 @@ Filtering by `type` or `source` narrows results to a specific domain or event ki
 
 Conforming implementations must propagate the W3C Trace Context `traceparent` header from each inbound HTTP request to every event emitted during that request's lifecycle. The `traceparent` value is included as a CloudEvents extension attribute (per the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md)) and must not be modified — it carries a trace ID (stable across the full causal chain) and a parent span ID (the immediate parent operation).
 
-Clients must forward the `traceparent` header on all requests to enable end-to-end tracing. When an inbound request carries no `traceparent`, the implementation omits the attribute from emitted events rather than generating a synthetic value.
+Clients that are already part of a trace send their `traceparent` header, so the trace continues end to end. When an inbound request carries no `traceparent`, the implementation starts a trace, as W3C Trace Context has the first traced service do, and every event that request causes carries it. A client that does not trace still gets its events grouped.
 
 The trace ID is stable across the entire chain — every event emitted from a single HTTP request shares the same trace ID, so the complete causal trail for any operation is recoverable by filtering events on `traceparent` prefix or by querying an OTLP-compatible backend.
 

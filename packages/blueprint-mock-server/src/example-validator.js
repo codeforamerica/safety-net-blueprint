@@ -3,7 +3,7 @@
  * Validates a flat map of example values against a map of JSON schemas.
  */
 
-import Ajv from 'ajv';
+import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -64,11 +64,16 @@ export function validateAgainstSchema(value, schema) {
  */
 export function errorsFrom(validateFn, value) {
   if (validateFn(value)) return [];
-  return (validateFn.errors || []).map((err) => ({
-    instancePath: err.instancePath || '',
-    message: err.message,
-    missingProperty: err.params?.missingProperty,
-  }));
+  return (validateFn.errors || []).map((err) => {
+    // Name the field a closed schema refused, which ajv keeps out of its message.
+    const extra = err.params?.unevaluatedProperty ?? err.params?.additionalProperty;
+    return {
+      instancePath: err.instancePath || '',
+      message: extra ? `${err.message}: ${extra}` : err.message,
+      missingProperty: err.params?.missingProperty,
+      unevaluatedProperty: extra,
+    };
+  });
 }
 
 /**

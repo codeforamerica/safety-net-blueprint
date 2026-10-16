@@ -1,6 +1,6 @@
 # Intake State Machine
 
-Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-openapi.yaml) | State machine: [intake-state-machine.yaml](../../../contracts/intake-state-machine.yaml)
+Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/intake-openapi.yaml) | State machine: [intake-state-machine.yaml](../../../contracts/intake-state-machine.yaml)
 
 ---
 
@@ -21,6 +21,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `under_review` → `closed`
   - Emit: `intake.application.closed`
 - **withdraw** — Withdraws the application at the household's request.
+  - Actors: applicant, or case_worker
   - Transition: `draft`/`submitted`/`under_review` → `withdrawn`
   - Emit: `intake.application.withdrawn`
 

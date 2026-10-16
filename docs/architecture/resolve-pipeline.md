@@ -51,6 +51,7 @@ base spec directory (--spec)         overlay directory (--overlay)
                   *-state-machine.yaml  (copied)
                   *-sla-types.yaml      (copied)
                   *-metrics.yaml        (copied)
+                *.arazzo.yaml           (copied — scenarios, wherever they sit)
                 base/                   (blueprint-core base contracts)
                   components/
                   schemas/
@@ -70,7 +71,7 @@ The overlay resolver (`packages/blueprint-core/src/overlay/overlay-resolver.js`)
 
 The overlay path is specified via the `--overlay` flag to `resolve.js`. It can be a single file or a directory. When given a directory, the resolver walks it recursively and discovers all `.yaml` files with `overlay: 1.0.0` at the top level, applying them in alphabetical order.
 
-The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-casing`, `x-pagination`, and `x-relationship`. See [x-extensions](x-extensions.md) for the full config key reference.
+The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-casing`, `x-pagination`, `x-relationship`, and `x-capabilities`, which chooses the framework's capabilities to include. See [x-extensions](x-extensions.md) for the full config key reference.
 
 **File type identification:** Throughout the pipeline, asset types are identified from spec content rather than filename patterns. Each spec type declares its type explicitly:
 
@@ -155,11 +156,15 @@ may produce false negatives on source files since overlays have not been applied
 
 ### 4. OpenAPI Generation {#openapi-generation}
 
-After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types:
+After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types, and two documents of its own:
 
 **RPC endpoints** — `resolve.js` reads all `*-state-machine.yaml` files and generates RPC transition endpoints for each one (e.g. `POST /tasks/{id}/claim`), derived from the state machine's action definitions.
 
 **Composition endpoints and schemas** — `resolve.js` reads all `*-compositions.yaml` files and generates composite view endpoints (e.g. `GET /applications/{id}/review`), state endpoints (e.g. `PATCH /applications/{id}/review-progress/{section}`), and the corresponding request/response schemas. If the composition sets `parentLink: true`, it also adds `_links.<compositionId>` to the parent resource's response schema. See [Resource Composition](cross-cutting/resource-composition.md) for the full config reference.
+
+**Rules APIs** — beside each rules file, an OpenAPI document of its evaluate endpoints (`intake-rules-openapi.yaml` beside `intake-rules.yaml`).
+
+**Events AsyncAPI** — beside each OpenAPI document, `<name>-events-asyncapi.yaml`: every event its resources send — created, updated and deleted, and each attached state machine's `emits:` — with the shape of each event's data. A hand-written AsyncAPI document holds only events not yet backed by a resource.
 
 Because generation runs after overlays, any overlay modifications to `*-state-machine.yaml` or `*-compositions.yaml` files are reflected in the generated output.
 

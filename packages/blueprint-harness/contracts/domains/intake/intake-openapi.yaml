@@ -14,37 +14,6 @@ servers:
   - url: http://localhost:1080/intake
     description: Local development server
 
-x-events:
-  # CRUD lifecycle events — auto-emitted for every POST, PATCH, DELETE
-  application.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.created
-    summary: Emitted when an application is created.
-  application.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
-    summary: Emitted when an application is updated via PATCH.
-  application.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
-    summary: Emitted when an application is deleted.
-  applicationMember.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
-    summary: Emitted when a household member is added to an application.
-  applicationMember.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
-    summary: Emitted when a household member is updated via PATCH.
-  applicationMember.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
-    summary: Emitted when a household member is removed from an application.
-  # State machine transition events
-  intake.application.submitted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
-  intake.application.withdrawn:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-    summary: Emitted when a household withdraws their application.
-  intake.application.closed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
-    summary: Emitted when intake is complete and the application is closed.
-
 paths:
   /applications:
     get:
@@ -160,6 +129,79 @@ paths:
       responses:
         '204':
           description: Application deleted successfully.
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}/income-verifications:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+    get:
+      summary: List an application's income verifications
+      operationId: listIncomeVerifications
+      tags: [Applications]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+      responses:
+        '200':
+          description: The income verifications gathered for this application.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerificationList'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    post:
+      summary: Record an income verification
+      operationId: createIncomeVerification
+      tags: [Applications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeVerificationCreate'
+      responses:
+        '201':
+          description: Income verification recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerification'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}/income-verifications/{incomeVerificationId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+      - name: incomeVerificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an income verification
+      operationId: getIncomeVerification
+      tags: [Applications]
+      responses:
+        '200':
+          description: Income verification retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerification'
         '404':
           $ref: '../../common/components/responses.yaml#/NotFound'
         '500':
@@ -333,6 +375,17 @@ components:
             domain: document-management
             resource: Document
             style: links-only
+        type:
+          type: string
+          enum: [new, renewal]
+          default: new
+          description: >
+            A first application, or an application for recertification — the
+            same kind of request.
+        interviewDate:
+          type: string
+          format: date
+          description: The date of the application's interview.
         labels:
           # additionalProperties map — arbitrary key-value labels for state-specific tagging.
           type: object
@@ -370,6 +423,14 @@ components:
                 domain: document-management
                 resource: Document
                 style: expand
+            previousHousehold:
+              $ref: '../../common/schemas/household.yaml#/$defs/Household'
+              readOnly: true
+              description: >
+                The household on record before this application's interview: on a
+                new application, the household as filed; on a renewal, the
+                household as last certified, copied when the renewal is opened
+                so the baseline holds still through the review.
             programCount:
               type: integer
               readOnly: true
@@ -384,7 +445,7 @@ components:
               # mock's evaluator falls through to JavaScript. `.size()` is in
               # the supported set, and the value is genuinely a function of a
               # field the request supplied.
-              x-derived: "$this.programsAppliedFor.size()"
+              x-derived: "this.programsAppliedFor.size()"
               description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
@@ -401,15 +462,13 @@ components:
               x-enum-source: "states[].id"
               description: Current lifecycle status of the application.
             submittedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when the application was formally submitted. Null until submitted.
             openedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when a caseworker began active review. Null until the application is opened.
             slaTypeCode:
@@ -453,6 +512,89 @@ components:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
           minProperties: 1
+
+    # ---------------------------------------------------------------------------
+    # IncomeVerification (sub-resource of Application)
+    # ---------------------------------------------------------------------------
+    IncomeVerificationWritable:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [wage_record, pay_stub]
+          description: >
+            Where the figure comes from: state wage records or IEVS, reported
+            by quarter; or a pay stub the household provided and the worker
+            verified.
+        memberId:
+          type: string
+          description: The member it's about, by their key in the household.
+        incomeId:
+          type: string
+          description: For a pay stub, the income it's for, by its key in the household.
+        period:
+          type: string
+          description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+        amount:
+          type: number
+          minimum: 0
+          description: Gross wages for the quarter, or gross pay on the stub.
+        frequency:
+          type: string
+          enum: [weekly, biweekly, semimonthly, monthly]
+          description: For a pay stub, how often the pay it shows is paid.
+
+    IncomeVerification:
+      allOf:
+        - $ref: '#/components/schemas/IncomeVerificationWritable'
+        - type: object
+          required: [id, applicationId, kind, memberId, amount, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    IncomeVerificationCreate:
+      allOf:
+        - $ref: '#/components/schemas/IncomeVerificationWritable'
+        - type: object
+          required: [kind, memberId, amount]
+
+    IncomeVerificationList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncomeVerification'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
 
     ApplicationList:
       type: object

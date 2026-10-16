@@ -774,6 +774,21 @@ export function toFactGraph(graph, untranslated = new Map()) {
     lines.push(`  <Fact path="${fgp}"><Writable><${fgType}/></Writable>${placeholder}</Fact>`);
   }
 
+  // Constants are Derived facts holding a literal — FactGraph's own way of
+  // writing a value no one supplies — so a fact resting on one is complete in
+  // both evaluators. A number without a type is a double in CEL, so a Rational
+  // here. A list or a record has no literal form; facts reading one are refused.
+  for (const [name, { value, type }] of Object.entries(graph.constants ?? {})) {
+    const fgp = `/constants_${name}`;
+    ctx.inputFgPaths.set(`constants.${name}`, fgp);
+    const valueType = type ?? (Array.isArray(value) ? 'array' : typeof value);
+    if (!['integer', 'number', 'boolean', 'string'].includes(valueType)) {
+      ctx.blockedFgPaths.set(fgp, `FactGraph has no literal for a constant of type ${valueType}`);
+      continue;
+    }
+    lines.push(`  <Fact path="${fgp}"><Derived>${placeholderValueXml(schemaTypeToFgType(valueType), value)}</Derived></Fact>`);
+  }
+
   // Derived output facts — translated first, emitted after, because whether a
   // fact can be emitted depends on whether everything it reads was.
   const derived = new Map();

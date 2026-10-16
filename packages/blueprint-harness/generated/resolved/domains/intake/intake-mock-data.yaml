@@ -1,3 +1,4 @@
+domain: intake
 ApplicationExample1:
   id: 11111111-1111-4111-8111-111111111111
   status: submitted
@@ -15,3 +16,65 @@ ApplicationExample2:
   channel: phone
   createdAt: "2026-02-02T10:00:00Z"
   updatedAt: "2026-02-02T10:00:00Z"
+ApplicationExample3:
+  id: 66666666-6666-4666-8666-666666666666
+  status: submitted
+  type: renewal
+  interviewDate: "2026-10-14"
+  programsAppliedFor:
+    - snap
+  channel: phone
+  previousHousehold:
+    size: 3
+    utilitiesIncludedInRent: true
+    monthlyIncome: 2400
+    monthlyExpenses: 1500
+    members:
+      - id: client
+        dateOfBirth: "1985-03-02"
+        isDisabled: false
+      - id: daughter
+        dateOfBirth: "2007-06-10"
+        isDisabled: false
+      - id: son
+        dateOfBirth: "2018-01-15"
+        isDisabled: false
+    jobs:
+      - id: warehouse
+        memberId: client
+        employer: Northgate Distribution
+    incomes:
+      - id: wages
+        memberId: client
+        jobId: warehouse
+        source: earned
+        amount: 1110
+        frequency: biweekly
+        paidInCash: false
+        amountVaries: false
+    expenses:
+      - type: rent
+        amount: 1150
+        frequency: monthly
+  createdAt: "2026-10-01T09:00:00Z"
+  updatedAt: "2026-10-01T09:00:00Z"
+IncomeVerificationExample1:
+  id: 77777777-7777-4777-8777-777777777771
+  applicationId: 66666666-6666-4666-8666-666666666666
+  kind: wage_record
+  memberId: client
+  period: 2026-Q3
+  amount: 5400
+  createdAt: "2026-10-02T09:00:00Z"
+  updatedAt: "2026-10-02T09:00:00Z"
+IncomeVerificationExample2:
+  id: 77777777-7777-4777-8777-777777777772
+  applicationId: 66666666-6666-4666-8666-666666666666
+  kind: pay_stub
+  memberId: client
+  incomeId: wages
+  period: "2026-09-26"
+  amount: 840
+  frequency: biweekly
+  createdAt: "2026-10-02T09:00:00Z"
+  updatedAt: "2026-10-02T09:00:00Z"

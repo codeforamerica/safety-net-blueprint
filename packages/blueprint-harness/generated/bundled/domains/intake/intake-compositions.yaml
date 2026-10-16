@@ -24,6 +24,25 @@ compositions:
           - dateOfBirth
           - relationship
           - incomeSource
+  interviewFlagsInputs:
+    resource: applications
+    fields:
+      - interviewDate as asOf
+      - previousHousehold as previous
+      - programsAppliedFor
+    endpoint:
+      path: /applications/{applicationId}/interview-flags-inputs
+    include:
+      verified:
+        resource: income-verifications
+        bind: applicationId
+        fields:
+          - kind
+          - memberId
+          - incomeId
+          - period
+          - amount
+          - frequency
   applicationReview:
     compositeType: sectionView
     resource: applications

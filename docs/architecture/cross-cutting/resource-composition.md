@@ -13,7 +13,7 @@ The machine-readable structure also enables front-end integration. A `sectionVie
 The three components of the pattern:
 
 1. **Composition config** (`*-compositions.yaml`) — the single source of truth for a composite view. Declares the composite type, which resources are assembled and how they are bound and filtered, which fields are included, where state is tracked, and what endpoint the composite is served at. The composite type (`sectionView` or plain) determines the endpoint structure and assembly behavior.
-2. **Resolve pipeline** — reads composition configs at build time and generates an OpenAPI overlay adding all declared and derived endpoints to the spec, including composition state endpoints generated from `state:` declarations. Also injects `_links` into parent resource response schemas when `parentLink: true` is set.
+2. **Resolve pipeline** — reads composition configs at build time and generates an OpenAPI overlay adding all declared and derived endpoints to the spec — the OpenAPI document in the composition's domain that declares the resource its `resource:` names, whichever document that is — including composition state endpoints generated from `state:` declarations. Also injects `_links` into parent resource response schemas when `parentLink: true` is set.
 3. **Assembly runtime** — a generic engine that executes the resource queries declared in the config and returns the assembled response at request time. The mock server is the reference implementation; production adopters provide their own.
 
 ## Composition config
@@ -247,7 +247,7 @@ compositions:
         type: object
         properties:
           status: { type: string, enum: [not_started, in_progress, complete, flagged], default: not_started }
-          notes: { type: object, nullable: true, additionalProperties: true }
+          notes: { type: [object, "null"], additionalProperties: true }
       methods: [put, patch]
     sections:
       identity:

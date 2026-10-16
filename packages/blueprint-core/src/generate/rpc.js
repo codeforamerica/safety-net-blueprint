@@ -11,7 +11,7 @@
  * applies it.
  */
 
-import { fileNameOf } from '../contract-types.js';
+import { governedResource } from '../attachment.js';
 import { buildParameterIndex, buildPathEntry, extractRefName } from '../openapi/utils.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
 
@@ -19,52 +19,11 @@ import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
 // Argument Parsing
 // =============================================================================
 
-export function extractItemEndpointFromSpec(spec, objectName) {
-  const paths = spec?.paths || {};
-
-  // If objectName is provided, derive the expected collection path (e.g., "Task" → "/tasks")
-  const expectedCollection = objectName
-    ? `/${objectName.toLowerCase()}s`
-    : null;
-
-  let fallback = null;
-
-  for (const [pathKey, pathItem] of Object.entries(paths)) {
-    // Item endpoints contain a path parameter like {taskId}
-    if (!pathKey.includes('{')) continue;
-
-    // Get the parameter references from the path item
-    const paramRefs = pathItem.parameters || [];
-
-    // Get the tag from the GET operation if available
-    const getOp = pathItem.get || {};
-    const tag = getOp.tags?.[0] || null;
-
-    // Get the resource schema ref from the GET 200 response
-    const schemaRef = getOp.responses?.['200']?.content?.['application/json']?.schema?.$ref || null;
-
-    const result = { itemPath: pathKey, paramRefs, tag, schemaRef };
-
-    // If we have an object name, match the path to the correct resource
-    if (expectedCollection && pathKey.startsWith(expectedCollection + '/')) {
-      return result;
-    }
-
-    // Keep first match as fallback for single-resource specs
-    if (!fallback) {
-      fallback = result;
-    }
-  }
-
-  return fallback;
-}
-
 /**
- * Read the base API spec and extract the item endpoint path and parameter refs.
- * @param {string} specsDir - Path to the specs directory
- * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
- * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
- * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
+ * The operationId of a transition endpoint: `claim` on Task is `claimTask`.
+ * @param {string} trigger - The action id
+ * @param {string} objectName - The machine's object
+ * @returns {string}
  */
 export function buildOperationId(trigger, objectName) {
   return `${trigger}${objectName}`;
@@ -262,12 +221,13 @@ export function generateOverlay(stateMachine, endpointInfo) {
 // =============================================================================
 
 /**
- * RPC overlays for every state machine that targets a spec in the set.
+ * RPC overlays for every state machine in the set.
  *
- * A state machine names its API spec by filename in `apiSpec:`. The item
- * endpoint it attaches to comes from that spec, and the overlay's `file:`
- * references are rewritten from that bare filename to the document's actual
- * relative path, since that is what overlay targeting matches on.
+ * Each machine governs the resource in its domain named for its object, and
+ * its actions become endpoints on that resource's item path, in the document
+ * that declares it. One overlay per machine: the machines of one document can
+ * govern different resources — intake's Verification sits under its
+ * application, not on the application's own path.
  *
  * @param {import('../../types.js').Doc[]} docs
  * @returns {{ domain: string, overlay: object, actionCount: number }[]}
@@ -279,33 +239,33 @@ export function generateRpcOverlays(docs) {
     if (doc.type !== 'state-machine') continue;
 
     const stateMachine = doc.content;
-    const hasObject = stateMachine?.object || stateMachine?.machines?.length > 0;
-    if (!stateMachine?.domain || !hasObject || !stateMachine.apiSpec) continue;
+    if (!stateMachine?.domain || !Array.isArray(stateMachine.machines)) continue;
 
-    const target = docs.find(
-      (candidate) => fileNameOf(candidate.relativePath ?? candidate.path) === fileNameOf(stateMachine.apiSpec)
-    );
-    if (!target) continue;
+    for (const machine of stateMachine.machines) {
+      if (!machine?.object) continue;
 
-    // A single-machine spec names its object at the top level; a multi-machine
-    // spec puts it on each entry, so fall back to the first to find the path.
-    const objectName = stateMachine.object ?? stateMachine.machines?.[0]?.object;
-    const endpointInfo = extractItemEndpointFromSpec(target.content, objectName);
-    if (!endpointInfo) continue;
+      const governed = governedResource(docs, stateMachine.domain, machine.object);
+      if (!governed) continue;
+      const { api, resource } = governed;
 
-    const overlay = generateOverlay(stateMachine, endpointInfo);
+      const itemPath = resource.path('item');
+      const getOperation = api.content.paths?.[itemPath]?.get;
+      const overlay = generateOverlay(
+        { ...stateMachine, machines: [machine] },
+        {
+          itemPath,
+          schemaRef: getOperation?.responses?.['200']?.content?.['application/json']?.schema?.$ref ?? null,
+          relativePath: api.relativePath ?? api.path,
+          spec: api.content,
+        },
+      );
 
-    for (const action of overlay.actions ?? []) {
-      if (typeof action.file === 'string' && fileNameOf(action.file) === fileNameOf(stateMachine.apiSpec)) {
-        action.file = target.relativePath ?? target.path;
-      }
+      overlays.push({
+        domain: stateMachine.domain,
+        overlay: rewriteComponentRefs(overlay, './', detectComponentPrefix(api.content)),
+        actionCount: (machine.actions ?? []).length,
+      });
     }
-
-    overlays.push({
-      domain: stateMachine.domain,
-      overlay: rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content)),
-      actionCount: (stateMachine.machines ?? []).flatMap((m) => m.actions ?? []).length,
-    });
   }
 
   return overlays;

@@ -5,7 +5,7 @@
  */
 
 import jsonLogic from 'json-logic-js';
-import { evaluateCEL as _evaluateCEL } from './cel-evaluator.js';
+import { evaluateCEL as evaluateExpression } from '@codeforamerica/blueprint-core/cel';
 import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
 import { resolveTimeToken } from './time-tokens.js';
 import { evaluate as evaluateRules } from '@codeforamerica/blueprint-rules-engine';
@@ -41,6 +41,17 @@ export function resolveValue(value, context) {
   }
 
   if (typeof value === 'string') {
+    // A string with value expressions embedded in braces, as OpenAPI runtime
+    // expressions embed them: "workflow.{$params.timerType}.{$object.id}".
+    // Each is looked up as a lone value expression would be, and the pieces
+    // joined; nothing is evaluated. A missing value contributes nothing.
+    if (value.includes('{$')) {
+      return value.replace(/\{(\$[^{}]+)\}/g, (_, expression) => {
+        const part = resolveValue(expression, context);
+        return part === null || part === undefined ? '' : String(part);
+      });
+    }
+
     if (value === '$now') {
       return context.now ?? new Date().toISOString();
     }
@@ -192,39 +203,43 @@ function resolveBodyValue(val, context) {
 }
 
 /**
- * Evaluate a CEL condition string against a context.
- * This is a simplified CEL evaluator that handles common patterns used in guards and if steps.
- * Supports: 'in' operator for array membership, == and != comparisons, null checks, && and ||.
- *
- * @param {string} condition - CEL expression string
- * @param {Object} celData - Data available to the expression (caller, object, request, etc.)
- * @returns {boolean} Evaluation result
+ * The variables a guard, `if:` or `match:` expression sees: `caller`,
+ * `object`, `request`, `params`, `this` (the triggering event), `now`, and
+ * each context binding by its alias. A binding never shadows a runtime
+ * variable.
  */
-function evaluateCEL(condition, celData) {
-  if (!condition || typeof condition !== 'string') return true;
-
-  // Build a flat context from the structured celData argument.
-  // Note: 'this' is omitted — it is a reserved word and breaks new Function(); use $this instead.
+function expressionContext(celData) {
   const ctx = {
     caller: celData.caller || {},
     object: celData.object || {},
     request: celData.request || {},
     params: celData.params || {},
-    $caller: celData.caller || {},
-    $object: celData.object || {},
-    $request: celData.request || {},
-    $this: celData.this || {},
-    $params: celData.params || {},
-    $now: celData.now || new Date().toISOString(),
+    this: celData.this || {},
+    now: celData.now || new Date().toISOString(),
   };
-
-  // Add entity aliases with $ prefix
   for (const [alias, entity] of Object.entries(celData.entities || {})) {
-    ctx[`$${alias}`] = entity;
+    if (!(alias in ctx)) ctx[alias] = entity;
   }
+  return ctx;
+}
 
-  const result = _evaluateCEL(condition, ctx);
-  return result !== undefined ? Boolean(result) : false;
+/**
+ * Evaluate a CEL condition. An expression that does not evaluate — CEL names
+ * why, e.g. a field the record does not have — is false, and the reason is
+ * logged, since the contract is what needs fixing.
+ *
+ * @param {string} condition - CEL expression string
+ * @param {Object} celData - caller, object, request, params, this, now, entities
+ * @returns {boolean}
+ */
+function evaluateCEL(condition, celData) {
+  if (!condition || typeof condition !== 'string') return true;
+  try {
+    return Boolean(evaluateExpression(condition, expressionContext(celData)));
+  } catch (e) {
+    console.warn(`CEL "${condition}" did not evaluate: ${e.message}`);
+    return false;
+  }
 }
 
 /**
@@ -389,9 +404,13 @@ export function findOperation(machine, transitionName, resource) {
     return { operation: null, error: `Unknown action: ${transitionName}` };
   }
 
+  // Read the way a guard's refusal reads: what was asked, and what it needs.
+  const object = String(machine.object ?? 'record').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+  const from = [...new Set(actions.filter(op => op.id === transitionName).flatMap(op => [op.transition.from].flat()))];
+  const states = from.length < 2 ? from.join('') : `${from.slice(0, -1).join(', ')} or ${from.at(-1)}`;
   return {
     operation: null,
-    error: `Cannot ${transitionName}: resource is currently "${resource.status}"`
+    error: `Can't ${transitionName.replace(/-/g, ' ')} this ${object}. It requires that the ${object} is ${states}, and it is ${resource.status}.`
   };
 }
 
@@ -426,7 +445,7 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
       const entity = deriveCollectionName(rawPath, domain);
       const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
       const lastSeg = pathSegs[pathSegs.length - 1] || '';
-      const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+      const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');
       const stubUrl = '/' + rawPath.split('/').slice(1).join('/');
       pendingCreates.push({ entity, domain, eventObject, stubUrl, data: body });
     }
@@ -495,9 +514,14 @@ export function applySteps(steps, resource, context, store) {
       continue;
     }
 
-    // match: step — dispatch on a resolved value
+    // match: step — dispatch on the value of a CEL expression
     if (step.match !== undefined) {
-      const matchValue = resolveValue(step.match, context);
+      let matchValue;
+      try {
+        matchValue = evaluateExpression(step.match, expressionContext(context));
+      } catch (e) {
+        console.warn(`CEL "${step.match}" did not evaluate: ${e.message}`);
+      }
       const branches = step.when || {};
       const matchedSteps = branches[matchValue];
       if (matchedSteps) {
@@ -590,7 +614,8 @@ export function applySteps(steps, resource, context, store) {
     } else if (step.set) {
       resource[step.set.field] = resolveValue(step.set.value, context);
     } else if (step.emit) {
-      const data = {};
+      // An emit declaring no data carries none, rather than an empty object.
+      const data = step.emit.data ? {} : undefined;
       for (const [key, value] of Object.entries(step.emit.data || {})) {
         data[key] = resolveValue(value, context);
       }
@@ -640,7 +665,7 @@ export function applySteps(steps, resource, context, store) {
           const entity = deriveCollectionName(rawPath, domain);
           const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
           const lastSeg = pathSegs[pathSegs.length - 1] || '';
-          const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+          const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');
           pendingCreates.push({ entity, domain, eventObject, data: body });
         }
       } else {

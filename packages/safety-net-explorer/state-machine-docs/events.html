@@ -51,7 +51,7 @@
           <th>Event</th><th>Published by</th><th>Subscribers</th>
         </tr></thead>
         <tbody><tr>
-      <td><code>client_management.person.match_resolved</code></td>
+      <td><code>client-management.person.match_resolved</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
@@ -59,39 +59,47 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
-      <td><code>data_exchange.call.completed</code></td>
+      <td><code>data-exchange.call.completed</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="eligibility.html">Eligibility/Decision</a>, <a href="intake.html">Intake/Application</a></td>
     </tr><tr>
-      <td><code>document_management.document_version.uploaded</code></td>
+      <td><code>document-management.document_version.created</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
-      <td><code>eligibility.application.decision_completed</code></td>
+      <td><code>eligibility.decision.completed</code></td>
       <td><a href="eligibility.html">Eligibility/Decision</a></td>
       <td><a href="eligibility.html">Eligibility/Determination</a>, <a href="intake.html">Intake/Application</a></td>
-    </tr><tr>
-      <td><code>eligibility.application.determination_completed</code></td>
-      <td><a href="eligibility.html">Eligibility/Determination</a></td>
-      <td><a href="intake.html">Intake/Application</a></td>
-    </tr><tr>
-      <td><code>eligibility.application.expedited</code></td>
-      <td><a href="eligibility.html">Eligibility/Determination</a></td>
-      <td><a href="intake.html">Intake/Application</a>, <a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
       <td><code>eligibility.decision.created</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="eligibility.html">Eligibility/Decision</a></td>
     </tr><tr>
+      <td><code>eligibility.determination.completed</code></td>
+      <td><a href="eligibility.html">Eligibility/Determination</a></td>
+      <td><a href="intake.html">Intake/Application</a></td>
+    </tr><tr>
       <td><code>eligibility.determination.created</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
+    </tr><tr>
+      <td><code>eligibility.determination.expedited</code></td>
+      <td><a href="eligibility.html">Eligibility/Determination</a></td>
+      <td><a href="intake.html">Intake/Application</a>, <a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
       <td><code>eligibility.determination.withdrawn</code></td>
       <td><a href="eligibility.html">Eligibility/Determination</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
+      <td><code>intake.application.approval_needed</code></td>
+      <td><a href="intake.html">Intake/Application</a></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
+    </tr><tr>
       <td><code>intake.application.closed</code></td>
+      <td><a href="intake.html">Intake/Application</a></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
+    </tr><tr>
+      <td><code>intake.application.determination_rejected</code></td>
       <td><a href="intake.html">Intake/Application</a></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
@@ -115,15 +123,7 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
-      <td><code>intake.determination.approval_needed</code></td>
-      <td><a href="intake.html">Intake/Application</a></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
-      <td><code>intake.determination.rejected</code></td>
-      <td><a href="intake.html">Intake/Application</a></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
-      <td><code>intake.member_income.created</code></td>
+      <td><code>intake.income.created</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
@@ -151,7 +151,7 @@
       <td><a href="intake.html">Intake/Verification</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
-      <td><code>scheduling.appointment.scheduled</code></td>
+      <td><code>scheduling.appointment.created</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
@@ -253,7 +253,7 @@
     <h3 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2rem 0 0.75rem;">Subscribed but not emitted</h3>
     <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
     <ul style="font-size:13px;color:#666;">
-      <li><code>client_management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data_exchange.call.completed</code></li><li><code>document_management.document_version.uploaded</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.member_income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.scheduled</code></li><li><code>workflow.client_timeout</code></li><li><code>workflow.creation_deadline</code></li><li><code>workflow.sla_breach</code></li><li><code>workflow.sla_warning</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.verification_timeout</code></li>
+      <li><code>client-management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data-exchange.call.completed</code></li><li><code>document-management.document_version.created</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.created</code></li><li><code>workflow.client_timeout</code></li><li><code>workflow.creation_deadline</code></li><li><code>workflow.sla_breach</code></li><li><code>workflow.sla_warning</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.verification_timeout</code></li>
     </ul></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

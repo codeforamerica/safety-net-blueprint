@@ -28,6 +28,12 @@ Validation runs against the **resolved** output in `packages/generated/contracts
      to nothing leaves the relationship inert — no transform is applied and the
      field stays a bare scalar — so this is an error rather than the resolve-time
      warning it used to be
+   - a writable field named `…Id` that holds a uuid declares `x-relationship`.
+     Without it, nothing can follow the link or check the record it names
+     exists. Ids that point outside the set are plain strings, such as a
+     Medicare number, and fields that are `readOnly` or `x-derived` are set by
+     the server, so neither is checked. A uuid that names something outside the
+     set declares `resource: External`
 3. **Annotations** — dot-notation field paths in annotation files resolve to real schema properties
 4. **State machines** — within-file consistency and cross-artifact checks (see below)
 

@@ -1,0 +1,65 @@
+{
+  "description": "Paginated list of registry types.",
+  "allOf": [
+    {
+      "type": "object",
+      "required": [
+        "total",
+        "limit",
+        "offset"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of items available."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of items requested."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of items skipped before the current page."
+        },
+        "hasNext": {
+          "type": "boolean",
+          "description": "Whether more items are available beyond the current page."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "total"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "The registry type, as its files declare it."
+              },
+              "total": {
+                "type": "integer",
+                "description": "How many entries it has, across every file of the type."
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/RegistryTypeList"
+}

@@ -32,14 +32,14 @@ describe('Functional — x-derived: CEL field evaluation', () => {
     assert.equal(res.status, 201);
     const data = res.data as { id: string; widgetCode: string };
     assert.ok(data.id, 'id must be present');
-    assert.equal(data.widgetCode, data.id, 'widgetCode must equal id ($this.id)');
+    assert.equal(data.widgetCode, data.id, 'widgetCode must equal id (this.id)');
   });
 
   it('GET response includes widgetCode derived from id', async () => {
     const res = await getWidget({ client, path: { widgetId } });
     assert.equal(res.status, 200);
     const data = res.data as { id: string; widgetCode: string };
-    assert.equal(data.widgetCode, data.id, 'widgetCode must equal id ($this.id)');
+    assert.equal(data.widgetCode, data.id, 'widgetCode must equal id (this.id)');
   });
 
   it('list response items all have widgetCode equal to id', async () => {

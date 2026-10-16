@@ -51,6 +51,13 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
   const databases = new Map();
   const collectionDefaults = new Map();
 
+  /** Insert-or-replace a record exactly as given. */
+  const put = (collection, record) => {
+    getDatabase(collection)
+      .prepare('INSERT OR REPLACE INTO resources (id, data) VALUES (?, ?)')
+      .run(record.id, JSON.stringify(record));
+  };
+
   function getDatabase(collection) {
     if (databases.has(collection)) return databases.get(collection);
 
@@ -234,9 +241,11 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
       if (!resource.createdAt) resource.createdAt = new Date().toISOString();
       if (!resource.updatedAt) resource.updatedAt = resource.createdAt;
 
-      getDatabase(collection)
-        .prepare('INSERT OR REPLACE INTO resources (id, data) VALUES (?, ?)')
-        .run(resource.id, JSON.stringify(resource));
+      put(collection, resource);
+    },
+
+    append(collection, record) {
+      put(collection, record);
     },
 
     count(collection) {
@@ -257,7 +266,7 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
     restore(snapshot) {
       for (const [collection, records] of Object.entries(snapshot)) {
         store.clearAll(collection);
-        for (const record of records) store.insertResource(collection, { ...record });
+        for (const record of records) put(collection, record);
       }
     },
 
