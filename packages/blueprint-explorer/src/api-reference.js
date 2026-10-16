@@ -13,7 +13,7 @@
  * Usage: node build.js
  */
 
-import { writeFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
@@ -23,7 +23,6 @@ import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedSourcePairs } from './lib/paths.js';
 import { discover, load } from '@codeforamerica/blueprint-core';
-import { findSpecRelativePaths } from './contract-nav.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
@@ -600,7 +599,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
 // ── Request body ──────────────────────────────────────────────────────────
 
-function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
+function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
   if (!reqBody) return '';
   const content    = reqBody.content ?? {};
   const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
@@ -611,7 +610,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
   let bodyContent;
   if (refName) {
     const rawSchema = rawSchemas?.[refName] ?? null;
-    const rootPrefix = doc ? (findSpecRelativePaths(doc, refName)[0] ?? domainSlug) : domainSlug;
+    const rootPrefix = prefixOf(refName) ?? domainSlug;
     bodyContent = `<details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
       <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
         <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
@@ -633,7 +632,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
 
 // ── Response section ──────────────────────────────────────────────────────
 
-function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
+function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
   if (!responses || !Object.keys(responses).length) return '';
 
   const entries = Object.entries(responses).map(([status, resp]) => {
@@ -664,7 +663,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
       </details>`;
     } else if (schemaRefName) {
       const rawSchema = rawSchemas?.[schemaRefName] ?? null;
-      const rootPrefix = doc ? (findSpecRelativePaths(doc, schemaRefName)[0] ?? domainSlug) : domainSlug;
+      const rootPrefix = prefixOf(schemaRefName) ?? domainSlug;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
@@ -693,7 +692,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 
 // ── Endpoint block ────────────────────────────────────────────────────────
 
-function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
+function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
   const id       = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
   const params   = op.parameters ?? [];
   const descHtml = op.description
@@ -734,8 +733,8 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     <div style="padding:12px 16px;">
       ${descHtml}
       ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
-      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
+      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
+      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
     </div>
   </details>
 </div>`;
@@ -743,14 +742,64 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 
 // ── Domain page ───────────────────────────────────────────────────────────
 
+const SCHEMA_SUFFIXES = ['List', 'Create', 'Update', 'Writable'];
+
+/**
+ * What a domain's data dictionary holds, read from its field inventory: the
+ * field paths it has an entry for, and where each schema sits in them.
+ *
+ * Links used to be built from schema names alone — `Decision` linked as
+ * `decision.id`, though the dictionary has it as `determination.decisions[].id`,
+ * and a list's `total` linked too — so most of them led nowhere. The inventory
+ * is what the dictionary page is built from, so it is the authority on both.
+ *
+ * @returns {{ fields: Set<string>|null, prefixOf: (schemaName: string) => string|null }}
+ */
+function readDictionary(inventoryPath) {
+  if (!existsSync(inventoryPath)) return { fields: null, prefixOf: () => null };
+
+  const fields = new Set();
+  const prefixes = new Map();
+  let section = null;
+  let sectionSeen = true;
+  for (const line of readFileSync(inventoryPath, 'utf8').split('\n')) {
+    const header = line.match(/^# ── (\w+) /);
+    if (header) { section = header[1]; sectionSeen = false; continue; }
+    const entry = line.match(/^([a-z][^:]*): \{ type: (?:list\()?([A-Z]\w*)?/);
+    if (!entry) continue;
+    const [, path, typeName] = entry;
+    fields.add(path);
+    if (typeName && !prefixes.has(typeName)) prefixes.set(typeName, path);
+    // A root resource's section has no entry naming its type; its fields start
+    // with the resource's own name.
+    if (!sectionSeen) {
+      sectionSeen = true;
+      if (!prefixes.has(section)) prefixes.set(section, typeName === section ? path : path.split('.')[0]);
+    }
+  }
+
+  const prefixOf = (name) => {
+    if (prefixes.has(name)) return prefixes.get(name);
+    const suffix = SCHEMA_SUFFIXES.find((s) => name.endsWith(s) && prefixes.has(name.slice(0, -s.length)));
+    return suffix ? prefixes.get(name.slice(0, -suffix.length)) : null;
+  };
+  return { fields, prefixOf };
+}
+
 function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   // Only where there is one to link to. A data dictionary is built from a
   // domain's annotations, so a domain with none gets no page — and every
   // field on this page pointed into it regardless, which is hundreds of
   // dead links per domain. Data dictionaries are built before this tool, so
   // the answer is on disk by now.
-  const dataDictFile = resolve(contentDir, 'data-dictionaries', `${slug}.html`);
-  const dataDictHref = existsSync(dataDictFile) ? `../data-dictionaries/${slug}.html` : null;
+  //
+  // A dictionary is per domain and this page is per document, so it's found
+  // by the document's domain: platform-events and platform-registries both
+  // read the platform dictionary.
+  const dictSlug = spec.info?.['x-domain'] ?? slug;
+  const dataDictFile = resolve(contentDir, 'data-dictionaries', `${dictSlug}.html`);
+  const dataDictHref = existsSync(dataDictFile) ? `../data-dictionaries/${dictSlug}.html` : null;
+  const dictionary = readDictionary(resolve(contentDir, 'data-dictionaries', `${dictSlug}-field-inventory.yaml`));
   const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, resolvedDir, { include: SOURCE_SUFFIXES }, repo));
 
   const info       = spec.info ?? {};
@@ -847,7 +896,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, null, slug, doc)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, dictionary.fields, slug, dictionary.prefixOf)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>

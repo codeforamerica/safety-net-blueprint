@@ -166,12 +166,20 @@ export interface StateMachineModel {
 }
 
 /** A compiled decision graph. Names the contract it came from. */
+/** One of a ruleset's constants, with its value, as the compiled graph holds it. */
+export interface GraphConstant {
+  value: unknown;
+  type?: 'integer' | 'number' | 'string' | 'boolean' | 'array' | 'object';
+  description?: string;
+}
+
 export interface Graph {
   $schema: string;
   domain: string;
   ruleset: string;
   outputs: string[];
   inputs: Record<string, unknown>;
+  constants?: Record<string, GraphConstant>;
   facts: Record<string, unknown>;
   dependencies: Record<string, string[]>;
 }

@@ -3,29 +3,137 @@
 import { z } from 'zod';
 
 /**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ * Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
-export const zInterviewPromptsRequest = z.object({
-    household: z.optional(z.object({
-        monthlyIncome: z.optional(z.number()),
-        monthlyExpenses: z.optional(z.number()),
+export const zInterviewFlagsRequest = z.object({
+    current: z.optional(z.object({
+        size: z.optional(z.int().gte(1)),
+        utilitiesIncludedInRent: z.optional(z.boolean()),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
-            age: z.optional(z.int()),
-            isEmployed: z.optional(z.boolean()),
-            isStudent: z.optional(z.boolean()),
-            isNonCitizen: z.optional(z.boolean())
+            id: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            isDisabled: z.optional(z.boolean())
+        }))),
+        jobs: z.optional(z.array(z.object({
+            id: z.string(),
+            memberId: z.string(),
+            employer: z.optional(z.string())
+        }))),
+        incomes: z.optional(z.array(z.object({
+            id: z.string(),
+            memberId: z.string(),
+            jobId: z.optional(z.string()),
+            source: z.enum([
+                'earned',
+                'self_employment',
+                'unearned'
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly',
+                'irregular'
+            ]),
+            paidInCash: z.optional(z.boolean()),
+            amountVaries: z.optional(z.boolean())
+        }))),
+        expenses: z.optional(z.array(z.object({
+            type: z.enum([
+                'rent',
+                'mortgage',
+                'utilities',
+                'dependent_care',
+                'medical',
+                'child_support'
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ])
         })))
     })),
-    application: z.optional(z.object({
-        hasChangedCircumstances: z.optional(z.boolean())
-    }))
+    previous: z.optional(z.object({
+        size: z.optional(z.int().gte(1)),
+        utilitiesIncludedInRent: z.optional(z.boolean()),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
+        members: z.optional(z.array(z.object({
+            id: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            isDisabled: z.optional(z.boolean())
+        }))),
+        jobs: z.optional(z.array(z.object({
+            id: z.string(),
+            memberId: z.string(),
+            employer: z.optional(z.string())
+        }))),
+        incomes: z.optional(z.array(z.object({
+            id: z.string(),
+            memberId: z.string(),
+            jobId: z.optional(z.string()),
+            source: z.enum([
+                'earned',
+                'self_employment',
+                'unearned'
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly',
+                'irregular'
+            ]),
+            paidInCash: z.optional(z.boolean()),
+            amountVaries: z.optional(z.boolean())
+        }))),
+        expenses: z.optional(z.array(z.object({
+            type: z.enum([
+                'rent',
+                'mortgage',
+                'utilities',
+                'dependent_care',
+                'medical',
+                'child_support'
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ])
+        })))
+    })),
+    verified: z.optional(z.array(z.object({
+        kind: z.optional(z.enum(['wage_record', 'pay_stub'])),
+        memberId: z.optional(z.string()),
+        incomeId: z.optional(z.string()),
+        period: z.optional(z.string()),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly'
+        ]))
+    }))),
+    asOf: z.optional(z.iso.date()),
+    programsAppliedFor: z.optional(z.array(z.string()))
 });
 
 /**
  * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zInterviewPromptsResponse = z.array(z.union([
+export const zInterviewFlagsResponse = z.array(z.union([
     z.object({
         fact: z.string(),
         state: z.enum(['complete']),
@@ -48,21 +156,129 @@ export const zInterviewPromptsResponse = z.array(z.union([
     })
 ]));
 
-export const zEvaluateInterviewPromptsData = z.object({
+export const zEvaluateInterviewFlagsData = z.object({
     body: z.object({
-        household: z.optional(z.object({
-            monthlyIncome: z.optional(z.number()),
-            monthlyExpenses: z.optional(z.number()),
+        current: z.optional(z.object({
+            size: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
-                age: z.optional(z.int()),
-                isEmployed: z.optional(z.boolean()),
-                isStudent: z.optional(z.boolean()),
-                isNonCitizen: z.optional(z.boolean())
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                jobId: z.optional(z.string()),
+                source: z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                type: z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
             })))
         })),
-        application: z.optional(z.object({
-            hasChangedCircumstances: z.optional(z.boolean())
-        }))
+        previous: z.optional(z.object({
+            size: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
+            members: z.optional(z.array(z.object({
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                jobId: z.optional(z.string()),
+                source: z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                type: z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
+            })))
+        })),
+        verified: z.optional(z.array(z.object({
+            kind: z.optional(z.enum(['wage_record', 'pay_stub'])),
+            memberId: z.optional(z.string()),
+            incomeId: z.optional(z.string()),
+            period: z.optional(z.string()),
+            amount: z.optional(z.number().gte(0)),
+            frequency: z.optional(z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ]))
+        }))),
+        asOf: z.optional(z.iso.date()),
+        programsAppliedFor: z.optional(z.array(z.string()))
     }),
     path: z.optional(z.never()),
     query: z.optional(z.never())
@@ -72,7 +288,7 @@ export const zEvaluateInterviewPromptsData = z.object({
  * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zEvaluateInterviewPromptsResponse = z.array(z.union([
+export const zEvaluateInterviewFlagsResponse = z.array(z.union([
     z.object({
         fact: z.string(),
         state: z.enum(['complete']),

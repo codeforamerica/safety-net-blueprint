@@ -1,0 +1,396 @@
+{
+  "type": "object",
+  "description": "Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.",
+  "properties": {
+    "current": {
+      "type": "object",
+      "description": "A household's circumstances at one point in time.",
+      "properties": {
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The number of people who buy and prepare food together, as the household states it."
+        },
+        "utilitiesIncludedInRent": {
+          "type": "boolean",
+          "description": "Whether the household says its utilities are included in the rent."
+        },
+        "monthlyIncome": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total monthly income, as the household states it."
+        },
+        "monthlyExpenses": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total monthly expenses, as the household states them."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The member's key within the household."
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "format": "date"
+              },
+              "isDisabled": {
+                "type": "boolean",
+                "description": "Whether the member is disabled."
+              }
+            }
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "memberId"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The job's key within the household."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who holds the job."
+              },
+              "employer": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "incomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "memberId",
+              "source",
+              "amount",
+              "frequency"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The income's key within the household."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who receives it."
+              },
+              "jobId": {
+                "type": "string",
+                "description": "The job it's paid for, when it's earned."
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "earned",
+                  "self_employment",
+                  "unearned"
+                ]
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0,
+                "description": "The amount received each time it's paid, in dollars."
+              },
+              "frequency": {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "semimonthly",
+                  "monthly",
+                  "irregular"
+                ],
+                "description": "How often it's paid."
+              },
+              "paidInCash": {
+                "type": "boolean"
+              },
+              "amountVaries": {
+                "type": "boolean",
+                "description": "Whether the amount changes from one payment to the next, as with irregular hours or tips."
+              }
+            }
+          }
+        },
+        "expenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "amount",
+              "frequency"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rent",
+                  "mortgage",
+                  "utilities",
+                  "dependent_care",
+                  "medical",
+                  "child_support"
+                ]
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "frequency": {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "semimonthly",
+                  "monthly"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "previous": {
+      "type": "object",
+      "description": "A household's circumstances at one point in time.",
+      "properties": {
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The number of people who buy and prepare food together, as the household states it."
+        },
+        "utilitiesIncludedInRent": {
+          "type": "boolean",
+          "description": "Whether the household says its utilities are included in the rent."
+        },
+        "monthlyIncome": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total monthly income, as the household states it."
+        },
+        "monthlyExpenses": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total monthly expenses, as the household states them."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The member's key within the household."
+              },
+              "dateOfBirth": {
+                "type": "string",
+                "format": "date"
+              },
+              "isDisabled": {
+                "type": "boolean",
+                "description": "Whether the member is disabled."
+              }
+            }
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "memberId"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The job's key within the household."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who holds the job."
+              },
+              "employer": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "incomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "memberId",
+              "source",
+              "amount",
+              "frequency"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The income's key within the household."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who receives it."
+              },
+              "jobId": {
+                "type": "string",
+                "description": "The job it's paid for, when it's earned."
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "earned",
+                  "self_employment",
+                  "unearned"
+                ]
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0,
+                "description": "The amount received each time it's paid, in dollars."
+              },
+              "frequency": {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "semimonthly",
+                  "monthly",
+                  "irregular"
+                ],
+                "description": "How often it's paid."
+              },
+              "paidInCash": {
+                "type": "boolean"
+              },
+              "amountVaries": {
+                "type": "boolean",
+                "description": "Whether the amount changes from one payment to the next, as with irregular hours or tips."
+              }
+            }
+          }
+        },
+        "expenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "amount",
+              "frequency"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rent",
+                  "mortgage",
+                  "utilities",
+                  "dependent_care",
+                  "medical",
+                  "child_support"
+                ]
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "frequency": {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "semimonthly",
+                  "monthly"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "verified": {
+      "type": "array",
+      "description": "What outside records show for this application.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "wage_record",
+              "pay_stub"
+            ],
+            "description": "Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.\n"
+          },
+          "memberId": {
+            "type": "string",
+            "description": "The member it's about, by their key in the household."
+          },
+          "incomeId": {
+            "type": "string",
+            "description": "For a pay stub, the income it's for, by its key in the household."
+          },
+          "period": {
+            "type": "string",
+            "description": "For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date."
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Gross wages for the quarter, or gross pay on the stub."
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "semimonthly",
+              "monthly"
+            ],
+            "description": "For a pay stub, how often the pay it shows is paid."
+          }
+        }
+      }
+    },
+    "asOf": {
+      "type": "string",
+      "format": "date",
+      "description": "The date ages are measured from — the interview date."
+    },
+    "programsAppliedFor": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The programs the household applied for."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InterviewFlagsRequest"
+}

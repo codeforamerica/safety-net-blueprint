@@ -157,6 +157,10 @@ x_extensions:
       ruleset, or composition) to record which contract artifact produced the endpoint.
       The type field controls which other fields are required and how tooling interprets
       the annotation. Omitting type is equivalent to type: fk for backward compatibility.
+      Every writable field named …Id that holds a uuid must declare it; validation
+      fails with id-without-relationship otherwise. Fields that are readOnly or
+      x-derived are exempt, and a uuid naming something outside the contract set
+      declares resource: External.
     location: >
       Schema property level (FK fields); or operation level (generated endpoints injected
       by the resolve pipeline).
@@ -209,11 +213,11 @@ x_extensions:
 
       # Operation — generated from a rules contract ruleset
       post:
-        operationId: evaluateInterviewPrompts
+        operationId: evaluateInterviewFlags
         x-relationship:
           type: ruleset
           domain: intake
-          id: interviewPrompts
+          id: interviewFlags
 
       # Operation — generated from a compositions contract
       get:

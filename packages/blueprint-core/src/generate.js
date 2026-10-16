@@ -27,7 +27,7 @@
  */
 
 import { generateCompositionOverlays } from './compositions.js';
-import { resolveRef } from './ref-lookup.js';
+import { followRef, indexByRelativePath, normalizeRefPath, splitRef } from './ref-lookup.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
@@ -306,8 +306,40 @@ function rulesArtifacts(docs, inputFiles) {
     }
 
     const owner = docs.find((d) => d.content === rulesDoc);
-    return resolveRef(ref, docs, owner?.relativePath) ?? null;
+    const found = followRef(ref, byPath, owner?.relativePath);
+    // The schema is handed back with its own refs pointing where they did in
+    // the document it came from: a household's `#/$defs/HouseholdMember` means
+    // that file's definition, not the rules file's. Without this the compiler
+    // followed the first ref and stopped at the next, so a member's fields —
+    // a date of birth among them — were never declared.
+    return found ? rebaseRefs(found.node, found.relativePath) : null;
   };
+  const byPath = indexByRelativePath(docs);
 
   return generateRulesResults(rulesFiles, inputFiles, resolve);
+}
+
+/**
+ * A copy of a schema whose `$ref`s name their targets by path within the set,
+ * worked out from the document the schema was read from — so they still
+ * resolve once the schema is read from somewhere else. Canonical https refs
+ * are left alone; they resolve through the registry.
+ *
+ * @param {*} node
+ * @param {string} fromPath - relativePath of the document `node` came from
+ * @returns {*}
+ */
+function rebaseRefs(node, fromPath) {
+  if (Array.isArray(node)) return node.map((item) => rebaseRefs(item, fromPath));
+  if (!node || typeof node !== 'object') return node;
+  const out = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' && typeof value === 'string' && !/^https?:/.test(value)) {
+      const { file, pointer } = splitRef(value);
+      out[key] = `${file ? normalizeRefPath(file, fromPath) : fromPath}#${pointer ?? ''}`;
+    } else {
+      out[key] = rebaseRefs(value, fromPath);
+    }
+  }
+  return out;
 }

@@ -5,59 +5,206 @@ export type ClientOptions = {
 };
 
 /**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ * Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
-export type InterviewPromptsRequest = {
+export type InterviewFlagsRequest = {
     /**
-     * Household composition and financial circumstances.
+     * A household's circumstances at one point in time.
      */
-    household?: {
+    current?: {
         /**
-         * Total monthly gross income reported by the household.
+         * The number of people who buy and prepare food together, as the household states it.
+         */
+        size?: number;
+        /**
+         * Whether the household says its utilities are included in the rent.
+         */
+        utilitiesIncludedInRent?: boolean;
+        /**
+         * Total monthly income, as the household states it.
          */
         monthlyIncome?: number;
         /**
-         * Total monthly expenses reported by the household.
+         * Total monthly expenses, as the household states them.
          */
         monthlyExpenses?: number;
-        /**
-         * All individuals in the household.
-         */
         members?: Array<{
             /**
-             * Member's age in years.
+             * The member's key within the household.
              */
-            age?: number;
+            id: string;
+            dateOfBirth?: string;
             /**
-             * Whether the member is currently employed.
+             * Whether the member is disabled.
              */
-            isEmployed?: boolean;
+            isDisabled?: boolean;
+        }>;
+        jobs?: Array<{
             /**
-             * Whether the member is enrolled at least half-time in higher education.
+             * The job's key within the household.
              */
-            isStudent?: boolean;
+            id: string;
             /**
-             * Whether the member is a non-citizen subject to immigration screening.
+             * The member who holds the job.
              */
-            isNonCitizen?: boolean;
+            memberId: string;
+            employer?: string;
+        }>;
+        incomes?: Array<{
+            /**
+             * The income's key within the household.
+             */
+            id: string;
+            /**
+             * The member who receives it.
+             */
+            memberId: string;
+            /**
+             * The job it's paid for, when it's earned.
+             */
+            jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
+            /**
+             * The amount received each time it's paid, in dollars.
+             */
+            amount: number;
+            /**
+             * How often it's paid.
+             */
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
+            /**
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+             */
+            amountVaries?: boolean;
+        }>;
+        expenses?: Array<{
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
         }>;
     };
     /**
-     * Application-level context relevant to the interview.
+     * A household's circumstances at one point in time.
      */
-    application?: {
+    previous?: {
         /**
-         * Whether the household reported changes since the application was submitted.
+         * The number of people who buy and prepare food together, as the household states it.
          */
-        hasChangedCircumstances?: boolean;
+        size?: number;
+        /**
+         * Whether the household says its utilities are included in the rent.
+         */
+        utilitiesIncludedInRent?: boolean;
+        /**
+         * Total monthly income, as the household states it.
+         */
+        monthlyIncome?: number;
+        /**
+         * Total monthly expenses, as the household states them.
+         */
+        monthlyExpenses?: number;
+        members?: Array<{
+            /**
+             * The member's key within the household.
+             */
+            id: string;
+            dateOfBirth?: string;
+            /**
+             * Whether the member is disabled.
+             */
+            isDisabled?: boolean;
+        }>;
+        jobs?: Array<{
+            /**
+             * The job's key within the household.
+             */
+            id: string;
+            /**
+             * The member who holds the job.
+             */
+            memberId: string;
+            employer?: string;
+        }>;
+        incomes?: Array<{
+            /**
+             * The income's key within the household.
+             */
+            id: string;
+            /**
+             * The member who receives it.
+             */
+            memberId: string;
+            /**
+             * The job it's paid for, when it's earned.
+             */
+            jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
+            /**
+             * The amount received each time it's paid, in dollars.
+             */
+            amount: number;
+            /**
+             * How often it's paid.
+             */
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
+            /**
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+             */
+            amountVaries?: boolean;
+        }>;
+        expenses?: Array<{
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        }>;
     };
+    /**
+     * What outside records show for this application.
+     */
+    verified?: Array<{
+        /**
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
+         */
+        kind?: 'wage_record' | 'pay_stub';
+        /**
+         * The member it's about, by their key in the household.
+         */
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    }>;
+    /**
+     * The date ages are measured from — the interview date.
+     */
+    asOf?: string;
+    /**
+     * The programs the household applied for.
+     */
+    programsAppliedFor?: Array<string>;
 };
 
 /**
  * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export type InterviewPromptsResponse = Array<{
+export type InterviewFlagsResponse = Array<{
     /**
      * The fact name.
      */
@@ -99,61 +246,208 @@ export type InterviewPromptsResponse = Array<{
     message: string;
 }>;
 
-export type EvaluateInterviewPromptsData = {
+export type EvaluateInterviewFlagsData = {
     /**
-     * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+     * Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
      */
     body: {
         /**
-         * Household composition and financial circumstances.
+         * A household's circumstances at one point in time.
          */
-        household?: {
+        current?: {
             /**
-             * Total monthly gross income reported by the household.
+             * The number of people who buy and prepare food together, as the household states it.
+             */
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
              */
             monthlyIncome?: number;
             /**
-             * Total monthly expenses reported by the household.
+             * Total monthly expenses, as the household states them.
              */
             monthlyExpenses?: number;
-            /**
-             * All individuals in the household.
-             */
             members?: Array<{
                 /**
-                 * Member's age in years.
+                 * The member's key within the household.
                  */
-                age?: number;
+                id: string;
+                dateOfBirth?: string;
                 /**
-                 * Whether the member is currently employed.
+                 * Whether the member is disabled.
                  */
-                isEmployed?: boolean;
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
                 /**
-                 * Whether the member is enrolled at least half-time in higher education.
+                 * The job's key within the household.
                  */
-                isStudent?: boolean;
+                id: string;
                 /**
-                 * Whether the member is a non-citizen subject to immigration screening.
+                 * The member who holds the job.
                  */
-                isNonCitizen?: boolean;
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
             }>;
         };
         /**
-         * Application-level context relevant to the interview.
+         * A household's circumstances at one point in time.
          */
-        application?: {
+        previous?: {
             /**
-             * Whether the household reported changes since the application was submitted.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            hasChangedCircumstances?: boolean;
+            size?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            monthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
         };
+        /**
+         * What outside records show for this application.
+         */
+        verified?: Array<{
+            /**
+             * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+             *
+             */
+            kind?: 'wage_record' | 'pay_stub';
+            /**
+             * The member it's about, by their key in the household.
+             */
+            memberId?: string;
+            /**
+             * For a pay stub, the income it's for, by its key in the household.
+             */
+            incomeId?: string;
+            /**
+             * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+             */
+            period?: string;
+            /**
+             * Gross wages for the quarter, or gross pay on the stub.
+             */
+            amount?: number;
+            /**
+             * For a pay stub, how often the pay it shows is paid.
+             */
+            frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        }>;
+        /**
+         * The date ages are measured from — the interview date.
+         */
+        asOf?: string;
+        /**
+         * The programs the household applied for.
+         */
+        programsAppliedFor?: Array<string>;
     };
     path?: never;
     query?: never;
-    url: '/applications/evaluate-interview-prompts';
+    url: '/applications/evaluate-interview-flags';
 };
 
-export type EvaluateInterviewPromptsErrors = {
+export type EvaluateInterviewFlagsErrors = {
     /**
      * The request is malformed or contains invalid parameters.
      */
@@ -194,9 +488,9 @@ export type EvaluateInterviewPromptsErrors = {
     };
 };
 
-export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof EvaluateInterviewPromptsErrors];
+export type EvaluateInterviewFlagsError = EvaluateInterviewFlagsErrors[keyof EvaluateInterviewFlagsErrors];
 
-export type EvaluateInterviewPromptsResponses = {
+export type EvaluateInterviewFlagsResponses = {
     /**
      * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
      *
@@ -244,4 +538,4 @@ export type EvaluateInterviewPromptsResponses = {
     }>;
 };
 
-export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];
+export type EvaluateInterviewFlagsResponse = EvaluateInterviewFlagsResponses[keyof EvaluateInterviewFlagsResponses];

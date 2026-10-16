@@ -11,6 +11,7 @@ import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
+import { missingReferences, parentsOf } from '../references.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -63,6 +64,9 @@ export function buildChanges(before, after) {
  */
 export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
+  // The resource updated, in the API's model, for the records it's under.
+  const model = apiMetadata.doc?.model?.();
+  const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
   return async (request, ctx = {}) => {
     const { params = {}, body: bodyOverride } = ctx;
     const { pathname } = new URL(assertFetchShaped(request, 'createUpdateHandler').url);
@@ -135,6 +139,14 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         if (!valid) {
           return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
+      }
+
+      // Only the ids the client sent: one already stored was checked when it was written.
+      const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
+        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
+      });
+      if (missing.length > 0) {
+        return Response.json(createErrorResponse(missing, 422), { status: 422 });
       }
 
       // Snapshot existing state before any mutations
@@ -229,7 +241,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       return Response.json(responseBody);
     } catch (error) {

@@ -79,6 +79,26 @@ entries:
     citation: 7 CFR § 273.9(d)
     description: |
       SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.
+  snap-earned-income:
+    citation: 7 CFR § 273.9(b)(1)
+    description: |
+      SNAP earned income — wages, salaries and self-employment income are counted in determining eligibility and benefits.
+  snap-dependent-care-deduction:
+    citation: 7 CFR § 273.9(d)(4)
+    description: |
+      SNAP dependent care deduction — care for a child or other dependent, needed so a household member can work, look for work, or attend training or school.
+  snap-shelter-utility-deductions:
+    citation: 7 CFR § 273.9(d)(6)
+    description: |
+      SNAP shelter and utility deductions — the excess shelter deduction, and the standard utility allowances for households that pay utility costs separately from rent.
+  snap-reporting-changes:
+    citation: 7 CFR § 273.12
+    description: |
+      SNAP reporting requirements — the changes a household must report between certifications, and how the agency acts on them.
+  snap-recertification:
+    citation: 7 CFR § 273.14
+    description: |
+      SNAP recertification — the interview, verification and determination a household goes through before its certification period ends.
   snap-benefit-calculation:
     citation: 7 CFR § 273.10
     description: |

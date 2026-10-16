@@ -13,6 +13,7 @@ import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
+import { missingReferences, parentsOf } from '../references.js';
 
 
 /**
@@ -24,6 +25,9 @@ import { assertFetchShaped, readJsonBody } from '../http/request.js';
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
+  // The resource created, in the API's model, for the records it's made under.
+  const model = apiMetadata.doc?.model?.();
+  const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
   return async (request, ctx = {}) => {
     const { params = {}, enrichmentData, body: bodyOverride } = ctx;
     const { pathname } = new URL(assertFetchShaped(request, 'createCreateHandler').url);
@@ -69,6 +73,14 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         if (!valid) {
           return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
+      }
+
+      // An id that names no record is refused, like any other invalid value.
+      const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
+        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
+      });
+      if (missing.length > 0) {
+        return Response.json(createErrorResponse(missing, 422), { status: 422 });
       }
 
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
@@ -215,7 +227,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
       return Response.json(responseBody, { status: 201, headers: { Location: location } });

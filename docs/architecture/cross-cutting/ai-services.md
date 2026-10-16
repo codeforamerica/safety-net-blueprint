@@ -76,7 +76,7 @@ From `safety-net-contracts`, an AI service uses:
 | The interview as a record | The `Interview` schema in `intake-openapi.yaml` | Exists |
 | External calls, and a catalog of them | Data Exchange's service catalog and service call lifecycle | Exists |
 | What changed elsewhere | Domain events in AsyncAPI, on `GET /platform/events/stream` | Exists |
-| Rulesets — guidance, screening, risk | None yet. The harness has fictional sketches — `interviewPrompts` and `expeditedSnap` — that show the idea, not real policy | To define |
+| Rulesets — guidance, screening, risk | None yet in the real contracts. The harness has fictional ones — `interviewFlags` and `expeditedSnap` — that show the idea, not real policy | To define |
 
 Rulesets run in a page through `blueprint-rules-engine`, so once they exist an
 assistant gets the result the eligibility domain would compute with no network
@@ -98,20 +98,28 @@ AWS request signing (SigV4) is not part of these. It is how one deployment
 proves identity to AWS, not something the contract requires, and it is not a
 standard OpenAPI scheme.
 
-### Interview guidance: three kinds, three sources
+### Interview guidance: four kinds
 
-What an assistant puts in front of a worker during an interview is three
-different things, with three different sources. Treating them as one ruleset —
-as the harness's `interviewPrompts` sketch does — mixes them.
+What an assistant puts in front of a worker during an interview is four
+different things, and each asks the worker to do something different. A risk
+says *probe carefully here*; an inconsistency says *find out which is true*;
+missing information says *ask this*; a requirement says *cover this*.
+
+FNS's interview toolkit (FNS-1104) calls several of them "probe triggers", but
+they aren't one kind. Income below expenses is an inconsistency; a change since
+applying is a risk; a member aged 16–59 not working, a student, a non-citizen or
+a member with a felony conviction is information a rule needs, and asking for it
+is screening for eligibility.
 
 | Kind | Example | Source | Contract |
 |---|---|---|---|
 | **Missing information** the determination needs | "Ask about shelter costs" | Partial evaluation of the eligibility ruleset: it reports exactly which inputs are missing and would change the outcome, and nothing else | The eligibility ruleset itself. No separate ruleset — the questions fall out of the determination's own rules, explained by their `reason` and `policy` annotations. *No determination ruleset exists in the real contracts yet.* |
-| **Risk indicators** — the error-prone situations behind payment error rates | "Income does not cover reported expenses" | Deterministic conditions over declared facts, plus what a model notices that a condition cannot — vague or contradictory answers | A ruleset of its own, separate from the determination. Each output is one indicator; its annotations carry the severity, the reason, the citation and the question to probe with. Most of the harness sketch's facts are of this kind. *To define.* |
+| **Risks** — situations where payment errors are common, even when this case is right | "Wages vary month to month"; "someone moved in since the last certification"; "shelter costs are what they were last time" | Deterministic conditions over the application, the last certification and data matches, drawn from where payment errors come from — earned income, deductions, household composition | Facts in an interview flags ruleset, grouped under `risks`. Each one's annotations carry the reason, the questions to probe with, the regulation behind it and the sources the situation comes from. The harness's `interviewFlags` shows the shape. *To define for real.* |
+| **Inconsistencies** — two things in this case that don't agree | "Income does not cover reported expenses"; "reported wages differ from the wage records"; "utilities are included in the rent, but an allowance is claimed" | Deterministic comparisons within the application and against data matches and verified documents, plus what a model notices that a condition cannot — the call saying one thing and the application another | Facts in the same ruleset, grouped under `inconsistencies`, so one call returns both, and the group is in each fact's name. Annotated the same way. *To define for real.* |
 | **Interview requirements** that must be said or asked regardless | Rights and responsibilities, penalty warnings, consent | Some apply always, some on a condition — the ABAWD notice only when a member is of ABAWD age | Split three ways: a ruleset decides which requirements apply; a registry type, `interview-requirements`, holds each one's wording, whether it must be read word for word, whether an attestation is recorded, and its policies; and the `Interview` records which are covered. The interview cannot complete until every applicable one is. *To define.* |
 
 **Flat rulesets are still rulesets.** The determination is a deep dependency
-graph, and the risk and applicability rulesets are one level deep — a list of
+graph, and the flags and applicability rulesets are one level deep — a list of
 named conditions. Both are declared the same way and get the same things: typed
 inputs bound to the data model, so a condition never names a field; partial
 evaluation, so a condition whose inputs are unknown is *unknown* rather than
@@ -120,7 +128,7 @@ evaluates every condition at once, in the page. A condition written against
 fields directly — in a registry, say — would tie it to one state's data model.
 
 Rulesets cannot yet declare that one takes another's outputs as inputs. Where
-risk indicators should reuse the determination's computed totals rather than
+the flags should reuse the determination's computed totals rather than
 recompute them, the chaining happens in the `Interview`'s state machine, which
 evaluates the determination first and passes its outputs on. That works with
 the DSL today; the dependency is visible there rather than in the rules
@@ -316,11 +324,11 @@ a worker, and the worker's decision on it. Platform knows only two kinds:
   member is one; so is marking a required item covered, which is just an
   operation on the interview.
 - **Informs.** No operation; the worker acknowledges or dismisses it. A
-  question to ask, a risk indicator.
+  question to ask, a risk to probe, an inconsistency to resolve.
 
 Owning domains declare **categories**, each with its own payload schema —
-eligibility declares "missing determination input" and "risk indicator",
-intake "required item covered" — the same per-type-schema pattern Data Exchange
+eligibility declares "missing determination input", intake "risk",
+"inconsistency" and "required item covered" — the same per-type-schema pattern Data Exchange
 uses for service types. Platform owns the lifecycle — proposed, then accepted,
 rejected, expired or superseded — and knows nothing about interviews. The
 suggestion record is also the provenance: what was proposed, from which words,

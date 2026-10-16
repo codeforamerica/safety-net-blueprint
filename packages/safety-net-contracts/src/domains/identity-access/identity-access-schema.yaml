@@ -47,6 +47,8 @@ $defs:
         type: string
         format: uuid
         description: User Service identifier. Same value as User.id on the REST resource.
+        x-relationship:
+          resource: User
       roles:
         $ref: "#/$defs/Role"
 

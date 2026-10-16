@@ -23,6 +23,24 @@ compositions:
         bind: applicationId
         fields: [id, firstName, lastName, dateOfBirth, relationship, incomeSource]
 
+  # interviewFlagsInputs — what the interview flags compare the household's
+  # answers against, translated from the data model into the ruleset's inputs
+  # by alias: the household on record before the interview, the date the
+  # interview measures from, and what outside records show. A client fetches
+  # this, adds `current` — what the person is reporting — and posts the lot to
+  # /applications/evaluate-interview-flags.
+  # Produces: GET /applications/{applicationId}/interview-flags-inputs
+  interviewFlagsInputs:
+    resource: applications
+    fields: [interviewDate as asOf, previousHousehold as previous, programsAppliedFor]
+    endpoint:
+      path: /applications/{applicationId}/interview-flags-inputs
+    include:
+      verified:
+        resource: income-verifications
+        bind: applicationId
+        fields: [kind, memberId, incomeId, period, amount, frequency]
+
   # applicationReview — sectionView with a state resource, pared down from the
   # safety-net composition of the same name. This is the most involved
   # generation path: a sectionView produces per-section endpoints, and the

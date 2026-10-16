@@ -32,7 +32,7 @@ import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
  * @param {(schema: *) => *} follow
  * @returns {object[]} Property maps, outermost first
  */
-function propertiesOf(schema, follow = (x) => x) {
+export function propertiesOf(schema, follow = (x) => x) {
   const resolved = follow(schema);
   if (!resolved || typeof resolved !== 'object') return [];
 
@@ -174,9 +174,27 @@ export function getItemSchema(listSchema, schemas, follow = (x) => x) {
  */
 const collectionsByResource = new Map();
 
-/** @param {Map<string, string>} collections - Resource name → collection */
-export function registerResourceCollections(collections) {
+/**
+ * Where each resource is read, by resource name: its item path with the server
+ * base in front, and the parameter naming the record itself — so a link to a
+ * member is `/intake/applications/{applicationId}/members/{memberId}`, in the
+ * API that serves members, not a path under whichever API holds the link.
+ *
+ * @type {Map<string, { path: string, parameter: string }>}
+ */
+const itemPathsByResource = new Map();
+
+/**
+ * @param {Map<string, string>} collections - Resource name → collection
+ * @param {Map<string, { path: string, parameter: string }>} [itemPaths] - Resource name → where it is read
+ */
+export function registerResourceCollections(collections, itemPaths = new Map()) {
+  // A server starting replaces what the last one registered: a resource only it
+  // served would otherwise still look served here.
+  collectionsByResource.clear();
+  itemPathsByResource.clear();
   for (const [name, collection] of collections) collectionsByResource.set(name, collection);
+  for (const [name, item] of itemPaths) itemPathsByResource.set(name, item);
 }
 
 /**
@@ -184,7 +202,7 @@ export function registerResourceCollections(collections) {
  * found there; otherwise the name is converted by convention — ApplicationMember
  * → application-members — which is how it was found before the model said.
  */
-function resourceToCollection(resource) {
+export function resourceToCollection(resource) {
   return collectionsByResource.get(resource) ?? (resource
     .replace(/([A-Z])/g, (_, c, i) => (i === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`))
     + 's');
@@ -226,28 +244,60 @@ export function extractLinksFields(schema, follow = (x) => x) {
 }
 
 /**
+ * Where a related record is read: its resource's item path, with the record's
+ * own id and any parent ids filled in. Parent ids come from the related record
+ * itself — a member carries its `applicationId`.
+ *
+ * Null when there's no route to point at: a resource no loaded API serves, as
+ * when only one domain's contracts are deployed, or a nested record that isn't
+ * here to say who its parent is. A link that can't be right is left out.
+ *
+ * @param {string} resource
+ * @param {string} id
+ * @param {string} collection
+ * @param {(collection: string, id: string) => object|null} lookup
+ * @returns {string|null}
+ */
+function linkTo(resource, id, collection, lookup) {
+  const item = itemPathsByResource.get(resource);
+  if (!item) return null;
+  let related;
+  let unresolved = false;
+  const path = item.path.replace(/\{([^}]+)\}/g, (_, name) => {
+    if (name === item.parameter) return encodeURIComponent(id);
+    related ??= lookup?.(collection, id) ?? null;
+    const value = related?.[name];
+    if (value === undefined || value === null) unresolved = true;
+    return encodeURIComponent(value ?? '');
+  });
+  return unresolved ? null : path;
+}
+
+/**
  * Apply links-only substitutions to a single DB record.
  * Returns a new object — does not mutate the original.
  *
- * For each linksField, if the FK value exists on the record:
- *   - Adds a `links` entry: links[linkName] = serverBasePath/collection/fkValue
- *   - Does NOT remove the FK field (unlike expand)
+ * For each linksField with an id on the record, adds `links[linkName]`: where
+ * the related record is read, in the API that serves it. The id field stays
+ * (unlike expand).
  *
  * @param {object} record - Raw DB record (or already-expanded record)
- * @param {Array<{ fkField, linkName, collection }>} linksFields
- * @param {string} [serverBasePath=''] - e.g. '/x-relationship'
+ * @param {Array<{ fkField, linkName, resource, collection }>} linksFields
+ * @param {(collection: string, id: string) => object|null} [lookup] - Finds a related record, for its parent ids
  * @returns {object}
  */
-export function applyLinks(record, linksFields, serverBasePath = '') {
+export function applyLinks(record, linksFields, lookup) {
   if (!linksFields || linksFields.length === 0) return record;
 
   const links = record.links ? { ...record.links } : {};
   let hasLinks = false;
 
-  for (const { fkField, linkName, collection } of linksFields) {
+  for (const { fkField, linkName, resource, collection } of linksFields) {
     const fkValue = record[fkField];
     if (!fkValue) continue;
-    links[linkName] = `${serverBasePath}/${collection}/${fkValue}`;
+    const href = linkTo(resource, fkValue, collection, lookup);
+    if (!href) continue;
+    links[linkName] = href;
     hasLinks = true;
   }
 

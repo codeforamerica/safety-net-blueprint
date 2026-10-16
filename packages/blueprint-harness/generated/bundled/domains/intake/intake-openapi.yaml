@@ -307,6 +307,18 @@ paths:
                                 domain: document-management
                                 resource: Document
                                 style: links-only
+                            type:
+                              type: string
+                              enum:
+                                - new
+                                - renewal
+                              default: new
+                              description: |
+                                A first application, or an application for recertification — the same kind of request.
+                            interviewDate:
+                              type: string
+                              format: date
+                              description: The date of the application's interview.
                             labels:
                               type: object
                               additionalProperties:
@@ -333,6 +345,131 @@ paths:
                               format: uuid
                               readOnly: true
                               description: Unique identifier (server-generated).
+                            previousHousehold:
+                              readOnly: true
+                              description: |
+                                The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                              type: object
+                              properties:
+                                size:
+                                  type: integer
+                                  minimum: 1
+                                  description: The number of people who buy and prepare food together, as the household states it.
+                                utilitiesIncludedInRent:
+                                  type: boolean
+                                  description: Whether the household says its utilities are included in the rent.
+                                monthlyIncome:
+                                  type: number
+                                  minimum: 0
+                                  description: Total monthly income, as the household states it.
+                                monthlyExpenses:
+                                  type: number
+                                  minimum: 0
+                                  description: Total monthly expenses, as the household states them.
+                                members:
+                                  type: array
+                                  items:
+                                    type: object
+                                    required:
+                                      - id
+                                    properties:
+                                      id:
+                                        type: string
+                                        description: The member's key within the household.
+                                      dateOfBirth:
+                                        type: string
+                                        format: date
+                                      isDisabled:
+                                        type: boolean
+                                        description: Whether the member is disabled.
+                                jobs:
+                                  type: array
+                                  items:
+                                    type: object
+                                    required:
+                                      - id
+                                      - memberId
+                                    properties:
+                                      id:
+                                        type: string
+                                        description: The job's key within the household.
+                                      memberId:
+                                        type: string
+                                        description: The member who holds the job.
+                                      employer:
+                                        type: string
+                                incomes:
+                                  type: array
+                                  items:
+                                    type: object
+                                    required:
+                                      - id
+                                      - memberId
+                                      - source
+                                      - amount
+                                      - frequency
+                                    properties:
+                                      id:
+                                        type: string
+                                        description: The income's key within the household.
+                                      memberId:
+                                        type: string
+                                        description: The member who receives it.
+                                      jobId:
+                                        type: string
+                                        description: The job it's paid for, when it's earned.
+                                      source:
+                                        type: string
+                                        enum:
+                                          - earned
+                                          - self_employment
+                                          - unearned
+                                      amount:
+                                        type: number
+                                        minimum: 0
+                                        description: The amount received each time it's paid, in dollars.
+                                      frequency:
+                                        type: string
+                                        enum:
+                                          - weekly
+                                          - biweekly
+                                          - semimonthly
+                                          - monthly
+                                          - irregular
+                                        description: How often it's paid.
+                                      paidInCash:
+                                        type: boolean
+                                      amountVaries:
+                                        type: boolean
+                                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                                expenses:
+                                  type: array
+                                  items:
+                                    type: object
+                                    required:
+                                      - type
+                                      - amount
+                                      - frequency
+                                    properties:
+                                      type:
+                                        type: string
+                                        enum:
+                                          - rent
+                                          - mortgage
+                                          - utilities
+                                          - dependent_care
+                                          - medical
+                                          - child_support
+                                      amount:
+                                        type: number
+                                        minimum: 0
+                                      frequency:
+                                        type: string
+                                        enum:
+                                          - weekly
+                                          - biweekly
+                                          - semimonthly
+                                          - monthly
                             programCount:
                               type: integer
                               readOnly: true
@@ -915,6 +1052,18 @@ paths:
                         domain: document-management
                         resource: Document
                         style: links-only
+                    type:
+                      type: string
+                      enum:
+                        - new
+                        - renewal
+                      default: new
+                      description: |
+                        A first application, or an application for recertification — the same kind of request.
+                    interviewDate:
+                      type: string
+                      format: date
+                      description: The date of the application's interview.
                     labels:
                       type: object
                       additionalProperties:
@@ -1031,6 +1180,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -1057,6 +1218,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -1652,6 +1938,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -1678,6 +1976,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -2244,6 +2667,18 @@ paths:
                         domain: document-management
                         resource: Document
                         style: links-only
+                    type:
+                      type: string
+                      enum:
+                        - new
+                        - renewal
+                      default: new
+                      description: |
+                        A first application, or an application for recertification — the same kind of request.
+                    interviewDate:
+                      type: string
+                      format: date
+                      description: The date of the application's interview.
                     labels:
                       type: object
                       additionalProperties:
@@ -2352,6 +2787,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -2378,6 +2825,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -2888,6 +3460,526 @@ paths:
       responses:
         "204":
           description: Application deleted successfully.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /applications/{applicationId}/income-verifications:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+    get:
+      summary: List an application's income verifications
+      operationId: listIncomeVerifications
+      tags:
+        - Applications
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Search query using field:value syntax. Multiple conditions separated by
+            spaces are ANDed together.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples in this documentation
+            show human-readable syntax for clarity.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `term` | Full-text exact match | `john` |
+            | `*term*` | Full-text contains | `*john*` |
+            | `term*` | Full-text starts with | `john*` |
+            | `*term` | Full-text ends with | `*smith` |
+            | `field:value` | Exact match on field | `status:approved` |
+            | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+            | `field:value*` | Starts with | `name:john*` |
+            | `field:*value` | Ends with | `email:*@example.com` |
+            | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+            | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+            | `field:>value` | Greater than | `income:>1000` |
+            | `field:>=value` | Greater than or equal | `income:>=1000` |
+            | `field:<value` | Less than | `income:<5000` |
+            | `field:<=value` | Less than or equal | `income:<=5000` |
+            | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+            | `-field:value` | Exclude / negate | `-status:denied` |
+            | `field:*` | Field exists (not null) | `email:*` |
+            | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Examples
+
+            - `john` — exact match for "john" in searchable fields
+            - `*john*` — contains "john" in searchable fields
+            - `name:*smith*` — name contains "smith" (case-insensitive)
+            - `email:*@example.com` — email ends with "@example.com"
+            - `status:approved` — exact match on status field
+            - `status:approved,pending` — status is "approved" OR "pending"
+            - `income:>=1000` — income greater than or equal to 1000
+            - `created:>2024-01-01` — created after January 1, 2024
+            - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+            - `-status:denied` — exclude records with status "denied"
+            - `-deletedAt:*` — only records where deletedAt does not exist
+            - `applicant.state:CA` — nested field filter
+
+            ## URL Encoding Reference
+
+            When manually constructing URLs, encode these characters:
+
+            | Character | Encoded |
+            |-----------|---------|
+            | (space) | `%20` or `+` |
+            | `"` | `%22` |
+            | `:` | `%3A` |
+            | `>` | `%3E` |
+            | `<` | `%3C` |
+            | `,` | `%2C` |
+
+            **Example:**
+            ```
+            Human-readable: q=status:approved income:>=1000
+            URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+            ```
+          examples:
+            simpleSearch:
+              summary: Full-text exact match
+              value: john
+            containsSearch:
+              summary: Full-text contains
+              value: "*john*"
+            exactMatch:
+              summary: Filter by status
+              value: status:approved
+            containsField:
+              summary: Name contains (case-insensitive)
+              value: name:*smith*
+            startsWithField:
+              summary: Name starts with
+              value: name:john*
+            endsWithField:
+              summary: Email ends with domain
+              value: email:*@example.com
+            multipleFilters:
+              summary: Status and income filter
+              value: status:approved income:>=1000
+            dateRange:
+              summary: Created after date
+              value: created:>2024-01-01
+            multiValue:
+              summary: Multiple statuses (OR)
+              value: status:approved,pending,under_review
+            negation:
+              summary: Exclude denied
+              value: "-status:denied"
+            notExists:
+              summary: Field does not exist
+              value: "-deletedAt:*"
+            nestedField:
+              summary: Filter by nested field
+              value: applicant.state:CA
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: The income verifications gathered for this application.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - type: object
+                          properties:
+                            kind:
+                              type: string
+                              enum:
+                                - wage_record
+                                - pay_stub
+                              description: |
+                                Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                            memberId:
+                              type: string
+                              description: The member it's about, by their key in the household.
+                            incomeId:
+                              type: string
+                              description: For a pay stub, the income it's for, by its key in the household.
+                            period:
+                              type: string
+                              description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                            amount:
+                              type: number
+                              minimum: 0
+                              description: Gross wages for the quarter, or gross pay on the stub.
+                            frequency:
+                              type: string
+                              enum:
+                                - weekly
+                                - biweekly
+                                - semimonthly
+                                - monthly
+                              description: For a pay stub, how often the pay it shows is paid.
+                        - type: object
+                          required:
+                            - id
+                            - applicationId
+                            - kind
+                            - memberId
+                            - amount
+                            - createdAt
+                            - updatedAt
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                            applicationId:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                              x-relationship:
+                                resource: Application
+                            createdAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            links:
+                              type: object
+                              readOnly: true
+                              description: Related resource links.
+                              properties:
+                                application:
+                                  type: string
+                                  format: uri-reference
+                                  description: Link to the related Application resource.
+                  total:
+                    type: integer
+                    minimum: 0
+                  limit:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  offset:
+                    type: integer
+                    minimum: 0
+                  hasNext:
+                    type: boolean
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    post:
+      summary: Record an income verification
+      operationId: createIncomeVerification
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - wage_record
+                        - pay_stub
+                      description: |
+                        Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                    memberId:
+                      type: string
+                      description: The member it's about, by their key in the household.
+                    incomeId:
+                      type: string
+                      description: For a pay stub, the income it's for, by its key in the household.
+                    period:
+                      type: string
+                      description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                    amount:
+                      type: number
+                      minimum: 0
+                      description: Gross wages for the quarter, or gross pay on the stub.
+                    frequency:
+                      type: string
+                      enum:
+                        - weekly
+                        - biweekly
+                        - semimonthly
+                        - monthly
+                      description: For a pay stub, how often the pay it shows is paid.
+                - type: object
+                  required:
+                    - kind
+                    - memberId
+                    - amount
+      responses:
+        "201":
+          description: Income verification recorded.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - wage_record
+                          - pay_stub
+                        description: |
+                          Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                      memberId:
+                        type: string
+                        description: The member it's about, by their key in the household.
+                      incomeId:
+                        type: string
+                        description: For a pay stub, the income it's for, by its key in the household.
+                      period:
+                        type: string
+                        description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: Gross wages for the quarter, or gross pay on the stub.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                        description: For a pay stub, how often the pay it shows is paid.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - kind
+                      - memberId
+                      - amount
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /applications/{applicationId}/income-verifications/{incomeVerificationId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: incomeVerificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an income verification
+      operationId: getIncomeVerification
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Income verification retrieved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - wage_record
+                          - pay_stub
+                        description: |
+                          Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                      memberId:
+                        type: string
+                        description: The member it's about, by their key in the household.
+                      incomeId:
+                        type: string
+                        description: For a pay stub, the income it's for, by its key in the household.
+                      period:
+                        type: string
+                        description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: Gross wages for the quarter, or gross pay on the stub.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                        description: For a pay stub, how often the pay it shows is paid.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - kind
+                      - memberId
+                      - amount
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
         "404":
           description: Resource not found
           content:
@@ -4809,6 +5901,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -4835,6 +5939,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -5500,6 +6729,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -5526,6 +6767,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -6209,6 +7575,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -6235,6 +7613,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -6900,6 +8403,18 @@ paths:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -6926,6 +8441,131 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -7563,6 +9203,79 @@ paths:
         type: composition
         domain: intake
         id: applicationSummary
+  /applications/{applicationId}/interview-flags-inputs:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+    get:
+      summary: Get interviewFlagsInputs
+      operationId: getInterviewFlagsInputs
+      responses:
+        "200":
+          description: interviewFlagsInputs retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Generated composition response for interviewFlagsInputs.
+        "404":
+          description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: intake
+        id: interviewFlagsInputs
   /applications/{applicationId}/review:
     parameters:
       - name: applicationId
@@ -9293,6 +11006,18 @@ components:
             domain: document-management
             resource: Document
             style: links-only
+        type:
+          type: string
+          enum:
+            - new
+            - renewal
+          default: new
+          description: |
+            A first application, or an application for recertification — the same kind of request.
+        interviewDate:
+          type: string
+          format: date
+          description: The date of the application's interview.
         labels:
           type: object
           additionalProperties:
@@ -9394,6 +11119,18 @@ components:
                 domain: document-management
                 resource: Document
                 style: links-only
+            type:
+              type: string
+              enum:
+                - new
+                - renewal
+              default: new
+              description: |
+                A first application, or an application for recertification — the same kind of request.
+            interviewDate:
+              type: string
+              format: date
+              description: The date of the application's interview.
             labels:
               type: object
               additionalProperties:
@@ -9420,6 +11157,131 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
+            previousHousehold:
+              readOnly: true
+              description: |
+                The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+              type: object
+              properties:
+                size:
+                  type: integer
+                  minimum: 1
+                  description: The number of people who buy and prepare food together, as the household states it.
+                utilitiesIncludedInRent:
+                  type: boolean
+                  description: Whether the household says its utilities are included in the rent.
+                monthlyIncome:
+                  type: number
+                  minimum: 0
+                  description: Total monthly income, as the household states it.
+                monthlyExpenses:
+                  type: number
+                  minimum: 0
+                  description: Total monthly expenses, as the household states them.
+                members:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                    properties:
+                      id:
+                        type: string
+                        description: The member's key within the household.
+                      dateOfBirth:
+                        type: string
+                        format: date
+                      isDisabled:
+                        type: boolean
+                        description: Whether the member is disabled.
+                jobs:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - memberId
+                    properties:
+                      id:
+                        type: string
+                        description: The job's key within the household.
+                      memberId:
+                        type: string
+                        description: The member who holds the job.
+                      employer:
+                        type: string
+                incomes:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - memberId
+                      - source
+                      - amount
+                      - frequency
+                    properties:
+                      id:
+                        type: string
+                        description: The income's key within the household.
+                      memberId:
+                        type: string
+                        description: The member who receives it.
+                      jobId:
+                        type: string
+                        description: The job it's paid for, when it's earned.
+                      source:
+                        type: string
+                        enum:
+                          - earned
+                          - self_employment
+                          - unearned
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: The amount received each time it's paid, in dollars.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                          - irregular
+                        description: How often it's paid.
+                      paidInCash:
+                        type: boolean
+                      amountVaries:
+                        type: boolean
+                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                expenses:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - amount
+                      - frequency
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - rent
+                          - mortgage
+                          - utilities
+                          - dependent_care
+                          - medical
+                          - child_support
+                      amount:
+                        type: number
+                        minimum: 0
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
             programCount:
               type: integer
               readOnly: true
@@ -9959,6 +11821,18 @@ components:
                 domain: document-management
                 resource: Document
                 style: links-only
+            type:
+              type: string
+              enum:
+                - new
+                - renewal
+              default: new
+              description: |
+                A first application, or an application for recertification — the same kind of request.
+            interviewDate:
+              type: string
+              format: date
+              description: The date of the application's interview.
             labels:
               type: object
               additionalProperties:
@@ -10055,6 +11929,18 @@ components:
                 domain: document-management
                 resource: Document
                 style: links-only
+            type:
+              type: string
+              enum:
+                - new
+                - renewal
+              default: new
+              description: |
+                A first application, or an application for recertification — the same kind of request.
+            interviewDate:
+              type: string
+              format: date
+              description: The date of the application's interview.
             labels:
               type: object
               additionalProperties:
@@ -10076,6 +11962,234 @@ components:
                   description: Link to the related Document resource.
         - type: object
           minProperties: 1
+    IncomeVerificationWritable:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - wage_record
+            - pay_stub
+          description: |
+            Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+        memberId:
+          type: string
+          description: The member it's about, by their key in the household.
+        incomeId:
+          type: string
+          description: For a pay stub, the income it's for, by its key in the household.
+        period:
+          type: string
+          description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+        amount:
+          type: number
+          minimum: 0
+          description: Gross wages for the quarter, or gross pay on the stub.
+        frequency:
+          type: string
+          enum:
+            - weekly
+            - biweekly
+            - semimonthly
+            - monthly
+          description: For a pay stub, how often the pay it shows is paid.
+    IncomeVerification:
+      allOf:
+        - type: object
+          properties:
+            kind:
+              type: string
+              enum:
+                - wage_record
+                - pay_stub
+              description: |
+                Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+            memberId:
+              type: string
+              description: The member it's about, by their key in the household.
+            incomeId:
+              type: string
+              description: For a pay stub, the income it's for, by its key in the household.
+            period:
+              type: string
+              description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+            amount:
+              type: number
+              minimum: 0
+              description: Gross wages for the quarter, or gross pay on the stub.
+            frequency:
+              type: string
+              enum:
+                - weekly
+                - biweekly
+                - semimonthly
+                - monthly
+              description: For a pay stub, how often the pay it shows is paid.
+        - type: object
+          required:
+            - id
+            - applicationId
+            - kind
+            - memberId
+            - amount
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+    IncomeVerificationCreate:
+      allOf:
+        - type: object
+          properties:
+            kind:
+              type: string
+              enum:
+                - wage_record
+                - pay_stub
+              description: |
+                Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+            memberId:
+              type: string
+              description: The member it's about, by their key in the household.
+            incomeId:
+              type: string
+              description: For a pay stub, the income it's for, by its key in the household.
+            period:
+              type: string
+              description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+            amount:
+              type: number
+              minimum: 0
+              description: Gross wages for the quarter, or gross pay on the stub.
+            frequency:
+              type: string
+              enum:
+                - weekly
+                - biweekly
+                - semimonthly
+                - monthly
+              description: For a pay stub, how often the pay it shows is paid.
+        - type: object
+          required:
+            - kind
+            - memberId
+            - amount
+    IncomeVerificationList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+              - type: object
+                properties:
+                  kind:
+                    type: string
+                    enum:
+                      - wage_record
+                      - pay_stub
+                    description: |
+                      Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                  memberId:
+                    type: string
+                    description: The member it's about, by their key in the household.
+                  incomeId:
+                    type: string
+                    description: For a pay stub, the income it's for, by its key in the household.
+                  period:
+                    type: string
+                    description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                  amount:
+                    type: number
+                    minimum: 0
+                    description: Gross wages for the quarter, or gross pay on the stub.
+                  frequency:
+                    type: string
+                    enum:
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
+                    description: For a pay stub, how often the pay it shows is paid.
+              - type: object
+                required:
+                  - id
+                  - applicationId
+                  - kind
+                  - memberId
+                  - amount
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  applicationId:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    x-relationship:
+                      resource: Application
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
     ApplicationList:
       type: object
       additionalProperties: false
@@ -10169,6 +12283,18 @@ components:
                       domain: document-management
                       resource: Document
                       style: links-only
+                  type:
+                    type: string
+                    enum:
+                      - new
+                      - renewal
+                    default: new
+                    description: |
+                      A first application, or an application for recertification — the same kind of request.
+                  interviewDate:
+                    type: string
+                    format: date
+                    description: The date of the application's interview.
                   labels:
                     type: object
                     additionalProperties:
@@ -10195,6 +12321,131 @@ components:
                     format: uuid
                     readOnly: true
                     description: Unique identifier (server-generated).
+                  previousHousehold:
+                    readOnly: true
+                    description: |
+                      The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                    type: object
+                    properties:
+                      size:
+                        type: integer
+                        minimum: 1
+                        description: The number of people who buy and prepare food together, as the household states it.
+                      utilitiesIncludedInRent:
+                        type: boolean
+                        description: Whether the household says its utilities are included in the rent.
+                      monthlyIncome:
+                        type: number
+                        minimum: 0
+                        description: Total monthly income, as the household states it.
+                      monthlyExpenses:
+                        type: number
+                        minimum: 0
+                        description: Total monthly expenses, as the household states them.
+                      members:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                          properties:
+                            id:
+                              type: string
+                              description: The member's key within the household.
+                            dateOfBirth:
+                              type: string
+                              format: date
+                            isDisabled:
+                              type: boolean
+                              description: Whether the member is disabled.
+                      jobs:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - memberId
+                          properties:
+                            id:
+                              type: string
+                              description: The job's key within the household.
+                            memberId:
+                              type: string
+                              description: The member who holds the job.
+                            employer:
+                              type: string
+                      incomes:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - memberId
+                            - source
+                            - amount
+                            - frequency
+                          properties:
+                            id:
+                              type: string
+                              description: The income's key within the household.
+                            memberId:
+                              type: string
+                              description: The member who receives it.
+                            jobId:
+                              type: string
+                              description: The job it's paid for, when it's earned.
+                            source:
+                              type: string
+                              enum:
+                                - earned
+                                - self_employment
+                                - unearned
+                            amount:
+                              type: number
+                              minimum: 0
+                              description: The amount received each time it's paid, in dollars.
+                            frequency:
+                              type: string
+                              enum:
+                                - weekly
+                                - biweekly
+                                - semimonthly
+                                - monthly
+                                - irregular
+                              description: How often it's paid.
+                            paidInCash:
+                              type: boolean
+                            amountVaries:
+                              type: boolean
+                              description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                      expenses:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - type
+                            - amount
+                            - frequency
+                          properties:
+                            type:
+                              type: string
+                              enum:
+                                - rent
+                                - mortgage
+                                - utilities
+                                - dependent_care
+                                - medical
+                                - child_support
+                            amount:
+                              type: number
+                              minimum: 0
+                            frequency:
+                              type: string
+                              enum:
+                                - weekly
+                                - biweekly
+                                - semimonthly
+                                - monthly
                   programCount:
                     type: integer
                     readOnly: true
@@ -11885,6 +14136,9 @@ components:
     ApplicationSummaryResponse:
       type: object
       description: Generated composition response for applicationSummary.
+    InterviewFlagsInputsResponse:
+      type: object
+      description: Generated composition response for interviewFlagsInputs.
     ApplicationReviewResponse:
       type: object
       description: Generated composition response for applicationReview.

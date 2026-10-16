@@ -195,6 +195,56 @@ export function validateRuleset(domain, rulesetName, ruleset) {
     }
   }
 
+  // Every name in an expression's scope means one thing. Inputs and facts share
+  // that scope, and a dot nests in it — `household.income` is a field of the
+  // input `household`, and `risks.cashIncome` a fact in the group `risks` — so
+  // a fact can't repeat another, start with an input's name, or be a group too.
+  const inputNames = new Set(Object.keys(ruleset.inputs || {}));
+  // Constants are in scope as `constants`, so that name is taken too.
+  if (ruleset.constants) {
+    if (inputNames.has('constants')) {
+      errors.push({
+        rule: 'constants-input',
+        message: 'An input named "constants" would hide the ruleset\'s constants, which facts read as `constants.<name>`. Rename the input.',
+        path: `${base}.inputs.constants`,
+      });
+    }
+    inputNames.add('constants');
+  }
+  const paths = new Set();
+  for (const { path } of ruleset.facts || []) {
+    if (typeof path !== 'string') continue;
+    if (paths.has(path)) {
+      errors.push({
+        rule: 'duplicate-fact',
+        message: `Fact "${path}" is declared more than once.`,
+        path: `${base}.facts.${path}`,
+      });
+    }
+    paths.add(path);
+    const first = path.split('.')[0];
+    if (inputNames.has(first)) {
+      errors.push({
+        rule: 'fact-shadows-input',
+        message: `Fact "${path}" starts with the input "${first}", so the two can't be told apart in an expression. Rename the fact.`,
+        path: `${base}.facts.${path}`,
+      });
+    }
+  }
+  for (const path of paths) {
+    const segments = path.split('.');
+    for (let i = 1; i < segments.length; i++) {
+      const group = segments.slice(0, i).join('.');
+      if (paths.has(group)) {
+        errors.push({
+          rule: 'fact-is-a-group',
+          message: `"${group}" is a fact and also groups "${path}". A path is one or the other: rename the fact, or the group.`,
+          path: `${base}.facts.${group}`,
+        });
+      }
+    }
+  }
+
   // 4. $ref resolution
   const schemasToCheck = [
     ...Object.values(ruleset.inputs || {}),
