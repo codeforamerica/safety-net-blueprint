@@ -496,10 +496,24 @@ entries:
     citation: "7 CFR § 273.24"
     citationUrl: "https://www.ecfr.gov/current/title-7/section-273.24"
     description: >
-      Able-bodied adults without dependents (ABAWDs) ages 18–49 may receive SNAP
-      for only 3 months in a 36-month period unless they work or participate in
-      an approved work or training program for at least 80 hours per month.
-      Exemptions apply for pregnancy, disability, and caring for a dependent child.
+      Able-bodied adults without dependents (ABAWDs) ages 18 through 64, the range
+      P.L. 119-21 set, may receive SNAP for only 3 months in a 36-month period
+      unless they work or participate in an approved work or training program for
+      at least 80 hours per month. Exemptions apply for pregnancy, being unfit for
+      work, and a household with a child under 14.
+    programs: [snap]
+
+  snap-general-work-requirement:
+    citation: "7 CFR § 273.7"
+    citationUrl: "https://www.ecfr.gov/current/title-7/section-273.7"
+    description: >
+      SNAP general work requirements. Able-bodied adults must register for work,
+      accept suitable employment, and comply with assigned employment and training
+      activities unless they meet an exemption — among them caring for a child under
+      6 or an incapacitated person, receiving unemployment benefits, being a student,
+      being in a drug or alcohol treatment program, and working 30 hours a week or
+      earning the federal minimum wage times 30 (273.7(b)(1)(vii)). Distinct from
+      the ABAWD time limit at 273.24.
     programs: [snap]
 
   # ── SNAP — income rules detail ────────────────────────────────────────────────

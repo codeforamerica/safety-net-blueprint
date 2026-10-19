@@ -1,0 +1,116 @@
+# Worked examples for the SNAP work requirements, shown in the explorer's try-it panel.
+#
+# Ported from contracts/work-rules/intake-work-rules-examples.yaml in
+# codeforamerica/co-snap-interview-prompts (feature/work-rules). Each but the
+# last comes from the self-advocacy tool's own tests, cited at the end of its
+# description; the tool's age ranges are written as an age inside each.
+#
+# The rules give nothing a default, so an example that leaves questions out
+# shows results waiting on them, each naming what to ask. A state's overlay
+# appends its own. Inputs only: what each must produce is pinned by
+# tests/scenarios/snap-work-requirements.yaml.
+
+$schema: https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml
+domain: eligibility
+rulesets:
+  snapWorkRequirements:
+    examples:
+      - description: Meets the work rules, working 20 hours a week (tool factory trait :meets_work_rules)
+        inputs:
+          person:
+            age: 30
+            isWorking: true
+            workingHours: 20
+            workingWeeklyEarnings: 100
+      - description: Exempt by hours, working 35 hours a week (tool factory trait :with_earnings_exemption)
+        inputs:
+          person:
+            age: 30
+            isWorking: true
+            workingHours: 35
+      - description: Exempt by earnings, $217.50 a week (work_rules_policy_spec.rb:99)
+        inputs:
+          person:
+            age: 30
+            isWorking: true
+            workingWeeklyEarnings: 217.5
+      - description: >-
+          Working 10 hours for $100, under both thresholds — does not meet the work rules
+          (work_rules_policy_spec.rb:104)
+        inputs:
+          person:
+            age: 30
+            isWorking: true
+            workingHours: 10
+            workingWeeklyEarnings: 100
+      - description: >-
+          Working, volunteering and training, 21 hours together — meets the work rules
+          (screener_spec.rb:1016)
+        inputs:
+          person:
+            age: 30
+            workingHours: 5
+            volunteeringHours: 7
+            workTrainingHours: 9
+      - description: Exempt by age, 65 or older (tool factory trait :age_exempt)
+        inputs:
+          person:
+            age: 70
+      - description: >-
+          American Indian with a medical condition preventing work — exempt, with proof (tool
+          factory trait :with_exemption)
+        inputs:
+          person:
+            age: 30
+            isAmericanIndian: true
+            preventingWorkMedicalCondition: true
+      - description: >-
+          65 or older, with a child, pregnant and working 30 hours — four exemptions at once
+          (work_rules_policy_spec.rb:62)
+        inputs:
+          person:
+            age: 70
+            hasChild: true
+            isPregnant: true
+            isWorking: true
+            workingHours: 30
+      - description: >-
+          Nothing answered — nothing is decided, and each result names the questions it waits on
+          (work_rules_policy_spec.rb:27)
+        inputs:
+          person: {}
+      - description: >-
+          Every question answered, so every result is decided (not from the tool — added to show the
+          difference)
+        inputs:
+          person:
+            age: 30
+            isAmericanIndian: false
+            hasChild: false
+            caringForChildUnder6: false
+            caringForDisabledOrIllPerson: false
+            isPregnant: false
+            hasUnemploymentBenefits: false
+            receivingBenefitsSsdi: false
+            receivingBenefitsSsi: false
+            receivingBenefitsVeteransDisability: false
+            receivingBenefitsWorkersCompensation: false
+            receivingBenefitsDisabilityPension: false
+            receivingBenefitsInsurancePayments: false
+            receivingBenefitsDisabilityMedicaid: false
+            receivingBenefitsOther: false
+            isMigrantFarmworker: false
+            isStudent: false
+            isInAlcoholTreatmentProgram: false
+            preventingWorkPlaceToSleep: false
+            preventingWorkDrugsAlcohol: false
+            preventingWorkDomesticViolence: false
+            preventingWorkMedicalCondition: false
+            preventingWorkOther: false
+            isWorking: true
+            workingHours: 20
+            workingWeeklyEarnings: 100
+            isVolunteer: false
+            volunteeringHours: 0
+            isInWorkTraining: false
+            workTrainingHours: 0

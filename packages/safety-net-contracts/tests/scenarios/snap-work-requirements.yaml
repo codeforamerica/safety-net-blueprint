@@ -1,0 +1,679 @@
+# SNAP work requirements cases and the results each must produce. Ported from
+# scripts/work-rules-cases.mjs in codeforamerica/co-snap-interview-prompts
+# (feature/work-rules), whose cases come from the self-advocacy tool's own specs.
+#
+#   person  answers; a question not given takes its answer in unanswered, below
+#   state   a state overlay (default: the federal rules as written)
+#   expect  facts and the values they must have. null: not decided, so missing.
+#           A list of exemption codes is compared as a set.
+#   note    where an expectation differs from the port's, and why
+#
+# Renamed to the vocabulary Medicaid's work requirements share: exemptionReasons
+# is exemptions, outcome is status, compliesWithWorkRules is meetsRequirement.
+#
+# The rules give nothing a default, so an unanswered question leaves a result
+# missing. A case is about the answers it gives; every other question takes the
+# answer that grants nothing, as the tool treats a question it skipped. Age has
+# no such answer, so a case that leaves it out is undecided.
+
+unanswered:
+  person:
+    isAmericanIndian: false
+    hasChild: false
+    caringForChildUnder6: false
+    caringForDisabledOrIllPerson: false
+    isPregnant: false
+    hasUnemploymentBenefits: false
+    receivingBenefitsSsdi: false
+    receivingBenefitsSsi: false
+    receivingBenefitsVeteransDisability: false
+    receivingBenefitsWorkersCompensation: false
+    receivingBenefitsDisabilityPension: false
+    receivingBenefitsInsurancePayments: false
+    receivingBenefitsDisabilityMedicaid: false
+    receivingBenefitsOther: false
+    isMigrantFarmworker: false
+    isStudent: false
+    isInAlcoholTreatmentProgram: false
+    preventingWorkPlaceToSleep: false
+    preventingWorkDrugsAlcohol: false
+    preventingWorkDomesticViolence: false
+    preventingWorkMedicalCondition: false
+    preventingWorkOther: false
+    isWorking: false
+    workingHours: 0
+    workingWeeklyEarnings: 0
+    isVolunteer: false
+    volunteeringHours: 0
+    isInWorkTraining: false
+    workTrainingHours: 0
+  northCarolina:
+    hasHsDiploma: true
+    workedLastFiveYears: true
+    earnedMoreThanThreshold: true
+    healthConditionsPreventingWork: false
+    teachesHomeschool: false
+    homeschoolHours: 0
+cases:
+  - name: no exemption reasons when nothing applies
+    person:
+      age: 30
+    expect:
+      exemptions: []
+  - name: nothing decided when age is unanswered
+    person: {}
+    note: >-
+      The port expected the exemption list undecided, since it held the age codes. Without them the
+      list is decided without age; whether the requirement applies is what waits on it.
+    expect:
+      exemptions: []
+      requirementApplies: null
+  - name: 65 or older
+    person:
+      age: 70
+    note: >-
+      The port listed age_over_maximum among the exemptions. Age decides whether the requirement
+      applies, so it is in requirementApplies, not exemptions.
+    expect:
+      requirementApplies: false
+      exemptions: []
+  - name: under 18
+    person:
+      age: 16
+    note: >-
+      The port listed age_under_minimum among the exemptions. Age decides whether the requirement
+      applies, so it is in requirementApplies, not exemptions.
+    expect:
+      requirementApplies: false
+      exemptions: []
+  - name: receivingBenefitsSsdi = yes gives receiving_benefits_ssdi
+    person:
+      age: 30
+      receivingBenefitsSsdi: true
+    expect:
+      exemptions:
+        - receiving_benefits_ssdi
+  - name: receivingBenefitsSsi = yes gives receiving_benefits_ssi
+    person:
+      age: 30
+      receivingBenefitsSsi: true
+    expect:
+      exemptions:
+        - receiving_benefits_ssi
+  - name: receivingBenefitsVeteransDisability = yes gives receiving_benefits_veterans_disability
+    person:
+      age: 30
+      receivingBenefitsVeteransDisability: true
+    expect:
+      exemptions:
+        - receiving_benefits_veterans_disability
+  - name: receivingBenefitsWorkersCompensation = yes gives receiving_benefits_workers_compensation
+    person:
+      age: 30
+      receivingBenefitsWorkersCompensation: true
+    expect:
+      exemptions:
+        - receiving_benefits_workers_compensation
+  - name: receivingBenefitsDisabilityPension = yes gives receiving_benefits_disability_pension
+    person:
+      age: 30
+      receivingBenefitsDisabilityPension: true
+    expect:
+      exemptions:
+        - receiving_benefits_disability_pension
+  - name: receivingBenefitsInsurancePayments = yes gives receiving_benefits_insurance_payments
+    person:
+      age: 30
+      receivingBenefitsInsurancePayments: true
+    expect:
+      exemptions:
+        - receiving_benefits_insurance_payments
+  - name: receivingBenefitsDisabilityMedicaid = yes gives receiving_benefits_disability_medicaid
+    person:
+      age: 30
+      receivingBenefitsDisabilityMedicaid: true
+    expect:
+      exemptions:
+        - receiving_benefits_disability_medicaid
+  - name: receivingBenefitsOther = yes gives receiving_benefits_other
+    person:
+      age: 30
+      receivingBenefitsOther: true
+    expect:
+      exemptions:
+        - receiving_benefits_other
+  - name: preventingWorkDomesticViolence = yes gives preventing_work_domestic_violence
+    person:
+      age: 30
+      preventingWorkDomesticViolence: true
+    expect:
+      exemptions:
+        - preventing_work_domestic_violence
+  - name: preventingWorkDrugsAlcohol = yes gives preventing_work_drugs_alcohol
+    person:
+      age: 30
+      preventingWorkDrugsAlcohol: true
+    expect:
+      exemptions:
+        - preventing_work_drugs_alcohol
+  - name: preventingWorkMedicalCondition = yes gives preventing_work_medical_condition
+    person:
+      age: 30
+      preventingWorkMedicalCondition: true
+    expect:
+      exemptions:
+        - preventing_work_medical_condition
+  - name: preventingWorkOther = yes gives preventing_work_other
+    person:
+      age: 30
+      preventingWorkOther: true
+    expect:
+      exemptions:
+        - preventing_work_other
+  - name: preventingWorkPlaceToSleep = yes gives preventing_work_place_to_sleep
+    person:
+      age: 30
+      preventingWorkPlaceToSleep: true
+    expect:
+      exemptions:
+        - preventing_work_place_to_sleep
+  - name: caringForChildUnder6 = yes gives caring_for_child_under_6
+    person:
+      age: 30
+      caringForChildUnder6: true
+    expect:
+      exemptions:
+        - caring_for_child_under_6
+  - name: caringForDisabledOrIllPerson = yes gives caring_for_disabled_or_ill_person
+    person:
+      age: 30
+      caringForDisabledOrIllPerson: true
+    expect:
+      exemptions:
+        - caring_for_disabled_or_ill_person
+  - name: hasChild = yes gives has_child
+    person:
+      age: 30
+      hasChild: true
+    expect:
+      exemptions:
+        - has_child
+  - name: hasUnemploymentBenefits = yes gives has_unemployment_benefits
+    person:
+      age: 30
+      hasUnemploymentBenefits: true
+    expect:
+      exemptions:
+        - has_unemployment_benefits
+  - name: isAmericanIndian = yes gives is_american_indian
+    person:
+      age: 30
+      isAmericanIndian: true
+    expect:
+      exemptions:
+        - is_american_indian
+  - name: isInAlcoholTreatmentProgram = yes gives is_in_alcohol_treatment_program
+    person:
+      age: 30
+      isInAlcoholTreatmentProgram: true
+    expect:
+      exemptions:
+        - is_in_alcohol_treatment_program
+  - name: isMigrantFarmworker = yes gives is_migrant_farmworker
+    person:
+      age: 30
+      isMigrantFarmworker: true
+    expect:
+      exemptions:
+        - is_migrant_farmworker
+  - name: isPregnant = yes gives is_pregnant
+    person:
+      age: 30
+      isPregnant: true
+    expect:
+      exemptions:
+        - is_pregnant
+  - name: isStudent = yes gives is_student
+    person:
+      age: 30
+      isStudent: true
+    expect:
+      exemptions:
+        - is_student
+  - name: age, other and earnings exemptions together
+    person:
+      age: 70
+      hasChild: true
+      isPregnant: true
+      isWorking: true
+      workingHours: 30
+    note: >-
+      The port listed age_over_maximum among the exemptions. Age decides whether the requirement
+      applies, so it is in requirementApplies, not exemptions.
+    expect:
+      requirementApplies: false
+      exemptions:
+        - has_child
+        - is_pregnant
+        - earnings_exemption
+  - name: earnings exemption at 30 hours
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 30
+    expect:
+      hasEarningsExemption: true
+  - name: earnings exemption at $217.50 a week
+    person:
+      age: 30
+      isWorking: true
+      workingWeeklyEarnings: 217.5
+    expect:
+      hasEarningsExemption: true
+  - name: no earnings exemption under both thresholds
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 10
+      workingWeeklyEarnings: 100
+    expect:
+      hasEarningsExemption: false
+  - name: no earnings exemption when not working
+    person:
+      age: 30
+      isWorking: false
+    expect:
+      hasEarningsExemption: false
+  - name: earnings alone exempt, but are not a non-earnings exemption
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 30
+    expect:
+      hasExemption: false
+  - name: a non-earnings exemption counts
+    person:
+      age: 30
+      hasUnemploymentBenefits: true
+      isPregnant: true
+    expect:
+      hasExemption: true
+  - name: 20 combined hours complies
+    person:
+      age: 30
+      workingHours: 10
+      volunteeringHours: 5
+      workTrainingHours: 5
+    expect:
+      meetsRequirement: true
+  - name: 19 combined hours does not
+    person:
+      age: 30
+      workingHours: 10
+      volunteeringHours: 5
+      workTrainingHours: 4
+    expect:
+      meetsRequirement: false
+  - name: no proof of American Indian status federally
+    person:
+      age: 30
+      isAmericanIndian: true
+    expect:
+      americanIndianExemptionRequiresProof: false
+  - name: proof of volunteering when volunteering
+    person:
+      age: 30
+      isVolunteer: true
+      volunteeringHours: 5
+    expect:
+      needsProofOfVolunteering: true
+  - name: no proof of volunteering at 0 hours
+    person:
+      age: 30
+      isVolunteer: true
+      volunteeringHours: 0
+    expect:
+      needsProofOfVolunteering: false
+  - name: no proof of volunteering when not a volunteer
+    person:
+      age: 30
+      isVolunteer: false
+      volunteeringHours: 5
+    expect:
+      needsProofOfVolunteering: false
+  - name: nothing extra prevents work federally
+    person:
+      age: 30
+    expect:
+      anyPreventingWork: false
+  - name: a listed situation prevents work
+    person:
+      age: 30
+      preventingWorkOther: true
+    expect:
+      anyPreventingWork: true
+  - name: proof required for isStudent
+    person:
+      age: 30
+      isStudent: true
+    expect:
+      requiresProof: true
+  - name: proof required for preventingWorkDrugsAlcohol
+    person:
+      age: 30
+      preventingWorkDrugsAlcohol: true
+    expect:
+      requiresProof: true
+  - name: proof required for preventingWorkMedicalCondition
+    person:
+      age: 30
+      preventingWorkMedicalCondition: true
+    expect:
+      requiresProof: true
+  - name: proof required for receivingBenefitsSsi
+    person:
+      age: 30
+      receivingBenefitsSsi: true
+    expect:
+      requiresProof: true
+  - name: proof required for isInAlcoholTreatmentProgram
+    person:
+      age: 30
+      isInAlcoholTreatmentProgram: true
+    expect:
+      requiresProof: true
+  - name: no proof required for pregnancy
+    person:
+      age: 30
+      isPregnant: true
+    expect:
+      requiresProof: false
+  - name: no earnings proof once exempt
+    person:
+      age: 30
+      isWorking: true
+      workingWeeklyEarnings: 300
+    expect:
+      requiresProof: false
+  - name: no outcome until age is answered
+    person:
+      isPregnant: true
+    expect:
+      status: null
+  - name: 'outcome: age exempt'
+    person:
+      age: 16
+      isPregnant: true
+    expect:
+      status: requirement_does_not_apply
+  - name: 'outcome: exempt'
+    person:
+      age: 30
+      isPregnant: true
+    expect:
+      status: exempt
+  - name: 'outcome: rules met'
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 20
+    expect:
+      status: meets_requirement
+  - name: 'outcome: rules not met'
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 19
+    expect:
+      status: does_not_meet_requirement
+  - name: proof of American Indian status
+    state: DE
+    person:
+      age: 30
+      isAmericanIndian: true
+    expect:
+      americanIndianExemptionRequiresProof: true
+  - name: which makes proof required
+    state: DE
+    person:
+      age: 30
+      isAmericanIndian: true
+    expect:
+      requiresProof: true
+  - name: no proof when not American Indian
+    state: DE
+    person:
+      age: 30
+      isAmericanIndian: false
+    expect:
+      americanIndianExemptionRequiresProof: false
+  - name: no proof of American Indian status
+    state: NC
+    person:
+      age: 30
+      isAmericanIndian: true
+    expect:
+      americanIndianExemptionRequiresProof: false
+  - name: no proof of volunteering
+    state: NC
+    person:
+      age: 30
+      isVolunteer: true
+      volunteeringHours: 5
+    expect:
+      needsProofOfVolunteering: false
+  - name: 55–64, no diploma, no recent work, medical condition
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: true
+  - name: undecided when age is unanswered
+    state: NC
+    person:
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: null
+  - name: not when too young
+    state: NC
+    person:
+      age: 30
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: not when too old
+    state: NC
+    person:
+      age: 70
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: not when worked recently with no earnings answer
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: true
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: not with a diploma
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: true
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: not without a medical condition
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: false
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: worked recently but under the earnings threshold
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: true
+      earnedMoreThanThreshold: false
+      healthConditionsPreventingWork: true
+    expect:
+      ageWorkEducationHealthExemption: true
+  - name: not when no health condition either way
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: false
+      hasHsDiploma: false
+      workedLastFiveYears: false
+      earnedMoreThanThreshold: false
+      healthConditionsPreventingWork: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: the 55 exemption counts as preventing work
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      anyPreventingWork: true
+  - name: both state exemptions listed
+    state: NC
+    person:
+      age: 60
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+      teachesHomeschool: true
+      homeschoolHours: 40
+    expect:
+      stateExemptionReasons:
+        - exemption_age_no_diploma
+        - exemption_homeschool
+  - name: no state exemptions by default
+    state: NC
+    person:
+      age: 30
+    expect:
+      stateExemptionReasons: []
+  - name: homeschool alone exempts
+    state: NC
+    person:
+      age: 30
+      teachesHomeschool: true
+      homeschoolHours: 40
+    expect:
+      exemptions:
+        - exemption_homeschool
+  - name: and is a non-earnings exemption
+    state: NC
+    person:
+      age: 30
+      teachesHomeschool: true
+      homeschoolHours: 40
+    expect:
+      hasExemption: true
+  - name: state, federal and earnings exemptions together
+    state: NC
+    person:
+      age: 30
+      isPregnant: true
+      isWorking: true
+      workingHours: 30
+      teachesHomeschool: true
+      homeschoolHours: 40
+    expect:
+      exemptions:
+        - is_pregnant
+        - exemption_homeschool
+        - earnings_exemption
+  - name: homeschool under 30 hours does not exempt
+    state: NC
+    person:
+      age: 30
+      teachesHomeschool: true
+      homeschoolHours: 29
+    expect:
+      exemptions: []
+  - name: (ours) age 17
+    person:
+      age: 17
+    note: >-
+      The port listed age_under_minimum among the exemptions. Age decides whether the requirement
+      applies, so it is in requirementApplies, not exemptions.
+    expect:
+      requirementApplies: false
+      exemptions: []
+  - name: (ours) age 18
+    person:
+      age: 18
+    expect:
+      exemptions: []
+  - name: (ours) age 64
+    person:
+      age: 64
+    expect:
+      exemptions: []
+  - name: (ours) age 65
+    person:
+      age: 65
+    note: >-
+      The port listed age_over_maximum among the exemptions. Age decides whether the requirement
+      applies, so it is in requirementApplies, not exemptions.
+    expect:
+      requirementApplies: false
+      exemptions: []
+  - name: (ours) NC 55-to-64 exemption at 54
+    state: NC
+    person:
+      age: 54
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false
+  - name: (ours) NC 55-to-64 exemption at 55
+    state: NC
+    person:
+      age: 55
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: true
+  - name: (ours) NC 55-to-64 exemption at 64
+    state: NC
+    person:
+      age: 64
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: true
+  - name: (ours) NC 55-to-64 exemption at 65
+    state: NC
+    person:
+      age: 65
+      preventingWorkMedicalCondition: true
+      hasHsDiploma: false
+      workedLastFiveYears: false
+    expect:
+      ageWorkEducationHealthExemption: false

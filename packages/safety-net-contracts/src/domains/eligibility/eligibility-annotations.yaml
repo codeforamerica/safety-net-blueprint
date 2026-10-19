@@ -115,3 +115,190 @@ facts:
   medicaidWorkRequirements.nextStep:
     policies: [medicaid-community-engagement-verification, medicaid-community-engagement-noncompliance]
     programs: [medicaid]
+
+  # ── SNAP work requirements ─────────────────────────────────────────────────
+  # Cited only where the regulation was checked: 7 CFR 273.24(a)(1) for the 20
+  # hours; 7 CFR 273.7(b)(1), paragraph by paragraph, for caring for a child
+  # under 6 or an incapacitated person, unemployment benefits, a treatment
+  # program, working 30 hours or earning the minimum wage times 30, and being a
+  # student; 7 CFR 273.24 for the age cutoffs, pregnancy, a child in the
+  # household and disability. Not cited, because no source was checked: the five
+  # situations counted as preventing work, being American Indian, being a
+  # migrant farmworker, and the proof rules.
+
+  # Each exemption.
+  snapWorkRequirements.ageUnderMinimumExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.ageOverMaximumExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsSsdiExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsSsiExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsWorkersCompensationExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsDisabilityPensionExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingBenefitsOtherExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.hasChildExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.isPregnantExemption:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.caringForChildUnder6Exemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.caringForDisabledOrIllPersonExemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.hasUnemploymentBenefitsExemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.isInAlcoholTreatmentProgramExemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.isStudentExemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+
+  # What gathers them.
+  snapWorkRequirements.isAgeExempt:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.receivingDisabilityBenefits:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.hasOtherExemption:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.hasExemption:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.earningsAboveMinimum:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.hasEarningsExemption:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.isExemptFromWorkRules:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.totalWorkVolunteerAndTrainingHours:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+
+  # The result.
+  snapWorkRequirements.requirementApplies:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.isExempt:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.exemptions:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.meetsRequirement:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.status:
+    policies: [snap-general-work-requirement, snap-abawd-work-requirement]
+    programs: [snap]
+
+# ---------------------------------------------------------------------------
+# Constant annotations
+# Keyed {ruleset}.{constantName}: the policy that sets each value a state may
+# change.
+# ---------------------------------------------------------------------------
+
+constants:
+
+  # ── Medicaid work requirements ─────────────────────────────────────────────
+
+  medicaidWorkRequirements.firstYearInEffect:
+    policies: [medicaid-community-engagement-statute, medicaid-community-engagement-applicability]
+    programs: [medicaid]
+  medicaidWorkRequirements.minimumAge:
+    policies: [medicaid-community-engagement-applicability]
+    programs: [medicaid]
+  medicaidWorkRequirements.maximumAge:
+    policies: [medicaid-community-engagement-applicability]
+    programs: [medicaid]
+  medicaidWorkRequirements.formerFosterYouthMaximumAge:
+    policies: [medicaid-community-engagement-exclusions]
+    programs: [medicaid]
+  medicaidWorkRequirements.caregiverMinimumMonthlyHours:
+    policies: [medicaid-community-engagement-exclusions]
+    programs: [medicaid]
+  medicaidWorkRequirements.stableRecoveryYears:
+    policies: [medicaid-community-engagement-exclusions]
+    programs: [medicaid]
+  medicaidWorkRequirements.monthlyHoursRequired:
+    policies: [medicaid-community-engagement-activities]
+    programs: [medicaid]
+  medicaidWorkRequirements.federalMinimumWage:
+    policies: [medicaid-community-engagement-activities]
+    programs: [medicaid]
+  medicaidWorkRequirements.creditHourWeeklyHours:
+    policies: [medicaid-community-engagement-activities]
+    programs: [medicaid]
+  medicaidWorkRequirements.weeksPerMonth:
+    policies: [medicaid-community-engagement-activities]
+    programs: [medicaid]
+  medicaidWorkRequirements.offersHardshipExceptions:
+    policies: [medicaid-community-engagement-hardship]
+    programs: [medicaid]
+  medicaidWorkRequirements.applicationReviewMonths:
+    policies: [medicaid-community-engagement-review-period]
+    programs: [medicaid]
+  medicaidWorkRequirements.renewalMonthsRequired:
+    policies: [medicaid-community-engagement-review-period]
+    programs: [medicaid]
+  medicaidWorkRequirements.documentationRequiredFromYear:
+    policies: [medicaid-community-engagement-verification]
+    programs: [medicaid]
+  medicaidWorkRequirements.acceptsStatementsBefore2028:
+    policies: [medicaid-community-engagement-verification]
+    programs: [medicaid]
+  medicaidWorkRequirements.acceptsStatementsForMandatoryExceptions:
+    policies: [medicaid-community-engagement-verification]
+    programs: [medicaid]
+  medicaidWorkRequirements.acceptsFrailtyStatements:
+    policies: [medicaid-community-engagement-verification]
+    programs: [medicaid]
+
+  # ── SNAP work requirements ─────────────────────────────────────────────────
+  # The proof rules (requiresProofOf…) aren't cited: no source was checked.
+
+  snapWorkRequirements.workRulesMinimumAge:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.workRulesMaximumAge:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.weeklyHoursRequired:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.earningsExemptionWeeklyHours:
+    policies: [snap-general-work-requirement]
+    programs: [snap]
+  snapWorkRequirements.earningsExemptionWeeklyAmount:
+    policies: [snap-general-work-requirement]
+    programs: [snap]

@@ -408,3 +408,326 @@ rulesets:
           hasBasis && statementAccepted ? 'send_statement_or_documents' :
           isExempt && !hasExemptionOtherThanFrailty ? 'send_health_records' :
           hasBasis ? 'send_documents' : 'show_another_way_to_qualify'
+
+  # SNAP work requirements: the general work requirement (7 CFR 273.7) and the
+  # time limit's age and exemption rules (7 CFR 273.24), for one person.
+  #
+  # Ported from the work rules of codeforamerica/work-requirements-self-advocacy-tool,
+  # by way of codeforamerica/co-snap-interview-prompts (feature/work-rules,
+  # contracts/work-rules/), whose intake-work-rules-source-annotations.yaml maps
+  # each name here to the tool's code. The facts keep that port's logic and
+  # names; the outputs share Medicaid's vocabulary — requirementApplies,
+  # exemptions, isExempt, meetsRequirement, status — with age deciding whether
+  # the requirement applies, as the tool's own result does first.
+  #
+  # Nothing a person answers has a default. A state adds its own exemptions by
+  # overlay, through the three state facts below.
+  snapWorkRequirements:
+    endpoint:
+      path: /determinations/evaluate-snap-work-requirements
+
+    inputs:
+      person:
+        type: object
+        properties:
+          age:
+            type: integer
+            minimum: 0
+          isAmericanIndian:
+            type: boolean
+          hasChild:
+            type: boolean
+          caringForChildUnder6:
+            type: boolean
+          caringForDisabledOrIllPerson:
+            type: boolean
+          isPregnant:
+            type: boolean
+          hasUnemploymentBenefits:
+            type: boolean
+          receivingBenefitsSsdi:
+            type: boolean
+          receivingBenefitsSsi:
+            type: boolean
+          receivingBenefitsVeteransDisability:
+            type: boolean
+          receivingBenefitsWorkersCompensation:
+            type: boolean
+          receivingBenefitsDisabilityPension:
+            type: boolean
+          receivingBenefitsInsurancePayments:
+            type: boolean
+          receivingBenefitsDisabilityMedicaid:
+            type: boolean
+          receivingBenefitsOther:
+            type: boolean
+          isMigrantFarmworker:
+            type: boolean
+          isStudent:
+            type: boolean
+          isInAlcoholTreatmentProgram:
+            type: boolean
+          preventingWorkPlaceToSleep:
+            type: boolean
+          preventingWorkDrugsAlcohol:
+            type: boolean
+          preventingWorkDomesticViolence:
+            type: boolean
+          preventingWorkMedicalCondition:
+            type: boolean
+          preventingWorkOther:
+            type: boolean
+          isWorking:
+            type: boolean
+          workingHours:
+            type: integer
+          workingWeeklyEarnings:
+            type: number
+          isVolunteer:
+            type: boolean
+          volunteeringHours:
+            type: integer
+          isInWorkTraining:
+            type: boolean
+          workTrainingHours:
+            type: integer
+
+    constants:
+      workRulesMinimumAge:
+        value: 18
+        type: integer
+        description: Younger is outside the work rules.
+      workRulesMaximumAge:
+        value: 64
+        type: integer
+        description: Older is outside the work rules.
+      weeklyHoursRequired:
+        value: 20
+        type: integer
+        description: Hours of work, volunteering and training a week that meet the work rules.
+      earningsExemptionWeeklyHours:
+        value: 30
+        type: integer
+        description: Working this many hours a week exempts a person.
+      earningsExemptionWeeklyAmount:
+        value: 217.50
+        description: Earning this much a week exempts a person — the federal minimum wage times 30.
+      requiresProofOfVolunteering:
+        value: true
+      requiresProofOfAmericanIndianStatus:
+        value: false
+
+    outputs:
+      requirementApplies: {}
+      exemptions: {}
+      isExempt: {}
+      meetsRequirement: {}
+      status: {}
+      hasExemption: {}
+      hasEarningsExemption: {}
+      anyPreventingWork: {}
+      requiresProof: {}
+      needsProofOfVolunteering: {}
+      americanIndianExemptionRequiresProof: {}
+
+    # One fact per exemption, and only these read the answers that grant one.
+    # Everything else reads these by name, so each exemption's condition is
+    # written once.
+    facts:
+      # State hooks. A state overlay replaces these; federally there is nothing.
+      - path: hasStateExemption
+        type: boolean
+        expression: 'false'
+      - path: extraPreventingWork
+        type: boolean
+        expression: 'false'
+      - path: stateExemptionReasons
+        type: array
+        expression: '[]'
+
+      # Each exemption.
+      - path: ageUnderMinimumExemption
+        type: boolean
+        expression: person.age < constants.workRulesMinimumAge
+      - path: ageOverMaximumExemption
+        type: boolean
+        expression: person.age > constants.workRulesMaximumAge
+      - path: receivingBenefitsSsdiExemption
+        type: boolean
+        expression: person.receivingBenefitsSsdi
+      - path: receivingBenefitsSsiExemption
+        type: boolean
+        expression: person.receivingBenefitsSsi
+      - path: receivingBenefitsVeteransDisabilityExemption
+        type: boolean
+        expression: person.receivingBenefitsVeteransDisability
+      - path: receivingBenefitsWorkersCompensationExemption
+        type: boolean
+        expression: person.receivingBenefitsWorkersCompensation
+      - path: receivingBenefitsDisabilityPensionExemption
+        type: boolean
+        expression: person.receivingBenefitsDisabilityPension
+      - path: receivingBenefitsInsurancePaymentsExemption
+        type: boolean
+        expression: person.receivingBenefitsInsurancePayments
+      - path: receivingBenefitsDisabilityMedicaidExemption
+        type: boolean
+        expression: person.receivingBenefitsDisabilityMedicaid
+      - path: receivingBenefitsOtherExemption
+        type: boolean
+        expression: person.receivingBenefitsOther
+      - path: preventingWorkDomesticViolenceExemption
+        type: boolean
+        expression: person.preventingWorkDomesticViolence
+      - path: preventingWorkDrugsAlcoholExemption
+        type: boolean
+        expression: person.preventingWorkDrugsAlcohol
+      - path: preventingWorkMedicalConditionExemption
+        type: boolean
+        expression: person.preventingWorkMedicalCondition
+      - path: preventingWorkOtherExemption
+        type: boolean
+        expression: person.preventingWorkOther
+      - path: preventingWorkPlaceToSleepExemption
+        type: boolean
+        expression: person.preventingWorkPlaceToSleep
+      - path: caringForChildUnder6Exemption
+        type: boolean
+        expression: person.caringForChildUnder6
+      - path: caringForDisabledOrIllPersonExemption
+        type: boolean
+        expression: person.caringForDisabledOrIllPerson
+      - path: hasChildExemption
+        type: boolean
+        expression: person.hasChild
+      - path: hasUnemploymentBenefitsExemption
+        type: boolean
+        expression: person.hasUnemploymentBenefits
+      - path: isAmericanIndianExemption
+        type: boolean
+        expression: person.isAmericanIndian
+      - path: isInAlcoholTreatmentProgramExemption
+        type: boolean
+        expression: person.isInAlcoholTreatmentProgram
+      - path: isMigrantFarmworkerExemption
+        type: boolean
+        expression: person.isMigrantFarmworker
+      - path: isPregnantExemption
+        type: boolean
+        expression: person.isPregnant
+      - path: isStudentExemption
+        type: boolean
+        expression: person.isStudent
+
+      # Exemptions in groups.
+      - path: isAgeExempt
+        type: boolean
+        expression: ageUnderMinimumExemption || ageOverMaximumExemption
+      - path: receivingDisabilityBenefits
+        type: boolean
+        expression: >-
+          receivingBenefitsSsdiExemption || receivingBenefitsSsiExemption || receivingBenefitsVeteransDisabilityExemption ||
+          receivingBenefitsWorkersCompensationExemption || receivingBenefitsDisabilityPensionExemption ||
+          receivingBenefitsInsurancePaymentsExemption || receivingBenefitsDisabilityMedicaidExemption ||
+          receivingBenefitsOtherExemption
+      - path: anyListedPreventingWork
+        type: boolean
+        expression: >-
+          preventingWorkDomesticViolenceExemption || preventingWorkDrugsAlcoholExemption || preventingWorkMedicalConditionExemption ||
+          preventingWorkOtherExemption || preventingWorkPlaceToSleepExemption
+      - path: hasOtherExemption
+        type: boolean
+        expression: >-
+          caringForChildUnder6Exemption || caringForDisabledOrIllPersonExemption ||
+          hasChildExemption || hasUnemploymentBenefitsExemption ||
+          isAmericanIndianExemption || isInAlcoholTreatmentProgramExemption ||
+          isMigrantFarmworkerExemption || isPregnantExemption || isStudentExemption
+      - path: hasExemption
+        type: boolean
+        expression: >-
+          isAgeExempt || receivingDisabilityBenefits || anyListedPreventingWork ||
+          hasOtherExemption || hasStateExemption
+      - path: earningsAboveMinimum
+        type: boolean
+        expression: person.workingWeeklyEarnings >= constants.earningsExemptionWeeklyAmount
+      - path: workingEarningsExemptionHours
+        type: boolean
+        expression: person.workingHours >= constants.earningsExemptionWeeklyHours
+      - path: hasEarningsExemption
+        type: boolean
+        expression: person.isWorking && (workingEarningsExemptionHours || earningsAboveMinimum)
+      - path: isExemptFromWorkRules
+        type: boolean
+        expression: hasExemption || hasEarningsExemption
+      - path: anyPreventingWork
+        type: boolean
+        expression: anyListedPreventingWork || extraPreventingWork
+
+      # Whether the work rules are met.
+      - path: totalWorkVolunteerAndTrainingHours
+        type: integer
+        expression: person.workingHours + person.volunteeringHours + person.workTrainingHours
+      - path: meetsRequirement
+        type: boolean
+        expression: totalWorkVolunteerAndTrainingHours >= constants.weeklyHoursRequired
+
+      # Proof.
+      - path: isVolunteering
+        type: boolean
+        expression: person.isVolunteer && person.volunteeringHours > 0
+      - path: needsProofOfVolunteering
+        type: boolean
+        expression: constants.requiresProofOfVolunteering && isVolunteering
+      - path: americanIndianExemptionRequiresProof
+        type: boolean
+        expression: constants.requiresProofOfAmericanIndianStatus && isAmericanIndianExemption
+      - path: requiresProof
+        type: boolean
+        expression: >-
+          (earningsAboveMinimum && !isExemptFromWorkRules) || isStudentExemption ||
+          preventingWorkDrugsAlcoholExemption || preventingWorkMedicalConditionExemption || receivingDisabilityBenefits ||
+          isInAlcoholTreatmentProgramExemption || americanIndianExemptionRequiresProof
+
+      # The result, in the vocabulary Medicaid's work requirements share. Age
+      # decides whether the requirement applies at all.
+      - path: requirementApplies
+        type: boolean
+        expression: '!isAgeExempt'
+      - path: isExempt
+        type: boolean
+        expression: requirementApplies && isExemptFromWorkRules
+      # The exemption codes, one per exemption that holds. Age isn't among them:
+      # it decides whether the requirement applies.
+      - path: exemptions
+        type: array
+        expression: >-
+          (receivingBenefitsSsdiExemption ? ['receiving_benefits_ssdi'] : []) +
+          (receivingBenefitsSsiExemption ? ['receiving_benefits_ssi'] : []) +
+          (receivingBenefitsVeteransDisabilityExemption ? ['receiving_benefits_veterans_disability'] : []) +
+          (receivingBenefitsWorkersCompensationExemption ? ['receiving_benefits_workers_compensation'] : []) +
+          (receivingBenefitsDisabilityPensionExemption ? ['receiving_benefits_disability_pension'] : []) +
+          (receivingBenefitsInsurancePaymentsExemption ? ['receiving_benefits_insurance_payments'] : []) +
+          (receivingBenefitsDisabilityMedicaidExemption ? ['receiving_benefits_disability_medicaid'] : []) +
+          (receivingBenefitsOtherExemption ? ['receiving_benefits_other'] : []) +
+          (preventingWorkDomesticViolenceExemption ? ['preventing_work_domestic_violence'] : []) +
+          (preventingWorkDrugsAlcoholExemption ? ['preventing_work_drugs_alcohol'] : []) +
+          (preventingWorkMedicalConditionExemption ? ['preventing_work_medical_condition'] : []) +
+          (preventingWorkOtherExemption ? ['preventing_work_other'] : []) +
+          (preventingWorkPlaceToSleepExemption ? ['preventing_work_place_to_sleep'] : []) +
+          (caringForChildUnder6Exemption ? ['caring_for_child_under_6'] : []) +
+          (caringForDisabledOrIllPersonExemption ? ['caring_for_disabled_or_ill_person'] : []) +
+          (hasChildExemption ? ['has_child'] : []) +
+          (hasUnemploymentBenefitsExemption ? ['has_unemployment_benefits'] : []) +
+          (isAmericanIndianExemption ? ['is_american_indian'] : []) +
+          (isInAlcoholTreatmentProgramExemption ? ['is_in_alcohol_treatment_program'] : []) +
+          (isMigrantFarmworkerExemption ? ['is_migrant_farmworker'] : []) +
+          (isPregnantExemption ? ['is_pregnant'] : []) +
+          (isStudentExemption ? ['is_student'] : []) +
+          stateExemptionReasons +
+          (hasEarningsExemption ? ['earnings_exemption'] : [])
+      - path: status
+        type: string
+        expression: >-
+          !requirementApplies ? 'requirement_does_not_apply' :
+          isExempt ? 'exempt' :
+          meetsRequirement ? 'meets_requirement' : 'does_not_meet_requirement'
