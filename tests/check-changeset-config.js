@@ -82,3 +82,15 @@ test('dependency updates are one line naming the new versions', async () => {
   assert.equal(line, '- Uses @codeforamerica/blueprint-core 0.4.0, @codeforamerica/blueprint-explorer 0.3.0.');
   assert.equal(getDependencyReleaseLine(changesets, []), '');
 });
+
+test('a breaking changeset bumps every package it names by at least a minor', () => {
+  // CONTRIBUTING.md: a breaking change is a minor bump while packages are at
+  // 0.x. A patch bump files the entry under that package's Patch Changes.
+  const wrong = [];
+  for (const file of readdirSync('.changeset').filter((f) => f.endsWith('.md') && f !== 'README.md')) {
+    const [, front = '', body = ''] = readFileSync(join('.changeset', file), 'utf8').match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/) ?? [];
+    if (!body.trimStart().startsWith('**Breaking:**')) continue;
+    for (const [, name] of front.matchAll(/^["']?([^"':\s]+)["']?\s*:\s*patch\s*$/gm)) wrong.push(`${file}: ${name}`);
+  }
+  assert.deepEqual(wrong, [], 'A **Breaking:** changeset names these packages at patch; make them minor');
+});
