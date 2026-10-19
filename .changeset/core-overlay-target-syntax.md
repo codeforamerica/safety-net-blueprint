@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-core": minor
 ---
 
-**Breaking:** An overlay target using syntax overlays don't support, such as a wildcard (`[*]`) or a slice (`[0:2]`), now fails resolve with an error naming the target, where before it matched nothing and was skipped with a warning. Index selectors (`$.machines[0]`) and quoted names (`outputs['risks.earnedIncomeVaries']`), which also matched nothing, now work. (#502)
+**Breaking:** Before, an overlay target with an index (`$.machines[0]`), a quoted name (`outputs['risks.earnedIncomeVaries']`) or other syntax overlays don't support matched nothing, and the action was skipped with a warning. Now indexes and quoted names work, and any other syntax, such as a wildcard (`[*]`), fails resolve with an error naming the target. (#502)
