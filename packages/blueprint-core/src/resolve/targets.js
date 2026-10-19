@@ -15,7 +15,7 @@
  * arbitrary one of several matches would be worse than not patching at all.
  */
 
-import { checkPathExists, parsePath } from '../overlay/overlay-resolver.js';
+import { checkPathExists, formatPath, parsePath } from '../overlay/overlay-resolver.js';
 
 /**
  * @param {object} action
@@ -50,10 +50,7 @@ function checkTargetFor(action) {
   const tokens = parsePath(action.target);
   if (tokens.length <= 1) return action.target;
 
-  return '$.' + tokens
-    .slice(0, -1)
-    .map((t) => (t.type === 'filter' ? `[?(@.${t.field} == '${t.value}')]` : t.value))
-    .join('.');
+  return formatPath(tokens.slice(0, -1));
 }
 
 /**
