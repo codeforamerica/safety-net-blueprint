@@ -20,8 +20,7 @@ node build.js
 This runs the full pipeline:
 1. `src/render.js` — reads config, generates HTML fragments → `dist/`
 2. `src/build-html.js` — assembles everything into `output/context-map.html`
-3. `src/scan-gaps.js` — reports design gaps from config.yaml
-4. `src/export-png.js` — screenshots each view via Puppeteer → `dist/*.png` + `dist/context-map-export.zip`
+3. `src/export-png.js` — screenshots each view via Puppeteer → `dist/*.png` + `dist/context-map-export.zip`
 
 `output/` holds the tracked artifact (`context-map.html`). `dist/` holds intermediate fragments, PNGs, and the zip — not tracked in git.
 
@@ -31,7 +30,7 @@ There are two config files. Neither requires code changes for routine updates.
 
 ### `../config.yaml` — domain and event registry
 
-The source of truth for all domain definitions, events, flows, and API calls. Schema: [`../config-schema.json`](../config-schema.json).
+The source of truth for all domain definitions, events, and API calls. Schema: [`../config-schema.json`](../config-schema.json).
 
 ### `config/config.yaml` — diagram layout
 

@@ -18,6 +18,7 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-capabilities` | Config | `overlays/config.yaml` | `config:` section |
 | `x-casing` | Config | `overlays/config.yaml` | `config:` section |
 | `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
+| `x-data-classification` | Spec | `*-openapi.yaml` | Schema property (on fields holding regulated data) |
 | `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
 | `x-domain` | Spec | `*-openapi.yaml` | `info` level or operation level |
 | `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
@@ -70,6 +71,33 @@ config:
 - YAML property names in OpenAPI specs remain camelCase (`applicationId`, `createdAt`, etc.)
 - Fields added via overlays must still use camelCase in the YAML (`countyCode`, not `county_code`)
 - Annotation keys reference YAML property paths and must always be camelCase
+
+---
+
+## x-data-classification
+
+**File type:** `*-openapi.yaml` — schema property level, on fields holding regulated data.
+
+Marks a field that holds sensitive or regulated data, so an adapter knows which safeguards apply to it. The blueprint says which fields are sensitive; how a state protects them — encryption, masking in logs, access control — is the state's infrastructure, not the contract.
+
+The value is a list of one or more of:
+
+| Value | Data |
+|---|---|
+| `pii` | Personally identifiable information: names, SSNs, dates of birth, addresses |
+| `fti` | Federal tax information received from the IRS |
+| `phi` | Protected health information |
+
+```yaml
+ssn:
+  type: string
+  x-data-classification: [pii, fti]
+medicareEnrollmentStatus:
+  type: string
+  x-data-classification: [phi]
+```
+
+Each value's governing law and safeguarding requirements are in [conventions/extensions.yaml](../conventions/extensions.yaml).
 
 ---
 

@@ -16,7 +16,7 @@ import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
-import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase } from './collection-utils.js';
+import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -24,6 +24,21 @@ import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase 
 function eventTypeMatches(eventType, onValue) {
   if (!onValue || !eventType) return false;
   return eventType === onValue;
+}
+
+/**
+ * The collection a machine's records are stored in, from the contracts' model:
+ * its resource's collection path, named the way the mock names it when it
+ * registers that resource's routes — a nested resource under its parent
+ * (`determination-decisions`). Null when the model has no resource for the
+ * machine; then there is no record to find, and none is guessed.
+ *
+ * @param {{ resource?: { path(part: string): string|null } | null }} smEntry
+ * @returns {string|null}
+ */
+function collectionOf(smEntry) {
+  const path = smEntry.resource?.path?.('collection');
+  return path ? deriveCollectionName(path, '') : null;
 }
 
 /**
@@ -35,9 +50,7 @@ function eventTypeMatches(eventType, onValue) {
 function findSmEntryForCollection(allStateMachines, domain, collection) {
   return allStateMachines.find(sm => {
     if (sm.domain !== domain) return false;
-    const kebabPlural = toKebabCase(sm.object) + 's';
-    // Also match sub-collection names like "application-verifications" → "verifications"
-    return kebabPlural === collection || collection.endsWith(`-${kebabPlural}`);
+    return collectionOf(sm) === collection;
   }) || null;
 }
 
@@ -169,6 +182,24 @@ function applyThroughRoutes(call, { now, caller, traceparent = null, causationid
   }
 }
 
+/**
+ * Whether an event is about a machine's own resource: its type ends
+ * `{domain}.{resource}.{event}` with the machine's domain and its resource's
+ * event name, which is how every event is named. A state's type prefix, if
+ * any, comes before.
+ *
+ * @param {string} type
+ * @param {string} domain - The machine's domain
+ * @param {string|undefined} eventName - Its resource's name in events, from core's model
+ * @returns {boolean}
+ */
+function aboutOwnResource(type, domain, eventName) {
+  const parts = String(type ?? '').split('.');
+  if (parts.length < 3 || !domain || !eventName) return false;
+  const [eventDomain, resource] = parts.slice(-3);
+  return eventDomain === domain && resource === eventName;
+}
+
 export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null) {
   currentStepCalls = stepCalls;
   // Replace rather than accumulate. Registering twice — a second server in
@@ -215,7 +246,11 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         let targetCollection = null;
         let originalSnapshot = null;
         if (entry.transition) {
-          targetCollection = toKebabCase(smEntry.machine.object) + 's';
+          targetCollection = collectionOf(smEntry);
+          if (!targetCollection) {
+            console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
+            continue;
+          }
           const found = store.findById(targetCollection, event.subject);
           if (!found) {
             console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
@@ -228,12 +263,17 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           }
           resource = { ...found };
           originalSnapshot = { ...found };
-        } else if (event.data && typeof event.data === 'object' && !Array.isArray(event.data)
-            && event.data.id != null && event.data.id === event.subject) {
-          // No transition, but the event carries the full resource as its data payload
-          // (e.g. *.resource.created events where data: { ...created }). Use it as the
-          // primary resource so $object resolves correctly in subscription steps.
-          resource = { ...event.data };
+        } else if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) {
+          // No transition, but the event is about one of this machine's own
+          // records — a decision's machine hearing that a decision was created
+          // — so $object is that record, found by the event's subject as a
+          // transition finds it. An event about another resource gives the
+          // machine no record of its own, and no $object: it reads the record's
+          // id from this.subject and what the event carries from this.data.
+          // The payload is never taken for the record.
+          const collection = collectionOf(smEntry);
+          const found = collection && store.findById(collection, event.subject);
+          if (found) resource = { ...found };
         }
 
         const baseContext = {

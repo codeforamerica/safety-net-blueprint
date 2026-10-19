@@ -8,12 +8,6 @@ cross_cutting:
   - Authentication & Authorization
   - Audit & History
 
-actors:
-  - id: applicant
-    label: Applicant
-  - id: caseworker
-    label: Caseworker
-
 domains:
   - id: intake
     label: Intake
@@ -47,18 +41,3 @@ events:
     publisher: eligibility
     status: implemented
     subscribers: []
-
-flows:
-  - id: submit_application
-    label: Submit Application
-    domain: intake
-    participants: [applicant, intake, eligibility]
-    steps:
-      - from: applicant
-        to: intake
-        label: "POST /intake/applications/{id}/submit"
-      - self: intake
-        label: Start regulatory clock
-      - event: intake.application.submitted
-        from: intake
-        to: eligibility

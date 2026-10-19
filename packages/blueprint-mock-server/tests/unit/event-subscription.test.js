@@ -17,6 +17,14 @@ import { eventBus } from '../../src/event-bus.js';
 // Each test registers subscriptions; remove all listeners between tests to prevent accumulation
 beforeEach(() => eventBus.removeAllListeners('domain-event'));
 
+// The resource core's model gives a machine whose object is Application: what
+// the mock reads to find the collection the machine's records are stored in.
+const APPLICATION = {
+  name: 'Application',
+  eventName: 'application',
+  path: (part) => (part === 'collection' ? '/applications' : '/applications/{applicationId}'),
+};
+
 function makeEvent(type, subject, data = null) {
   return {
     specversion: '1.0',
@@ -53,6 +61,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
@@ -90,6 +99,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
@@ -128,6 +138,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
@@ -160,6 +171,7 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
@@ -191,6 +203,7 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
@@ -235,6 +248,7 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
   const smEntries = [{
     domain: 'intake',
     machine,
+    resource: APPLICATION,
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] },
   }];
 

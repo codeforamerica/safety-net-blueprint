@@ -136,7 +136,7 @@ Inputs may be partial — each fact reports whether it resolved, fell back to a 
 
 ### `blueprint-build-explorer`
 
-Builds the Blueprint Explorer static site from a resolved contracts directory — context map, sequence diagrams, data dictionaries, state machine docs, rules docs, event catalog, and API reference.
+Builds the Blueprint Explorer static site from a resolved contracts directory — context map, data dictionaries, state machine docs, rules docs, event catalog, and API reference.
 
 ```bash
 npx blueprint-build-explorer --spec=./resolved --out=./explorer

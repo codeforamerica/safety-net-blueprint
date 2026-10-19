@@ -312,6 +312,28 @@ test('state-machine-schema action types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
+  // The method is the key. A step written as path: and method: used to pass
+  // validation and then do nothing: the engine found no method key, skipped
+  // the step and let the transition succeed (#463).
+  const callStep = (call) => withActions([{ id: 'route', transition: { from: 'active' }, steps: [{ call }] }]);
+  const callErrors = (errors) => errors.filter((e) => e.instancePath.endsWith('/call') || e.instancePath.includes('/call/'));
+
+  await t.test('call step with path: and method: instead of a method key is refused', () => {
+    const { valid, errors } = validate(callStep({ path: 'eligibility/determinations', method: 'POST' }));
+    assert.ok(!valid, 'must not validate');
+    assert.ok(callErrors(errors).length > 0, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('call step with two method keys is refused', () => {
+    const { valid } = validate(callStep({ POST: 'a/things', PATCH: 'a/things/1' }));
+    assert.ok(!valid);
+  });
+
+  await t.test('call step with a method key, body and description is accepted', () => {
+    const { valid, errors } = validate(callStep({ DELETE: 'a/things/1', body: { reason: '$request.reason' }, description: 'Remove it' }));
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
   await t.test('call step with bind: (string — whole response)', () => {
     const doc = withActions([{
       id: 'assess',

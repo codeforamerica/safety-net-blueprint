@@ -47,9 +47,7 @@ machines:
               description: Record the submission timestamp (regulatory clock start).
           - emit:
               event: submitted
-              subject: $object.id
               data:
-                id: $object.id
                 programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
               type: intake.application.submitted

@@ -13,7 +13,6 @@
  *   node build.js --only=event-catalog
  *   node build.js --only=api-reference
  *   node build.js --only=client-reference
- *   node build.js --only=sequence-diagrams
  *
  * State customization (overlay-aware build):
  *   node build.js --resolved=/path/to/state/resolved
@@ -32,7 +31,6 @@ import { loadConfig } from './src/lib/config.js';
 
 import { build as buildAnnotationsExplorer } from './src/annotations-explorer/build.js';
 import { build as buildContextMap }       from './src/context-map/build.js';
-import { build as buildSequenceDiagrams } from './src/sequence-diagrams/index.js';
 import { build as buildDataDictionaries } from './src/data-dictionaries/build.js';
 import { build as buildStateMachineDocs } from './src/state-machine-docs/build.js';
 import { build as buildRulesDocs }        from './src/rules-docs/build.js';
@@ -74,12 +72,6 @@ if (doBuild('annotations-explorer')) {
 
 if (doBuild('context-map')) {
   buildContextMap({ contentDir, resolvedDir });
-}
-
-// ── Sequence diagrams ─────────────────────────────────────────────────────────
-
-if (doBuild('sequence-diagrams')) {
-  buildSequenceDiagrams({ contentDir, resolvedDir });
 }
 
 // ── Data dictionaries ─────────────────────────────────────────────────────────

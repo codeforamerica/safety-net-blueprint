@@ -1,61 +1,27 @@
 /**
  * resolve-config.js
  *
- * Loads packages/explorer/config.yaml and enriches every flow step with
- * resolved annotation data from the contracts package.
- *
- * Steps with ref: "section/path" (e.g. ref: "operations/application.submit")
- * get a resolved policies: [...] array. Steps with legacy regulatory: [...]
- * are normalized to the same format so all renderers handle one shape.
- *
- * All renderers (context map, service blueprint) receive the enriched config
- * and read step.policies rather than step.ref or step.regulatory.
+ * Loads the explorer's config.yaml and replaces its domains with the ones the
+ * contracts define.
  */
 
-import { readFileSync, readdirSync, existsSync } from 'fs';
-import { resolve, dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import yaml from 'js-yaml';
-import { loadAnnotations } from '../annotations.js';
 import { discover, load } from '@codeforamerica/blueprint-core';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 /**
- * Load packages/explorer/config.yaml and return it enriched with resolved
- * annotation data from the contracts package.
+ * The explorer's config, with the domains the contracts define.
  *
- * @param {string} contractsDir path to the contracts package root.
+ * @param {string} contractsDir path to the resolved contracts.
  * @param {string} contentDir path to the content package root.
- * @returns {Object} enriched config — same shape as config.yaml but with
- *   step.policies: [...] replacing step.ref annotation paths and step.regulatory arrays.
+ * @returns {Object} config.yaml, with `domains` from the contracts
  */
 export function resolveConfig(contractsDir, contentDir) {
-
   const config = yaml.load(readFileSync(join(contentDir, 'config.yaml'), 'utf8'));
-
-  // Load annotations for all domains and policy registry from contracts.
-  const annotations = {};
-  if (existsSync(contractsDir)) {
-    const domains = new Set(
-      readdirSync(contractsDir)
-        .filter(f => f.match(/^.+-annotations.*\.yaml$/))
-        .map(f => f.replace(/-annotations.*\.yaml$/, ''))
-    );
-    for (const domain of domains) {
-      annotations[domain] = loadAnnotations(domain, contractsDir);
-    }
-  }
-
-  const policies = existsSync(contractsDir) ? registryEntries(discover(contractsDir).map(load), 'policies') : {};
-
   return {
     ...config,
     domains: domainsFromContracts(existsSync(contractsDir) ? discover(contractsDir).map(load) : [], config.domains || []),
-    flows: (config.flows || []).map(flow => ({
-      ...flow,
-      steps: enrichSteps(flow.steps || [], annotations, policies),
-    })),
   };
 }
 
@@ -138,95 +104,5 @@ function isResourceSchema(name) {
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
-function enrichSteps(steps, annotations, policies) {
-  return steps.map(step => {
-    // Recurse into fragment wrappers
-    if (step.fragment !== undefined) {
-      const enriched = { ...step };
-      if (step.operands) {
-        enriched.operands = step.operands.map(op => ({
-          ...op,
-          steps: enrichSteps(op.steps || [], annotations, policies),
-        }));
-      } else if (step.steps) {
-        enriched.steps = enrichSteps(step.steps || [], annotations, policies);
-      }
-      return enriched;
-    }
 
-    const enriched = { ...step };
 
-    // Resolve annotation ref (ref: "section/path") → policies array
-    if (step.ref && step.ref.includes('/')) {
-      const resolved = resolveAnnotationRef(step.ref, annotations, policies);
-      if (resolved.length > 0) {
-        enriched.policies = resolved;
-      }
-    }
-
-    // Normalize legacy regulatory items to the same policies shape
-    if (step.regulatory && step.regulatory.length > 0) {
-      const converted = step.regulatory.map(r => ({
-        id:          null,
-        citation:    r.citation,
-        description: [r.summary, r.detail].filter(Boolean).join(' — '),
-        citationUrl: null,
-        programs:    [],
-      }));
-      enriched.policies = (enriched.policies || []).concat(converted);
-      delete enriched.regulatory;
-    }
-
-    return enriched;
-  });
-}
-
-function resolveAnnotationRef(ref, annotations, policies) {
-  const slashIdx = ref.indexOf('/');
-  const section  = ref.slice(0, slashIdx);  // e.g. "operations"
-  const path     = ref.slice(slashIdx + 1); // e.g. "application.submit"
-
-  for (const domainAnnotations of Object.values(annotations)) {
-    const sectionData = domainAnnotations[section];
-    if (!sectionData) continue;
-    const annotation = sectionData[path];
-    if (!annotation) continue;
-
-    return (annotation.policies || []).map(policyId => {
-      const policy = policies[policyId];
-      if (!policy) {
-        console.warn(`Warning: policy '${policyId}' referenced in annotation '${ref}' not found in registry`);
-        return { id: policyId, citation: policyId, description: '', citationUrl: null, programs: [] };
-      }
-      return {
-        id:          policyId,
-        citation:    policy.citation,
-        description: (policy.description || '').trim().replace(/\s+/g, ' '),
-        citationUrl: policy.citationUrl || null,
-        programs:    policy.programs || [],
-      };
-    });
-  }
-
-  return [];
-}
-
-/**
- * Merge every registry of one type into a map of ID to entry.
- *
- * Later documents override earlier ones per ID, which is how a state replaces
- * a baseline entry. `registry` is a contract type, so `discover` has already
- * tagged these; all that is left is the merge.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Registry type, e.g. 'policies'
- * @returns {Record<string, object>}
- */
-function registryEntries(docs, type) {
-  const merged = {};
-  for (const doc of docs) {
-    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
-    Object.assign(merged, doc.content.entries ?? {});
-  }
-  return merged;
-}

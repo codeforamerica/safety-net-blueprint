@@ -107,7 +107,6 @@ const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
 const rulesPages   = scanPages(join(contentDir, 'rules-docs'), rulesLabel);
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
   .filter(p => p.slug.startsWith('domain_'));
-const seqPages     = scanPages(join(contentDir, 'sequence-diagrams'));
 
 // ── Featured links HTML ───────────────────────────────────────────────────────
 
@@ -670,27 +669,6 @@ const html = `<!DOCTYPE html>
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>${outputTags(contextPages, `context-map`, 'dot-blue')}
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-accent accent-blue"></div>
-        <div class="card-body">
-          <div class="card-icon icon-blue">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <line x1="2" y1="5" x2="10" y2="5" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="2" y1="10" x2="18" y2="10" stroke="#2B1A78" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="10" y1="15" x2="18" y2="15" stroke="#5650BE" stroke-width="1.5" stroke-linecap="round"/>
-              <polygon points="10,5 13,3 13,7" fill="#5650BE"/>
-              <polygon points="18,10 15,8 15,12" fill="#2B1A78"/>
-              <polygon points="18,15 15,13 15,17" fill="#5650BE"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            ${sectionTitle(contentDir, "Sequence Diagrams", "sequence-diagrams/index.html")}
-            <span class="status-badge badge-progress">In progress</span>
-          </div>
-          <p>Contract-driven event chain diagrams tracing how a triggering action propagates across domain boundaries.</p>${outputTags(seqPages, `sequence-diagrams`, 'dot-blue')}
         </div>
       </div>
 

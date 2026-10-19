@@ -744,8 +744,34 @@ $defs:
           - type: string
             description: Named procedure id.
           - type: object
-            description: "HTTP call — one key is the method (POST, PATCH, GET, DELETE) and its value is the path; optional body:."
-            additionalProperties: true
+            description: >
+              HTTP call — one key is the method (POST, PATCH, GET, DELETE) and
+              its value is the path; optional body:. Exactly one method, and no
+              other keys: a step written as `path:` and `method:` used to pass
+              validation and then do nothing.
+            additionalProperties: false
+            oneOf:
+              - required: [POST]
+              - required: [PATCH]
+              - required: [GET]
+              - required: [DELETE]
+            properties:
+              POST:
+                type: string
+                description: The path to POST to.
+              PATCH:
+                type: string
+                description: The path to PATCH.
+              GET:
+                type: string
+                description: The path to GET.
+              DELETE:
+                type: string
+                description: The path to DELETE.
+              body:
+                description: The request body. Field values are value expressions resolved when the step runs.
+              description:
+                type: string
       with:
         type: object
         additionalProperties: true

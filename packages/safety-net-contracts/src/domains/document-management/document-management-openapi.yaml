@@ -792,7 +792,7 @@ components:
         uploadedById:
           type: string
           description: Identity of the uploader. Required for HIPAA chain-of-custody (45 CFR § 164.312).
-          x-data-classification: pii
+          x-data-classification: [pii]
         createdAt:
           type: string
           format: date-time
@@ -916,7 +916,7 @@ components:
         linkedBy:
           type: string
           description: Identity of who created the link. Required for HIPAA chain-of-custody (45 CFR § 164.312).
-          x-data-classification: pii
+          x-data-classification: [pii]
         closedAt:
           type: [string, "null"]
           format: date-time

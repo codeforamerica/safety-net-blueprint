@@ -13,13 +13,13 @@
  *   --spec      Path to resolved contracts directory (output of blueprint-resolve)
  *   --out       Path to the output directory — receives all generated HTML files
  *   --config    Path to the authored configuration directory — contains config.yaml,
- *               context-map/config/, and sequence-diagrams/config/. Defaults to --out.
+ *               and context-map/config/. Defaults to --out.
  *               When different from --out, config files are copied to --out before
  *               building so that tool scripts can find them there.
  *   --authored  Path to authored HTML pages source directory. Defaults to the
  *               blueprint-explorer package's built-in authored/ directory.
  *   --clients   Path to generated TypeScript clients (output of blueprint-generate-ts-clients).
- *   --only      Build one tool only: context-map, sequence-diagrams, data-dictionaries,
+ *   --only      Build one tool only: context-map, data-dictionaries,
  *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
  */
 
@@ -28,7 +28,6 @@ import { resolve, join } from 'path';
 import {
   buildAnnotationsExplorer,
   buildContextMap,
-  buildSequenceDiagrams,
   buildDataDictionaries,
   buildStateMachineDocs,
   buildRulesDocs,
@@ -65,8 +64,6 @@ if (configDir !== outDir) {
   cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
   const cmConfig  = join(configDir, 'context-map', 'config');
   if (existsSync(cmConfig))  cpSync(cmConfig,  join(outDir, 'context-map', 'config'),  { recursive: true });
-  const seqConfig = join(configDir, 'sequence-diagrams', 'config');
-  if (existsSync(seqConfig)) cpSync(seqConfig, join(outDir, 'sequence-diagrams', 'config'), { recursive: true });
 }
 
 const contentDir  = outDir;
@@ -75,7 +72,6 @@ const doBuild = tool => !only || only === tool;
 
 if (doBuild('annotations-explorer')) buildAnnotationsExplorer({ contentDir, resolvedDir });
 if (doBuild('context-map'))       buildContextMap({ contentDir, resolvedDir });
-if (doBuild('sequence-diagrams')) buildSequenceDiagrams({ contentDir, resolvedDir });
 if (doBuild('data-dictionaries')) await buildDataDictionaries({ contentDir, resolvedDir });
 if (doBuild('state-machine-docs')) buildStateMachineDocs({ contentDir, resolvedDir });
 if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
