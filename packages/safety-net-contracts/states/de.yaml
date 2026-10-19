@@ -1,0 +1,56 @@
+# Delaware: state choices for the Medicaid and SNAP work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/de.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: none
+#   frailtyDefinitionPlan: federal definition
+#   hasStateFrailtyDefinition: false
+#   frailtyVerifiedBy: claims, other program data, treating provider, self-attestation
+#   frailtyVerificationUndecided: health screener
+overlay: 1.0.0
+info:
+  title: Delaware work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 1
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 1
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: true
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsFrailtyStatements.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsFrailtyStatements'
+    update: true
+
+  # ── SNAP ────────────────────────────────────────────────────────────────────
+  # Proof of American Indian status: the one way Delaware differs from the federal
+  # baseline. Ported from WorkRulesPolicy::Delaware in
+  # codeforamerica/work-requirements-self-advocacy-tool.
+
+  - target: $.rulesets.snapWorkRequirements.constants.requiresProofOfAmericanIndianStatus.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: Delaware asks for proof of American Indian status'
+    update: true
+
+  - target: $.rulesets.snapWorkRequirements.examples
+    file: domains/eligibility/eligibility-rules-examples.yaml
+    description: 'SNAP: Delaware''s proof rule, as an example from the tool''s tests'
+    append:
+      - description: American Indian — exempt, and Delaware asks for proof of status (work_rules_policy_spec.rb:301)
+        inputs:
+          person:
+            age: 30
+            isAmericanIndian: true

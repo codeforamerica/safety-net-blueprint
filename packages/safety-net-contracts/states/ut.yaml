@@ -1,0 +1,52 @@
+# Utah: state choices for the Medicaid work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/ut.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Notes:
+#   - H.B. 471 (2026), Utah Code 26B-3-142.1: one month at application and at renewal;
+#     documentary evidence, never self-attestation alone; exemptions need documentation
+#     unless reliable data show them.
+#   - Medical frailty: may approve provisionally on a diagnosis the person names, then
+#     verify with data or a health care professional's statement.
+#   - The statute's frailty list adds homelessness, which the federal rule does not
+#     allow (CMS: no categories beyond the five).
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: none
+#   frailtyDefinitionPlan: undecided
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: claims, treating provider, health screener
+overlay: 1.0.0
+info:
+  title: Utah work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 1
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 1
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: true
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsFrailtyStatements.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsFrailtyStatements'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBefore2028.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsStatementsBefore2028'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsForMandatoryExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsStatementsForMandatoryExceptions'
+    update: false

@@ -1,0 +1,38 @@
+# Arkansas: state choices for the Medicaid work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/ar.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Notes:
+#   - Soft launch of reporting in July 2026; no disenrollments before January 2027.
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: none
+#   frailtyDefinitionPlan: existing state definition
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: claims, managed care claims, managed care case management, other program data, treating provider
+overlay: 1.0.0
+info:
+  title: Arkansas work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 1
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: true
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsFrailtyStatements.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsFrailtyStatements'
+    update: false

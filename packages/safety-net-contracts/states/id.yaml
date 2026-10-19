@@ -1,0 +1,33 @@
+# Idaho: state choices for the Medicaid work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/id.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Notes:
+#   - Idaho Code 56-267(6)(a): three consecutive months before the application month.
+#
+# Undecided, so the federal default applies, and a screener should say so rather than
+# present it as Idaho's rule: renewalMonthsRequired, acceptsFrailtyStatements.
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: undecided
+#   frailtyDefinitionPlan: undecided
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: undecided
+overlay: 1.0.0
+info:
+  title: Idaho work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: true

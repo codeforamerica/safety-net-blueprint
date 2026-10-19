@@ -1,0 +1,211 @@
+# North Carolina: state choices for the Medicaid and SNAP work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/nc.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Notes:
+#   - H.B. 696 (signed Apr 30, 2026): three months before the application month; at
+#     renewal, at least three of the six months since the last determination.
+#   - H.B. 696 bars self-attestation as the only evidence for any eligibility
+#     requirement, unless federal law requires it.
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: none
+#   frailtyDefinitionPlan: undecided
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: claims, managed care claims, managed care case management, other program data, treating provider
+#   frailtyVerificationUndecided: health screener
+overlay: 1.0.0
+info:
+  title: North Carolina work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: true
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsFrailtyStatements.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsFrailtyStatements'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBefore2028.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsStatementsBefore2028'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsForMandatoryExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsStatementsForMandatoryExceptions'
+    update: false
+
+  # ── SNAP ────────────────────────────────────────────────────────────────────
+  # Two state exemptions, and no proof of volunteering. Ported from
+  # WorkRulesPolicy::NorthCarolina in codeforamerica/work-requirements-self-advocacy-tool,
+  # by way of co-snap-interview-prompts (feature/work-rules). NC's extra answers
+  # are more questions about the same person, so they're fields of `person`, with
+  # no defaults like the rest. Citations: the NC DHHS Food and Nutrition Services
+  # manual, FNS 260 (ABAWD) and FNS 240 (Work Registration), both Change #02-2025,
+  # December 1, 2025. Nothing is cited for dropping proof of volunteering: FNS
+  # 260.04 B.3.c says to request verification of volunteer hours, so the tool's
+  # choice may be about its own proof packet rather than the agency's rule.
+
+  - target: $.rulesets.snapWorkRequirements.inputs.person.properties
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: the questions only North Carolina asks'
+    update:
+      hasHsDiploma:
+        type: boolean
+      workedLastFiveYears:
+        type: boolean
+      earnedMoreThanThreshold:
+        type: boolean
+      healthConditionsPreventingWork:
+        type: boolean
+      teachesHomeschool:
+        type: boolean
+      homeschoolHours:
+        type: integer
+
+  - target: $.rulesets.snapWorkRequirements.constants
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: the homeschool hours, and the lower age of the 55-to-64 exemption'
+    update:
+      homeschoolExemptionWeeklyHours:
+        value: 30
+        type: integer
+      ageWorkEducationHealthExemptionMinimumAge:
+        value: 55
+        type: integer
+
+  - target: $.rulesets.snapWorkRequirements.constants.requiresProofOfVolunteering.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: North Carolina does not ask for proof of volunteering'
+    update: false
+
+  - target: $.rulesets.snapWorkRequirements.facts
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: North Carolina''s two exemptions'
+    append:
+      - path: ageWorkEducationHealthExemption
+        type: boolean
+        expression: >-
+          person.age >= constants.ageWorkEducationHealthExemptionMinimumAge &&
+          person.age <= constants.workRulesMaximumAge && !person.hasHsDiploma &&
+          ((person.workedLastFiveYears && !person.earnedMoreThanThreshold) ||
+          !person.workedLastFiveYears) && (person.healthConditionsPreventingWork ||
+          person.preventingWorkMedicalCondition)
+      - path: operatingHomeschoolExemptionHours
+        type: boolean
+        expression: >-
+          person.teachesHomeschool && person.homeschoolHours >=
+          constants.homeschoolExemptionWeeklyHours
+
+  - target: $.rulesets.snapWorkRequirements.facts[?(@.path=='hasStateExemption')]
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: either North Carolina exemption counts as an exemption'
+    update:
+      expression: ageWorkEducationHealthExemption || operatingHomeschoolExemptionHours
+
+  - target: $.rulesets.snapWorkRequirements.facts[?(@.path=='stateExemptionReasons')]
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: North Carolina''s exemption codes'
+    update:
+      expression: >-
+        (ageWorkEducationHealthExemption ? ['exemption_age_no_diploma'] : []) +
+        (operatingHomeschoolExemptionHours ? ['exemption_homeschool'] : [])
+
+  - target: $.rulesets.snapWorkRequirements.facts[?(@.path=='extraPreventingWork')]
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'SNAP: the 55-and-over exemption counts as something preventing work'
+    update:
+      expression: ageWorkEducationHealthExemption
+
+  - target: $.entries
+    file: domains/platform/platform-registry-policies.yaml
+    description: 'SNAP: North Carolina''s two exemptions'
+    update:
+      nc-fns-abawd-unfit-55-to-64:
+        citation: "NC FNS Manual 260.01 F.2.a.vii"
+        citationUrl: "https://policies.ncdhhs.gov/wp-content/uploads/FNS-260-Able-Bodied-Adults-without-Dependents-ABAWD-11.26.2025-1.pdf"
+        description: >
+          Obviously unfit for work: individuals aged 55-64 with a limited education
+          (less than a high school degree or equivalent), no substantial gainful work
+          activity in the past five years, and any health condition limiting work
+          capacity are exempt from the ABAWD time limit.
+        programs: [snap]
+      nc-fns-work-registration-homeschool:
+        citation: "NC FNS Manual 240.03 N"
+        citationUrl: "https://policies.ncdhhs.gov/wp-content/uploads/FNS-240-Work-Registration_12.01.2025.pdf"
+        description: >
+          A parent operating a home school is exempt from work requirements when the
+          academic instruction is conducted at least 30 hours per week. The home school
+          must be registered with the NC Division of Non-Public Education, or otherwise
+          verified.
+        programs: [snap]
+
+  - target: $.facts
+    file: domains/eligibility/eligibility-annotations.yaml
+    description: 'SNAP: what North Carolina''s exemptions implement'
+    update:
+      snapWorkRequirements.ageWorkEducationHealthExemption:
+        policies: [nc-fns-abawd-unfit-55-to-64]
+        programs: [snap]
+      snapWorkRequirements.operatingHomeschoolExemptionHours:
+        policies: [nc-fns-work-registration-homeschool]
+        programs: [snap]
+      snapWorkRequirements.hasStateExemption:
+        policies: [nc-fns-abawd-unfit-55-to-64, nc-fns-work-registration-homeschool]
+        programs: [snap]
+
+  - target: $.constants
+    file: domains/eligibility/eligibility-annotations.yaml
+    description: 'SNAP: the sources of North Carolina''s constants'
+    update:
+      snapWorkRequirements.homeschoolExemptionWeeklyHours:
+        policies: [nc-fns-work-registration-homeschool]
+        programs: [snap]
+      snapWorkRequirements.ageWorkEducationHealthExemptionMinimumAge:
+        policies: [nc-fns-abawd-unfit-55-to-64]
+        programs: [snap]
+
+  - target: $.rulesets.snapWorkRequirements.examples
+    file: domains/eligibility/eligibility-rules-examples.yaml
+    description: 'SNAP: North Carolina''s exemptions, as examples from the tool''s tests'
+    append:
+      - description: >-
+          55 to 64, no diploma, not worked in five years, a medical condition preventing work —
+          exempt in North Carolina (work_rules_policy_spec.rb:182)
+        inputs:
+          person:
+            age: 60
+            hasHsDiploma: false
+            workedLastFiveYears: false
+            preventingWorkMedicalCondition: true
+      - description: Teaching homeschool 40 hours a week — exempt in North Carolina (work_rules_policy_spec.rb:269)
+        inputs:
+          person:
+            age: 30
+            teachesHomeschool: true
+            homeschoolHours: 40
+      - description: >-
+          Homeschooling, pregnant and working 30 hours — federal, state and earnings exemptions
+          together (work_rules_policy_spec.rb:276)
+        inputs:
+          person:
+            age: 30
+            teachesHomeschool: true
+            homeschoolHours: 40
+            isPregnant: true
+            isWorking: true
+            workingHours: 30

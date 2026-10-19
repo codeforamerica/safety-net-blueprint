@@ -4,7 +4,8 @@
   "description": "OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference implementation of the Blueprint framework",
   "type": "module",
   "files": [
-    "src/"
+    "src/",
+    "states/"
   ],
   "scripts": {
     "validate": "node ../blueprint-cli/scripts/validate.js --resolved=../generated/contracts",

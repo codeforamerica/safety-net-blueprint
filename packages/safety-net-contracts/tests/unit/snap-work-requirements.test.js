@@ -7,42 +7,39 @@
  * from the fixture's `unanswered` block. A value of null means not decided:
  * the fact is missing.
  *
- * Cases for a state wait for the state overlays; until then they are listed
- * as todo.
+ * A case for a state runs against the rules with that state's file in
+ * states/ applied.
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { discover, load, generate } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
+import { graphFor } from '../rulesets.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const specArg = process.argv.find((a) => a.startsWith('--spec='));
-const CONTRACTS_DIR = specArg ? specArg.slice('--spec='.length) : resolve(here, '..', '..', 'src');
-
 const { unanswered, cases } = yaml.load(readFileSync(join(here, '..', 'scenarios', 'snap-work-requirements.yaml'), 'utf8'));
-const graph = generate(discover(CONTRACTS_DIR).map(load), 'graph')
-  .find(({ graph }) => graph.ruleset === 'snapWorkRequirements').graph;
+const graph = graphFor('snapWorkRequirements');
 
-/** A case's answers, with every question it leaves out answered so it grants nothing. Age has no such answer. */
-const inputsOf = (person) => ({ person: { ...unanswered.person, ...person } });
+/**
+ * A case's answers, with every question it leaves out answered so it grants
+ * nothing, North Carolina's own questions included for a case there. Age has
+ * no such answer.
+ */
+const inputsOf = (person, state) => ({
+  person: { ...unanswered.person, ...(state === 'NC' ? unanswered.northCarolina : {}), ...person },
+});
 
 /** A list of exemption codes is a set: the order is the rules' own, and nothing depends on it. */
 const sorted = (value) => (Array.isArray(value) ? [...value].sort() : value);
 
 describe('SNAP work requirements cases', () => {
   for (const c of cases) {
-    if (c.state) {
-      test.todo(`${c.name} (${c.state}): waits for the state overlays`);
-      continue;
-    }
-
-    test(c.name, () => {
-      const nodes = evaluate(graph, inputsOf(c.person));
+    test(c.state ? `${c.name} (${c.state})` : c.name, () => {
+      const nodes = evaluate(c.state ? graphFor('snapWorkRequirements', c.state) : graph, inputsOf(c.person, c.state));
       for (const [fact, expected] of Object.entries(c.expect)) {
         const node = nodes[fact];
         if (expected === null) {

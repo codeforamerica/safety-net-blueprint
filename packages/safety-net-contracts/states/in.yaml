@@ -1,0 +1,40 @@
+# Indiana: state choices for the Medicaid work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/in.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Notes:
+#   - Renewal: three months, checked after each quarterly compliance check.
+#   - News reports of FSSA's announcement say exemptions need documentation;
+#     acceptsStatementsBefore2028 is left at the default until the state plan confirms it.
+#
+# Recorded in the survey; no rule reads these:
+#   checksBetweenRenewals: quarterly
+#   frailtyDefinitionPlan: existing state definition
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: claims, managed care claims, managed care case management, other program data
+overlay: 1.0.0
+info:
+  title: Indiana work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.applicationReviewMonths.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: applicationReviewMonths'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 3
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsFrailtyStatements.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: acceptsFrailtyStatements'
+    update: false

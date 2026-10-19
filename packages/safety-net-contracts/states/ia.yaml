@@ -1,0 +1,35 @@
+# Iowa: state choices for the Medicaid work requirements.
+#
+# Apply after the package's own overlays:
+#   blueprint-resolve --spec=src --overlay=src/overlays --overlay=states/ia.yaml
+#
+# Medicaid values: KFF / Georgetown CCF 50-state survey, fielded January–March 2026,
+# before CMS's June 2026 rule, unless a note says otherwise. States may have changed
+# course since.
+#
+# Undecided, so the federal default applies, and a screener should say so rather than
+# present it as Iowa's rule: applicationReviewMonths, acceptsFrailtyStatements.
+#
+# Recorded in the survey; no rule reads these:
+#   startDate: 2026-12-01
+#   checksBetweenRenewals: undecided
+#   frailtyDefinitionPlan: undecided
+#   hasStateFrailtyDefinition: true
+#   frailtyVerifiedBy: undecided
+overlay: 1.0.0
+info:
+  title: Iowa work requirements
+  version: 0.1.0
+actions:
+  - target: $.rulesets.medicaidWorkRequirements.constants.renewalMonthsRequired.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: renewalMonthsRequired'
+    update: 2
+  - target: $.rulesets.medicaidWorkRequirements.constants.offersHardshipExceptions.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: offersHardshipExceptions'
+    update: false
+  - target: $.rulesets.medicaidWorkRequirements.constants.firstYearInEffect.value
+    file: domains/eligibility/eligibility-rules.yaml
+    description: 'Medicaid: firstYearInEffect'
+    update: 2026

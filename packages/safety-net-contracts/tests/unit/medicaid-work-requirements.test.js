@@ -6,26 +6,22 @@
  * default, so every question a scenario doesn't answer takes the answer that
  * grants nothing, from the fixture's `unanswered` block.
  *
- * Scenarios for a state wait for the state overlays; until then they are
- * listed as todo.
+ * A scenario for a state runs against the rules with that state's file in
+ * states/ applied.
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { discover, load, generate } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
+import { graphFor } from '../rulesets.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const specArg = process.argv.find((a) => a.startsWith('--spec='));
-const CONTRACTS_DIR = specArg ? specArg.slice('--spec='.length) : resolve(here, '..', '..', 'src');
-
 const { unanswered, scenarios } = yaml.load(readFileSync(join(here, '..', 'scenarios', 'medicaid-work-requirements.yaml'), 'utf8'));
-const graph = generate(discover(CONTRACTS_DIR).map(load), 'graph')
-  .find(({ graph }) => graph.ruleset === 'medicaidWorkRequirements').graph;
+const graph = graphFor('medicaidWorkRequirements');
 
 /**
  * Equal, with numbers compared to within a billionth. CEL's numbers are
@@ -51,13 +47,8 @@ function inputsOf(scenario) {
 
 describe('Medicaid work requirements scenarios', () => {
   for (const scenario of scenarios) {
-    if (scenario.state) {
-      test.todo(`${scenario.id} (${scenario.state}): waits for the state overlays`);
-      continue;
-    }
-
-    test(scenario.id, () => {
-      const nodes = evaluate(graph, inputsOf(scenario));
+    test(scenario.state ? `${scenario.id} (${scenario.state})` : scenario.id, () => {
+      const nodes = evaluate(scenario.state ? graphFor('medicaidWorkRequirements', scenario.state) : graph, inputsOf(scenario));
       for (const [output, expected] of Object.entries(scenario.expect ?? {})) {
         const node = nodes[output];
         assert.ok(node && node.state !== 'missing' && node.state !== 'error', `${output}: ${JSON.stringify(node)}`);

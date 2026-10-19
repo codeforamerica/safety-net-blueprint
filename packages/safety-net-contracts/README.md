@@ -65,6 +65,20 @@ npx blueprint-validate --resolved=./resolved
 npx blueprint-mock --spec=./resolved
 ```
 
+### State overlays for the work requirements
+
+`states/` holds an overlay for each state whose Medicaid or SNAP work requirement choices the package knows: Arkansas, Delaware, Idaho, Indiana, Iowa, North Carolina and Utah. Each sets that state's values in the `medicaidWorkRequirements` and `snapWorkRequirements` rulesets, and notes where its values come from and which it hadn't decided. Apply one after the package's overlays, or start your own from it:
+
+```bash
+npx blueprint-resolve \
+  --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src \
+  --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src/overlays \
+  --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/states/nc.yaml \
+  --out=./resolved
+```
+
+The files sit outside `src/` because `blueprint-resolve` applies every overlay it finds in the contracts it's given, so one state's file there would apply to every build.
+
 See the [Setup Guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/setup-guide.md) for the full walkthrough and the [Overlay Guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md) for overlay authoring.
 
 ## Changelog
