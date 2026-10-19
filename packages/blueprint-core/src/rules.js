@@ -11,8 +11,8 @@
  *      input node per field ($.namespace.field, $.namespace.array[], etc.)
  *   2. extractDeps — scan each fact's CEL expression for references to input
  *      paths and other facts; build the dependencies map
- *   3. Assemble the graph document (schema, domain, ruleset, outputs, inputs,
- *      facts, dependencies)
+ *   3. Assemble the graph document (schema, format version, domain, ruleset,
+ *      outputs, inputs, facts, dependencies)
  *
  * Endpoint overlay generation follows the same pattern as compositions:
  * returns an OpenAPI Overlay 1.0.0 document that adds the POST endpoint and
@@ -200,6 +200,60 @@ function containsPathRef(expression, celRef) {
   return new RegExp(`(?<![a-zA-Z0-9$_.])${escaped}(?![a-zA-Z0-9_])`, 'u').test(expression);
 }
 
+// ── Per-item facts ───────────────────────────────────────────────────────────
+
+/**
+ * The list fact a per-item fact is on: `reviewMonths[].reviewWeeks[].worked`
+ * is on `reviewMonths[].reviewWeeks`. Null for a fact on no list.
+ *
+ * @param {string} factPath
+ * @returns {string|null}
+ */
+export function listFactOf(factPath) {
+  const at = factPath.lastIndexOf('[].');
+  return at < 0 ? null : factPath.slice(0, at);
+}
+
+/**
+ * What a fact depends on through per-item facts, beyond what extractDeps
+ * finds in its expression.
+ *
+ * A per-item fact depends on its list and on every list enclosing it, since
+ * it is computed once for each of their items. It reads an enclosing item's
+ * facts by that list's `as` name — `month.meetsHours` is
+ * `reviewMonths[].meetsHours` — and those are dependencies too.
+ *
+ * Reading a list reads its items, and they carry their facts, so a fact that
+ * reads a list depends on every per-item fact on it, at every depth. That
+ * over-counts — `size(reviewMonths)` needs none of them — but an edge too many
+ * only orders evaluation; one too few computes a fact before what it reads.
+ *
+ * @param {string} factPath
+ * @param {string} expression
+ * @param {string[]} direct - What extractDeps found
+ * @param {Object<string, {as?: string}>} decls - Every fact's declaration, by path
+ * @returns {string[]}
+ */
+function perItemDeps(factPath, expression, direct, decls) {
+  const deps = [];
+  const onItems = (list) => Object.keys(decls).filter((p) => p.startsWith(`${list}[].`));
+  const readsList = (list) => { deps.push(list); if (decls[list]?.as) deps.push(...onItems(list)); };
+
+  for (const dep of direct) if (decls[dep]?.as) deps.push(...onItems(dep));
+
+  for (let list = listFactOf(factPath); list; list = listFactOf(list)) {
+    deps.push(list);
+    const as = decls[list]?.as;
+    if (!as) continue;
+    for (const itemFact of onItems(list)) {
+      const name = itemFact.slice(list.length + 3);
+      if (name.includes('[].') || itemFact === factPath) continue;
+      if (containsPathRef(expression, `${as}.${name}`)) readsList(itemFact);
+    }
+  }
+  return deps.filter((d) => d !== factPath);
+}
+
 // ── Ruleset compiler ─────────────────────────────────────────────────────────
 
 /**
@@ -229,12 +283,17 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
   // whatever order the file is written in; the evaluator already resolves
   // topologically, and cycles are detected separately.
   const factPaths = (ruleset.facts || []).map((f) => f.path);
+  // A per-item fact is read through its item's name, never by its path, so
+  // only facts on no list are looked for by name.
+  const namedFacts = factPaths.filter((p) => !p.includes('[]'));
+  const decls = Object.fromEntries((ruleset.facts || []).map((f) => [f.path, f]));
 
   for (const factDecl of ruleset.facts || []) {
-    const { path: factPath, expression, description, type } = factDecl;
+    const { path: factPath, expression, description, type, as } = factDecl;
 
     // Build fact node
     const node = { expression };
+    if (as) node.as = as;
     if (type) {
       // type may be a SchemaOrRef object or a plain string
       const typeStr = typeof type === 'object' ? type.type : type;
@@ -244,7 +303,8 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
     facts[factPath] = node;
 
     // A fact never depends on itself; anything else in the ruleset is fair game.
-    const deps = extractDeps(expression, inputPaths, factPaths.filter((n) => n !== factPath));
+    const direct = extractDeps(expression, inputPaths, namedFacts.filter((n) => n !== factPath));
+    const deps = [...new Set([...direct, ...perItemDeps(factPath, expression, direct, decls)])];
     if (deps.length > 0) {
       dependencies[factPath] = deps;
     }
@@ -263,8 +323,13 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
     { value: p.value, ...(p.type ? { type: p.type } : {}), ...(p.description ? { description: p.description } : {}) },
   ]));
 
+  // The format's edition, raised only by what the graph uses, so a graph
+  // without per-item facts still runs on an engine that predates them.
+  const formatVersion = factPaths.some((p) => p.includes('[]')) || (ruleset.facts || []).some((f) => f.as) ? '1.1' : '1.0';
+
   return {
     $schema: 'https://blueprint.codeforamerica.org/schemas/graph-schema.yaml',
+    formatVersion,
     domain,
     ruleset: rulesetName,
     outputs,

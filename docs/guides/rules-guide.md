@@ -201,6 +201,55 @@ another, start with an input's name, or be a group too: `risks` and
 grouped fact's key quotes it, as JSONPath needs for any key with a dot:
 `$.rulesets.interviewFlags.outputs['risks.earnedIncomeVaries']`.
 
+### Facts on each item of a list
+
+Some decisions are made once for each item of a list, then about the whole:
+whether each month of a review period counts, then whether enough months did.
+A **list fact** names its items with `as`, and a fact whose path is
+`<list>[].<name>` is computed once for each item:
+
+```yaml
+facts:
+  - path: reviewMonths
+    as: month
+    expression: "isApplication ? months.filter(m, m.monthsBefore <= constants.applicationReviewMonths) : months"
+  - path: reviewMonths[].meetsHours
+    expression: month.hoursWorked >= constants.monthlyHoursRequired
+  - path: reviewMonths[].qualifies
+    expression: month.hadException || month.meetsHours
+  - path: qualifyingMonthCount
+    expression: size(reviewMonths.filter(m, m.qualifies))
+```
+
+Inside a fact on the items, the item is read by its `as` name: `month.hoursWorked`
+is a field the caller sent, and `month.meetsHours` is another fact on the item.
+Outside, the list is read with a macro, and each item carries its facts as
+fields: `reviewMonths.filter(m, m.qualifies)`.
+
+Lists nest. A list fact on the items has its own `as`, and a fact inside it
+reads both items by name:
+
+```yaml
+  - path: reviewMonths[].reviewWeeks
+    as: week
+    expression: month.weeks
+  - path: reviewMonths[].reviewWeeks[].shareOfMonth
+    expression: week.hours / month.hoursWorked
+```
+
+A fact on the items can be an output. Its value has one entry per item, in
+the list's order, with `null` for an item that is unresolved, and one list per
+outer item when it is nested. Its `missing` names what those items need, at
+their position in what the caller sent — `$.months[1].hoursWorked` — so an
+interview knows which month to ask about. When the list fact builds new items
+rather than keeping the caller's, as `months.map(m, {"hours": m.hoursWorked})`
+does, there is no such position, and an item is named in the list fact:
+`reviewMonths[0].hours`.
+
+An `as` name can't be an input, a fact, `constants`, or an enclosing list's
+`as`, and a fact on the items can't take the name of a field the items
+already have, so `month.hoursWorked` always means one thing.
+
 ## Types
 
 Two things about a declared type change the answers a ruleset gives.
@@ -315,7 +364,10 @@ ruleset reports as missing, which is usually the more interesting case.
 as outputs, CEL expressions that do not parse, `$.path` references that do not
 match the declared inputs, and names that would mean two things: a fact
 declared twice, a fact starting with an input's name, a path that's both a
-fact and a group, and an input named `constants` alongside a `constants` block. It does not check that an expression computes
+fact and a group, an input named `constants` alongside a `constants` block, an
+`as` name already in use, and a fact on the items named like a field they
+have. It also refuses a fact on the items of something that isn't a list
+fact. It does not check that an expression computes
 the right answer — that is what examples and the conformance corpus are for.
 
 [cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions

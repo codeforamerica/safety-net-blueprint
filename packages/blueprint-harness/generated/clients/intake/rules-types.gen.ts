@@ -76,20 +76,20 @@ export type InterviewFlagsInputs = {
 };
 
 export type InterviewFlagsResult = {
-  risks.earnedIncomeVaries: FactNode<boolean>;
-  risks.cashOrSelfEmploymentIncome: FactNode<boolean>;
-  risks.incomeChangedSincePrevious: FactNode<boolean>;
-  risks.householdChangedSincePrevious: FactNode<boolean>;
-  risks.shelterCostsCarriedOver: FactNode<boolean>;
-  risks.elderlyOrDisabledWithoutMedicalCosts: FactNode<boolean>;
-  risks.childrenAndEarnersWithoutDependentCare: FactNode<boolean>;
-  risks.multipleProgramsApplied: FactNode<boolean>;
-  inconsistencies.incomeBelowExpenses: FactNode<boolean>;
-  inconsistencies.wagesDifferFromWageRecords: FactNode<boolean>;
-  inconsistencies.incomeDiffersFromPayStub: FactNode<boolean>;
-  inconsistencies.householdSizeDiffersFromMembers: FactNode<boolean>;
-  inconsistencies.jobWithoutEarnedIncome: FactNode<boolean>;
-  inconsistencies.earnedIncomeWithoutJob: FactNode<boolean>;
-  inconsistencies.utilitiesIncludedButBilled: FactNode<boolean>;
+  'risks.earnedIncomeVaries': FactNode<boolean>;
+  'risks.cashOrSelfEmploymentIncome': FactNode<boolean>;
+  'risks.incomeChangedSincePrevious': FactNode<boolean>;
+  'risks.householdChangedSincePrevious': FactNode<boolean>;
+  'risks.shelterCostsCarriedOver': FactNode<boolean>;
+  'risks.elderlyOrDisabledWithoutMedicalCosts': FactNode<boolean>;
+  'risks.childrenAndEarnersWithoutDependentCare': FactNode<boolean>;
+  'risks.multipleProgramsApplied': FactNode<boolean>;
+  'inconsistencies.incomeBelowExpenses': FactNode<boolean>;
+  'inconsistencies.wagesDifferFromWageRecords': FactNode<boolean>;
+  'inconsistencies.incomeDiffersFromPayStub': FactNode<boolean>;
+  'inconsistencies.householdSizeDiffersFromMembers': FactNode<boolean>;
+  'inconsistencies.jobWithoutEarnedIncome': FactNode<boolean>;
+  'inconsistencies.earnedIncomeWithoutJob': FactNode<boolean>;
+  'inconsistencies.utilitiesIncludedButBilled': FactNode<boolean>;
   nodes: Record<string, FactNode<unknown>>;
 };

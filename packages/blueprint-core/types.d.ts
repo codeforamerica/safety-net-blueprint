@@ -175,6 +175,8 @@ export interface GraphConstant {
 
 export interface Graph {
   $schema: string;
+  /** The format's edition, as major.minor: "1.1" with per-item facts, "1.0" without. Absent means "1.0". */
+  formatVersion?: string;
   domain: string;
   ruleset: string;
   outputs: string[];

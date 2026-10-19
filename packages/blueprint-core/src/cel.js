@@ -136,3 +136,85 @@ export function celSyntaxError(expr) {
     return e.message.split('\n')[0];
   }
 }
+
+/**
+ * The input a list fact's items come from, when they are that input's items,
+ * or null when its expression makes new ones.
+ *
+ * A list fact names its items with `as`, and facts on them are computed once
+ * for each item. When the items are the caller's own records — an input, or
+ * some of them — a missing answer on one can be named where the caller sent
+ * it, `$.months[1].hoursWorked`, and validation knows the fields an item
+ * already has. When the expression builds new items, neither is possible.
+ *
+ * With a graph whose input is `$.months[]`, each month having `weeks[]`:
+ *
+ *   reviewMonths: months                                        → '$.months[]'
+ *   reviewMonths: months.filter(m, m.monthsBefore <= 1)         → '$.months[]'
+ *   reviewMonths: isApplication ? months.filter(...) : months   → '$.months[]'
+ *   reviewMonths[].reviewWeeks: month.weeks                     → '$.months[].weeks[]'
+ *   reviewMonths: months.map(m, {"hours": m.hoursWorked})       → null
+ *
+ *   inputOf(graph, 'reviewMonths')  // → '$.months[]'
+ *
+ * Read from the parsed expression, not its text, and only these shapes: an
+ * input, a field of an enclosing item, `filter` of one, and `? :` whose
+ * branches agree. `filter` is recognized by the parser's record of the macro
+ * call, which CEL keeps in its parse output, not by the comprehension it
+ * expands to. Anything else is null, which is always safe: a missing answer
+ * is then named on the list fact, `reviewMonths[1].hours`, instead of on the
+ * input.
+ *
+ * @param {{ inputs: Object, facts: Object<string, { expression: string, as?: string }> }} graph - A compiled graph
+ * @param {string} factPath - A list fact, e.g. 'reviewMonths' or 'reviewMonths[].reviewWeeks'
+ * @returns {string|null} An input path ending in `[]`, e.g. '$.months[]', or null
+ */
+export function inputOf(graph, factPath) {
+  const expression = graph.facts?.[factPath]?.expression;
+  if (!expression) return null;
+  let parsed;
+  try {
+    parsed = parse(expression);
+  } catch {
+    return null;
+  }
+  const known = new Set(Object.keys(graph.inputs ?? {}));
+  const macroCalls = parsed.sourceInfo?.macroCalls ?? {};
+
+  // Inside a list, the expression reads each enclosing item by its list's
+  // `as` name, and `month` stands for one of that list's input's items.
+  const itemNames = {};
+  for (let at = factPath.lastIndexOf('[].'); at >= 0; at = factPath.lastIndexOf('[].', at - 1)) {
+    const list = factPath.slice(0, at);
+    const as = graph.facts[list]?.as;
+    const input = as && inputOf(graph, list);
+    if (input && !(as in itemNames)) itemNames[as] = input;
+  }
+
+  // `months` is '$.months', `month.weeks` is '$.months[].weeks'.
+  const pathOf = (expr) => {
+    const { case: kind, value } = expr.exprKind;
+    if (kind === 'identExpr') return itemNames[value.name] ?? `$.${value.name}`;
+    if (kind === 'selectExpr' && !value.testOnly) {
+      const operand = pathOf(value.operand);
+      return operand && `${operand}.${value.field}`;
+    }
+    return null;
+  };
+
+  const from = (expr) => {
+    const { case: kind, value } = expr.exprKind;
+    if (kind === 'comprehensionExpr') {
+      const call = macroCalls[String(expr.id)]?.exprKind;
+      return call?.case === 'callExpr' && call.value.function === 'filter' ? from(value.iterRange) : null;
+    }
+    if (kind === 'callExpr' && value.function === '_?_:_') {
+      const [, whenTrue, whenFalse] = value.args.map(from);
+      return whenTrue && whenTrue === whenFalse ? whenTrue : null;
+    }
+    const path = pathOf(expr);
+    return path && known.has(`${path}[]`) ? `${path}[]` : null;
+  };
+
+  return from(parsed.expr);
+}

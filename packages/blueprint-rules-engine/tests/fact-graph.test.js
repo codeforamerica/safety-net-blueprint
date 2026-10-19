@@ -29,10 +29,12 @@
  *   not here and not in the contract docs, so there is one place to read it.
  *
  * Coverage limit on `missing`:
- *   Only scalar paths are compared. An unseeded collection produces no
- *   Writable node in the Explanation tree, so a fact blocked on one has
- *   nothing on the other side to compare against. See unresolvedWritables()
- *   in tools/fact-graph.js.
+ *   An absent collection ($.h.people[]) is not compared. An unseeded
+ *   collection produces no Writable node in the Explanation tree, so a fact
+ *   blocked on one has nothing on the other side to compare against. See
+ *   unresolvedWritables() in tools/fact-graph.js. A field of one item
+ *   ($.h.people[1].age) is compared: its item is seeded, and its position
+ *   comes from the item's id.
  */
 
 import { describe, it } from 'node:test';
@@ -200,14 +202,15 @@ function assertOutputParity(celResult, fgResult, label) {
       assert.deepStrictEqual(cel[fact].value, fg[fact].value, `${label}: ${fact} value`);
     }
     if (cel[fact].state === 'missing') {
-      // Scalars only — see the coverage limit in the header. A collection
-      // path has no Writable in the Explanation tree, so FactGraph cannot
-      // report it and comparing it would fail for the wrong reason.
-      const scalars = (paths) => (paths ?? []).filter((p) => !p.includes('[]')).sort();
+      // Not a whole collection — see the coverage limit in the header. An
+      // absent collection has no Writable in the Explanation tree, so
+      // FactGraph cannot report it and comparing it would fail for the wrong
+      // reason. A field of one item can be, and is compared by its position.
+      const reportable = (paths) => (paths ?? []).filter((p) => !p.endsWith('[]')).sort();
       assert.deepStrictEqual(
-        scalars(cel[fact].missing),
-        scalars(fg[fact].missing),
-        `${label}: ${fact} missing (scalar paths)`
+        reportable(cel[fact].missing),
+        reportable(fg[fact].missing),
+        `${label}: ${fact} missing (all but absent collections)`
       );
     }
   }
@@ -728,5 +731,31 @@ describe('conditionals, size(), and membership', () => {
     const untranslated = new Map();
     toFactGraph(g({ weird: 'h.n h.n' }, { '$.h.n': { type: 'integer' } }), untranslated);
     assert.match(untranslated.get('weird'), /Unexpected/);
+  });
+});
+
+describe('per-item facts', () => {
+  it('are not translated yet, and say so', () => {
+    // Fact Graph has them as collection facts (`/h_months/*/qualifies`), so
+    // they can be translated; until then each is reported, not dropped.
+    const untranslated = new Map();
+    toFactGraph({
+      formatVersion: '1.1',
+      outputs: ['qualifyingMonthCount'],
+      inputs: { '$.h.months[]': { type: 'array' }, '$.h.months[].hoursWorked': { type: 'number' } },
+      facts: {
+        reviewMonths: { as: 'month', expression: 'h.months' },
+        'reviewMonths[].qualifies': { expression: 'month.hoursWorked >= 80.0' },
+        qualifyingMonthCount: { expression: 'size(reviewMonths.filter(m, m.qualifies))' },
+      },
+      dependencies: {
+        reviewMonths: ['$.h.months[]'],
+        'reviewMonths[].qualifies': ['reviewMonths'],
+        qualifyingMonthCount: ['reviewMonths', 'reviewMonths[].qualifies'],
+      },
+    }, untranslated);
+    assert.match(untranslated.get('reviewMonths'), /per-item/);
+    assert.match(untranslated.get('reviewMonths[].qualifies'), /per-item/);
+    assert.ok(untranslated.has('qualifyingMonthCount'));
   });
 });

@@ -1,4 +1,5 @@
 $schema: https://blueprint.codeforamerica.org/schemas/graph-schema.yaml
+formatVersion: "1.0"
 domain: eligibility
 ruleset: expeditedSnap
 outputs:
