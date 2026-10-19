@@ -1137,3 +1137,99 @@ entries:
       with IHS and tribal health programs, and may not consider IHS services as
       third-party liability.
     programs: [medicaid, chip]
+
+  # ── Medicaid work requirements (community engagement) ─────────────────────────
+
+  medicaid-community-engagement-statute:
+    citation: "SSA § 1902(xx)"
+    citationUrl: "https://www.congress.gov/bill/119th-congress/house-bill/1"
+    description: >
+      The community engagement requirement, added by P.L. 119-21 § 71119: adults in the
+      Medicaid expansion group must show work or other qualifying activity to get and keep
+      coverage. 42 CFR 435.551–435.562 implement it.
+    programs: [medicaid]
+
+  medicaid-community-engagement-applicability:
+    citation: "42 CFR § 435.551"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.551"
+    description: >
+      Who the requirement applies to: adults 19 through 64 in the expansion group, or a
+      similar section 1115 program, who don't have Medicare, from 2027. A state may start
+      earlier.
+    programs: [medicaid]
+
+  medicaid-community-engagement-activities:
+    citation: "42 CFR § 435.552"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.552"
+    description: >
+      What makes a month count: 80 hours of work, community service, a work program or
+      education; enrollment at least half-time; or income at least 80 times the federal
+      minimum wage, including a seasonal worker's six-month average.
+    programs: [medicaid]
+
+  medicaid-community-engagement-exceptions:
+    citation: "42 CFR § 435.553"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.553"
+    description: >
+      Months that count without activity: a month the person was excluded, under 19, had
+      Medicare, was in another mandatory Medicaid group, or followed release from
+      incarceration in the prior three months.
+    programs: [medicaid]
+
+  medicaid-community-engagement-exclusions:
+    citation: "42 CFR § 435.554"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.554"
+    description: >
+      Who doesn't have to meet the requirement, as of the month of application or renewal:
+      American Indians and Alaska Natives, veterans with a total disability rating, former
+      foster youth under 26, people who are medically frail, parents and caretakers of a child
+      13 or younger or of a person with a disability, pregnant and postpartum people, people
+      meeting SNAP or TANF work rules, people in substance use treatment, and people who are
+      incarcerated. Medical frailty (paragraph (c)(5)) is one of five kinds of condition and
+      significant impairment.
+    programs: [medicaid]
+
+  medicaid-community-engagement-hardship:
+    citation: "42 CFR § 435.555"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.555"
+    description: >
+      Short-term hardship exceptions, offered by a state for all hardships or none: a declared
+      disaster or emergency, or high unemployment, in the person's county apply on their own;
+      inpatient care and travel for serious medical treatment apply when the person asks.
+    programs: [medicaid]
+
+  medicaid-community-engagement-review-period:
+    citation: "42 CFR § 435.556"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.556"
+    description: >
+      The months reviewed: at application, one to three consecutive months just before it, as
+      the state chooses, all of which must count; at renewal, a number of months since the last
+      determination, consecutive or not.
+    programs: [medicaid]
+
+  medicaid-community-engagement-verification:
+    citation: "42 CFR § 435.557"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.557"
+    description: >
+      How it's shown: the state's own data first. A signed statement is enough in 2027 where the
+      state accepts one; from 2028, documents are needed where reasonably available. A state may
+      accept a statement for a mandatory exception in any year, and one medical frailty
+      statement per enrollment period.
+    programs: [medicaid]
+
+  medicaid-community-engagement-noncompliance:
+    citation: "42 CFR § 435.558"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.558"
+    description: >
+      When the state can't confirm compliance from its data, it sends a notice and gives the
+      person 30 days to respond before denying an application or ending coverage, and checks
+      first for another basis of eligibility.
+    programs: [medicaid]
+
+  medicaid-community-engagement-transition:
+    citation: "42 CFR § 435.559"
+    citationUrl: "https://www.ecfr.gov/current/title-42/section-435.559"
+    description: >
+      An application submitted, or a renewal started, before the requirement took effect is
+      decided without it.
+    programs: [medicaid]

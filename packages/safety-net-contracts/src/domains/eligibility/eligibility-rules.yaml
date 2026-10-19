@@ -1,0 +1,410 @@
+$schema: https://blueprint.codeforamerica.org/schemas/rules-schema.yaml
+domain: eligibility
+
+rulesets:
+
+  # Medicaid work requirements, 2027–2028: the community engagement
+  # requirement of SSA § 1902(xx) (P.L. 119-21 § 71119) and 42 CFR
+  # 435.551–435.562 (CMS-2454-IFC).
+  #
+  # Four questions, in order: does the requirement apply (435.551); is the
+  # person exempt — the regulation's "exclusions", as of the month of
+  # application or renewal (435.554); did enough months of the review period
+  # count (435.552–435.556); and can it be shown (435.557–435.558).
+  #
+  # Nothing a person answers has a default, so a result that needs an answer
+  # is missing until it's given, and names the answer to ask for. Values a
+  # state chooses are constants, which a state overlay changes.
+  medicaidWorkRequirements:
+    endpoint:
+      path: /determinations/evaluate-medicaid-work-requirements
+
+    inputs:
+      determination:
+        type: object
+        properties:
+          kind:
+            type: string
+            enum: [application, renewal, change_in_circumstances]
+          year:
+            type: integer
+          # Applications submitted, or renewals started, before the requirement
+          # took effect are decided without it (435.559).
+          startedBeforeRequirement:
+            type: boolean
+          exemptAtLastDetermination:
+            type: boolean
+
+      # As of the month of application or renewal.
+      person:
+        type: object
+        properties:
+          age:
+            type: integer
+          inAdultExpansionGroup:
+            type: boolean
+          hasMedicare:
+            type: boolean
+          isPregnantOrPostpartum:
+            type: boolean
+          isAmericanIndianOrAlaskaNative:
+            type: boolean
+          isFormerFosterYouth:
+            type: boolean
+          caresForChildUnder14:
+            type: boolean
+          caresForPersonWithDisability:
+            type: boolean
+          careRelationship:
+            type: string
+            enum: [parent_or_guardian, relative, lives_with, other]
+          caregivingHoursPerMonth:
+            type: number
+          isVeteranWithTotalDisability:
+            type: boolean
+          meetsTanfWorkRequirements:
+            type: boolean
+          inSnapHousehold:
+            type: boolean
+          subjectToSnapWorkRules:
+            type: boolean
+          inSubstanceUseTreatment:
+            type: boolean
+          isIncarcerated:
+            type: boolean
+
+      # Medical frailty (435.554(c)(5)): one of five kinds of condition, and
+      # significant impairment.
+      health:
+        type: object
+        properties:
+          isBlindOrDisabled:
+            type: boolean
+          hasSubstanceUseDisorder:
+            type: boolean
+          yearsInRecovery:
+            type: number
+          hasDisablingMentalDisorder:
+            type: boolean
+          hasDisabilityLimitingDailyActivities:
+            type: boolean
+          hasSeriousOrComplexCondition:
+            type: boolean
+          conditionSignificantlyImpairsAbilityToMeetRequirement:
+            type: boolean
+
+      # Each month the person reports on, by how many months before the month
+      # of application or renewal it is (1 = the month before).
+      months:
+        type: array
+        items:
+          type: object
+          properties:
+            monthsBefore:
+              type: integer
+            # Exceptions (435.553): the month counts.
+            wasExempt:
+              type: boolean
+            wasUnder19:
+              type: boolean
+            hadMedicare:
+              type: boolean
+            wasInOtherMandatoryGroup:
+              type: boolean
+            wasIncarceratedInPrior3Months:
+              type: boolean
+            # Short-term hardships (435.555): county ones apply on their own,
+            # medical ones only when asked for.
+            countyHadDisasterOrEmergency:
+              type: boolean
+            countyHadHighUnemployment:
+              type: boolean
+            receivedInpatientCare:
+              type: boolean
+            hadMedicalTravel:
+              type: boolean
+            askedForHardship:
+              type: boolean
+            # Qualifying activities (435.552).
+            hoursWorked:
+              type: number
+            hoursCommunityService:
+              type: number
+            hoursWorkProgram:
+              type: number
+            enrolledHalfTimeOrMore:
+              type: boolean
+            educationCreditHours:
+              type: number
+            educationClassHours:
+              type: number
+            householdIncome:
+              type: number
+            isSeasonalWorker:
+              type: boolean
+            sixMonthAverageIncome:
+              type: number
+
+      # The state's own data first; otherwise a notice, with 30 days to
+      # respond (435.558).
+      verification:
+        type: object
+        properties:
+          stateDataConfirms:
+            type: boolean
+          response:
+            type: string
+            enum: [not_yet, responded, no_response]
+          proofSent:
+            type: string
+            enum: [none, statement, documents]
+          documentsReasonablyAvailable:
+            type: boolean
+          frailtyStatementAlreadyUsed:
+            type: boolean
+
+    constants:
+      firstYearInEffect:
+        value: 2027
+        type: integer
+        description: Earlier at state option; later only under a CMS good-faith exemption, by December 31, 2028.
+      minimumAge:
+        value: 19
+        type: integer
+      maximumAge:
+        value: 64
+        type: integer
+      formerFosterYouthMaximumAge:
+        value: 25
+        type: integer
+      caregiverMinimumMonthlyHours:
+        value: 80
+        description: For a caregiver who neither lives with nor is related to the person cared for.
+      stableRecoveryYears:
+        value: 5
+      monthlyHoursRequired:
+        value: 80
+      federalMinimumWage:
+        value: 7.25
+        description: The federal minimum wage, never a state or local one.
+      creditHourWeeklyHours:
+        value: 3
+        description: Each credit hour counts as this many hours a week.
+      weeksPerMonth:
+        value: 4.33
+      offersHardshipExceptions:
+        value: true
+        description: State option, all or none (435.555).
+      applicationReviewMonths:
+        value: 1
+        type: integer
+        description: 1–3 consecutive months before the month of application (435.556).
+      renewalMonthsRequired:
+        value: 1
+        type: integer
+        description: Months, consecutive or not, since the last determination.
+      documentationRequiredFromYear:
+        value: 2028
+        type: integer
+        description: From this year, documents where reasonably available (435.557).
+      acceptsStatementsBefore2028:
+        value: true
+        description: State option.
+      acceptsStatementsForMandatoryExceptions:
+        value: true
+        description: State option, any year.
+      acceptsFrailtyStatements:
+        value: true
+        description: State option. From 2028, once per enrollment period.
+
+    outputs:
+      requirementApplies: {}
+      exemptions: {}
+      isExempt: {}
+      lostExemptStatus: {}
+      frailtyCategories: {}
+      isMedicallyFrail: {}
+      monthsRequired: {}
+      qualifyingMonthCount: {}
+      meetsRequirement: {}
+      couldAskForHardship: {}
+      statementAccepted: {}
+      status: {}
+      coverageResult: {}
+      nextStep: {}
+      reviewMonths[].qualifies: {}
+      reviewMonths[].qualifiesBy: {}
+      reviewMonths[].proofRule: {}
+      reviewMonths[].hardshipAvailableIfRequested: {}
+      reviewMonths[].totalActivityHours: {}
+
+    facts:
+      # ── Does the requirement apply? (435.551, 435.559) ──────────────────────
+      - path: requirementInEffect
+        expression: determination.year >= constants.firstYearInEffect && !determination.startedBeforeRequirement
+      - path: inAgeRange
+        expression: person.age >= constants.minimumAge && person.age <= constants.maximumAge
+      - path: requirementApplies
+        expression: requirementInEffect && person.inAdultExpansionGroup && inAgeRange && !person.hasMedicare
+
+      # ── Medical frailty (435.554(c)(5)) ─────────────────────────────────────
+      - path: substanceUseDisorderCounts
+        expression: health.hasSubstanceUseDisorder && health.yearsInRecovery < constants.stableRecoveryYears
+      - path: frailtyCategories
+        expression: >-
+          (health.isBlindOrDisabled ? ['blind_or_disabled'] : []) +
+          (substanceUseDisorderCounts ? ['substance_use_disorder'] : []) +
+          (health.hasDisablingMentalDisorder ? ['disabling_mental_disorder'] : []) +
+          (health.hasDisabilityLimitingDailyActivities ? ['disability_limiting_daily_activities'] : []) +
+          (health.hasSeriousOrComplexCondition ? ['serious_or_complex_condition'] : [])
+      - path: isMedicallyFrail
+        expression: size(frailtyCategories) > 0 && health.conditionSignificantlyImpairsAbilityToMeetRequirement
+
+      # ── Is the person exempt? (435.554), longest-lasting first ──────────────
+      - path: isQualifyingCaregiver
+        expression: >-
+          person.careRelationship != 'other' ||
+          person.caregivingHoursPerMonth >= constants.caregiverMinimumMonthlyHours
+      - path: exemptions
+        expression: >-
+          (person.isAmericanIndianOrAlaskaNative ? ['american_indian_or_alaska_native'] : []) +
+          (person.isVeteranWithTotalDisability ? ['veteran_with_total_disability'] : []) +
+          (person.isFormerFosterYouth && person.age <= constants.formerFosterYouthMaximumAge ? ['former_foster_youth'] : []) +
+          (isMedicallyFrail ? ['medically_frail'] : []) +
+          (person.caresForChildUnder14 && isQualifyingCaregiver ? ['caregiver_of_child_under_14'] : []) +
+          (person.caresForPersonWithDisability && isQualifyingCaregiver ? ['caregiver_of_person_with_disability'] : []) +
+          (person.isPregnantOrPostpartum ? ['pregnant_or_postpartum'] : []) +
+          (person.inSnapHousehold && person.subjectToSnapWorkRules ? ['snap_work_rules'] : []) +
+          (person.meetsTanfWorkRequirements ? ['tanf_work_rules'] : []) +
+          (person.inSubstanceUseTreatment ? ['substance_use_treatment'] : []) +
+          (person.isIncarcerated ? ['incarcerated'] : [])
+      - path: isExempt
+        expression: requirementApplies && size(exemptions) > 0
+      - path: lostExemptStatus
+        expression: determination.exemptAtLastDetermination && !isExempt
+
+      # ── The review period (435.552–435.556) ─────────────────────────────────
+      # At application, the months just before it, all of which must count. At
+      # renewal or a change, any months since the last determination.
+      - path: isApplication
+        expression: determination.kind == 'application'
+      - path: monthsRequired
+        expression: 'isApplication ? constants.applicationReviewMonths : constants.renewalMonthsRequired'
+      - path: reviewMonths
+        as: month
+        expression: 'isApplication ? months.filter(m, m.monthsBefore <= constants.applicationReviewMonths) : months'
+      - path: incomeRequired
+        expression: constants.monthlyHoursRequired * constants.federalMinimumWage
+
+      - path: reviewMonths[].mandatoryException
+        expression: >-
+          month.wasExempt || month.wasUnder19 || month.hadMedicare ||
+          month.wasInOtherMandatoryGroup || month.wasIncarceratedInPrior3Months
+      - path: reviewMonths[].automaticHardshipException
+        expression: >-
+          constants.offersHardshipExceptions &&
+          (month.countyHadDisasterOrEmergency || month.countyHadHighUnemployment)
+      - path: reviewMonths[].hardshipAvailableIfRequested
+        expression: constants.offersHardshipExceptions && (month.receivedInpatientCare || month.hadMedicalTravel)
+      - path: reviewMonths[].requestedHardshipException
+        expression: month.hardshipAvailableIfRequested && month.askedForHardship
+      - path: reviewMonths[].educationHours
+        expression: >-
+          month.educationCreditHours * constants.creditHourWeeklyHours * constants.weeksPerMonth +
+          month.educationClassHours
+      - path: reviewMonths[].totalActivityHours
+        expression: month.hoursWorked + month.hoursCommunityService + month.hoursWorkProgram + month.educationHours
+      - path: reviewMonths[].meetsActivityHours
+        expression: month.totalActivityHours >= constants.monthlyHoursRequired
+      - path: reviewMonths[].meetsIncome
+        expression: month.householdIncome >= incomeRequired
+      - path: reviewMonths[].meetsSeasonalIncome
+        expression: month.isSeasonalWorker && month.sixMonthAverageIncome >= incomeRequired
+      - path: reviewMonths[].qualifies
+        expression: >-
+          month.mandatoryException || month.automaticHardshipException || month.requestedHardshipException ||
+          month.meetsIncome || month.meetsSeasonalIncome || month.enrolledHalfTimeOrMore || month.meetsActivityHours
+      - path: reviewMonths[].qualifiesBy
+        expression: >-
+          month.mandatoryException ? 'mandatory_exception' :
+          month.automaticHardshipException ? 'automatic_hardship' :
+          month.requestedHardshipException ? 'requested_hardship' :
+          month.meetsIncome ? 'income' :
+          month.meetsSeasonalIncome ? 'seasonal_income' :
+          month.enrolledHalfTimeOrMore ? 'half_time_education' :
+          month.meetsActivityHours ? 'activity_hours' : 'none'
+      # none_needed: the state's county data shows it. exception: a statement
+      # is enough. standard: a statement in 2027, documents from 2028.
+      - path: reviewMonths[].proofRule
+        expression: "month.automaticHardshipException ? 'none_needed' : month.mandatoryException ? 'exception' : 'standard'"
+
+      - path: qualifyingMonthCount
+        expression: size(reviewMonths.filter(m, m.qualifies))
+      - path: meetsRequirement
+        expression: qualifyingMonthCount >= monthsRequired
+      - path: couldAskForHardship
+        expression: '!meetsRequirement && reviewMonths.exists(m, !m.qualifies && m.hardshipAvailableIfRequested)'
+
+      # ── Can it be shown? (435.557) ──────────────────────────────────────────
+      - path: beforeDocumentationYear
+        expression: determination.year < constants.documentationRequiredFromYear
+      - path: statementAcceptedGenerally
+        expression: >-
+          (beforeDocumentationYear && constants.acceptsStatementsBefore2028) ||
+          !verification.documentsReasonablyAvailable
+      - path: frailtyStatementAccepted
+        expression: >-
+          isMedicallyFrail && constants.acceptsFrailtyStatements &&
+          (beforeDocumentationYear ? constants.acceptsStatementsBefore2028 : !verification.frailtyStatementAlreadyUsed)
+      - path: hasExemptionOtherThanFrailty
+        expression: 'size(exemptions) > (isMedicallyFrail ? 1 : 0)'
+      - path: statementAcceptedForExemption
+        expression: (hasExemptionOtherThanFrailty && statementAcceptedGenerally) || frailtyStatementAccepted
+      - path: monthsNeedingNoProof
+        expression: "size(reviewMonths.filter(m, m.qualifies && m.proofRule == 'none_needed'))"
+      - path: monthsShownByExceptionStatement
+        expression: >-
+          size(reviewMonths.filter(m, m.qualifies && (m.proofRule == 'none_needed' ||
+          (m.proofRule == 'exception' && constants.acceptsStatementsForMandatoryExceptions))))
+      - path: statementAcceptedForReviewPeriod
+        expression: statementAcceptedGenerally || monthsShownByExceptionStatement >= monthsRequired
+      - path: statementAccepted
+        expression: 'isExempt ? statementAcceptedForExemption : statementAcceptedForReviewPeriod'
+      - path: sentDocuments
+        expression: verification.response == 'responded' && verification.proofSent == 'documents'
+      - path: sentStatement
+        expression: verification.response == 'responded' && verification.proofSent == 'statement'
+
+      # Shown by the exemption, or by the review period.
+      - path: exemptionShown
+        expression: >-
+          isExempt && (verification.stateDataConfirms || sentDocuments ||
+          (sentStatement && statementAcceptedForExemption))
+      - path: reviewPeriodShown
+        expression: >-
+          meetsRequirement && (monthsNeedingNoProof >= monthsRequired || verification.stateDataConfirms ||
+          (!isExempt && (sentDocuments || (sentStatement && statementAcceptedForReviewPeriod))))
+
+      # ── The result (435.558) ────────────────────────────────────────────────
+      - path: hasBasis
+        expression: isExempt || meetsRequirement
+      - path: isCovered
+        expression: '!requirementApplies || exemptionShown || reviewPeriodShown'
+      - path: status
+        expression: >-
+          !requirementApplies ? 'requirement_does_not_apply' :
+          isExempt ? 'exempt' :
+          meetsRequirement ? 'meets_requirement' : 'does_not_meet_requirement'
+      - path: coverageResult
+        expression: >-
+          isCovered ? (isApplication ? 'gets_coverage' : 'keeps_coverage') :
+          verification.response == 'not_yet' ? 'notice_respond_within_30_days' :
+          isApplication ? 'application_denied' : 'loses_coverage'
+      - path: nextStep
+        expression: >-
+          isCovered ? 'none' :
+          verification.response != 'not_yet' ? 'reapply_or_ask_for_reconsideration' :
+          couldAskForHardship ? 'ask_for_hardship_exception' :
+          hasBasis && statementAccepted ? 'send_statement_or_documents' :
+          isExempt && !hasExemptionOtherThanFrailty ? 'send_health_records' :
+          hasBasis ? 'send_documents' : 'show_another_way_to_qualify'

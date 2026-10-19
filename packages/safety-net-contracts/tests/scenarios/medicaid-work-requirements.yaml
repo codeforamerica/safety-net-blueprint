@@ -1,0 +1,942 @@
+# Medicaid work requirements scenarios and the results each must produce, from the
+# draft rules these were ported from (all 44 passing as of October 17, 2026).
+#
+#   given         inputs, by group; a question not given takes its answer in
+#                 unanswered, below
+#   months        each month the person reports on
+#   state         a state overlay (default: the federal rules as written)
+#   expect        outputs
+#   expectMonths  per-item outputs on reviewMonths, by position
+#
+# The rules give nothing a default, so an unanswered question leaves a result
+# missing. A scenario is about the answers it gives; every other question takes
+# the answer that grants nothing, listed here once.
+
+unanswered:
+  determination:
+    startedBeforeRequirement: false
+    exemptAtLastDetermination: false
+  person:
+    inAdultExpansionGroup: true
+    hasMedicare: false
+    isPregnantOrPostpartum: false
+    isAmericanIndianOrAlaskaNative: false
+    isFormerFosterYouth: false
+    caresForChildUnder14: false
+    caresForPersonWithDisability: false
+    careRelationship: other
+    caregivingHoursPerMonth: 0
+    isVeteranWithTotalDisability: false
+    meetsTanfWorkRequirements: false
+    inSnapHousehold: false
+    subjectToSnapWorkRules: false
+    inSubstanceUseTreatment: false
+    isIncarcerated: false
+  health:
+    isBlindOrDisabled: false
+    hasSubstanceUseDisorder: false
+    yearsInRecovery: 0
+    hasDisablingMentalDisorder: false
+    hasDisabilityLimitingDailyActivities: false
+    hasSeriousOrComplexCondition: false
+    conditionSignificantlyImpairsAbilityToMeetRequirement: false
+  month:
+    wasExempt: false
+    wasUnder19: false
+    hadMedicare: false
+    wasInOtherMandatoryGroup: false
+    wasIncarceratedInPrior3Months: false
+    countyHadDisasterOrEmergency: false
+    countyHadHighUnemployment: false
+    receivedInpatientCare: false
+    hadMedicalTravel: false
+    askedForHardship: false
+    hoursWorked: 0
+    hoursCommunityService: 0
+    hoursWorkProgram: 0
+    enrolledHalfTimeOrMore: false
+    educationCreditHours: 0
+    educationClassHours: 0
+    householdIncome: 0
+    isSeasonalWorker: false
+    sixMonthAverageIncome: 0
+  verification:
+    stateDataConfirms: false
+    response: not_yet
+    proofSent: none
+    documentsReasonablyAvailable: true
+    frailtyStatementAlreadyUsed: false
+scenarios:
+  - id: david-child-turns-14
+    story: >-
+      His child turns 14 and he gets a notice that he lost the parent exclusion. He's still covered:
+      months since his last renewal, when his child was 13, count as exceptions.
+    given:
+      determination:
+        kind: change_in_circumstances
+        year: 2027
+        exemptAtLastDetermination: true
+      person:
+        age: 41
+        careRelationship: parent_or_guardian
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        wasExempt: true
+      - monthsBefore: 2
+        wasExempt: true
+    expect:
+      lostExemptStatus: true
+      status: meets_requirement
+      coverageResult: keeps_coverage
+  - id: david-other-exclusion
+    story: >-
+      At renewal he cares for a disabled relative, a different exclusion. A statement is enough in
+      2027.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+        exemptAtLastDetermination: true
+      person:
+        age: 41
+        caresForPersonWithDisability: true
+        careRelationship: relative
+      verification:
+        response: responded
+        proofSent: statement
+    expect:
+      status: exempt
+      exemptions:
+        - caregiver_of_person_with_disability
+      coverageResult: keeps_coverage
+  - id: david-first-renewal-no-work
+    story: >-
+      First renewal after his child turned 14, with no qualifying work. A month in the review period
+      when the child was still 13 counts, so he keeps coverage.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 41
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+      - monthsBefore: 2
+      - monthsBefore: 3
+        wasExempt: true
+    expect:
+      status: meets_requirement
+      qualifyingMonthCount: 1
+      coverageResult: keeps_coverage
+  - id: david-renewal-80-hours
+    story: >-
+      The renewal after that, 82 hours in one month (40 paid, 42 in an unpaid internship). He sends
+      documents.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 42
+      verification:
+        response: responded
+        proofSent: documents
+    months:
+      - monthsBefore: 1
+        hoursWorked: 20
+        householdIncome: 300
+      - monthsBefore: 2
+        hoursWorked: 82
+        householdIncome: 300
+    expect:
+      status: meets_requirement
+      coverageResult: keeps_coverage
+    expectMonths:
+      - qualifies: false
+      - qualifiesBy: activity_hours
+  - id: david-renewal-580-dollars
+    story: The renewal after that, $600 of income in one month, seen in wage data.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 42
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        householdIncome: 300
+      - monthsBefore: 2
+        householdIncome: 600
+    expect:
+      status: meets_requirement
+      coverageResult: keeps_coverage
+  - id: david-no-response
+    story: No exclusion, no qualifying month, and no response within 30 days.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 42
+      verification:
+        response: no_response
+    months:
+      - monthsBefore: 1
+        hoursWorked: 20
+        householdIncome: 300
+      - monthsBefore: 2
+        hoursWorked: 20
+        householdIncome: 300
+    expect:
+      status: does_not_meet_requirement
+      coverageResult: loses_coverage
+  - id: sam-one-month-state
+    story: Worked 90 hours last month. A one-month state reviews December 2026 only.
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 30
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        hoursWorked: 90
+        householdIncome: 1080
+      - monthsBefore: 2
+        hoursWorked: 30
+        householdIncome: 360
+      - monthsBefore: 3
+        hoursWorked: 30
+        householdIncome: 360
+    expect:
+      monthsRequired: 1
+      status: meets_requirement
+      coverageResult: gets_coverage
+  - id: sam-one-month-state-wrong-month
+    story: If his strong month had been October, a one-month state wouldn't count it.
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 30
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        hoursWorked: 30
+        householdIncome: 360
+      - monthsBefore: 2
+        hoursWorked: 30
+        householdIncome: 360
+      - monthsBefore: 3
+        hoursWorked: 90
+        householdIncome: 1080
+    expect:
+      qualifyingMonthCount: 0
+      status: does_not_meet_requirement
+  - id: sam-three-month-state
+    story: Idaho reviews October–December 2026 and all three must count. Only one does; he gets a notice.
+    state: ID
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 30
+    months:
+      - monthsBefore: 1
+        hoursWorked: 90
+        householdIncome: 1080
+      - monthsBefore: 2
+        hoursWorked: 30
+        householdIncome: 360
+      - monthsBefore: 3
+        hoursWorked: 30
+        householdIncome: 360
+    expect:
+      monthsRequired: 3
+      qualifyingMonthCount: 1
+      status: does_not_meet_requirement
+      coverageResult: notice_respond_within_30_days
+  - id: sam-three-month-state-no-response
+    story: The same, with no response within 30 days.
+    state: ID
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 30
+      verification:
+        response: no_response
+    months:
+      - monthsBefore: 1
+        hoursWorked: 90
+        householdIncome: 1080
+      - monthsBefore: 2
+        hoursWorked: 30
+        householdIncome: 360
+      - monthsBefore: 3
+        hoursWorked: 30
+        householdIncome: 360
+    expect:
+      status: does_not_meet_requirement
+      coverageResult: application_denied
+  - id: sam-three-month-state-later
+    story: He applies again after three straight months of 80 or more hours.
+    state: IN
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 30
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        hoursWorked: 90
+        householdIncome: 1080
+      - monthsBefore: 2
+        hoursWorked: 85
+        householdIncome: 1020
+      - monthsBefore: 3
+        hoursWorked: 82
+        householdIncome: 984
+    expect:
+      qualifyingMonthCount: 3
+      coverageResult: gets_coverage
+  - id: priya-asks-2027
+    story: >-
+      Earns $400. Her dependent travels for treatment; she asks for the hardship. A statement is
+      enough in 2027.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 39
+      verification:
+        response: responded
+        proofSent: statement
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+        askedForHardship: true
+    expect:
+      status: meets_requirement
+      coverageResult: keeps_coverage
+    expectMonths:
+      - qualifies: false
+      - qualifiesBy: requested_hardship
+  - id: priya-asks-2028-documents
+    story: The same in 2028, with documentation.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 39
+      verification:
+        response: responded
+        proofSent: documents
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+        askedForHardship: true
+    expect:
+      coverageResult: keeps_coverage
+  - id: priya-2028-statement-only
+    story: In 2028 a statement alone isn't enough when documents are reasonably available.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 39
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+        askedForHardship: true
+    expect:
+      statementAccepted: false
+      coverageResult: notice_respond_within_30_days
+      nextStep: send_documents
+  - id: priya-2028-no-documents-exist
+    story: If documents can't reasonably be had, the state must accept other information.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 39
+      verification:
+        response: responded
+        proofSent: statement
+        documentsReasonablyAvailable: false
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+        askedForHardship: true
+    expect:
+      statementAccepted: true
+      coverageResult: keeps_coverage
+  - id: priya-does-not-ask
+    story: She doesn't ask, so the state doesn't apply it. The notice is her chance to ask.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 39
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+    expect:
+      couldAskForHardship: true
+      coverageResult: notice_respond_within_30_days
+      nextStep: ask_for_hardship_exception
+  - id: priya-does-not-ask-no-response
+    story: She doesn't ask and doesn't respond within 30 days.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 39
+      verification:
+        response: no_response
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+    expect:
+      status: does_not_meet_requirement
+      coverageResult: loses_coverage
+  - id: maya-2027-statement
+    story: Full-time grad student earning $400; no enrollment data. In 2027 her statement is enough.
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 24
+      verification:
+        response: responded
+        proofSent: statement
+    months:
+      - monthsBefore: 1
+        enrolledHalfTimeOrMore: true
+        householdIncome: 400
+        hoursWorked: 26
+    expect:
+      status: meets_requirement
+      coverageResult: gets_coverage
+    expectMonths:
+      - qualifiesBy: half_time_education
+  - id: maya-2028-class-schedule
+    story: In 2028 she sends a class schedule or transcript.
+    given:
+      determination:
+        kind: application
+        year: 2028
+      person:
+        age: 24
+      verification:
+        response: responded
+        proofSent: documents
+    months:
+      - monthsBefore: 1
+        enrolledHalfTimeOrMore: true
+        householdIncome: 400
+        hoursWorked: 26
+    expect:
+      coverageResult: gets_coverage
+  - id: maya-below-half-time
+    story: >-
+      At renewal she's down to 3 credit hours (39 hours a month) plus 26 hours of work: 65, under
+      80, and $400 of income. No response within 30 days.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 24
+      verification:
+        response: no_response
+    months:
+      - monthsBefore: 1
+        educationCreditHours: 3
+        hoursWorked: 26
+        householdIncome: 400
+    expect:
+      status: does_not_meet_requirement
+      coverageResult: loses_coverage
+    expectMonths:
+      - qualifies: false
+        totalActivityHours: 64.97
+  - id: maya-below-half-time-combined
+    story: >-
+      Below half-time, but 4 credit hours (52 hours) plus 30 hours of work is 82, so the month
+      counts.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 24
+      verification:
+        response: responded
+        proofSent: documents
+    months:
+      - monthsBefore: 1
+        educationCreditHours: 4
+        hoursWorked: 30
+        householdIncome: 460
+    expect:
+      coverageResult: keeps_coverage
+    expectMonths:
+      - qualifiesBy: activity_hours
+        totalActivityHours: 81.96
+  - id: emily-snap-subject
+    story: Her household gets SNAP and she must follow SNAP's work rules, so she's excluded.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 35
+        inSnapHousehold: true
+        subjectToSnapWorkRules: true
+      verification:
+        stateDataConfirms: true
+    expect:
+      status: exempt
+      exemptions:
+        - snap_work_rules
+      coverageResult: keeps_coverage
+  - id: emily-snap-exempt
+    story: >-
+      She's exempt from SNAP's work rules, so the SNAP exclusion doesn't apply. With nothing else,
+      she gets a notice.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 35
+        inSnapHousehold: true
+        subjectToSnapWorkRules: false
+    months:
+      - monthsBefore: 1
+    expect:
+      isExempt: false
+      coverageResult: notice_respond_within_30_days
+      nextStep: show_another_way_to_qualify
+  - id: emily-no-response
+    story: Exempt from SNAP's work rules, nothing else, no response within 30 days.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 35
+        inSnapHousehold: true
+      verification:
+        response: no_response
+    months:
+      - monthsBefore: 1
+    expect:
+      coverageResult: loses_coverage
+  - id: frailty-2027-statement
+    story: Charles (SHVS
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 55
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        response: responded
+        proofSent: statement
+    expect:
+      isMedicallyFrail: true
+      exemptions:
+        - medically_frail
+      coverageResult: gets_coverage
+  - id: frailty-2028-first-statement
+    story: Linda (SHVS
+    given:
+      determination:
+        kind: application
+        year: 2028
+      person:
+        age: 49
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        response: responded
+        proofSent: statement
+    expect:
+      statementAccepted: true
+      coverageResult: gets_coverage
+  - id: frailty-2028-second-statement
+    story: >-
+      At her 2028 renewal the one statement is used up; the state needs claims data or health
+      records.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 49
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        frailtyStatementAlreadyUsed: true
+    expect:
+      statementAccepted: false
+      coverageResult: notice_respond_within_30_days
+      nextStep: send_health_records
+  - id: frailty-2028-doctors-note
+    story: She sends a doctor's note and keeps the exclusion.
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 49
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        frailtyStatementAlreadyUsed: true
+        response: responded
+        proofSent: documents
+    expect:
+      status: exempt
+      coverageResult: keeps_coverage
+  - id: frailty-stable-recovery
+    story: A substance use disorder in recovery for 6 years is "stable recovery" and doesn't count.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 45
+      health:
+        hasSubstanceUseDisorder: true
+        yearsInRecovery: 6
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+    expect:
+      isMedicallyFrail: false
+      frailtyCategories: []
+  - id: frailty-early-recovery
+    story: In recovery for 2 years, and it significantly impairs them, so they are medically frail.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 39
+      health:
+        hasSubstanceUseDisorder: true
+        yearsInRecovery: 2
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        stateDataConfirms: true
+    expect:
+      isMedicallyFrail: true
+      frailtyCategories:
+        - substance_use_disorder
+      coverageResult: keeps_coverage
+  - id: frailty-diagnosis-without-impairment
+    story: >-
+      A serious diagnosis alone isn't enough; it must significantly impair their ability to meet the
+      requirement.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 54
+      health:
+        hasSeriousOrComplexCondition: true
+    expect:
+      isMedicallyFrail: false
+      isExempt: false
+  - id: other-age-65
+    story: At 65 the requirement doesn't apply.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 65
+    expect:
+      status: requirement_does_not_apply
+      coverageResult: keeps_coverage
+  - id: other-renewal-started-before
+    story: A renewal due January 2027 but started in 2026 isn't subject to it (SHVS
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+        startedBeforeRequirement: true
+      person:
+        age: 37
+    expect:
+      requirementApplies: false
+  - id: other-released-from-incarceration
+    story: Released in February 2027, applies in June (SHVS
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 29
+      verification:
+        response: responded
+        proofSent: statement
+    months:
+      - monthsBefore: 1
+        wasIncarceratedInPrior3Months: true
+    expect:
+      coverageResult: gets_coverage
+  - id: other-high-unemployment-county
+    story: Lives in a high-unemployment county (SHVS
+    given:
+      determination:
+        kind: renewal
+        year: 2028
+      person:
+        age: 47
+    months:
+      - monthsBefore: 1
+        householdIncome: 300
+        countyHadHighUnemployment: true
+    expect:
+      coverageResult: keeps_coverage
+    expectMonths:
+      - qualifiesBy: automatic_hardship
+        proofRule: none_needed
+  - id: other-unrelated-caregiver
+    story: >-
+      Cares 55 hours a month for a disabled neighbor: not an excluded caregiver, but those hours
+      count as work, and with 25 hours of community service the month counts.
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 50
+        caresForPersonWithDisability: true
+        caregivingHoursPerMonth: 55
+      verification:
+        response: responded
+        proofSent: statement
+    months:
+      - monthsBefore: 1
+        hoursWorked: 55
+        hoursCommunityService: 25
+    expect:
+      isExempt: false
+      coverageResult: keeps_coverage
+  - id: priya-indiana
+    story: >-
+      Indiana doesn't offer hardship exceptions, so her travel month doesn't count even though she
+      asks.
+    state: IN
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 39
+    months:
+      - monthsBefore: 1
+        householdIncome: 400
+        hoursWorked: 50
+      - monthsBefore: 2
+        householdIncome: 400
+        hadMedicalTravel: true
+        askedForHardship: true
+    expect:
+      status: does_not_meet_requirement
+      couldAskForHardship: false
+      nextStep: show_another_way_to_qualify
+  - id: frailty-north-carolina
+    story: >-
+      Charles in North Carolina, which bars self-attestation as the only evidence. His statement
+      isn't enough; he needs health records.
+    state: NC
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 55
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+    expect:
+      status: exempt
+      statementAccepted: false
+      coverageResult: notice_respond_within_30_days
+      nextStep: send_health_records
+  - id: frailty-arkansas
+    story: >-
+      Charles in Arkansas, which told KFF it won't take self-attestation for medical frailty. Other
+      statements are still accepted in 2027, but for frailty he needs claims data or records.
+    state: AR
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 55
+      health:
+        hasSeriousOrComplexCondition: true
+        conditionSignificantlyImpairsAbilityToMeetRequirement: true
+      verification:
+        response: responded
+        proofSent: statement
+    expect:
+      status: exempt
+      statementAccepted: false
+      coverageResult: application_denied
+  - id: maya-utah
+    story: >-
+      Maya in Utah, which never relies on self-attestation alone. Even in 2027 she needs a class
+      schedule or transcript.
+    state: UT
+    given:
+      determination:
+        kind: application
+        year: 2027
+      person:
+        age: 24
+    months:
+      - monthsBefore: 1
+        enrolledHalfTimeOrMore: true
+        householdIncome: 400
+        hoursWorked: 26
+    expect:
+      status: meets_requirement
+      statementAccepted: false
+      nextStep: send_documents
+  - id: north-carolina-renewal-two-months
+    story: >-
+      North Carolina requires three of the six months since the last determination. Two months of
+      $600 aren't enough.
+    state: NC
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 33
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        householdIncome: 600
+      - monthsBefore: 2
+        householdIncome: 300
+      - monthsBefore: 3
+        householdIncome: 600
+    expect:
+      monthsRequired: 3
+      qualifyingMonthCount: 2
+      status: does_not_meet_requirement
+  - id: north-carolina-renewal-three-months
+    story: Three qualifying months out of six, not in a row, meet North Carolina's renewal rule.
+    state: NC
+    given:
+      determination:
+        kind: renewal
+        year: 2027
+      person:
+        age: 33
+      verification:
+        stateDataConfirms: true
+    months:
+      - monthsBefore: 1
+        householdIncome: 600
+      - monthsBefore: 2
+        householdIncome: 300
+      - monthsBefore: 3
+        householdIncome: 600
+      - monthsBefore: 4
+        householdIncome: 300
+      - monthsBefore: 5
+        hoursWorked: 85
+      - monthsBefore: 6
+        householdIncome: 300
+    expect:
+      qualifyingMonthCount: 3
+      coverageResult: keeps_coverage
+  - id: iowa-early-start
+    story: Iowa starts December 1, 2026, so a December 2026 renewal is subject to the requirement.
+    state: IA
+    given:
+      determination:
+        kind: renewal
+        year: 2026
+      person:
+        age: 45
+    months:
+      - monthsBefore: 1
+    expect:
+      requirementApplies: true
+      coverageResult: notice_respond_within_30_days
+  - id: baseline-2026-renewal
+    story: The same renewal under the federal baseline isn't subject to the requirement yet.
+    given:
+      determination:
+        kind: renewal
+        year: 2026
+      person:
+        age: 45
+    months:
+      - monthsBefore: 1
+    expect:
+      requirementApplies: false
+      coverageResult: keeps_coverage
