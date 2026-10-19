@@ -3,7 +3,7 @@
  *
  *   discover(dir, type?)  find contract files on disk
  *   load(file)            parse what discover found into a Doc
- *   generate(docs, type)  derive an artifact: 'overlay', 'graph', 'postman', 'artifact'
+ *   generate(docs, type)  derive an artifact: 'graph', 'postman', 'artifact'
  *   extract(docs, type)   read out a fact the documents already state
  *   resolve(docs, opts)   apply overlays, substitute variables, resolve relationships
  *   validate(docs)        check contracts against their schemas
