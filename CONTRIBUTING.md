@@ -42,6 +42,8 @@ The rationale — why two functions are separate, what moved where, incidental f
 
 **Judge the entry against `main`, not against your branch.** A changelog reader has never seen your intermediate steps. If one changeset documents an option on a feature that another *unreleased* changeset introduces, fold it into that one: `--domain` is not news on its own when the command it belongs to is also new.
 
+**Name only the packages the text is about.** A changeset's text goes into the release notes of every package it lists, at that package's bump, so a breaking change to state machines listed against the CLI as well shows up under the CLI's patch changes. When a change touches several packages, write a changeset for each whose consumers see something different, each saying what that package's consumers see. Preflight lists changesets that name more than one package so you can check.
+
 **Name the file `<package-prefix>-<topic>.md`** — `core-`, `cli-`, `mock-server-`, `contracts-` — matching the first package it declares, so `.changeset/` stays readable at a glance.
 
 If the change fixes a GitHub issue, include the issue number at the end of the description: `Overlay resolution now handles circular $ref chains without throwing. (#123)`

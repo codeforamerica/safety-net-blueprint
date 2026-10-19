@@ -1,12 +1,14 @@
 /**
  * Verifies that .changeset/config.json references packages that actually exist
- * in the workspace, and that all publishable packages are accounted for.
+ * in the workspace, that all publishable packages are accounted for, and that
+ * release notes are written the way CONTRIBUTING.md describes.
  */
 
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'url';
 
 const config = JSON.parse(readFileSync('.changeset/config.json', 'utf8'));
 
@@ -55,4 +57,28 @@ test('no publishable package is in the ignore list', () => {
       `Publishable package ${pkgName} is in the ignore list — remove it or mark it private`
     );
   }
+});
+
+test('release notes are written by the repository\'s own changelog writer', async () => {
+  assert.equal(config.changelog, './changelog.js');
+  const writer = await import(pathToFileURL(join('.changeset', config.changelog)).href);
+  assert.equal(typeof writer.getReleaseLine, 'function');
+  assert.equal(typeof writer.getDependencyReleaseLine, 'function');
+});
+
+test('an entry is the changeset\'s text, without a commit hash', async () => {
+  const { getReleaseLine } = await import(pathToFileURL(join('.changeset', 'changelog.js')).href);
+  const entry = getReleaseLine({ summary: 'Before, x. Now y. (#1)\n\nMore detail.', commit: 'abcdef1234567' }, 'minor');
+  assert.equal(entry, '- Before, x. Now y. (#1)\n\n  More detail.');
+});
+
+test('dependency updates are one line naming the new versions', async () => {
+  const { getDependencyReleaseLine } = await import(pathToFileURL(join('.changeset', 'changelog.js')).href);
+  const changesets = [{ commit: 'aaaaaaa' }, { commit: 'bbbbbbb' }, { commit: 'aaaaaaa' }];
+  const line = getDependencyReleaseLine(changesets, [
+    { name: '@codeforamerica/blueprint-core', newVersion: '0.4.0' },
+    { name: '@codeforamerica/blueprint-explorer', newVersion: '0.3.0' },
+  ]);
+  assert.equal(line, '- Uses @codeforamerica/blueprint-core 0.4.0, @codeforamerica/blueprint-explorer 0.3.0.');
+  assert.equal(getDependencyReleaseLine(changesets, []), '');
 });
