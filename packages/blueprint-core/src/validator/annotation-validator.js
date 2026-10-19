@@ -19,7 +19,7 @@ import { resolveSchemaRefs, resolveRef, collectTopLevelProperties, getPropertyAt
  * @param {Map<string, *>} context.byRelativePath - The set, for following cross-file $refs
  * @param {Set<string>} context.actions - "<object>.<action>" keys from state machines
  * @param {Set<string>} context.channels - Every AsyncAPI channel
- * @param {Map<string, { domain: string, facts: Set<string> }>} context.graphs - Facts per ruleset
+ * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>} context.graphs - Facts and constants per ruleset
  * @param {Map<string, Set<string>>} context.registryEntryIds - Entry IDs per registry type
  * @returns {{ rule: string, message: string, path: string }[]}
  */
@@ -32,7 +32,8 @@ export function validateAnnotations(doc, context) {
       context.actions.has(key) ? null : `Operation "${key}" matches no state machine action.`, 'operations'),
     ...checkKeys(doc.content?.events, (key) =>
       context.channels.has(key) ? null : `Event "${key}" is not a channel in any AsyncAPI document.`, 'events'),
-    ...checkKeys(doc.content?.facts, (key) => factError(key, context.graphs, domain), 'facts'),
+    ...checkKeys(doc.content?.facts, (key) => rulesetMemberError(key, context.graphs, domain, 'facts'), 'facts'),
+    ...checkKeys(doc.content?.constants, (key) => rulesetMemberError(key, context.graphs, domain, 'constants'), 'constants'),
     ...citationErrors(doc, context.registryEntryIds),
   ];
 }
@@ -220,33 +221,35 @@ function buildSubResourceMap(spec, relativePath, byRelativePath) {
 }
 
 /**
- * Why a `facts:` key does not resolve, or null when it does.
+ * Why a `facts:` or `constants:` key does not resolve, or null when it does.
  *
- * Keys are `{ruleset}.{factName}`. The ruleset must exist in a compiled graph,
- * belong to the annotating domain, and declare the fact.
+ * Keys are `{ruleset}.{name}`. The ruleset must be declared, belong to the
+ * annotating domain, and declare the fact or constant.
  *
  * @param {string} key
- * @param {Map<string, { domain: string, facts: Set<string> }>} graphs
+ * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>} graphs
  * @param {string|null} domain
+ * @param {'facts'|'constants'} section
  * @returns {string|null}
  */
-function factError(key, graphs, domain) {
-  if (graphs.size === 0) return null; // no compiled graphs to check against
+function rulesetMemberError(key, graphs, domain, section) {
+  if (graphs.size === 0) return null; // no rulesets to check against
 
+  const kind = section === 'facts' ? 'Fact' : 'Constant';
   const dot = key.indexOf('.');
-  if (dot === -1) return `Fact key "${key}" must be {ruleset}.{factName}.`;
+  if (dot === -1) return `${kind} key "${key}" must be {ruleset}.{name}.`;
 
   const ruleset = key.slice(0, dot);
-  const factName = key.slice(dot + 1);
+  const name = key.slice(dot + 1);
 
   const graph = graphs.get(ruleset);
-  if (!graph) return `Ruleset "${ruleset}" is not in any compiled graph.`;
+  if (!graph) return `Ruleset "${ruleset}" is not declared in this contract set.`;
 
   if (domain && graph.domain !== domain) {
     return `Ruleset "${ruleset}" belongs to domain "${graph.domain}" but is annotated in "${domain}".`;
   }
 
-  return graph.facts.has(factName) ? null : `Fact "${factName}" is not declared by ruleset "${ruleset}".`;
+  return graph[section].has(name) ? null : `${kind} "${name}" is not declared by ruleset "${ruleset}".`;
 }
 
 /**
@@ -262,7 +265,7 @@ function factError(key, graphs, domain) {
 function citationErrors(doc, registryEntryIds) {
   const errors = [];
 
-  for (const section of ['schema', 'operations', 'events', 'facts']) {
+  for (const section of ['schema', 'operations', 'events', 'facts', 'constants']) {
     for (const [key, annotation] of Object.entries(doc.content?.[section] ?? {})) {
       for (const [field, value] of Object.entries(annotation ?? {})) {
         const ids = registryEntryIds.get(field);

@@ -22,6 +22,8 @@ description: >
                  (e.g., intake.application.submitted)
     facts      — Ruleset facts, keyed by {ruleset}.{factName}
                  (e.g., snapInterviewProbes.incomeInconsistency)
+    constants  — Ruleset constants, keyed by {ruleset}.{constantName}
+                 (e.g., snapWorkRequirements.weeklyHoursRequired)
 
   Annotations reference policies by ID from the policy registry. They never
   embed citation text directly.
@@ -73,6 +75,13 @@ properties:
       (e.g., snapInterviewProbes.incomeInconsistency)
     $ref: "#/$defs/FactsAnnotationMap"
 
+  constants:
+    description: >
+      Annotations for ruleset constants, keyed by {ruleset}.{constantName}.
+      A constant a policy sets, such as a threshold, an age or a number of
+      hours, cites that policy here, as a fact does.
+    $ref: "#/$defs/ConstantsAnnotationMap"
+
 $defs:
   SchemaAnnotationMap:
     type: object
@@ -123,6 +132,17 @@ $defs:
     minProperties: 1
     propertyNames:
       pattern: "^[a-z][a-zA-Z0-9]*\\.[a-zA-Z][a-zA-Z0-9]*((\\.|\\[\\]\\.)[a-zA-Z][a-zA-Z0-9]*)*$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  ConstantsAnnotationMap:
+    type: object
+    description: >
+      Map of ruleset constant keys to annotation objects.
+      Keys are {ruleset}.{constantName} (e.g., snapWorkRequirements.weeklyHoursRequired).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-zA-Z0-9]*\\.[a-zA-Z][a-zA-Z0-9]*$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

@@ -154,6 +154,15 @@ from can change later without any evaluator changing. A number without a
 `type` is a double in CEL; declare `type: integer` for one compared with an
 integer, such as an age.
 
+A constant a policy sets cites that policy the way a fact does, in the
+domain's annotations file, keyed `{ruleset}.{constantName}`:
+
+```yaml
+constants:
+  snapWorkRequirements.weeklyHoursRequired:
+    policies: [snap-abawd-work-requirement]
+```
+
 ## Facts
 
 A fact is a [CEL][cel] expression over inputs and other facts — the same

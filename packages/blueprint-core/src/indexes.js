@@ -213,7 +213,7 @@ export function buildActionIndex(docs) {
 }
 
 /**
- * Facts each ruleset declares, with the domain that owns it.
+ * Facts and constants each ruleset declares, with the domain that owns it.
  *
  * Read from the rules documents, which declare the facts, and from compiled
  * graphs for a set that has only those. It used to read graphs alone, and
@@ -221,23 +221,25 @@ export function buildActionIndex(docs) {
  * passed resolve and failed later, in a separate validate run.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { domain: string, facts: Set<string> }>}
+ * @returns {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>}
  */
 export function buildGraphIndex(docs) {
   const index = new Map();
 
   for (const doc of docs) {
     if (doc.type === 'rules') {
-      for (const [ruleset, { facts = [] } = {}] of Object.entries(doc.content?.rulesets ?? {})) {
+      for (const [ruleset, { facts = [], constants = {} } = {}] of Object.entries(doc.content?.rulesets ?? {})) {
         index.set(ruleset, {
           domain: doc.content.domain,
           facts: new Set(facts.map((fact) => fact?.path).filter(Boolean)),
+          constants: new Set(Object.keys(constants ?? {})),
         });
       }
     } else if (doc.type === 'graph' && doc.content?.ruleset && !index.has(doc.content.ruleset)) {
       index.set(doc.content.ruleset, {
         domain: doc.content.domain,
         facts: new Set(Object.keys(doc.content.facts ?? {})),
+        constants: new Set(Object.keys(doc.content.constants ?? {})),
       });
     }
   }
