@@ -11,6 +11,7 @@ echo
 
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
 BOLD=$'\033[1m'
 RESET=$'\033[0m'
 
@@ -25,6 +26,10 @@ step() {
 pass() {
   printf "${GREEN}  ✓ %s${RESET}\n" "$1"
   passed=$((passed + 1))
+}
+
+warn() {
+  printf "${YELLOW}  ! %s${RESET}\n" "$1"
 }
 
 fail() {
@@ -174,6 +179,17 @@ if node --test tests/check-changeset-config.js 2>&1; then
   pass "Changeset config valid"
 else
   fail "Changeset config check failed"
+fi
+
+step "Checking which packages each changeset names"
+multi=$(node scripts/check-changeset-packages.js)
+if [ -z "$multi" ]; then
+  pass "Every changeset names one package"
+else
+  # A warning, not a failure: some changesets do apply to several packages.
+  warn "These changesets name more than one package, and their text goes into each one's release notes. Check it's about each:"
+  while IFS= read -r line; do warn "  $line"; done <<< "$multi"
+  pass "Changeset packages listed"
 fi
 
 # Summary
