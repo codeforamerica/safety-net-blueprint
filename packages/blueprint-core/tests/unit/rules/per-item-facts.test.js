@@ -276,3 +276,17 @@ test('validating per-item facts', async (t) => {
     assert.ok(errors.length > 0);
   });
 });
+
+// ── Annotations ───────────────────────────────────────────────────────────────
+
+test('an annotation can be keyed to a per-item fact', () => {
+  const { pattern } = yaml.load(readFileSync(join(here, '../../../schemas/annotations-schema.yaml'), 'utf8'))
+    .$defs.FactsAnnotationMap.propertyNames;
+  const key = new RegExp(pattern);
+  for (const ok of ['review.qualifyingMonthCount', 'review.reviewMonths[].qualifies', 'review.reviewMonths[].reviewWeeks[].worked', 'flags.risks.cashIncome']) {
+    assert.ok(key.test(ok), ok);
+  }
+  for (const bad of ['review.reviewMonths[]', 'review[].x', 'review.reviewMonths[]qualifies', 'review']) {
+    assert.ok(!key.test(bad), bad);
+  }
+});
