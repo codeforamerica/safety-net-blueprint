@@ -91,6 +91,25 @@ workflows:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
+      - stepId: attachADocumentThatIsNotThere
+        description: |
+          Attach a document that isn't there
+
+          - Refused with `422`. `proofOfIncomeDocumentId` declares `x-relationship` to document management's `Document`, so the mock looked for that document and found none.
+          - The refusal names the field and the id, in the same shape as a schema error. The id is a valid uuid, so the schema had nothing to object to.
+          - The check crosses domains, from intake into document management, and nothing was written for it. Every field that declares a relationship is checked the same way, on every create and update.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            proofOfIncomeDocumentId: 00000000-0000-4000-8000-000000000000
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == 'proofOfIncomeDocumentId'
       - stepId: attachTheDocument
         description: |
           Edit and attach the document
@@ -248,33 +267,66 @@ workflows:
               resourceThreshold: 100
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: evaluateInterviewPrompts
+      - stepId: gatherWhatTheFlagsCompareAgainst
         description: |
-          Evaluate interviewPrompts
+          Gather what the interview flags compare against
 
-          - The answer is not one expression but a chain of named facts. The last is `changeVerificationPrompt = application.hasChangedCircumstances` — so the system can say which condition carried, not just what it concluded.
-          - `interviewPrompts.incomeInconsistencyPrompt` carries more than a true or false. The annotations attach `snap-interview-toolkit` to it and 2 interview questions to go with it, so the rule that raises a prompt and the words somebody says out loud are one declaration rather than two that drift apart.
-        operationId: $sourceDescriptions.intakeRules.evaluateInterviewPrompts
+          - A renewal: a household already on SNAP recertifying.
+          - `previous` is the household as last certified, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
+          - The `interviewFlagsInputs` composition translates the data model into the ruleset's inputs by alias — `interviewDate as asOf`, `previousHousehold as previous` — so the rules speak their own vocabulary and nothing between them maps by hand.
+        operationId: $sourceDescriptions.intake.getInterviewFlagsInputs
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: 66666666-6666-4666-8666-666666666666
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          asOf: $response.body#/asOf
+          previous: $response.body#/previous
+          verified: $response.body#/verified
+          programsAppliedFor: $response.body#/programsAppliedFor
+      - stepId: evaluateInterviewFlags
+        description: |
+          Evaluate interviewFlags
+
+          - `current` is what the household is reporting in the interview, sent by the worker's screen: the client's mother has moved in with Social Security, warehouse hours were cut, there's cash work cleaning offices, rent went up, and the electric bill is in the client's name. Everything else came from the step before.
+          - One call answers in two groups: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree. `risks.householdChangedSincePrevious` is true — the mother is new — and so is `inconsistencies.wagesDifferFromWageRecords`: the wage records show about 1800 a month, and the household reports about 1100.
+          - Every flag is worked out from data, never a conclusion the caller sent: ages from dates of birth and the interview date, monthly amounts from what's paid and how often.
+          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from.
+        operationId: $sourceDescriptions.intakeRules.evaluateInterviewFlags
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            household:
-              monthlyIncome: 800
-              monthlyExpenses: 1200
+            asOf: $steps.gatherWhatTheFlagsCompareAgainst.outputs.asOf
+            previous: $steps.gatherWhatTheFlagsCompareAgainst.outputs.previous
+            verified: $steps.gatherWhatTheFlagsCompareAgainst.outputs.verified
+            programsAppliedFor: $steps.gatherWhatTheFlagsCompareAgainst.outputs.programsAppliedFor
+            current:
+              size: 3
+              utilitiesIncludedInRent: true
+              monthlyIncome: 2200
+              monthlyExpenses: 2600
               members:
-                - age: 35
-                  isEmployed: false
-                  isStudent: false
-                  isNonCitizen: false
-                - age: 8
-                  isEmployed: false
-                  isStudent: false
-                  isNonCitizen: false
-            application:
-              hasChangedCircumstances: false
+                - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
+                - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
+                - { id: son, dateOfBirth: "2018-01-15", isDisabled: false }
+                - { id: mother, dateOfBirth: "1958-05-20", isDisabled: false }
+              jobs:
+                - { id: warehouse, memberId: client, employer: Northgate Distribution }
+              incomes:
+                - { id: wages, memberId: client, jobId: warehouse, source: earned, amount: 510, frequency: biweekly, paidInCash: false, amountVaries: true }
+                - { id: cleaning, memberId: client, source: self_employment, amount: 200, frequency: irregular, paidInCash: true, amountVaries: true }
+                - { id: ss, memberId: mother, source: unearned, amount: 900, frequency: monthly, paidInCash: false, amountVaries: false }
+              expenses:
+                - { type: rent, amount: 1400, frequency: monthly }
+                - { type: utilities, amount: 128, frequency: monthly }
         successCriteria:
           - condition: $statusCode == 200
+          - condition: $response.body#/risks.householdChangedSincePrevious/value == true
+          - condition: $response.body#/inconsistencies.wagesDifferFromWageRecords/value == true
       - stepId: seeWhatTheWalkEmitted
         description: |
           See what the walk emitted

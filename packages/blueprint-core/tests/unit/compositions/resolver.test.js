@@ -525,6 +525,15 @@ describe('validateFieldsArrays', () => {
     assert.ok(errors[0].message.includes('nonExistentField'));
   });
 
+  test('an aliased field is checked by its source, not its alias', () => {
+    const doc = (fields) => ({ domain: 'test', doc: { compositions: { review: { resource: 'applications', fields } } } });
+    const index = buildResourceSchemaIndex(yamlFiles);
+    assert.equal(validateFieldsArrays(doc(['status as applicationStatus']), index).length, 0);
+    const errors = validateFieldsArrays(doc(['missing as present']), index);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, /field "missing" not found/);
+  });
+
   test('skips nodes whose resource is not in the index', () => {
     const compositionDoc = {
       domain: 'test',

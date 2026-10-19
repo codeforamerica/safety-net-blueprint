@@ -125,6 +125,8 @@ paths:
                   type: string
                   format: uuid
                   description: Document type — determines retention rules and classification.
+                  x-relationship:
+                    resource: DocumentType
                 title:
                   type: string
                   maxLength: 200

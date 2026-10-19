@@ -123,11 +123,14 @@ The domain directory name is taken from `info.x-domain` in each spec, falling ba
 
 ### `blueprint-evaluate`
 
-Evaluates rules from the command line. Takes a compiled graph (`*-graph.yaml`), a rules contract (`*-rules.yaml`, compiled on the fly), or a rules examples file (`*-rules-examples.yaml`) to run every ruleset and example in batch. Results are returned as JSON.
+Evaluates a compiled rules graph (`*-graph.yaml`), the one `blueprint-resolve` builds for each ruleset, against inputs or against each example a rules examples file declares for that ruleset. Results are returned as JSON. It exits 1, naming each, when any fact comes back as an error.
 
 ```bash
-npx blueprint-evaluate --spec=./resolved/eligibility-rules.yaml --input=./inputs.json
+npx blueprint-evaluate --spec=./resolved/domains/eligibility/eligibility-expeditedSnap-graph.yaml --input='{"household":{"monthlyGrossIncome":120}}'
+npx blueprint-evaluate --spec=./resolved/domains/eligibility/eligibility-expeditedSnap-graph.yaml --examples=./resolved/domains/eligibility/eligibility-rules-examples.yaml
 ```
+
+It doesn't compile rules: a rules file refers to schemas in other files, and a graph carries everything it needs.
 
 Inputs may be partial — each fact reports whether it resolved, fell back to a declared default, or is still waiting on specific input paths.
 

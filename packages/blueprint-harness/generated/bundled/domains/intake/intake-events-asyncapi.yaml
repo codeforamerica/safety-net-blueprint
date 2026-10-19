@@ -196,6 +196,18 @@ channels:
                             domain: document-management
                             resource: Document
                             style: links-only
+                        type:
+                          type: string
+                          enum:
+                            - new
+                            - renewal
+                          default: new
+                          description: |
+                            A first application, or an application for recertification — the same kind of request.
+                        interviewDate:
+                          type: string
+                          format: date
+                          description: The date of the application's interview.
                         labels:
                           type: object
                           additionalProperties:
@@ -222,6 +234,131 @@ channels:
                           format: uuid
                           readOnly: true
                           description: Unique identifier (server-generated).
+                        previousHousehold:
+                          readOnly: true
+                          description: |
+                            The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                          type: object
+                          properties:
+                            size:
+                              type: integer
+                              minimum: 1
+                              description: The number of people who buy and prepare food together, as the household states it.
+                            utilitiesIncludedInRent:
+                              type: boolean
+                              description: Whether the household says its utilities are included in the rent.
+                            monthlyIncome:
+                              type: number
+                              minimum: 0
+                              description: Total monthly income, as the household states it.
+                            monthlyExpenses:
+                              type: number
+                              minimum: 0
+                              description: Total monthly expenses, as the household states them.
+                            members:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - id
+                                properties:
+                                  id:
+                                    type: string
+                                    description: The member's key within the household.
+                                  dateOfBirth:
+                                    type: string
+                                    format: date
+                                  isDisabled:
+                                    type: boolean
+                                    description: Whether the member is disabled.
+                            jobs:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - id
+                                  - memberId
+                                properties:
+                                  id:
+                                    type: string
+                                    description: The job's key within the household.
+                                  memberId:
+                                    type: string
+                                    description: The member who holds the job.
+                                  employer:
+                                    type: string
+                            incomes:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - id
+                                  - memberId
+                                  - source
+                                  - amount
+                                  - frequency
+                                properties:
+                                  id:
+                                    type: string
+                                    description: The income's key within the household.
+                                  memberId:
+                                    type: string
+                                    description: The member who receives it.
+                                  jobId:
+                                    type: string
+                                    description: The job it's paid for, when it's earned.
+                                  source:
+                                    type: string
+                                    enum:
+                                      - earned
+                                      - self_employment
+                                      - unearned
+                                  amount:
+                                    type: number
+                                    minimum: 0
+                                    description: The amount received each time it's paid, in dollars.
+                                  frequency:
+                                    type: string
+                                    enum:
+                                      - weekly
+                                      - biweekly
+                                      - semimonthly
+                                      - monthly
+                                      - irregular
+                                    description: How often it's paid.
+                                  paidInCash:
+                                    type: boolean
+                                  amountVaries:
+                                    type: boolean
+                                    description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                            expenses:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - type
+                                  - amount
+                                  - frequency
+                                properties:
+                                  type:
+                                    type: string
+                                    enum:
+                                      - rent
+                                      - mortgage
+                                      - utilities
+                                      - dependent_care
+                                      - medical
+                                      - child_support
+                                  amount:
+                                    type: number
+                                    minimum: 0
+                                  frequency:
+                                    type: string
+                                    enum:
+                                      - weekly
+                                      - biweekly
+                                      - semimonthly
+                                      - monthly
                         programCount:
                           type: integer
                           readOnly: true
@@ -945,6 +1082,184 @@ channels:
                     no longer exists and consumers should treat the subject ID as permanently
                     removed.
                   properties: {}
+  intake.income_verification.created:
+    address: intake.income_verification.created
+    messages:
+      IntakeIncomeVerificationCreated:
+        name: intake.income_verification.created
+        summary: A IncomeVerification was created. Carries the record as created.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.income_verification.created
+                data:
+                  allOf:
+                    - type: object
+                      properties:
+                        kind:
+                          type: string
+                          enum:
+                            - wage_record
+                            - pay_stub
+                          description: |
+                            Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                        memberId:
+                          type: string
+                          description: The member it's about, by their key in the household.
+                        incomeId:
+                          type: string
+                          description: For a pay stub, the income it's for, by its key in the household.
+                        period:
+                          type: string
+                          description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                        amount:
+                          type: number
+                          minimum: 0
+                          description: Gross wages for the quarter, or gross pay on the stub.
+                        frequency:
+                          type: string
+                          enum:
+                            - weekly
+                            - biweekly
+                            - semimonthly
+                            - monthly
+                          description: For a pay stub, how often the pay it shows is paid.
+                    - type: object
+                      required:
+                        - id
+                        - applicationId
+                        - kind
+                        - memberId
+                        - amount
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                        applicationId:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                          x-relationship:
+                            resource: Application
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            application:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related Application resource.
   intake.application_member.created:
     address: intake.application_member.created
     messages:
@@ -2187,6 +2502,18 @@ components:
                           domain: document-management
                           resource: Document
                           style: links-only
+                      type:
+                        type: string
+                        enum:
+                          - new
+                          - renewal
+                        default: new
+                        description: |
+                          A first application, or an application for recertification — the same kind of request.
+                      interviewDate:
+                        type: string
+                        format: date
+                        description: The date of the application's interview.
                       labels:
                         type: object
                         additionalProperties:
@@ -2213,6 +2540,131 @@ components:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
+                      previousHousehold:
+                        readOnly: true
+                        description: |
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                        type: object
+                        properties:
+                          size:
+                            type: integer
+                            minimum: 1
+                            description: The number of people who buy and prepare food together, as the household states it.
+                          utilitiesIncludedInRent:
+                            type: boolean
+                            description: Whether the household says its utilities are included in the rent.
+                          monthlyIncome:
+                            type: number
+                            minimum: 0
+                            description: Total monthly income, as the household states it.
+                          monthlyExpenses:
+                            type: number
+                            minimum: 0
+                            description: Total monthly expenses, as the household states them.
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                              properties:
+                                id:
+                                  type: string
+                                  description: The member's key within the household.
+                                dateOfBirth:
+                                  type: string
+                                  format: date
+                                isDisabled:
+                                  type: boolean
+                                  description: Whether the member is disabled.
+                          jobs:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                              properties:
+                                id:
+                                  type: string
+                                  description: The job's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who holds the job.
+                                employer:
+                                  type: string
+                          incomes:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - id
+                                - memberId
+                                - source
+                                - amount
+                                - frequency
+                              properties:
+                                id:
+                                  type: string
+                                  description: The income's key within the household.
+                                memberId:
+                                  type: string
+                                  description: The member who receives it.
+                                jobId:
+                                  type: string
+                                  description: The job it's paid for, when it's earned.
+                                source:
+                                  type: string
+                                  enum:
+                                    - earned
+                                    - self_employment
+                                    - unearned
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                  description: The amount received each time it's paid, in dollars.
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
+                                    - irregular
+                                  description: How often it's paid.
+                                paidInCash:
+                                  type: boolean
+                                amountVaries:
+                                  type: boolean
+                                  description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                          expenses:
+                            type: array
+                            items:
+                              type: object
+                              required:
+                                - type
+                                - amount
+                                - frequency
+                              properties:
+                                type:
+                                  type: string
+                                  enum:
+                                    - rent
+                                    - mortgage
+                                    - utilities
+                                    - dependent_care
+                                    - medical
+                                    - child_support
+                                amount:
+                                  type: number
+                                  minimum: 0
+                                frequency:
+                                  type: string
+                                  enum:
+                                    - weekly
+                                    - biweekly
+                                    - semimonthly
+                                    - monthly
                       programCount:
                         type: integer
                         readOnly: true
@@ -2930,6 +3382,181 @@ components:
                   no longer exists and consumers should treat the subject ID as permanently
                   removed.
                 properties: {}
+    IntakeIncomeVerificationCreated:
+      name: intake.income_verification.created
+      summary: A IncomeVerification was created. Carries the record as created.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.income_verification.created
+              data:
+                allOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - wage_record
+                          - pay_stub
+                        description: |
+                          Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                      memberId:
+                        type: string
+                        description: The member it's about, by their key in the household.
+                      incomeId:
+                        type: string
+                        description: For a pay stub, the income it's for, by its key in the household.
+                      period:
+                        type: string
+                        description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: Gross wages for the quarter, or gross pay on the stub.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                        description: For a pay stub, how often the pay it shows is paid.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - kind
+                      - memberId
+                      - amount
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
     IntakeApplicationMemberCreated:
       name: intake.application_member.created
       summary: A ApplicationMember was created. Carries the record as created.
@@ -4147,6 +4774,18 @@ components:
                         domain: document-management
                         resource: Document
                         style: links-only
+                    type:
+                      type: string
+                      enum:
+                        - new
+                        - renewal
+                      default: new
+                      description: |
+                        A first application, or an application for recertification — the same kind of request.
+                    interviewDate:
+                      type: string
+                      format: date
+                      description: The date of the application's interview.
                     labels:
                       type: object
                       additionalProperties:
@@ -4173,6 +4812,131 @@ components:
                       format: uuid
                       readOnly: true
                       description: Unique identifier (server-generated).
+                    previousHousehold:
+                      readOnly: true
+                      description: |
+                        The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
+                      type: object
+                      properties:
+                        size:
+                          type: integer
+                          minimum: 1
+                          description: The number of people who buy and prepare food together, as the household states it.
+                        utilitiesIncludedInRent:
+                          type: boolean
+                          description: Whether the household says its utilities are included in the rent.
+                        monthlyIncome:
+                          type: number
+                          minimum: 0
+                          description: Total monthly income, as the household states it.
+                        monthlyExpenses:
+                          type: number
+                          minimum: 0
+                          description: Total monthly expenses, as the household states them.
+                        members:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                            properties:
+                              id:
+                                type: string
+                                description: The member's key within the household.
+                              dateOfBirth:
+                                type: string
+                                format: date
+                              isDisabled:
+                                type: boolean
+                                description: Whether the member is disabled.
+                        jobs:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - memberId
+                            properties:
+                              id:
+                                type: string
+                                description: The job's key within the household.
+                              memberId:
+                                type: string
+                                description: The member who holds the job.
+                              employer:
+                                type: string
+                        incomes:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - memberId
+                              - source
+                              - amount
+                              - frequency
+                            properties:
+                              id:
+                                type: string
+                                description: The income's key within the household.
+                              memberId:
+                                type: string
+                                description: The member who receives it.
+                              jobId:
+                                type: string
+                                description: The job it's paid for, when it's earned.
+                              source:
+                                type: string
+                                enum:
+                                  - earned
+                                  - self_employment
+                                  - unearned
+                              amount:
+                                type: number
+                                minimum: 0
+                                description: The amount received each time it's paid, in dollars.
+                              frequency:
+                                type: string
+                                enum:
+                                  - weekly
+                                  - biweekly
+                                  - semimonthly
+                                  - monthly
+                                  - irregular
+                                description: How often it's paid.
+                              paidInCash:
+                                type: boolean
+                              amountVaries:
+                                type: boolean
+                                description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                        expenses:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - type
+                              - amount
+                              - frequency
+                            properties:
+                              type:
+                                type: string
+                                enum:
+                                  - rent
+                                  - mortgage
+                                  - utilities
+                                  - dependent_care
+                                  - medical
+                                  - child_support
+                              amount:
+                                type: number
+                                minimum: 0
+                              frequency:
+                                type: string
+                                enum:
+                                  - weekly
+                                  - biweekly
+                                  - semimonthly
+                                  - monthly
                     programCount:
                       type: integer
                       readOnly: true
@@ -4884,6 +5648,178 @@ components:
                 no longer exists and consumers should treat the subject ID as permanently
                 removed.
               properties: {}
+    IntakeIncomeVerificationCreatedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.income_verification.created
+            data:
+              allOf:
+                - type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - wage_record
+                        - pay_stub
+                      description: |
+                        Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                    memberId:
+                      type: string
+                      description: The member it's about, by their key in the household.
+                    incomeId:
+                      type: string
+                      description: For a pay stub, the income it's for, by its key in the household.
+                    period:
+                      type: string
+                      description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                    amount:
+                      type: number
+                      minimum: 0
+                      description: Gross wages for the quarter, or gross pay on the stub.
+                    frequency:
+                      type: string
+                      enum:
+                        - weekly
+                        - biweekly
+                        - semimonthly
+                        - monthly
+                      description: For a pay stub, how often the pay it shows is paid.
+                - type: object
+                  required:
+                    - id
+                    - applicationId
+                    - kind
+                    - memberId
+                    - amount
+                    - createdAt
+                    - updatedAt
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                    applicationId:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                      x-relationship:
+                        resource: Application
+                    createdAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        application:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related Application resource.
     IntakeApplicationMemberCreatedEvent:
       allOf:
         - allOf:

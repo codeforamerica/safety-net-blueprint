@@ -632,6 +632,57 @@ describe('number inputs keep their fraction', () => {
   });
 });
 
+describe('constants', () => {
+  // A constant is a value no one supplies, so it is a Derived fact holding a
+  // literal — not a Writable with a Placeholder, which would make every fact
+  // resting on it a placeholder in FactGraph while CEL calls it complete.
+  const constantsGraph = (constants) => ({
+    outputs: ['monthly', 'isChild', 'tooMuch'],
+    inputs: { '$.w.weekly': { type: 'number' }, '$.p.age': { type: 'integer' } },
+    constants,
+    facts: {
+      monthly: { expression: 'w.weekly * constants.weeklyToMonthly' },
+      isChild: { expression: 'p.age < constants.childAgeUnder' },
+      tooMuch: { expression: 'w.weekly > 100.0 && constants.strict' },
+    },
+    dependencies: { monthly: ['$.w.weekly'], isChild: ['$.p.age'], tooMuch: ['$.w.weekly'] },
+  });
+  const graph = constantsGraph({
+    weeklyToMonthly: { value: 4.3 },
+    childAgeUnder: { value: 13, type: 'integer' },
+    strict: { value: true },
+  });
+  const inputs = { w: { weekly: 250 }, p: { age: 9 } };
+
+  it('each constant is a Derived literal of its type', () => {
+    const xml = toFactGraph(graph);
+    assert.match(xml, /path="\/constants_weeklyToMonthly">\s*<Derived>\s*<Rational>43\/10<\/Rational>/);
+    assert.match(xml, /path="\/constants_childAgeUnder">\s*<Derived>\s*<Int>13<\/Int>/);
+    assert.match(xml, /path="\/constants_strict">\s*<Derived>\s*<True\/>/);
+  });
+
+  it('agrees fact for fact, and both call the results complete', () => {
+    const fg = toGraphWithFactGraph(graph).evaluate(inputs);
+    assertOutputParity(toGraph(graph).evaluate(inputs), fg, 'constants');
+    const json = fg.toJSON();
+    assert.deepStrictEqual(
+      ['monthly', 'isChild', 'tooMuch'].map((f) => [json[f].state, json[f].value]),
+      [['complete', 1075], ['complete', true], ['complete', true]],
+    );
+  });
+
+  it('a fact reading a constant FactGraph has no literal for is left out, with its reason', () => {
+    const untranslated = new Map();
+    toFactGraph(constantsGraph({
+      weeklyToMonthly: { value: [4.3] },
+      childAgeUnder: { value: 13, type: 'integer' },
+      strict: { value: true },
+    }), untranslated);
+    assert.deepStrictEqual([...untranslated.keys()], ['monthly']);
+    assert.match(untranslated.get('monthly'), /no literal for a constant of type array/);
+  });
+});
+
 describe('conditionals, size(), and membership', () => {
   const g = (facts, inputs) => ({
     outputs: Object.keys(facts),

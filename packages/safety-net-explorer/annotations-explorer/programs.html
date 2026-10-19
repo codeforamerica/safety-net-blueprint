@@ -304,6 +304,11 @@
         if (!hash) return;
         const el = document.getElementById(decodeURIComponent(hash.slice(1)));
         if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
         const content = document.getElementById('content');
         if (!content) { el.scrollIntoView(); return; }
         const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;

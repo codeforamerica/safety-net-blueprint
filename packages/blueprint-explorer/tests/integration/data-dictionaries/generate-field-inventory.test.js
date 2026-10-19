@@ -202,3 +202,18 @@ test('exits with error when --out is missing', () => {
   assert.notStrictEqual(result.status, 0, 'should exit non-zero');
   assert.match(result.stderr, /--out/);
 });
+
+// ── Read-only resources ────────────────────────────────────────────────────────
+
+test('a resource with no update operation is still documented, from what it returns', () => {
+  const outDir = join(OUT_DIR, 'read-only');
+  mkdirSync(outDir, { recursive: true });
+  run([`--spec=${join(FIXTURE_DIR, 'read-only-openapi.yaml')}`, `--out=${outDir}`]);
+  const fields = parseInventory(readFileSync(join(outDir, 'read-only-domain-field-inventory.yaml'), 'utf8'));
+  assert.equal(fields['record.status'], '{ type: enum, values: [open, closed] }');
+});
+
+test('a GET answering with a page of records is a list, not a resource', () => {
+  const content = readFileSync(join(OUT_DIR, 'read-only', 'read-only-domain-field-inventory.yaml'), 'utf8');
+  assert.doesNotMatch(content, /LookupList|^kind\./m);
+});

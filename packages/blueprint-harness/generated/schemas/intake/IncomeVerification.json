@@ -1,0 +1,92 @@
+{
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "wage_record",
+            "pay_stub"
+          ],
+          "description": "Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.\n"
+        },
+        "memberId": {
+          "type": "string",
+          "description": "The member it's about, by their key in the household."
+        },
+        "incomeId": {
+          "type": "string",
+          "description": "For a pay stub, the income it's for, by its key in the household."
+        },
+        "period": {
+          "type": "string",
+          "description": "For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Gross wages for the quarter, or gross pay on the stub."
+        },
+        "frequency": {
+          "type": "string",
+          "enum": [
+            "weekly",
+            "biweekly",
+            "semimonthly",
+            "monthly"
+          ],
+          "description": "For a pay stub, how often the pay it shows is paid."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "id",
+        "applicationId",
+        "kind",
+        "memberId",
+        "amount",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "applicationId": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "application": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Application resource."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/IncomeVerification"
+}

@@ -296,6 +296,37 @@ describe('evaluator — input defaults', () => {
   });
 });
 
+describe('evaluator — constants', () => {
+  const graph = {
+    outputs: ['monthly', 'isChild'],
+    inputs: { '$.w.weekly': { type: 'number' }, '$.p.age': { type: 'integer' } },
+    constants: {
+      weeklyToMonthly: { value: 4.3 },
+      childAgeUnder: { value: 13, type: 'integer' },
+    },
+    facts: {
+      monthly: { expression: 'w.weekly * constants.weeklyToMonthly' },
+      isChild: { expression: 'p.age < constants.childAgeUnder' },
+    },
+    dependencies: { monthly: ['$.w.weekly'], isChild: ['$.p.age'] },
+  };
+
+  it('reads them from the graph, and a result resting on one is complete', () => {
+    const nodes = evaluate(graph, { w: { weekly: 250 }, p: { age: 9 } });
+    assert.deepStrictEqual([nodes.monthly.state, nodes.monthly.value], ['complete', 1075]);
+    assert.deepStrictEqual([nodes.isChild.state, nodes.isChild.value], ['complete', true]);
+  });
+
+  it('an integer constant compares with an integer input', () => {
+    assert.strictEqual(evaluate(graph, { w: { weekly: 1 }, p: { age: 13 } }).isChild.value, false);
+  });
+
+  it('a caller cannot replace one', () => {
+    const nodes = evaluate(graph, { w: { weekly: 250 }, p: { age: 9 }, constants: { weeklyToMonthly: 1 } });
+    assert.strictEqual(nodes.monthly.value, 1075);
+  });
+});
+
 /**
  * CEL's timestamp and duration are protobuf well-known types, not primitives.
  * Left alone they reach the caller as @bufbuild/cel's internal message
@@ -491,6 +522,41 @@ describe('evaluator — declared dates reach CEL as timestamps', () => {
     assert.strictEqual(node.value, 'not-a-date');
   });
 
+  it('a date declared as an input of its own binds too', () => {
+    // Its path has one segment, `$.asOf`, and binding cloned the input as if it
+    // were an object holding the date: the string was spread into a map, and
+    // getFullYear() found no overload for it.
+    const graph = {
+      outputs: ['f'],
+      inputs: { '$.asOf': { type: 'string', format: 'date' } },
+      facts: { f: { expression: 'asOf.getFullYear()' } },
+      dependencies: { f: ['$.asOf'] },
+    };
+    const node = evaluate(graph, { asOf: '2026-10-14' }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 2026);
+  });
+
+  it('a fact can return records holding dates', () => {
+    // A bare Timestamp message is reflected by CEL each time it's read, which
+    // needs a registry only an evaluation has. Converting a returned list of
+    // records back to plain values happens afterwards, so it failed with
+    // "cannot use `getEvalContext` outside of an evaluation".
+    const graph = {
+      outputs: ['elders'],
+      inputs: {
+        '$.asOf': { type: 'string', format: 'date' },
+        '$.h.members[]': { type: 'array' },
+        '$.h.members[].dateOfBirth': { type: 'string', format: 'date' },
+      },
+      facts: { elders: { expression: 'h.members.filter(m, asOf.getFullYear() - m.dateOfBirth.getFullYear() >= 60)' } },
+      dependencies: { elders: ['$.asOf', '$.h.members[]'] },
+    };
+    const node = evaluate(graph, { asOf: '2026-10-14', h: { members: [{ dateOfBirth: '1958-05-20' }, { dateOfBirth: '2018-01-15' }] } }).elders;
+    assert.strictEqual(node.state, 'complete');
+    assert.deepStrictEqual(node.value, [{ dateOfBirth: '1958-05-20T00:00:00Z' }]);
+  });
+
   it('collection sub-fields bind too, without mutating the input', () => {
     const members = [{ dateOfBirth: '1989-03-13' }, { dateOfBirth: '2010-06-01' }];
     const graph = {
@@ -542,5 +608,47 @@ describe('evaluator — what the date accessors actually return', () => {
     // The reason the guide tells authors to leave the zone off unless the
     // policy means the local calendar date.
     assert.strictEqual(on("h.d.getDate('America/Denver')"), 12);
+  });
+});
+
+describe('evaluator — a list item missing a field', () => {
+  // The corpus pins the contract; these cover what it doesn't: a macro inside
+  // a macro, dates on list items, and a complete list unchanged.
+  const graph = (facts, inputs) => ({
+    outputs: Object.keys(facts),
+    inputs,
+    facts: Object.fromEntries(Object.entries(facts).map(([k, expression]) => [k, { expression }])),
+    dependencies: Object.fromEntries(Object.keys(facts).map((k) => [k, Object.keys(inputs).filter((p) => p.endsWith('[]'))])),
+  });
+
+  it('is found by a macro inside a macro, naming the inner item\'s path', () => {
+    // Each wage record against the incomes of the same member, as the
+    // interview flags compare them.
+    const g = graph(
+      { unmatched: 'h.records.exists(r, !h.incomes.exists(i, i.memberId == r.memberId && i.amount == r.amount))' },
+      {
+        '$.h.records[]': { type: 'array' }, '$.h.records[].memberId': { type: 'string' }, '$.h.records[].amount': { type: 'number' },
+        '$.h.incomes[]': { type: 'array' }, '$.h.incomes[].memberId': { type: 'string' }, '$.h.incomes[].amount': { type: 'number' },
+      },
+    );
+    const nodes = evaluate(g, { h: { records: [{ memberId: 'a', amount: 100 }], incomes: [{ memberId: 'a' }] } });
+    assert.strictEqual(nodes.unmatched.state, 'missing');
+    assert.deepStrictEqual(nodes.unmatched.missing, ['$.h.incomes[].amount']);
+  });
+
+  it('is missing for a date an item doesn\'t have, and settled by another item\'s date', () => {
+    const g = graph(
+      { anyBornBefore2000: "h.people.exists(p, p.born < timestamp('2000-01-01T00:00:00Z'))" },
+      { '$.h.people[]': { type: 'array' }, '$.h.people[].born': { type: 'string', format: 'date' } },
+    );
+    assert.strictEqual(evaluate(g, { h: { people: [{ born: '2010-05-01' }, {}] } }).anyBornBefore2000.state, 'missing');
+    const settled = evaluate(g, { h: { people: [{}, { born: '1950-05-01' }] } }).anyBornBefore2000;
+    assert.deepStrictEqual([settled.state, settled.value], ['complete', true]);
+  });
+
+  it('leaves a complete list answered exactly as before', () => {
+    const g = graph({ adults: 'h.people.filter(p, p.age >= 18).map(p, p.age)' }, { '$.h.people[]': { type: 'array' }, '$.h.people[].age': { type: 'integer' } });
+    const nodes = evaluate(g, { h: { people: [{ age: 30 }, { age: 10 }, { age: 40 }] } });
+    assert.deepStrictEqual([nodes.adults.state, nodes.adults.value], ['complete', [30, 40]]);
   });
 });

@@ -15,7 +15,7 @@ curl http://localhost:1080/health
 
 ## What gets served
 
-**REST endpoints** — generated from each OpenAPI spec (`*-openapi.yaml`): list, get, create, update, delete. Requests are validated against schemas; errors return the shared error shape.
+**REST endpoints** — generated from each OpenAPI spec (`*-openapi.yaml`): list, get, create, update, delete. Requests are validated against schemas; errors return the shared error shape. An id in a create or update whose field declares `x-relationship` must name a record the mock holds, in any domain, or the write is refused with a `422` naming the field. Ids marked `External` or `Polymorphic`, and ids into a collection forwarded to a real service, aren't checked.
 
 **RPC endpoints** — generated from state machine files (`*-state-machine.yaml`): one `POST /{domain}/{resource}/:id/{operation}` per transition. The server enforces valid state transitions (409 on invalid), evaluates guards, executes steps, tracks SLA clocks, and fires domain events.
 

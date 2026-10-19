@@ -252,7 +252,9 @@ export function validateFieldsArrays(compositionDoc, resourceSchemaIndex) {
       if (props) {
         const fields = Array.isArray(node.fields) ? node.fields : [];
         for (const field of fields) {
-          const topField = String(field).split('.')[0];
+          // `source as alias` names the field it projects by its source.
+          const topField = String(field).split(/\s+as\s+/)[0].split('.')[0];
+          if (topField === '*') continue;
           if (!props.has(topField)) {
             errors.push({
               message: `fields: "${field}" — field "${topField}" not found on resource "${node.resource}"`,

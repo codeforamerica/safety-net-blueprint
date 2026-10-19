@@ -97,6 +97,11 @@ run(join(CLI, 'generate-ts-clients.js'), [
 ]);
 
 console.log('  [5/8] Building explorer...');
+// The rules pages copy the engine's browser bundle, which `npm install` builds
+// and nothing else rebuilds — so after a change to the engine, the pages ran
+// the engine as it was at the last install. generate-artifacts.sh does the
+// same before building the safety-net explorer.
+run(resolve(__dirname, '../../blueprint-rules-engine/scripts/build-browser.js'), []);
 run(join(CLI, 'build-explorer.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
   `--out=${join(HARNESS, 'generated/explorer')}`,

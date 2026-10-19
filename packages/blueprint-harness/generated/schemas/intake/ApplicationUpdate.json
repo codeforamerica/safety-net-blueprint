@@ -86,6 +86,20 @@
           "format": "uuid",
           "description": "The uploaded document evidencing household income, if one is attached."
         },
+        "type": {
+          "type": "string",
+          "enum": [
+            "new",
+            "renewal"
+          ],
+          "default": "new",
+          "description": "A first application, or an application for recertification — the same kind of request.\n"
+        },
+        "interviewDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the application's interview."
+        },
         "labels": {
           "type": "object",
           "additionalProperties": {

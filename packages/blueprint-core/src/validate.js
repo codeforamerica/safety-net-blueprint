@@ -304,6 +304,61 @@ function unresolvedRelationshipResources(doc, schemaIndex) {
 }
 
 /**
+ * Writable id fields that never say what they point at.
+ *
+ * A field named `…Id` holding a uuid is a link to another record, and only
+ * `x-relationship` says which. Without it, nothing can follow the link: the
+ * resolver adds no `links`, the mock cannot check the record exists, and a
+ * service reading the contracts has to keep its own list of foreign keys —
+ * which is what the transcript analysis experiment did (#481).
+ *
+ * A uuid is the test because every declared relationship in the blueprint is
+ * one, while the ids that point outside it — a Medicare number, a CMS plan
+ * code, a timer key — are plain strings. Fields nobody writes are skipped:
+ * `readOnly` and `x-derived` ones are set by the server, such as `userId` on
+ * the users API, an alias for the record's own id. Overlays are skipped too;
+ * what they add is checked once resolved, where the whole field is visible.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function undeclaredRelationships(doc) {
+  if (doc.type === 'overlay') return [];
+  const findings = [];
+
+  const walk = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, `${path}/${i}`));
+      return;
+    }
+
+    const properties = node.properties;
+    if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+      for (const [name, field] of Object.entries(properties)) {
+        if (!/Id$/.test(name) || !field || typeof field !== 'object') continue;
+        if (field.format !== 'uuid' || field.readOnly || field['x-derived'] || field['x-relationship']) continue;
+        findings.push({
+          rule: 'id-without-relationship',
+          message:
+            `"${name}" holds a uuid but declares no x-relationship, so nothing can follow it ` +
+            `or check that the record it names exists. Add x-relationship with the schema it ` +
+            `points at, or "External" if it names something outside the contract set.`,
+          path: `${path}/properties/${name}`,
+        });
+      }
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key !== 'examples' && key !== 'example') walk(value, `${path}/${key}`);
+    }
+  };
+
+  walk(doc.content, doc.relativePath ?? doc.path);
+  return findings;
+}
+
+/**
  * Give every finding the same shape: { rule, message, path }.
  *
  * `rule` falls back to the contract type, so a finding from a validator that
@@ -655,6 +710,7 @@ function validateDoc(doc, context) {
   errors.push(...brokenFragmentRefs(doc));
   errors.push(...brokenExternalRefs(doc, context.byRelativePath));
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));
+  errors.push(...undeclaredRelationships(doc));
   errors.push(...removedNullable(doc));
   const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
   if (conformance) {

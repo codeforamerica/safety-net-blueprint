@@ -1,0 +1,26 @@
+# eligibility field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=eligibility
+
+# ── Determination ───────────────────────────────────────────────────────────────
+
+determination.id: { type: uuid }
+determination.applicationId: { type: uuid, relationship: Application }
+determination.status: { type: enum, values: [pending, in_progress, completed, withdrawn] }
+determination.expeditedFlagged: { type: boolean }
+
+# ── Decision ────────────────────────────────────────────────────────────────────
+
+determination.decisions[]: { type: list(Decision) }
+determination.decisions[].id: { type: uuid }
+determination.decisions[].determinationId: { type: uuid, relationship: Determination }
+determination.decisions[].applicationId: { type: uuid, relationship: Application }
+determination.decisions[].memberId: { type: uuid, relationship: ApplicationMember }
+determination.decisions[].program: { type: enum, values: [snap, medicaid, chip, tanf, aca] }
+determination.decisions[].status: { type: enum, values: [pending, approved, denied, ineligible] }
+determination.decisions[].path: { type: enum, values: [auto, manual] }
+determination.decisions[].decidedAt: { type: datetime }
+determination.decisions[].denialReasonCode: { type: string }
+determination.decisions[].electronicChecks[]: { type: list(ElectronicCheckSummary) }
+determination.decisions[].electronicChecks[].serviceType: { type: string }
+determination.decisions[].electronicChecks[].result: { type: string }
+determination.decisions[].electronicChecks[].checkedAt: { type: datetime }

@@ -1,0 +1,16 @@
+# document-management field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=document-management
+
+# ── Document ────────────────────────────────────────────────────────────────────
+
+document.id: { type: uuid }
+document.latestVersionId: { type: uuid, relationship: DocumentVersion }
+document.documentTypeId: { type: string }
+document.title: { type: string }
+document.documentDate: { type: date }
+document.lifecycleState: { type: enum, values: [active, superseded, disposed] }
+document.legalHold: { type: boolean }
+document.retentionDeadline: { type: datetime }
+document.metadata: { type: object }
+document.links: { type: object }
+document.links.latestVersion: { type: string }

@@ -130,7 +130,15 @@ function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap, st
  */
 function projectFields(record, fields) {
   const out = {};
-  for (const field of fields) {
+  for (const entry of fields) {
+    // `source as alias` projects the source field under another name, so a
+    // composition can translate the data model into what a consumer reads.
+    const [field, alias] = String(entry).split(/\s+as\s+/);
+    if (alias) {
+      const value = field.includes('.') ? resolveDotPath(record, field) : record[field];
+      if (value !== undefined && value !== null) out[alias] = value;
+      continue;
+    }
     if (field.includes('.')) {
       // Dot-notation: resolve the value and set it at the top-level key (first segment).
       // e.g. "person.firstName" → out.person = { firstName: <value> }

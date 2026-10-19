@@ -258,16 +258,20 @@ export function apiSpecsFromDocs(docs) {
   }
 
   // Where each resource's records are kept, so a related record is found by
-  // its resource's name without guessing at its collection.
+  // its resource's name without guessing at its collection — and where it is
+  // read, so a link to one points at its own route, in its own API.
   const collections = new Map();
+  const itemPaths = new Map();
   for (const api of loaded) {
     for (const resource of api.doc.model?.()?.resources ?? []) {
       if (resource.name && !collections.has(resource.name)) {
         collections.set(resource.name, deriveCollectionName(resource.path('collection'), ''));
+        const item = resource.path('item');
+        if (item) itemPaths.set(resource.name, { path: `${api.serverBasePath ?? ''}${item}`, parameter: resource.item.parameter });
       }
     }
   }
-  registerResourceCollections(collections);
+  registerResourceCollections(collections, itemPaths);
 
   return loaded;
 }

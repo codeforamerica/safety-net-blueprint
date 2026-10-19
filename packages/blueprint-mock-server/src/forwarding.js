@@ -274,7 +274,10 @@ export function applyForwarding(routes, forwarding = []) {
   const byRoute = validateForwarding(forwarding, routes);
 
   for (const [key, { to, includeHeaders, timeoutMs }] of byRoute) {
-    routes.get(key).handler = forwardTo(to, { includeHeaders, timeoutMs });
+    const route = routes.get(key);
+    route.handler = forwardTo(to, { includeHeaders, timeoutMs });
+    // Marked, so a check that reads the mock's records knows these aren't the ones that count.
+    route.forwarded = true;
   }
   return [...byRoute.keys()];
 }

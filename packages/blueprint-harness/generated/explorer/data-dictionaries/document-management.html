@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>interviewPromptRationale — Annotation Explorer — Blueprint Harness</title>
+  <title>Blueprint Harness — Data Dictionary — Document Management</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -14,8 +14,8 @@
     #page-header { flex-shrink: 0; }
     .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     #sidebar {
-      width: 260px;
-      min-width: 260px;
+      width: 240px;
+      min-width: 240px;
       background: #2B1A78;
       color: white;
       flex-shrink: 0;
@@ -73,16 +73,89 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+:root {
+  --blue-dark:   #2B1A78;
+  --blue-mid:    #5650BE;
+  --blue-light:  #C2C0E8;
+  --sand:        #E9CCBE;
+  --sand-light:  #F5F0ED;
+  --lb-light:    #E6EBF9;
+  --green-dark:  #006152;
+  --green-light: #E2F9F6;
+  --yellow-light:#FFF3E0;
+  --red-dark:    #AF121D;
+  --red-light:   #F9C8CB;
+}
+.csv-btn {
+  font-size: 0.78rem; padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  background: rgba(255,255,255,0.1); color: white; cursor: pointer; white-space: nowrap;
+}
+.csv-btn:hover { background: rgba(255,255,255,0.2); }
+.no-results { padding: 2rem; text-align: center; color: #888; font-style: italic; }
+.hidden { display: none !important; }
+.dict-section { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+.section-title {
+  font-size: 1rem; font-weight: 700; color: var(--blue-dark);
+  border-bottom: 2px solid var(--blue-light);
+  padding-bottom: 0.35rem; margin-bottom: 0.75rem;
+}
+.cards-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+.card {
+  background: #fff; border: 1px solid var(--sand);
+  border-left: 3px solid var(--blue-mid); border-radius: 6px; overflow: hidden;
+}
+.card.hidden { display: none; }
+.card-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: var(--lb-light); }
+.field-path { font-size: 0.82rem; font-weight: 600; color: var(--blue-dark); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.type-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--blue-light); color: var(--blue-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.rel-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--green-light); color: var(--green-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; letter-spacing: 0.02em;
+}
+.applies-expr { font-size: 0.72rem; background: var(--yellow-light); border-radius: 3px; padding: 0.05rem 0.4rem; color: #5a4000; }
+.card-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ann-reason { font-size: 0.78rem; color: #333; line-height: 1.5; margin: 0; }
+.ann-modeling { font-size: 0.75rem; color: #555; line-height: 1.5; margin: 0; display: flex; gap: 0.5rem; align-items: baseline; }
+.ann-modeling .ann-label { flex-shrink: 0; }
+.card-ann { display: flex; flex-direction: column; gap: 0.3rem; }
+.ann-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+.ann-row--col { align-items: flex-start; }
+.ann-label {
+  display: inline-block; font-size: 0.6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 3px; padding: 0.1rem 0.35rem; margin-right: 0.1rem;
+  vertical-align: middle; white-space: nowrap; flex-shrink: 0;
+  background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
+}
+.badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.ann-chip { text-decoration: none; background: var(--lb-light); color: var(--blue-mid); border: 1px solid var(--blue-light); }
+.ann-chip:hover { background: var(--blue-light); }
+.val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
+@keyframes field-highlight {
+  0%   { background: #fef9c3; border-left-color: #ca8a04; }
+  100% { background: #fff;    border-left-color: var(--blue-mid); }
+}
+.card.field-highlight { animation: field-highlight 1.8s ease-out; }
+
   </style>
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">interviewPromptRationale</a></div>
-    
-      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
-        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">interviewPromptRationale</code></div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
-      </div>
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Data Dictionary</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Document Management</a></div>
+    <div style="background:#2B1A78;color:white;">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Document Management</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">11 fields</span>
+      <button class="csv-btn" onclick="exportCsv()" style="margin-left:auto;">Export CSV</button>
+    </div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">document-management</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/domains/document-management/document-management-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">document-management-openapi.yaml</code></a></div>
+  </div>
   </div>
   <div class="page-layout">
     <nav id="sidebar">
@@ -93,99 +166,14 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <div class="nav-section">
-        <div class="nav-section-label">intake</div>
-        <a class="nav-link" href="#entry--interviewprompts-changeverificationprompt" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.changeVerificationPrompt</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-hasnoncitizenmembers" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.hasNonCitizenMembers</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-hasstudentmembers" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.hasStudentMembers</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-hasunemployedworkeligible" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.hasUnemployedWorkEligible</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-immigrationstatusprompt" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.immigrationStatusPrompt</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-incomegapexists" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.incomeGapExists</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-incomeinconsistencyprompt" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.incomeInconsistencyPrompt</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-studenteligibilityprompt" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.studentEligibilityPrompt</code>
-        </a><a class="nav-link" href="#entry--interviewprompts-workrequirementprompt" style="padding-left:1.25rem;">
-          <code style="font-size:10px;">interviewPrompts.workRequirementPrompt</code>
-        </a>
-      </div>
+        <a href="#sec-Document" class="nav-link">Document <span class="nav-count">11</span></a>
       </div>
     </nav>
     <main id="content">
-      <div style="padding:2rem 0.5rem;">
-      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>interviewPromptRationale</code></h1>
-      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">9 annotations</p>
-      <div id="entry--interviewprompts-changeverificationprompt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.changeVerificationPrompt</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Identify and document all changes in household circumstances that occurred between the application date and the interview date, and determine what verification is required.
-</div>
-        </div><div id="entry--interviewprompts-hasnoncitizenmembers" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.hasNonCitizenMembers</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Identifies non-citizen household members who must be screened for qualified alien status and sponsor income deeming rules.
-</div>
-        </div><div id="entry--interviewprompts-hasstudentmembers" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.hasStudentMembers</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Identifies household members enrolled at least half-time in higher education who are subject to student eligibility restrictions.
-</div>
-        </div><div id="entry--interviewprompts-hasunemployedworkeligible" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.hasUnemployedWorkEligible</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Identifies household members aged 16–59 who are not employed and have not yet been screened for general work requirement exemptions.
-</div>
-        </div><div id="entry--interviewprompts-immigrationstatusprompt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.immigrationStatusPrompt</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Determine qualified alien status and apply sponsor income and resource deeming rules for non-citizen household members.
-</div>
-        </div><div id="entry--interviewprompts-incomegapexists" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.incomeGapExists</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Flags a potential inconsistency when reported income does not cover reported expenses. Required by FNS-1104 as a probe trigger — workers must probe for undisclosed income sources or assistance.
-</div>
-        </div><div id="entry--interviewprompts-incomeinconsistencyprompt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.incomeInconsistencyPrompt</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Probe for undisclosed income sources or assistance when monthly income is less than monthly expenses.
-</div>
-        </div><div id="entry--interviewprompts-studenteligibilityprompt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.studentEligibilityPrompt</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screen higher-education students for SNAP eligibility exceptions — most students enrolled at least half-time are ineligible unless they meet one of the statutory exceptions.
-</div>
-        </div><div id="entry--interviewprompts-workrequirementprompt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
-            <code style="font-size:12px;font-weight:700;">interviewPrompts.workRequirementPrompt</code>
-          </div>
-          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screen non-employed household members aged 16–59 for general work requirement exemptions before determining work registration obligations.
-</div>
-        </div>
-    </div>
+      <section class="dict-section" id="sec-Document">
+      <h2 class="section-title">Document</h2>
+      <div class="cards-grid"><div class="card content-item" id="field-document.id" data-path="document.id"><div class="card-header"><code class="field-path">document.id</code><span class="type-badge">uuid</span></div></div><div class="card content-item" id="field-document.latestVersionId" data-path="document.latestVersionId"><div class="card-header"><code class="field-path">document.latestVersionId</code><span class="type-badge">uuid(DocumentVersion)</span></div></div><div class="card content-item" id="field-document.documentTypeId" data-path="document.documentTypeId"><div class="card-header"><code class="field-path">document.documentTypeId</code><span class="type-badge">string</span></div></div><div class="card content-item" id="field-document.title" data-path="document.title"><div class="card-header"><code class="field-path">document.title</code><span class="type-badge">string</span></div></div><div class="card content-item" id="field-document.documentDate" data-path="document.documentDate"><div class="card-header"><code class="field-path">document.documentDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-document.lifecycleState" data-path="document.lifecycleState"><div class="card-header"><code class="field-path">document.lifecycleState</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>active</code> <code>superseded</code> <code>disposed</code></span></div></div></div><div class="card content-item" id="field-document.legalHold" data-path="document.legalHold"><div class="card-header"><code class="field-path">document.legalHold</code><span class="type-badge">boolean</span></div></div><div class="card content-item" id="field-document.retentionDeadline" data-path="document.retentionDeadline"><div class="card-header"><code class="field-path">document.retentionDeadline</code><span class="type-badge">datetime</span></div></div><div class="card content-item" id="field-document.metadata" data-path="document.metadata"><div class="card-header"><code class="field-path">document.metadata</code><span class="type-badge">object</span></div></div><div class="card content-item" id="field-document.links" data-path="document.links"><div class="card-header"><code class="field-path">document.links</code><span class="type-badge">object</span></div></div><div class="card content-item" id="field-document.links.latestVersion" data-path="document.links.latestVersion"><div class="card-header"><code class="field-path">document.links.latestVersion</code><span class="type-badge">string</span></div></div></div>
+    </section>
     </main>
   </div>
   <script>
@@ -324,6 +312,11 @@
         if (!hash) return;
         const el = document.getElementById(decodeURIComponent(hash.slice(1)));
         if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
         const content = document.getElementById('content');
         if (!content) { el.scrollIntoView(); return; }
         const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
@@ -333,6 +326,35 @@
       window.addEventListener('hashchange', scrollToHash);
     })();
     
+(function() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const id = decodeURIComponent(hash.slice(1));
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('field-highlight');
+  setTimeout(function() { el.classList.remove('field-highlight'); }, 2000);
+})();
+
+function exportCsv() {
+  const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
+  document.querySelectorAll('.card:not(.hidden)').forEach(card => {
+    const path = card.dataset.path ?? '';
+    const type = card.querySelector('.type-badge')?.textContent ?? '';
+    const getAnnRow = label => [...card.querySelectorAll('.ann-row')]
+      .find(r => r.querySelector('.ann-label')?.textContent.trim().toLowerCase() === label);
+    const programs = [...(getAnnRow('programs')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    const policies = [...(getAnnRow('policies')?.querySelectorAll('code') ?? [])].map(b => b.textContent).join(';');
+    const dc = [...(getAnnRow('classification')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    rows.push([path, type, programs, policies, dc]);
+  });
+  const csv = rows.map(r => r.map(v => JSON.stringify(v)).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'data-dictionary.csv';
+  a.click();
+}
+
   </script>
 </body>
 </html>
