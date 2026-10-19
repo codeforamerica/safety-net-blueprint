@@ -770,14 +770,33 @@ function buildInputType(graphInputs) {
 }
 
 /**
+ * A fact's name as a TypeScript property key: bare when it is an identifier,
+ * quoted otherwise. A grouped fact (`risks.cashIncome`) and a per-item fact
+ * (`reviewMonths[].qualifies`) are not identifiers.
+ */
+function propertyKey(factName) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(factName) ? factName : `'${factName}'`;
+}
+
+/**
+ * The TypeScript type of a fact's value. A per-item fact has one value per
+ * item, null where the item is unresolved, and one list per outer item for
+ * each enclosing list: `reviewMonths[].qualifies` is `Array<boolean | null>`.
+ */
+function factValueType(factName, fact) {
+  let tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
+  if (tsType === 'unknown') return tsType;
+  for (let i = factName.split('[].').length - 1; i > 0; i--) tsType = `Array<${tsType} | null>`;
+  return tsType;
+}
+
+/**
  * Build a TypeScript result type from graph outputs, using FactNode<T> for each fact.
  */
 function buildResultType(graph) {
   const lines = [];
   for (const factName of graph.outputs ?? []) {
-    const fact = graph.facts?.[factName];
-    const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
-    lines.push(`  ${factName}: FactNode<${tsType}>;`);
+    lines.push(`  ${propertyKey(factName)}: FactNode<${factValueType(factName, graph.facts?.[factName])}>;`);
   }
   lines.push(`  nodes: Record<string, FactNode<unknown>>;`);
   return `{\n${lines.join('\n')}\n}`;
@@ -830,9 +849,7 @@ function generateRules(specsDir, outputDir) {
       const p = pascal(graph.ruleset);
       const graphJson = JSON.stringify(graph);
       const outputProps = (graph.outputs ?? []).map(factName => {
-        const fact = graph.facts?.[factName];
-        const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
-        return `      ${factName}: nodes['${factName}'] as FactNode<${tsType}>`;
+        return `      ${propertyKey(factName)}: nodes['${factName}'] as FactNode<${factValueType(factName, graph.facts?.[factName])}>`;
       }).join(',\n');
       return [
         `  ${graph.ruleset}: { evaluate: (inputs: ${p}Inputs): ${p}Result => {`,

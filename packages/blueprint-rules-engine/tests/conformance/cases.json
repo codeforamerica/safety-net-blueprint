@@ -5,9 +5,10 @@
   "howToRead": {
     "case": "Each case names a graph from `graphs`, the inputs to evaluate it against, and the nodes the engine must produce, keyed by fact name.",
     "partial": "Only the fields an expectation lists are asserted. A case can pin a state without committing to a value, need not name every fact, and adding a field to the node shape later does not invalidate the corpus.",
-    "missing": "Compared as a set. The order of paths is not part of the contract.",
+    "missing": "Compared as a set. The order of paths is not part of the contract. A path into a list names the item by its position in the input, counting from 0: `$.h.people[1].age` is the second person's age. A list that is absent altogether is named without a position: `$.h.people[]`.",
     "messageIncludes": "A substring check. Exact error wording is not part of the contract; naming the offending path or type is.",
-    "note": "Explains what the case is pinning and why it matters."
+    "note": "Explains what the case is pinning and why it matters.",
+    "perItem": "A fact at `list[].name` is computed once for each item of the list fact `list`, which names its items with `as`. Its node's `value` has one entry per item, in the list's order, null where that item is unresolved; `state` and `missing` are as for any fact. A fact on an inner list nests the same way, one list per outer item. When a list fact's items are an input's items — the input itself, a filter of it, or a conditional whose branches are both — a missing answer on an item is reported at that input's path, at the item's position in the input; otherwise at the list fact's path."
   },
   "graphs": {
     "eligibility": {
@@ -402,6 +403,113 @@
         ],
         "adults": [
           "$.h.people[]"
+        ]
+      }
+    },
+    "perItemFacts": {
+      "formatVersion": "1.1",
+      "outputs": [
+        "reviewMonths[].qualifies",
+        "reviewMonths[].reviewWeeks[].worked",
+        "reviewMonths[].everyWeekWorked",
+        "qualifyingMonthCount",
+        "anyMonthQualifies"
+      ],
+      "inputs": {
+        "$.h.kind": {
+          "type": "string"
+        },
+        "$.h.months[]": {
+          "type": "array"
+        },
+        "$.h.months[].monthsBefore": {
+          "type": "integer"
+        },
+        "$.h.months[].hadMedicare": {
+          "type": "boolean",
+          "default": false
+        },
+        "$.h.months[].hoursWorked": {
+          "type": "number"
+        },
+        "$.h.months[].weeks[]": {
+          "type": "array"
+        },
+        "$.h.months[].weeks[].hours": {
+          "type": "number"
+        }
+      },
+      "constants": {
+        "monthlyHoursRequired": {
+          "value": 80
+        }
+      },
+      "facts": {
+        "reviewMonths": {
+          "expression": "h.kind == 'application' ? h.months.filter(m, m.monthsBefore <= 1) : h.months",
+          "as": "month"
+        },
+        "reviewMonths[].meetsHours": {
+          "expression": "month.hoursWorked >= constants.monthlyHoursRequired"
+        },
+        "reviewMonths[].qualifies": {
+          "expression": "month.hadMedicare || month.meetsHours"
+        },
+        "reviewMonths[].reviewWeeks": {
+          "expression": "month.weeks",
+          "as": "week"
+        },
+        "reviewMonths[].reviewWeeks[].worked": {
+          "expression": "week.hours > 0.0"
+        },
+        "reviewMonths[].everyWeekWorked": {
+          "expression": "month.reviewWeeks.all(w, w.worked)"
+        },
+        "qualifyingMonthCount": {
+          "expression": "size(reviewMonths.filter(m, m.qualifies))"
+        },
+        "anyMonthQualifies": {
+          "expression": "reviewMonths.exists(m, m.qualifies)"
+        }
+      },
+      "dependencies": {
+        "reviewMonths": [
+          "$.h.kind",
+          "$.h.months[]"
+        ],
+        "reviewMonths[].meetsHours": [
+          "reviewMonths"
+        ],
+        "reviewMonths[].qualifies": [
+          "reviewMonths",
+          "reviewMonths[].meetsHours"
+        ],
+        "reviewMonths[].reviewWeeks": [
+          "reviewMonths"
+        ],
+        "reviewMonths[].reviewWeeks[].worked": [
+          "reviewMonths[].reviewWeeks"
+        ],
+        "reviewMonths[].everyWeekWorked": [
+          "reviewMonths",
+          "reviewMonths[].reviewWeeks",
+          "reviewMonths[].reviewWeeks[].worked"
+        ],
+        "qualifyingMonthCount": [
+          "reviewMonths",
+          "reviewMonths[].meetsHours",
+          "reviewMonths[].qualifies",
+          "reviewMonths[].reviewWeeks",
+          "reviewMonths[].reviewWeeks[].worked",
+          "reviewMonths[].everyWeekWorked"
+        ],
+        "anyMonthQualifies": [
+          "reviewMonths",
+          "reviewMonths[].meetsHours",
+          "reviewMonths[].qualifies",
+          "reviewMonths[].reviewWeeks",
+          "reviewMonths[].reviewWeeks[].worked",
+          "reviewMonths[].everyWeekWorked"
         ]
       }
     }
@@ -1125,7 +1233,7 @@
       }
     },
     {
-      "name": "a field one item does not have is missing, naming the item path",
+      "name": "a field one item does not have is missing, naming that item",
       "graph": "itemFields",
       "note": "Absent is a question, not an error and not a no, inside a list as at the top: a person added before their age is known leaves \"is anyone an adult\" unanswered when no one else settles it.",
       "inputs": {
@@ -1142,7 +1250,7 @@
         "anyAdult": {
           "state": "missing",
           "missing": [
-            "$.h.people[].age"
+            "$.h.people[1].age"
           ]
         },
         "allAdults": {
@@ -1173,7 +1281,7 @@
         "allAdults": {
           "state": "missing",
           "missing": [
-            "$.h.people[].age"
+            "$.h.people[1].age"
           ]
         }
       }
@@ -1241,7 +1349,7 @@
         "anyAdultOrExempt": {
           "state": "missing",
           "missing": [
-            "$.h.people[].age"
+            "$.h.people[1].age"
           ]
         }
       }
@@ -1264,7 +1372,331 @@
         "adults": {
           "state": "missing",
           "missing": [
-            "$.h.people[].age"
+            "$.h.people[1].age"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a per-item fact has one value per item, in the list's order",
+      "graph": "perItemFacts",
+      "note": "Each month is judged on its own answers, and the list of results lines up with the months, so a caller can say which month counted.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 20
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 3,
+              "hadMedicare": true,
+              "hoursWorked": 0
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "complete",
+          "value": [
+            false,
+            true,
+            true
+          ]
+        },
+        "qualifyingMonthCount": {
+          "state": "complete",
+          "value": 2
+        }
+      }
+    },
+    {
+      "name": "per-item facts are computed only for the items the list fact keeps",
+      "graph": "perItemFacts",
+      "note": "At application only the month just before counts; a per-item fact has nothing to say about the months the list fact left out.",
+      "inputs": {
+        "h": {
+          "kind": "application",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false,
+              "hoursWorked": 0
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "complete",
+          "value": [
+            true
+          ]
+        },
+        "qualifyingMonthCount": {
+          "state": "complete",
+          "value": 1
+        }
+      }
+    },
+    {
+      "name": "an empty list gives per-item facts an empty list, complete",
+      "graph": "perItemFacts",
+      "note": "No months is an answer, not a question: nothing qualifies.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": []
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "complete",
+          "value": []
+        },
+        "qualifyingMonthCount": {
+          "state": "complete",
+          "value": 0
+        }
+      }
+    },
+    {
+      "name": "an item missing an answer leaves only that item unresolved, naming the input",
+      "graph": "perItemFacts",
+      "note": "One month without its hours does not unsettle the months that have theirs, and the missing path is the input the answer goes in, traced through the list fact.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "missing",
+          "value": [
+            true,
+            null
+          ],
+          "missing": [
+            "$.h.months[1].hoursWorked"
+          ]
+        }
+      }
+    },
+    {
+      "name": "another item settles a later fact; a fact the unresolved item could change stays missing",
+      "graph": "perItemFacts",
+      "note": "Whether any month qualifies is already known from month 1. How many qualify is not, until month 2 is answered.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyMonthQualifies": {
+          "state": "complete",
+          "value": true
+        },
+        "qualifyingMonthCount": {
+          "state": "missing",
+          "missing": [
+            "$.h.months[1].hoursWorked"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a default on an item's field fills it, and a result resting on it is a placeholder",
+      "graph": "perItemFacts",
+      "note": "Defaults work inside a list as at the top: the month is judged, but the answer is marked as resting on an assumption, unless something else settles it.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hoursWorked": 10
+            },
+            {
+              "monthsBefore": 2,
+              "hoursWorked": 90
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "placeholder",
+          "value": [
+            false,
+            true
+          ]
+        }
+      }
+    },
+    {
+      "name": "an inner per-item fact nests one list per outer item, and a missing inner answer names the inner input",
+      "graph": "perItemFacts",
+      "note": "Weeks within months: each week is judged on its own, an unanswered week leaves only itself and its month unresolved, and another month can still settle the answer for the whole list.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 40,
+              "weeks": [
+                {
+                  "hours": 10
+                },
+                {}
+              ]
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false,
+              "hoursWorked": 20,
+              "weeks": [
+                {
+                  "hours": 20
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].reviewWeeks[].worked": {
+          "state": "missing",
+          "value": [
+            [
+              true,
+              null
+            ],
+            [
+              true
+            ]
+          ],
+          "missing": [
+            "$.h.months[0].weeks[1].hours"
+          ]
+        },
+        "reviewMonths[].everyWeekWorked": {
+          "state": "missing",
+          "value": [
+            null,
+            true
+          ]
+        }
+      }
+    },
+    {
+      "name": "each unresolved item is named by its own position",
+      "graph": "perItemFacts",
+      "note": "Two months each lack an answer; each is named, so a caller knows which month to ask about.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 3,
+              "hadMedicare": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "missing",
+          "value": [
+            null,
+            true,
+            null
+          ],
+          "missing": [
+            "$.h.months[0].hoursWorked",
+            "$.h.months[2].hoursWorked"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a filtered list names a missing answer at the item's position in the input",
+      "graph": "perItemFacts",
+      "note": "The list fact keeps only the month just before, which the person entered third. Its result is the only entry in the value, and the missing path points at the month they entered.",
+      "inputs": {
+        "h": {
+          "kind": "application",
+          "months": [
+            {
+              "monthsBefore": 3,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 2,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].qualifies": {
+          "state": "missing",
+          "value": [
+            null
+          ],
+          "missing": [
+            "$.h.months[2].hoursWorked"
           ]
         }
       }

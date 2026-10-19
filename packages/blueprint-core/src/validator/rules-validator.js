@@ -15,9 +15,9 @@
  */
 
 import { existsSync } from 'fs';
-import { compileRuleset } from '../rules.js';
+import { compileRuleset, listFactOf } from '../rules.js';
 import { resolverMap } from '../paths.js';
-import { celSyntaxError } from '../cel.js';
+import { celSyntaxError, inputOf } from '../cel.js';
 
 // ── Full dependency scan ──────────────────────────────────────────────────────
 
@@ -245,6 +245,8 @@ export function validateRuleset(domain, rulesetName, ruleset) {
     }
   }
 
+  errors.push(...validatePerItemFacts(ruleset, graph, inputNames, base));
+
   // 4. $ref resolution
   const schemasToCheck = [
     ...Object.values(ruleset.inputs || {}),
@@ -263,6 +265,67 @@ export function validateRuleset(domain, rulesetName, ruleset) {
     }
   }
 
+  return errors;
+}
+
+/**
+ * Per-item facts: each is on a list fact, and the names its expression reads
+ * an item by mean one thing.
+ *
+ * - `per-item-without-list`: `x[].y` needs a fact `x` that declares `as`.
+ * - `as-name-in-use`: an item's name can't be an input, a fact, `constants`,
+ *   or an enclosing item's name, or the expression couldn't tell them apart.
+ * - `item-field-name-in-use`: a fact on an item can't be named like a field
+ *   the item already has, or `month.hoursWorked` would mean two things.
+ *
+ * @param {Object} ruleset
+ * @param {Object} graph - The ruleset compiled
+ * @param {Set<string>} inputNames - Every input's name, and `constants` if declared
+ * @param {string} base - Where the ruleset sits, for error paths
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function validatePerItemFacts(ruleset, graph, inputNames, base) {
+  const errors = [];
+  const decls = Object.fromEntries((ruleset.facts || []).filter((f) => typeof f.path === 'string').map((f) => [f.path, f]));
+  const taken = new Set([...inputNames, 'constants', ...Object.keys(decls).filter((p) => !p.includes('[]')).map((p) => p.split('.')[0])]);
+
+  for (const [path, { as }] of Object.entries(decls)) {
+    const list = listFactOf(path);
+    if (list && !decls[list]?.as) {
+      errors.push({
+        rule: 'per-item-without-list',
+        message: `Fact "${path}" is on the items of "${list}", which is not a list fact. Declare "${list}" with \`as\`, naming its items.`,
+        path: `${base}.facts.${path}`,
+      });
+    }
+    if (!as) continue;
+    const enclosing = [];
+    for (let l = list; l; l = listFactOf(l)) if (decls[l]?.as) enclosing.push(decls[l].as);
+    if (taken.has(as) || enclosing.includes(as)) {
+      errors.push({
+        rule: 'as-name-in-use',
+        message: `Fact "${path}" names its items "${as}", which is already an input, a fact, \`constants\` or an enclosing item's name. Choose another name.`,
+        path: `${base}.facts.${path}`,
+      });
+    }
+  }
+
+  // An item's fields are known when its items are an input's: the fields
+  // declared under that input.
+  const inputPaths = Object.keys(graph.inputs);
+  const listInput = Object.fromEntries(Object.keys(decls).filter((p) => decls[p].as).map((p) => [p, inputOf(graph, p)]));
+  for (const path of Object.keys(decls)) {
+    const list = listFactOf(path);
+    if (!list || !listInput[list]) continue;
+    const name = path.slice(list.length + 3);
+    if (inputPaths.some((p) => [`${listInput[list]}.${name}`, `${listInput[list]}.${name}[]`].includes(p) || p.startsWith(`${listInput[list]}.${name}.`))) {
+      errors.push({
+        rule: 'item-field-name-in-use',
+        message: `Fact "${path}" has the name of a field "${list}"'s items already have, so \`${decls[list].as}.${name}\` would mean two things. Rename the fact.`,
+        path: `${base}.facts.${path}`,
+      });
+    }
+  }
   return errors;
 }
 
