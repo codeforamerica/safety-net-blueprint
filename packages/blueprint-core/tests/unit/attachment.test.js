@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { toDoc } from '../../src/doc.js';
 import { governedResource, declaredResource } from '../../src/attachment.js';
 import { generateRpcOverlays } from '../../src/generate/rpc.js';
+import { generatedOverlays } from '../../src/generate.js';
 
 const returns = (schema) => ({
   get: { responses: { 200: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } } },
@@ -135,13 +136,13 @@ describe('an operation written by hand that a generated one would replace', asyn
 
   test('is refused, naming the operation, the document and the action', () => {
     assert.throws(
-      () => generate([withSubmit({ operationId: 'submitByHand', responses: {} }), machine], 'overlay'),
+      () => generatedOverlays([withSubmit({ operationId: 'submitByHand', responses: {} }), machine]),
       /POST \/applications\/\{applicationId\}\/submit is written in domains\/intake\/intake-openapi\.yaml and also generated from the intake state machine's "submit" action/,
     );
   });
 
   test('one resolve generated earlier, carrying the same marker, is not', () => {
     const marked = { operationId: 'submitApplication', 'x-relationship': { type: 'state-machine-action', domain: 'intake', id: 'submit' }, responses: {} };
-    assert.doesNotThrow(() => generate([withSubmit(marked), machine], 'overlay'));
+    assert.doesNotThrow(() => generatedOverlays([withSubmit(marked), machine]));
   });
 });

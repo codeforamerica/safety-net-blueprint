@@ -467,20 +467,12 @@ async function main() {
   docs.push(...baseDocs);
   console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s)${wanted.length ? `; capabilities: ${wanted.join(', ')}` : ''})`);
 
-  // Each rules file's endpoints are documented in an OpenAPI document of its
-  // own, generated beside it. Added before resolving, so it is resolved,
-  // validated and written like any other document.
-  docs.push(...generate(docs, 'rules-api'));
-  // The events each API's resources and their state machines send, documented
-  // in an AsyncAPI document beside it. Generated, like the rules endpoints, so
-  // it is validated and written like any other document.
-  docs.push(...generate(docs, 'events-asyncapi'));
-
-  const generatedOverlays = generate(docs, 'overlay');
-  const graphs = generate(docs, 'graph');
-
+  // Generated documents — the rules API, the events AsyncAPI and the endpoints
+  // rulesets, state machines and compositions imply — come from resolve, which
+  // builds them after the state's overlays so they describe the contracts as
+  // overlaid (#500).
   const resolved = coreResolve(docs, {
-    overlays: [...authoredOverlays, ...generatedOverlays],
+    overlays: authoredOverlays,
     envTarget: options.envTarget,
     envVariables: options.envVariables ? readEnvVariables(options.envVariables) : {},
   });
@@ -524,6 +516,13 @@ async function main() {
   }
 
   let currentResults = new Map(resolved.docs.map((doc) => [doc.relativePath, doc.content]));
+
+  // Compiled from the resolved rules documents, so a state's overlay reaches
+  // the graph the engine runs, not only the document beside it. Compiled
+  // before overlays, a graph kept the base ruleset while the rules document
+  // showed the state's (#467). A graph isn't a contract document, so it joins
+  // the write map below rather than the resolved set.
+  const graphs = generate(resolved.docs, 'graph');
 
   // Compiled rules graphs are written alongside the contracts they came from.
   // They join the write map rather than the document set: they are generated

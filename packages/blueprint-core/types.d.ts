@@ -230,7 +230,11 @@ export interface Overlay {
 }
 
 export interface ResolveOptions {
-  /** Applied in order. Authored overlays first, then generated ones. */
+  /**
+   * The state's overlays, applied in order. Not the generated ones: resolve
+   * generates the rules API, events AsyncAPI and endpoint overlays itself,
+   * from the contracts as these overlays leave them.
+   */
   overlays?: Overlay[];
   /** Keep only nodes whose `x-environments` lists this, and strip the marker. */
   envTarget?: string | null;
@@ -295,19 +299,18 @@ export function load(file: DiscoveredFile | string): Doc;
 /**
  * Generate an artifact from a contract set.
  *
- * `overlay` produces the OpenAPI Overlays that compositions, rulesets and
- * state machine actions project into their sibling specs; `resolve` applies
- * them. `graph` produces one compiled decision graph per ruleset, with where
- * each should be written.
+ * `graph` produces one compiled decision graph per ruleset, with where each
+ * should be written; pass it the resolved documents, so a state's overlays
+ * reach the graph. What a contract set generates for itself — the endpoints
+ * compositions, rulesets and state machine actions imply, the API document
+ * beside each rules file, the events AsyncAPI beside each OpenAPI document —
+ * isn't generated here: `resolve` adds it after the state's overlays.
  *
- * @throws If a composition or rules document has no `relativePath`, since an
- *   overlay addresses its target by relative path.
+ * @throws If a document has no `relativePath`, since generated artifacts are
+ *   positioned beside the documents they come from.
  * @throws If `type` is not a known artifact kind.
  */
-export function generate(docs: Doc[], type: 'overlay'): Overlay[];
 export function generate(docs: Doc[], type: 'graph'): Array<{ path: string; graph: Graph }>;
-/** The OpenAPI document each rules file's endpoints are documented in, positioned beside it, for a caller to add to the set it resolves. */
-export function generate(docs: Doc[], type: 'rules-api'): Doc[];
 export function generate(
   docs: Doc[],
   type: 'postman',
@@ -319,7 +322,7 @@ export function generate(
  */
 export function generate(docs: Doc[], type: 'artifact'): ContractsArtifact;
 
-/** Apply overlays, inject enums, filter by environment, substitute variables. */
+/** Apply the state's overlays, add generated documents and endpoints, inject enums, filter by environment, substitute variables. */
 export function resolve(docs: Doc[], options?: ResolveOptions): ResolveResult;
 
 /** Check the document set. Every type is checked or reported as unchecked. */

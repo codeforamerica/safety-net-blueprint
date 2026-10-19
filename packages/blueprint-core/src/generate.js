@@ -4,13 +4,17 @@
  * `discover`, `load`, `resolve` and `validate` act on contracts. `generate`
  * produces something else *from* them, and the second argument says what:
  *
- *   overlay   OpenAPI Overlays that add the endpoints and schemas a
- *             composition, ruleset or state machine action implies
  *   graph     compiled decision graphs, one per ruleset
- *   events-asyncapi  an AsyncAPI document beside each OpenAPI document, of the
- *             events its resources and their state machines send
  *   postman   a Postman collection exercising every endpoint
  *   artifact  the whole contract set as one serializable object
+ *
+ * What a contract set generates for itself isn't here: the endpoints a
+ * composition, ruleset or state machine action implies, the API document
+ * beside each rules file, and the events AsyncAPI beside each OpenAPI
+ * document. `resolve` adds those after the state's overlays, so they follow
+ * what the state changed. generatedOverlays, rulesApis and eventsAsyncapis
+ * build them, and only core calls them: built from the contracts as written,
+ * they would describe the base contracts.
  *
  * Every one of these produces content the inputs do not contain. `examples`
  * used to be here and is now `extract(docs, 'examples')`: grouping records the
@@ -38,20 +42,22 @@ import { fileNameOf } from './contract-types.js';
 import { declaredResource } from './attachment.js';
 import { toDoc } from './doc.js';
 
-/** What `generate` knows how to produce. */
+/**
+ * What `generate` knows how to produce — for a person to ask for. Something
+ * only the framework builds for itself is an exported function here instead,
+ * called from core, not a new type: a public type invites a caller to build
+ * it at the wrong moment, as callers once built the endpoint overlays before
+ * applying the state's overlays.
+ */
 const BUILDERS = {
-  overlay: buildOverlays,
   graph: buildGraphs,
-  'rules-api': buildRulesApis,
-  'events-asyncapi': (positioned) => buildEventCatalogs(positioned)
-    .map(({ relativePath, content }) => toDoc({ path: relativePath, relativePath, type: 'asyncapi', content })),
   postman: buildPostman,
   artifact: buildArtifact,
 };
 
 /**
  * @param {import('../types.js').Doc[]} docs
- * @param {'overlay'|'graph'|'rules-api'|'events-asyncapi'|'postman'|'artifact'} type - Which artifact to build
+ * @param {'graph'|'postman'|'artifact'} type - Which artifact to build
  * @param {object} [options] - Passed to the builder that needs them
  * @returns {*} Whatever that artifact is
  */
@@ -63,10 +69,52 @@ export function generate(docs, type, options) {
     );
   }
 
+  return builder(positionedOnly(docs), options);
+}
+
+/**
+ * The endpoints and schemas compositions, rulesets and state machine actions
+ * imply, as overlays on the OpenAPI documents they belong in. Internal:
+ * `resolve` applies them after the state's overlays, and the Arazzo validator
+ * reads the operation ids they add. A caller never applies them itself, since
+ * built before the state's overlays they would describe the base contracts.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {import('../types.js').Overlay[]}
+ */
+export function generatedOverlays(docs) {
+  return buildOverlays(positionedOnly(docs));
+}
+
+/**
+ * The API document each rules file's endpoints are documented in, beside it.
+ * Internal, like generatedOverlays: `resolve` adds them.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {import('../types.js').Doc[]}
+ */
+export function rulesApis(docs) {
+  return buildRulesApis(positionedOnly(docs));
+}
+
+/**
+ * The AsyncAPI document of the events each OpenAPI document's resources and
+ * their state machines send, beside it. Internal, like generatedOverlays:
+ * `resolve` adds them.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {import('../types.js').Doc[]}
+ */
+export function eventsAsyncapis(docs) {
+  return buildEventCatalogs(positionedOnly(docs))
+    .map(({ relativePath, content }) => toDoc({ path: relativePath, relativePath, type: 'asyncapi', content }));
+}
+
+/** The documents, refusing any that don't know where they sit in the set. */
+function positionedOnly(docs) {
   const positioned = docs.filter((doc) => doc.relativePath !== null);
   assertPositioned(docs, positioned);
-
-  return builder(positioned, options);
+  return positioned;
 }
 
 /**
@@ -98,8 +146,8 @@ function buildOverlays(positioned) {
 /**
  * The API document each rules file's endpoints are documented in, as Docs
  * positioned beside it — `intake-rules-openapi.yaml` beside `intake-rules.yaml`.
- * A caller adds them to the set it resolves, so they are validated, written
- * and served like any other OpenAPI document.
+ * `resolve` adds them to the set, so they are validated, written and served
+ * like any other OpenAPI document.
  *
  * @param {import('../types.js').Doc[]} positioned
  * @returns {import('../types.js').Doc[]}
