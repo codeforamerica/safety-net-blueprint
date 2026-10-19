@@ -4,10 +4,17 @@
  * Core functions for applying OpenAPI Overlay Specification (1.0.0)
  * transformations to base schemas, including behavioral YAML files.
  *
- * Supports:
- * - Basic JSONPath: $.foo.bar.baz
+ * Supports a subset of JSONPath (RFC 9535), the syntax the specification
+ * gives `target`:
+ * - Dotted names: $.foo.bar.baz
+ * - Quoted names, for a key with a dot or brackets in it: $.outputs['risks.cashIncome']
+ * - Index selectors, negative from the end: $.machines[0], $.items[-1]
  * - Filter expressions: $.items[?(@.id == 'value')].field
  * - append: action for non-destructive array additions
+ *
+ * Any other syntax is an error naming the target. It used to be read as a
+ * literal key name, which matched nothing, so the action was skipped with a
+ * warning among many.
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -18,45 +25,64 @@ import yaml from 'js-yaml';
 // Path Parsing
 // =============================================================================
 
+const SUPPORTED = "Overlays support dotted names, ['quoted names'], [n] indexes and [?(@.field == value)] filters";
+
 /**
- * Parse a JSONPath string into tokens.
- * Handles property access (keys) and filter expressions ([?(@.field == value)]).
+ * Parse a JSONPath target into tokens.
  *
- * @param {string} path - JSONPath-like path (e.g., "$.slaTypes[?(@.id == 'x')].durationDays")
- * @returns {Array<{type: 'key', value: string} | {type: 'filter', field: string, value: *}>}
+ * @param {string} path - e.g. "$.slaTypes[?(@.id == 'x')].durationDays"
+ * @returns {Array<{type: 'key', value: string} | {type: 'index', value: number} | {type: 'filter', field: string, value: *}>}
+ * @throws {Error} Naming the target, for syntax overlays don't support
  */
 export function parsePath(path) {
-  const cleanPath = path.startsWith('$.') ? path.slice(2) : (path.startsWith('$') ? path.slice(1) : path);
+  const fail = (why) => {
+    throw new Error(`Overlay target "${path}" ${why}. ${SUPPORTED}.`);
+  };
+  // A target written without the root, as `foo.bar`, has always been accepted.
+  const text = path.startsWith('$') ? path : `$.${path}`;
   const tokens = [];
-  let i = 0;
-  let current = '';
+  let i = 1;
 
-  while (i < cleanPath.length) {
-    if (cleanPath[i] === '[') {
-      if (current) {
-        tokens.push({ type: 'key', value: current });
-        current = '';
+  while (i < text.length) {
+    if (text[i] === '.') {
+      if (text[i + 1] === '.') fail("uses '..', a descendant selector, which overlays don't support");
+      let end = i + 1;
+      while (end < text.length && text[end] !== '.' && text[end] !== '[') end++;
+      const name = text.slice(i + 1, end);
+      if (!name) fail('has an empty name');
+      if (name === '*') fail("uses '*', a wildcard, which overlays don't support");
+      tokens.push({ type: 'key', value: name });
+      i = end;
+    } else if (text[i] === '[') {
+      const quote = text[i + 1];
+      if (quote === "'" || quote === '"') {
+        let end = i + 2;
+        let name = '';
+        while (end < text.length && text[end] !== quote) {
+          if (text[end] === '\\') end++;
+          name += text[end];
+          end++;
+        }
+        if (text[end] !== quote || text[end + 1] !== ']') fail('has a quoted name that is never closed');
+        tokens.push({ type: 'key', value: name });
+        i = end + 2;
+      } else {
+        // A filter's own parentheses close it, so a ']' inside its value doesn't.
+        const close = text.startsWith('[?(', i) ? text.indexOf(')]', i) + 1 : text.indexOf(']', i);
+        if (close <= i) fail("has a '[' that is never closed");
+        const content = text.slice(i + 1, close);
+        if (/^-?\d+$/.test(content)) {
+          tokens.push({ type: 'index', value: Number(content) });
+        } else {
+          const filter = parseFilterToken(content);
+          if (!filter) fail(`uses '[${content}]', which overlays don't support`);
+          tokens.push(filter);
+        }
+        i = close + 1;
       }
-      const end = cleanPath.indexOf(']', i);
-      if (end === -1) break;
-      const content = cleanPath.slice(i + 1, end);
-      tokens.push(parseFilterToken(content));
-      i = end + 1;
-      if (i < cleanPath.length && cleanPath[i] === '.') i++;
-    } else if (cleanPath[i] === '.') {
-      if (current) {
-        tokens.push({ type: 'key', value: current });
-        current = '';
-      }
-      i++;
     } else {
-      current += cleanPath[i];
-      i++;
+      fail(`has '${text[i]}' where a '.' or '[' belongs`);
     }
-  }
-
-  if (current) {
-    tokens.push({ type: 'key', value: current });
   }
 
   return tokens;
@@ -65,7 +91,7 @@ export function parsePath(path) {
 /**
  * Parse a filter expression string like ?(@.field == 'value') or ?(@.field == 42)
  * @param {string} content - Content inside brackets, e.g. "?(@.id == 'snap_expedited')"
- * @returns {{type: 'filter', field: string, value: *}}
+ * @returns {{type: 'filter', field: string, value: *} | null} Null for anything else
  */
 function parseFilterToken(content) {
   // Match ?(@.field == 'value'), ?(@.field == "value"), or ?(@.field == value)
@@ -84,8 +110,45 @@ function parseFilterToken(content) {
     return { type: 'filter', field: unquoted[1], value };
   }
 
-  // Unrecognized bracket notation — treat as opaque key
-  return { type: 'key', value: `[${content}]` };
+  return null;
+}
+
+/**
+ * Write tokens back out as a target: a name as `.name` when it can be, and
+ * quoted otherwise.
+ *
+ * @param {Array} tokens - Result of parsePath()
+ * @returns {string}
+ */
+export function formatPath(tokens) {
+  return '$' + tokens.map((token) => {
+    if (token.type === 'index') return `[${token.value}]`;
+    if (token.type === 'filter') {
+      const value = typeof token.value === 'string' ? `'${token.value}'` : String(token.value);
+      return `[?(@.${token.field} == ${value})]`;
+    }
+    return /^[^.[\]'"\s]+$/.test(token.value) ? `.${token.value}` : `['${token.value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}']`;
+  }).join('');
+}
+
+/**
+ * The child a filter or index selects in a list, or undefined. A key is read
+ * by each caller, since some create what's missing.
+ *
+ * @param {*} current
+ * @param {{type: 'index', value: number} | {type: 'filter', field: string, value: *}} token
+ * @returns {*}
+ */
+function selectItem(current, token) {
+  if (!Array.isArray(current)) return undefined;
+  if (token.type === 'index') return current[token.value < 0 ? current.length + token.value : token.value];
+  return current.find((item) => item && item[token.field] === token.value);
+}
+
+/** The position an index selects, or -1 when it is outside the list. */
+function indexIn(array, index) {
+  const at = index < 0 ? array.length + index : index;
+  return at >= 0 && at < array.length ? at : -1;
 }
 
 /**
@@ -99,15 +162,7 @@ function navigatePath(obj, tokens) {
   let current = obj;
   for (const token of tokens) {
     if (current === undefined || current === null) return undefined;
-
-    if (token.type === 'key') {
-      current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return undefined;
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return undefined;
-      current = match;
-    }
+    current = token.type === 'key' ? current[token.value] : selectItem(current, token);
   }
   return current;
 }
@@ -153,11 +208,10 @@ export function setAtPath(obj, path, value) {
         current[token.value] = {};
       }
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return;
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return;
-      current = match;
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) return;
+      current = item;
     }
   }
 
@@ -170,6 +224,12 @@ export function setAtPath(obj, path, value) {
     } else {
       current[key] = value;
     }
+  } else if (lastToken.type === 'index') {
+    const at = Array.isArray(current) ? indexIn(current, lastToken.value) : -1;
+    if (at === -1) return;
+    const existing = current[at];
+    const merge = typeof value === 'object' && value !== null && !Array.isArray(value) && typeof existing === 'object' && existing !== null && !Array.isArray(existing);
+    current[at] = merge ? { ...existing, ...value } : value;
   } else if (lastToken.type === 'filter') {
     // Filter as last token: merge value into all matching array items
     if (!Array.isArray(current)) return;
@@ -204,16 +264,18 @@ export function removeAtPath(obj, path) {
     if (token.type === 'key') {
       if (current[token.value] === undefined) return;
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return;
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return;
-      current = match;
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) return;
+      current = item;
     }
   }
 
   if (lastToken.type === 'key') {
     delete current[lastToken.value];
+  } else if (lastToken.type === 'index') {
+    const at = Array.isArray(current) ? indexIn(current, lastToken.value) : -1;
+    if (at !== -1) current.splice(at, 1);
   } else if (lastToken.type === 'filter') {
     // Remove all matching items from the parent array
     if (!Array.isArray(current)) return;
@@ -245,11 +307,10 @@ export function renameAtPath(obj, path, newName) {
     if (token.type === 'key') {
       if (current[token.value] === undefined) return false;
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return false;
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return false;
-      current = match;
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) return false;
+      current = item;
     }
   }
 
@@ -281,29 +342,25 @@ export function checkPathExists(obj, path) {
     return { rootExists: false, fullPathExists: false, missingAt: null };
   }
 
-  // Check full path
+  // Check full path. Where it stops is reported as written, without the
+  // leading '$.' a caller adds.
+  const at = (i) => formatPath(tokens.slice(0, i + 1)).replace(/^\$\.?/, '');
   let current = obj;
-  let pathStr = '';
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
 
     if (token.type === 'key') {
       if (current === undefined || current === null || !Object.prototype.hasOwnProperty.call(current, token.value)) {
-        pathStr += (pathStr ? '.' : '') + token.value;
-        return { rootExists: true, fullPathExists: false, missingAt: pathStr };
+        return { rootExists: true, fullPathExists: false, missingAt: at(i) };
       }
-      pathStr += (pathStr ? '.' : '') + token.value;
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) {
-        return { rootExists: true, fullPathExists: false, missingAt: pathStr + `[?(@.${token.field} == '${token.value}')]` };
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) {
+        return { rootExists: true, fullPathExists: false, missingAt: at(i) };
       }
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) {
-        return { rootExists: true, fullPathExists: false, missingAt: pathStr + `[?(@.${token.field} == '${token.value}')]` };
-      }
-      current = match;
+      current = item;
     }
   }
 
@@ -344,16 +401,18 @@ export function replaceAtPath(obj, path, value) {
         current[token.value] = {};
       }
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return;
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return;
-      current = match;
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) return;
+      current = item;
     }
   }
 
   if (lastToken.type === 'key') {
     current[lastToken.value] = value;
+  } else if (lastToken.type === 'index') {
+    const at = Array.isArray(current) ? indexIn(current, lastToken.value) : -1;
+    if (at !== -1) current[at] = value;
   }
 }
 
@@ -393,7 +452,7 @@ export function addAtPath(obj, path, value) {
 
   const lastToken = tokens[tokens.length - 1];
   if (lastToken.type !== 'key') {
-    return { added: false, reason: 'last path segment must be a key, not a filter expression' };
+    return { added: false, reason: 'last path segment must be a key, not a filter expression or index' };
   }
 
   const navTokens = tokens.slice(0, -1);
@@ -404,11 +463,10 @@ export function addAtPath(obj, path, value) {
         return { added: false, reason: `parent path does not exist at '${token.value}'` };
       }
       current = current[token.value];
-    } else if (token.type === 'filter') {
-      if (!Array.isArray(current)) return { added: false, reason: 'filter applied to non-array in parent path' };
-      const match = current.find(item => item && item[token.field] === token.value);
-      if (!match) return { added: false, reason: 'no item matched filter in parent path' };
-      current = match;
+    } else {
+      const item = selectItem(current, token);
+      if (item === undefined) return { added: false, reason: `nothing in the parent path matched ${formatPath([token])}` };
+      current = item;
     }
   }
 
