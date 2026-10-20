@@ -26,15 +26,28 @@ const ZOOM_BUTTON = 'font:inherit;font-size:12px;min-width:28px;height:26px;padd
 // ── Data adapter ──────────────────────────────────────────────────────────────
 // Converts a *-graph.yaml document into nodes and what each one reads: inputs
 // grouped by their top-level binding ("$.household.members[]" → "household"),
-// then every fact.
+// the ruleset's constants as one node, then every fact.
+//
+// A graph records no dependency on a constant — constants are bound values,
+// not inputs or facts — so a fact reads the constants node when its
+// expression names `constants.`.
+
+/** The node a ruleset's constants share; no input or fact can take the name. */
+export const CONSTANTS_NODE = 'constants';
 
 function buildGraphData(graph) {
   const outputSet = new Set(graph.outputs);
-  const inputNodes = [...new Set(Object.keys(graph.inputs).map(path => path.slice(2).split('.')[0]))];
+  const hasConstants = Object.keys(graph.constants ?? {}).length > 0;
+  const inputNodes = [
+    ...new Set(Object.keys(graph.inputs).map(path => path.slice(2).split('.')[0])),
+    ...(hasConstants ? [CONSTANTS_NODE] : []),
+  ];
   const reads = {};
-  for (const [factName, deps] of Object.entries(graph.dependencies)) {
+  for (const [factName, fact] of Object.entries(graph.facts)) {
+    const deps = graph.dependencies[factName] ?? [];
     const from = [...new Set(deps.map(dep => dep.startsWith('$.') ? dep.slice(2).split('.')[0] : dep))]
       .filter(dep => dep !== factName);
+    if (hasConstants && /(^|[^A-Za-z0-9_.])constants\./.test(fact?.expression ?? '')) from.push(CONSTANTS_NODE);
     if (from.length) reads[factName] = from;
   }
   return {
@@ -145,6 +158,7 @@ function buildGraphSvg(graph, markerId) {
   if (!nodes?.length) return '';
 
   const nodeStyle = n => {
+    if (n === CONSTANTS_NODE && graph.constants) return PALETTE.purple;
     if (inputSet.has(n))  return PALETTE.teal;
     if (outputSet.has(n)) return PALETTE.navy;
     return PALETTE.amber;
@@ -247,7 +261,7 @@ function renderBottomPanel(graph, examples) {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Inputs</div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <button id="evaluate-btn" onclick="runEval()" style="display:none;padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
+        <button id="evaluate-btn" onclick="runEval()" style="display:${hasExamples ? 'none' : 'inline-block'};padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
         ${tryItBtn}
       </div>
     </div>
@@ -283,9 +297,10 @@ function shell(title, body, hubHref) {
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
-function legendHtml() {
+function legendHtml(hasConstants) {
   const items = [
     { style: PALETTE.teal,  label: 'Input' },
+    ...(hasConstants ? [{ style: PALETTE.purple, label: 'Constants' }] : []),
     { style: PALETTE.amber, label: 'Intermediate fact' },
     { style: PALETTE.navy,  label: 'Output' },
   ];
@@ -302,7 +317,7 @@ function legendHtml() {
 // ── Per-ruleset page ──────────────────────────────────────────────────────────
 
 export function generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, opts) {
-  const { hubHref, endpointInfo, registryTypes = new Set() } = opts;
+  const { hubHref, endpointInfo, registryTypes = new Set(), constantAnnotations = {} } = opts;
   const rulesetName = graph.ruleset;
   const domainBadge = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">${esc(graph.domain)}</span>`;
 
@@ -332,16 +347,18 @@ export function generateRulesetHtml(graph, annotations, registries, examples, ru
   const examplesJson = JSON.stringify(examples);
   const rulesetInputsJson = JSON.stringify(rulesetInputs);
   const registryFieldsJson = JSON.stringify([...registryTypes]);
+  const constantAnnotJson = JSON.stringify(constantAnnotations);
+  const constantCount = Object.keys(graph.constants ?? {}).length;
 
   const body = `
 <div style="margin-bottom:1.5rem">
   <div style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;">
     <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline;margin:0;">${esc(rulesetName)}</h1>${domainBadge}${apiLinkHtml}
   </div>
-  <div style="font-size:12px;color:#6b7280;margin-top:4px;">${esc(graph.facts ? Object.keys(graph.facts).length : 0)} facts &middot; ${esc(graph.outputs?.length ?? 0)} outputs &middot; ${esc(Object.keys(graph.inputs ?? {}).length)} inputs</div>
+  <div style="font-size:12px;color:#6b7280;margin-top:4px;">${esc(graph.facts ? Object.keys(graph.facts).length : 0)} facts &middot; ${esc(graph.outputs?.length ?? 0)} outputs &middot; ${esc(Object.keys(graph.inputs ?? {}).length)} inputs${constantCount ? ` &middot; ${esc(constantCount)} constants` : ''}</div>
 </div>
 
-${legendHtml()}
+${legendHtml(constantCount > 0)}
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:#374151;">
   <label for="graph-output">Show</label>
   <select id="graph-output" style="font:12px ui-monospace,monospace;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;max-width:100%;">
@@ -367,6 +384,8 @@ const GRAPH_LAYOUT = ${graphLayoutJson};
 ${graphLayout.toString()}
 ${graphEdgePath.toString()}
 const ANNOTATIONS = ${annotJson};
+const CONSTANT_ANNOTATIONS = ${constantAnnotJson};
+const CONSTANTS_NODE = ${JSON.stringify(CONSTANTS_NODE)};
 const REGISTRIES = ${registriesJson};
 const EXAMPLES = ${examplesJson};
 const RULESET_INPUTS = ${rulesetInputsJson};
@@ -406,6 +425,7 @@ function enterExperimentMode() {
   if (nav)         nav.style.display         = 'none';
   if (btn)         btn.textContent            = 'Reset';
   if (evaluateBtn) evaluateBtn.style.display  = '';
+  refreshConstantsDetail();
 }
 
 function resetToExample() {
@@ -423,7 +443,10 @@ function resetToExample() {
   if (nav)         nav.style.display        = '';
   if (btn)         btn.textContent          = 'Try it';
   if (evaluateBtn) evaluateBtn.style.display = 'none';
+  // The contract's constants come back with the example.
+  for (const name of Object.keys(CONSTANT_OVERRIDES)) delete CONSTANT_OVERRIDES[name];
   runEval();
+  refreshConstantsDetail();
 }
 
 // ── Click-to-highlight (ported from spike's visualize-graph-html.js) ──────────
@@ -556,6 +579,72 @@ function renderAnnotFields(annot) {
   return html;
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+// The values the ruleset fixes, each editable here to try what a state's
+// overlay would change. A caller can't send them. They behave as the inputs
+// do: editable in Try-it mode, applied by Evaluate, and restored with the
+// example by Reset.
+const CONSTANT_OVERRIDES = {};
+
+/** The graph with any edited constants in place of the contract's values. */
+function graphWithOverrides() {
+  if (!Object.keys(CONSTANT_OVERRIDES).length) return GRAPH;
+  const constants = {};
+  for (const [name, c] of Object.entries(GRAPH.constants ?? {})) {
+    constants[name] = name in CONSTANT_OVERRIDES ? Object.assign({}, c, { value: CONSTANT_OVERRIDES[name] }) : c;
+  }
+  return Object.assign({}, GRAPH, { constants: constants });
+}
+
+function constantField(name, c) {
+  const value = name in CONSTANT_OVERRIDES ? CONSTANT_OVERRIDES[name] : c.value;
+  const id = 'constant-' + name;
+  const edited = name in CONSTANT_OVERRIDES
+    ? ' <span style="font-size:9px;font-weight:600;color:#5650BE;background:#E6EBF9;padding:1px 4px;border-radius:2px;">edited, was ' + escHtml(JSON.stringify(c.value)) + '</span>'
+    : '';
+  const locked = isExperimentMode ? '' : ' disabled';
+  const control = typeof c.value === 'boolean'
+    ? '<input type="checkbox" id="' + escHtml(id) + '" data-constant="' + escHtml(name) + '"' + (value ? ' checked' : '') + locked + '>'
+    : '<input type="' + (typeof c.value === 'number' ? 'number' : 'text') + '" id="' + escHtml(id) + '" data-constant="' + escHtml(name) + '"' + locked +
+      (c.type === 'integer' ? ' step="1"' : typeof c.value === 'number' ? ' step="any"' : '') +
+      ' value="' + escHtml(String(value)) + '" style="font:12px ui-monospace,monospace;width:110px;padding:2px 4px;border:1px solid #d1d5db;border-radius:3px;">';
+  return '<div style="padding:8px 0;border-top:1px solid #f3f4f6;">' +
+    '<label for="' + escHtml(id) + '" style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,monospace;color:#111827;">' +
+      '<b>' + escHtml(name) + '</b>' + control + (c.type ? '<span style="color:#9ca3af;">(' + escHtml(c.type) + ')</span>' : '') + edited +
+    '</label>' +
+    (c.description ? '<div style="font-size:11px;color:#374151;margin:4px 0;">' + escHtml(c.description.trim()) + '</div>' : '') +
+    (CONSTANT_ANNOTATIONS[name] ? '<div style="margin-top:6px;">' + renderAnnotFields(CONSTANT_ANNOTATIONS[name]) + '</div>' : '') +
+  '</div>';
+}
+
+function constantsDetail() {
+  let html = "<div style='font-size:11px;color:#374151;margin-bottom:8px;'>The values this ruleset fixes, which a state changes by overlay. " +
+    "A caller can't send them; edit one here to see what a different choice would do to the inputs below. " +
+    (isExperimentMode ? 'Click Evaluate to apply your edits.' : 'Click Try it to edit them.') + '</div>';
+  return html + Object.entries(GRAPH.constants ?? {}).map(([name, c]) => constantField(name, c)).join('');
+}
+
+/** Show the constants again if they're open, so their fields follow the panel's mode and edits. */
+function refreshConstantsDetail() {
+  if (activeNode === CONSTANTS_NODE) showDetail(CONSTANTS_NODE);
+}
+
+document.addEventListener('change', function (event) {
+  const name = event.target?.dataset?.constant;
+  if (!name || !GRAPH.constants?.[name]) return;
+  const original = GRAPH.constants[name];
+  let value;
+  if (event.target.type === 'checkbox') value = event.target.checked;
+  else if (typeof original.value === 'number') {
+    value = original.type === 'integer' ? parseInt(event.target.value, 10) : parseFloat(event.target.value);
+    if (Number.isNaN(value)) return;
+  } else value = event.target.value;
+  if (value === original.value) delete CONSTANT_OVERRIDES[name];
+  else CONSTANT_OVERRIDES[name] = value;
+  refreshConstantsDetail();
+});
+
+
 // ── Detail strip ──────────────────────────────────────────────────────────────
 // Full-width strip between graph and columns. Shows on node click, hides on
 // close button or clicking empty graph area.
@@ -569,6 +658,13 @@ function showDetail(nodeName) {
   const outputSet = new Set(GRAPH.outputs);
   const fact = GRAPH.facts[nodeName];
   const annot = ANNOTATIONS[nodeName];
+  if (nodeName === CONSTANTS_NODE && !fact && GRAPH.constants) {
+    panel.innerHTML = '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;font-family:ui-monospace,monospace">constants</div>' +
+      '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#5650BE;margin-bottom:10px;">Constants</div>' +
+      constantsDetail();
+    strip.style.display = '';
+    return;
+  }
   const isInput = !fact;
   const isOutput = outputSet.has(nodeName);
   const isIntermediate = !isInput && !isOutput;
@@ -721,7 +817,7 @@ function runEval() {
   }
   try {
     const { scope, defaultedNamespaces } = applyDefaults(userInputs);
-    const nodes = window.RulesEngine.evaluate(GRAPH, scope);
+    const nodes = window.RulesEngine.evaluate(graphWithOverrides(), scope);
     const prevNodes = lastNodes;
     lastNodes = reclassifyPlaceholders(nodes, defaultedNamespaces);
     errEl.style.display = 'none';

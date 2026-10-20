@@ -103,6 +103,7 @@ for (const ef of examplesFiles) {
 // ── Load annotations by domain, indexed by fact path ──────────────────────────
 
 const annotationsByDomain = {};
+const constantAnnotationsByDomain = {};
 const annotationFiles = readdirSync(resolvedDir, { recursive: true })
   .filter(f => typeof f === 'string' && f.endsWith('-annotations.yaml'))
   .map(f => join(resolvedDir, f));
@@ -113,6 +114,10 @@ for (const af of annotationFiles) {
   if (!annotationsByDomain[domain]) annotationsByDomain[domain] = {};
   for (const [key, value] of Object.entries(doc.facts ?? {})) {
     annotationsByDomain[domain][key] = value;
+  }
+  if (!constantAnnotationsByDomain[domain]) constantAnnotationsByDomain[domain] = {};
+  for (const [key, value] of Object.entries(doc.constants ?? {})) {
+    constantAnnotationsByDomain[domain][key] = value;
   }
 }
 
@@ -149,20 +154,18 @@ for (const graphFile of graphFiles) {
   const { domain, ruleset: rulesetName } = graph;
 
   // Pull annotations for this specific ruleset: strip "{rulesetName}." prefix
-  const domainAnnot = annotationsByDomain[domain] ?? {};
-  const annotations = {};
-  for (const [key, value] of Object.entries(domainAnnot)) {
-    if (key.startsWith(`${rulesetName}.`)) {
-      annotations[key.slice(rulesetName.length + 1)] = value;
-    }
-  }
+  const forRuleset = (byKey = {}) => Object.fromEntries(Object.entries(byKey)
+    .filter(([key]) => key.startsWith(`${rulesetName}.`))
+    .map(([key, value]) => [key.slice(rulesetName.length + 1), value]));
+  const annotations = forRuleset(annotationsByDomain[domain]);
+  const constantAnnotations = forRuleset(constantAnnotationsByDomain[domain]);
 
   const examples = examplesByDomainRuleset[domain]?.[rulesetName] ?? [];
   const rulesetInputs = rulesetInputsByDomainRuleset[domain]?.[rulesetName] ?? {};
   const slug = `${domain}-${rulesetName}`;
   const endpoint = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
   const endpointInfo = endpoint && { ...endpoint, page: apiPageFor(domain, endpoint) };
-  const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes });
+  const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes, constantAnnotations });
   writeFileSync(join(outputDir, `${slug}.html`), html);
   allRulesets.push({ domain, rulesetName, slug });
   console.log(`  ✓ ${domain}/${rulesetName}`);
