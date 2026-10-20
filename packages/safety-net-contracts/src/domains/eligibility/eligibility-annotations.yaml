@@ -102,7 +102,7 @@ facts:
     policies: [medicaid-community-engagement-verification]
     programs: [medicaid]
 
-  medicaidWorkRequirements.status:
+  medicaidWorkRequirements.satisfiesRequirement:
     policies: [medicaid-community-engagement-applicability, medicaid-community-engagement-exclusions, medicaid-community-engagement-review-period]
     programs: [medicaid]
 
@@ -218,7 +218,7 @@ facts:
   snapWorkRequirements.meetsRequirement:
     policies: [snap-abawd-work-requirement]
     programs: [snap]
-  snapWorkRequirements.status:
+  snapWorkRequirements.satisfiesRequirement:
     policies: [snap-general-work-requirement, snap-abawd-work-requirement]
     programs: [snap]
 

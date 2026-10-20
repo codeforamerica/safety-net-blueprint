@@ -227,9 +227,9 @@ rulesets:
       monthsRequired: {}
       qualifyingMonthCount: {}
       meetsRequirement: {}
+      satisfiesRequirement: {}
       couldAskForHardship: {}
       statementAccepted: {}
-      status: {}
       coverageResult: {}
       nextStep: {}
       reviewMonths[].qualifies: {}
@@ -390,11 +390,11 @@ rulesets:
         expression: isExempt || meetsRequirement
       - path: isCovered
         expression: '!requirementApplies || exemptionShown || reviewPeriodShown'
-      - path: status
-        expression: >-
-          !requirementApplies ? 'requirement_does_not_apply' :
-          isExempt ? 'exempt' :
-          meetsRequirement ? 'meets_requirement' : 'does_not_meet_requirement'
+      # Whether the person is all right under the requirement: it doesn't
+      # apply, they're exempt, or enough months counted. Whether that's shown
+      # is isCovered's question.
+      - path: satisfiesRequirement
+        expression: '!requirementApplies || isExempt || meetsRequirement'
       - path: coverageResult
         expression: >-
           isCovered ? (isApplication ? 'gets_coverage' : 'keeps_coverage') :
@@ -417,7 +417,7 @@ rulesets:
   # contracts/work-rules/), whose intake-work-rules-source-annotations.yaml maps
   # each name here to the tool's code. The facts keep that port's logic and
   # names; the outputs share Medicaid's vocabulary — requirementApplies,
-  # exemptions, isExempt, meetsRequirement, status — with age deciding whether
+  # exemptions, isExempt, meetsRequirement, satisfiesRequirement — with age deciding whether
   # the requirement applies, as the tool's own result does first.
   #
   # Nothing a person answers has a default. A state adds its own exemptions by
@@ -522,7 +522,7 @@ rulesets:
       exemptions: {}
       isExempt: {}
       meetsRequirement: {}
-      status: {}
+      satisfiesRequirement: {}
       hasExemption: {}
       hasEarningsExemption: {}
       anyPreventingWork: {}
@@ -725,9 +725,8 @@ rulesets:
           (isStudentExemption ? ['is_student'] : []) +
           stateExemptionReasons +
           (hasEarningsExemption ? ['earnings_exemption'] : [])
-      - path: status
-        type: string
-        expression: >-
-          !requirementApplies ? 'requirement_does_not_apply' :
-          isExempt ? 'exempt' :
-          meetsRequirement ? 'meets_requirement' : 'does_not_meet_requirement'
+      # Whether the person is all right under the work rules: they don't
+      # apply, the person is exempt, or the hours are met.
+      - path: satisfiesRequirement
+        type: boolean
+        expression: '!requirementApplies || isExempt || meetsRequirement'

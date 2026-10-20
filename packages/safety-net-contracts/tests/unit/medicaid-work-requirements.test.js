@@ -68,17 +68,18 @@ describe('Medicaid work requirements, partly answered', () => {
   test('an unanswered question leaves a result missing, naming it', () => {
     const inputs = inputsOf({ given: { determination: { kind: 'renewal', year: 2027 }, person: { age: 40 } } });
     delete inputs.person.hasMedicare;
-    const status = evaluate(graph, inputs).status;
-    assert.equal(status.state, 'missing');
-    assert.ok(status.missing.includes('$.person.hasMedicare'), JSON.stringify(status.missing));
+    const satisfies = evaluate(graph, inputs).satisfiesRequirement;
+    assert.equal(satisfies.state, 'missing');
+    assert.ok(satisfies.missing.includes('$.person.hasMedicare'), JSON.stringify(satisfies.missing));
   });
 
   test('a question the answer doesn\'t need isn\'t asked: someone with Medicare is never asked about work', () => {
-    const status = evaluate(graph, {
+    const nodes = evaluate(graph, {
       determination: { kind: 'renewal', year: 2027, startedBeforeRequirement: false },
       person: { age: 40, inAdultExpansionGroup: true, hasMedicare: true },
-    }).status;
-    assert.deepEqual([status.state, status.value], ['complete', 'requirement_does_not_apply']);
+    });
+    assert.deepEqual([nodes.requirementApplies.state, nodes.requirementApplies.value], ['complete', false]);
+    assert.deepEqual([nodes.satisfiesRequirement.state, nodes.satisfiesRequirement.value], ['complete', true]);
   });
 
   test('a month missing an answer is named at its position', () => {

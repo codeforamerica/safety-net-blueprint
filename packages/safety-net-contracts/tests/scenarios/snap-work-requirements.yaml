@@ -9,7 +9,7 @@
 #   note    where an expectation differs from the port's, and why
 #
 # Renamed to the vocabulary Medicaid's work requirements share: exemptionReasons
-# is exemptions, outcome is status, compliesWithWorkRules is meetsRequirement.
+# is exemptions, outcome is satisfiesRequirement and the booleans it rests on, compliesWithWorkRules is meetsRequirement.
 #
 # The rules give nothing a default, so an unanswered question leaves a result
 # missing. A case is about the answers it gives; every other question takes the
@@ -399,33 +399,43 @@ cases:
     person:
       isPregnant: true
     expect:
-      status: null
+      requirementApplies: null
+      satisfiesRequirement: null
   - name: 'outcome: age exempt'
     person:
       age: 16
       isPregnant: true
     expect:
-      status: requirement_does_not_apply
+      requirementApplies: false
+      satisfiesRequirement: true
   - name: 'outcome: exempt'
     person:
       age: 30
       isPregnant: true
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
   - name: 'outcome: rules met'
     person:
       age: 30
       isWorking: true
       workingHours: 20
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
   - name: 'outcome: rules not met'
     person:
       age: 30
       isWorking: true
       workingHours: 19
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
   - name: proof of American Indian status
     state: DE
     person:

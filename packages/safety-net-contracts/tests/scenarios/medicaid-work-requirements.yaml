@@ -87,8 +87,11 @@ scenarios:
       - monthsBefore: 2
         wasExempt: true
     expect:
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       lostExemptStatus: true
-      status: meets_requirement
       coverageResult: keeps_coverage
   - id: david-other-exclusion
     story: >-
@@ -107,7 +110,9 @@ scenarios:
         response: responded
         proofSent: statement
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
       exemptions:
         - caregiver_of_person_with_disability
       coverageResult: keeps_coverage
@@ -129,7 +134,10 @@ scenarios:
       - monthsBefore: 3
         wasExempt: true
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       qualifyingMonthCount: 1
       coverageResult: keeps_coverage
   - id: david-renewal-80-hours
@@ -153,7 +161,10 @@ scenarios:
         hoursWorked: 82
         householdIncome: 300
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       coverageResult: keeps_coverage
     expectMonths:
       - qualifies: false
@@ -174,7 +185,10 @@ scenarios:
       - monthsBefore: 2
         householdIncome: 600
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       coverageResult: keeps_coverage
   - id: david-no-response
     story: No exclusion, no qualifying month, and no response within 30 days.
@@ -194,7 +208,10 @@ scenarios:
         hoursWorked: 20
         householdIncome: 300
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       coverageResult: loses_coverage
   - id: sam-one-month-state
     story: Worked 90 hours last month. A one-month state reviews December 2026 only.
@@ -217,8 +234,11 @@ scenarios:
         hoursWorked: 30
         householdIncome: 360
     expect:
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       monthsRequired: 1
-      status: meets_requirement
       coverageResult: gets_coverage
   - id: sam-one-month-state-wrong-month
     story: If his strong month had been October, a one-month state wouldn't count it.
@@ -241,8 +261,11 @@ scenarios:
         hoursWorked: 90
         householdIncome: 1080
     expect:
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       qualifyingMonthCount: 0
-      status: does_not_meet_requirement
   - id: sam-three-month-state
     story: Idaho reviews October–December 2026 and all three must count. Only one does; he gets a notice.
     state: ID
@@ -263,9 +286,12 @@ scenarios:
         hoursWorked: 30
         householdIncome: 360
     expect:
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       monthsRequired: 3
       qualifyingMonthCount: 1
-      status: does_not_meet_requirement
       coverageResult: notice_respond_within_30_days
   - id: sam-three-month-state-no-response
     story: The same, with no response within 30 days.
@@ -289,7 +315,10 @@ scenarios:
         hoursWorked: 30
         householdIncome: 360
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       coverageResult: application_denied
   - id: sam-three-month-state-later
     story: He applies again after three straight months of 80 or more hours.
@@ -337,7 +366,10 @@ scenarios:
         hadMedicalTravel: true
         askedForHardship: true
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       coverageResult: keeps_coverage
     expectMonths:
       - qualifies: false
@@ -443,7 +475,10 @@ scenarios:
         householdIncome: 400
         hadMedicalTravel: true
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       coverageResult: loses_coverage
   - id: maya-2027-statement
     story: Full-time grad student earning $400; no enrollment data. In 2027 her statement is enough.
@@ -462,7 +497,10 @@ scenarios:
         householdIncome: 400
         hoursWorked: 26
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       coverageResult: gets_coverage
     expectMonths:
       - qualifiesBy: half_time_education
@@ -502,7 +540,10 @@ scenarios:
         hoursWorked: 26
         householdIncome: 400
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       coverageResult: loses_coverage
     expectMonths:
       - qualifies: false
@@ -543,7 +584,9 @@ scenarios:
       verification:
         stateDataConfirms: true
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
       exemptions:
         - snap_work_rules
       coverageResult: keeps_coverage
@@ -651,7 +694,9 @@ scenarios:
         response: responded
         proofSent: documents
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
       coverageResult: keeps_coverage
   - id: frailty-stable-recovery
     story: A substance use disorder in recovery for 6 years is "stable recovery" and doesn't count.
@@ -711,7 +756,8 @@ scenarios:
       person:
         age: 65
     expect:
-      status: requirement_does_not_apply
+      requirementApplies: false
+      satisfiesRequirement: true
       coverageResult: keeps_coverage
   - id: other-renewal-started-before
     story: A renewal due January 2027 but started in 2026 isn't subject to it (SHVS
@@ -799,7 +845,10 @@ scenarios:
         hadMedicalTravel: true
         askedForHardship: true
     expect:
-      status: does_not_meet_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       couldAskForHardship: false
       nextStep: show_another_way_to_qualify
   - id: frailty-north-carolina
@@ -817,7 +866,9 @@ scenarios:
         hasSeriousOrComplexCondition: true
         conditionSignificantlyImpairsAbilityToMeetRequirement: true
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
       statementAccepted: false
       coverageResult: notice_respond_within_30_days
       nextStep: send_health_records
@@ -839,7 +890,9 @@ scenarios:
         response: responded
         proofSent: statement
     expect:
-      status: exempt
+      requirementApplies: true
+      isExempt: true
+      satisfiesRequirement: true
       statementAccepted: false
       coverageResult: application_denied
   - id: maya-utah
@@ -859,7 +912,10 @@ scenarios:
         householdIncome: 400
         hoursWorked: 26
     expect:
-      status: meets_requirement
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: true
+      satisfiesRequirement: true
       statementAccepted: false
       nextStep: send_documents
   - id: north-carolina-renewal-two-months
@@ -883,9 +939,12 @@ scenarios:
       - monthsBefore: 3
         householdIncome: 600
     expect:
+      requirementApplies: true
+      isExempt: false
+      meetsRequirement: false
+      satisfiesRequirement: false
       monthsRequired: 3
       qualifyingMonthCount: 2
-      status: does_not_meet_requirement
   - id: north-carolina-renewal-three-months
     story: Three qualifying months out of six, not in a row, meet North Carolina's renewal rule.
     state: NC
