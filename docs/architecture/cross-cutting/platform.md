@@ -152,7 +152,7 @@ of its own, in whichever domain the entries belong to.
 - **Identity and access** — see [Identity & Access](identity-access.md).
 - **Timers** — see [Scheduling Service](scheduling-service.md).
 - **Capabilities such as communication** — framework domains of their own; see
-  [Transcripts](transcripts.md).
+  [Communication](../domains/communication.md).
 
 ## Capability coverage
 
@@ -166,4 +166,4 @@ of its own, in whichever domain the entries belong to.
 - [CloudEvents 1.0](https://cloudevents.io/)
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 - [Inter-Domain Communication](../inter-domain-communication.md)
-- [Transcripts](transcripts.md)
+- [Communication](../domains/communication.md)

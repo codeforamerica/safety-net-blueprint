@@ -34,7 +34,7 @@ One document per domain — entity model, lifecycle, events, and key design deci
 | [Document Management](domains/document-management.md) | Document upload, classification, verification status, and retention |
 | [Data Exchange](domains/data-exchange.md) | External data requests: income verification, citizenship, state data matches |
 | [Scheduling](domains/scheduling.md) | Appointment scheduling across channels |
-| [Communication](domains/communication.md) | Notices, correspondence, and multi-channel delivery |
+| [Communication](domains/communication.md) | Notices, correspondence, multi-channel delivery, and transcripts of conversations |
 
 ## Cross-cutting docs
 
@@ -48,7 +48,6 @@ Resources and services every domain uses.
 |----------|---------------|
 | [Platform](cross-cutting/platform.md) | The infrastructure every contract set gets: one event log across domains, and the registries the contracts declare |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
-| [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
 | [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
 
 ### Patterns and concerns

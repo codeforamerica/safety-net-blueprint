@@ -135,7 +135,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 
 #### Communication (Cross-Cutting)
 
-Official notices and correspondence that can originate from any domain. **[Details →](cross-cutting/communication.md)**
+Official notices and correspondence that can originate from any domain. **[Details →](communication.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -324,7 +324,7 @@ Domain-specific design has been moved to separate files:
 | Case Management | [domains/case-management.md](domains/case-management.md) |
 | Data Exchange | [domains/data-exchange.md](domains/data-exchange.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
-| Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
+| Communication | [communication.md](communication.md) |
 | Search | [cross-cutting/search.md](cross-cutting/search.md) |
 
 *Note: Client Management, Intake, Eligibility, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*

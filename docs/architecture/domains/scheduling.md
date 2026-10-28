@@ -85,5 +85,5 @@ The scheduling domain is primarily **data-shaped** — most interactions are CRU
 | [Domain Design](domain-design.md) | Scheduling section in the domain overview |
 | [Case Management](case-management.md) | Staff assignments — closely related domain |
 | [Workflow](workflow.md) | Task lifecycle — appointments may trigger tasks |
-| [Communication](../cross-cutting/communication.md) | Reminders and notifications belong here |
+| [Communication](communication.md) | Reminders and notifications belong here |
 | [Contract-Driven Architecture](../contract-driven-architecture.md) | Contract artifacts and the adapter pattern |

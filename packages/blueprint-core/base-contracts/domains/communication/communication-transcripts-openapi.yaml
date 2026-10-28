@@ -12,7 +12,7 @@
 # the domain's config and can be changed through the API; their update events
 # record what a profile said when any transcript started under it.
 #
-# See docs/architecture/cross-cutting/transcripts.md for the design, including
+# See docs/architecture/domains/communication.md for the design, including
 # the rules a client is held to.
 openapi: 3.1.0
 info:

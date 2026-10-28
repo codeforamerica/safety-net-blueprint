@@ -1,6 +1,6 @@
 # The lifecycle of a transcript. A transcript starts in `recording` when it is
 # created; pausing takes the conversation off the record, resuming puts it back,
-# and closing ends it. See docs/architecture/cross-cutting/transcripts.md.
+# and closing ends it. See docs/architecture/domains/communication.md.
 #
 # Every time here is the client's — the transcript's startedAt, and the `at`
 # pause, resume and close are sent with — the same clock the times on its
