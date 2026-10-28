@@ -1,0 +1,142 @@
+# The scenarios the page offers, grouped by the decision each shows. A group
+# names the decision it's about (a fact with a section in results.yaml), a line
+# saying what it turns on, and its scenarios: each a scenario's id in
+# packages/safety-net-contracts/tests/scenarios/ (a SNAP case's name) and the
+# short name the page lists it by. The page opens on the first.
+#
+# The scenarios' answers, states and stories come from the test fixtures, so
+# the page shows what the tests check. A scenario can sit in more than one
+# group.
+
+programs:
+  medicaid:
+    - title: Does it apply?
+      decision: requirementApplies
+      help: Age, Medicare, coverage through expansion, and when the application or renewal started.
+      scenarios:
+        - { id: "other-age-65", name: "Age 65" }
+        - { id: "baseline-2026-renewal", name: "Renewal in December 2026" }
+        - { id: "other-renewal-started-before", name: "Renewal started in 2026" }
+        - { id: "other-application-submitted-before", name: "Applied in 2026, decided in 2027" }
+        - { id: "iowa-before-start", name: "Iowa renewal before its start" }
+        - { id: "iowa-early-start", name: "Iowa renewal after its early start" }
+
+    - title: Exempt?
+      decision: isExempt
+      help: Caregiving, pregnancy, SNAP or TANF work rules, treatment, and other situations as of the month of application or renewal.
+      scenarios:
+        - { id: "david-child-turns-14", name: "Child turns 14" }
+        - { id: "david-other-exclusion", name: "Cares for a disabled relative" }
+        - { id: "other-unrelated-caregiver", name: "Cares for a neighbor" }
+        - { id: "emily-snap-subject", name: "Follows SNAP's work rules" }
+        - { id: "emily-snap-exempt", name: "Exempt from SNAP's work rules" }
+
+    - title: Medically frail?
+      decision: isMedicallyFrail
+      help: A qualifying condition, and whether it significantly impairs meeting the requirement.
+      scenarios:
+        - { id: "frailty-2027-statement", name: "New cancer diagnosis" }
+        - { id: "frailty-diagnosis-without-impairment", name: "Diagnosis that doesn't limit them" }
+        - { id: "frailty-early-recovery", name: "2 years in recovery" }
+        - { id: "frailty-stable-recovery", name: "6 years in recovery" }
+
+    - title: Which months count?
+      decision: meetsRequirement
+      help: Hours of work, volunteering, work programs and school, income, and situations that make a month count on their own.
+      scenarios:
+        - { id: "david-renewal-80-hours", name: "82 hours of work and internship" }
+        - { id: "david-renewal-580-dollars", name: "$600 of income" }
+        - { id: "david-first-renewal-no-work", name: "Child still 13 that month" }
+        - { id: "maya-2027-statement", name: "Full-time student" }
+        - { id: "maya-below-half-time", name: "Part-time student, 65 hours" }
+        - { id: "maya-below-half-time-combined", name: "Part-time student, 82 hours" }
+        - { id: "other-released-from-incarceration", name: "Recently released from jail" }
+        - { id: "other-high-unemployment-county", name: "High-unemployment county" }
+
+    - title: How many months?
+      decision: meetsRequirement
+      help: Which months the state looks at, and how many of them have to count. States choose.
+      scenarios:
+        - { id: "sam-one-month-state", name: "90 hours last month" }
+        - { id: "sam-one-month-state-wrong-month", name: "90 hours, but too early" }
+        - { id: "sam-three-month-state", name: "Idaho needs all 3 months" }
+        - { id: "sam-three-month-state-later", name: "Indiana, 3 months in a row" }
+        - { id: "north-carolina-renewal-two-months", name: "North Carolina, 2 of 6 months" }
+        - { id: "north-carolina-renewal-three-months", name: "North Carolina, 3 of 6 months" }
+
+    - title: Hardship?
+      decision: meetsRequirement
+      help: A hospital stay or medical travel makes a month count, but only if the person asks, and only in states that offer it.
+      scenarios:
+        - { id: "priya-asks-2027", name: "Asks for a hardship" }
+        - { id: "priya-does-not-ask", name: "Doesn't ask" }
+        - { id: "priya-indiana", name: "Indiana offers none" }
+
+    - title: Can they prove it?
+      decision: isCovered
+      help: Whether the state's data confirms it, the year, what the person sends, and whether the state accepts a statement.
+      scenarios:
+        - { id: "priya-asks-2028-documents", name: "2028, sends documents" }
+        - { id: "priya-2028-statement-only", name: "2028, statement only" }
+        - { id: "priya-2028-no-documents-exist", name: "2028, no documents exist" }
+        - { id: "maya-utah", name: "Utah wants documents in 2027" }
+        - { id: "frailty-2028-first-statement", name: "2028, first health statement" }
+        - { id: "frailty-2028-second-statement", name: "2028, second health statement" }
+        - { id: "frailty-2028-doctors-note", name: "2028, doctor's note" }
+        - { id: "frailty-north-carolina", name: "North Carolina, no health statements" }
+        - { id: "frailty-arkansas", name: "Arkansas, no health statements" }
+
+  snap:
+    - title: Do they apply?
+      decision: requirementApplies
+      help: Age.
+      scenarios:
+        - { id: "under 18", name: "Age 16" }
+        - { id: "(ours) age 17", name: "Age 17" }
+        - { id: "(ours) age 18", name: "Age 18" }
+        - { id: "(ours) age 64", name: "Age 64" }
+        - { id: "(ours) age 65", name: "Age 65" }
+
+    - title: Exempt?
+      decision: hasExemption
+      help: Disability benefits, caregiving, children, pregnancy, school, treatment, and what keeps someone from working.
+      scenarios:
+        - { id: "no exemption reasons when nothing applies", name: "Nothing applies" }
+        - { id: "receivingBenefitsSsi = yes gives receiving_benefits_ssi", name: "Gets SSI" }
+        - { id: "caringForChildUnder6 = yes gives caring_for_child_under_6", name: "Cares for a child under 6" }
+        - { id: "hasChild = yes gives has_child", name: "Child under 14 at home" }
+        - { id: "isPregnant = yes gives is_pregnant", name: "Pregnant" }
+        - { id: "isStudent = yes gives is_student", name: "Student" }
+        - { id: "preventingWorkMedicalCondition = yes gives preventing_work_medical_condition", name: "Medical condition" }
+        - { id: "preventingWorkPlaceToSleep = yes gives preventing_work_place_to_sleep", name: "No regular place to sleep" }
+        - { id: "hasUnemploymentBenefits = yes gives has_unemployment_benefits", name: "Gets unemployment" }
+        - { id: "55–64, no diploma, no recent work, medical condition", name: "North Carolina, 55 without a diploma" }
+        - { id: "homeschool alone exempts", name: "North Carolina, teaches home school" }
+        - { id: "homeschool under 30 hours does not exempt", name: "North Carolina, home school under 30 hours" }
+
+    - title: Does their work exempt them?
+      decision: hasEarningsExemption
+      help: Hours worked and weekly earnings.
+      scenarios:
+        - { id: "earnings exemption at 30 hours", name: "30 hours a week" }
+        - { id: "earnings exemption at $217.50 a week", name: "Earns $217.50 a week" }
+        - { id: "no earnings exemption under both thresholds", name: "10 hours, $100" }
+        - { id: "no earnings exemption when not working", name: "Not working" }
+
+    - title: Do they meet the hours?
+      decision: meetsRequirement
+      help: Hours of work, volunteering and training together.
+      scenarios:
+        - { id: "20 combined hours complies", name: "20 hours combined" }
+        - { id: "19 combined hours does not", name: "19 hours combined" }
+        - { id: "hours for something the person doesn't do don't count", name: "Hours that don't count" }
+
+    - title: Do they need proof?
+      decision: requiresProof
+      help: Which situation exempts them, and the state's rules for proof.
+      scenarios:
+        - { id: "proof required for isStudent", name: "Student" }
+        - { id: "no proof required for pregnancy", name: "Pregnant" }
+        - { id: "proof required for preventingWorkMedicalCondition", name: "Medical condition" }
+        - { id: "no earnings proof once exempt", name: "Exempt by earnings" }
+        - { id: "which makes proof required", name: "Delaware, American Indian" }

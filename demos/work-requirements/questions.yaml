@@ -1,0 +1,263 @@
+# The demo's questions: the wording for each ruleset input, keyed by the input's
+# path as the rules name it (months[].hoursWorked for a field of each month).
+# Wording is the page's, so it lives here, not in the rules: Medicaid's from the
+# draft rules the ruleset was ported from, SNAP's in the self-advocacy tool's
+# own words.
+#
+# Everything else comes from the rules: which questions to ask (what they still
+# need), where each goes (under the nearest decision that reads it; see
+# results.yaml), the control (the input's type and enum), and when to stop.
+#
+#   ask       the question
+#   help      more about it, shown under the question; {name} is the selected
+#             state's constant of that name
+#   labels    what to show for each of the input's enum values
+#
+# When a question is moot is the rules' to say, not this file's: someone who
+# doesn't work is never asked their hours because the rules don't need them.
+#
+# lists: an input that is a list the person adds items to. `count` asks how many
+# (suggesting a fact's value), `itemNumber` is the item field the page numbers
+# from 1, and `item` names each item, {n} being that number.
+
+programs:
+  medicaid:
+    name: Medicaid
+    ruleset: medicaidWorkRequirements
+    questions:
+      determination.kind:
+        ask: Are you applying for Medicaid, or renewing coverage you already have?
+        labels:
+          application: Applying
+          renewal: Renewing
+          change_in_circumstances: Something changed and I got a notice (for example, my child turned 14)
+      determination.date:
+        ask: When is your application or renewal being decided?
+        help: >-
+          The requirement starts on {effectiveDate}. From {documentationRequiredFrom}, the state can ask
+          for documents.
+      determination.renewalStartedOn:
+        ask: When did your renewal start?
+        help: >-
+          The date on your renewal form. The state has it on record. A renewal started before
+          {effectiveDate} is decided without the requirement.
+      determination.exemptAtLastDetermination:
+        ask: Did your last Medicaid notice say you didn't have to meet the work requirement?
+      person.age:
+        ask: How old are you?
+      person.inAdultExpansionGroup:
+        ask: Is your coverage through the adult expansion group, or a similar section 1115 program?
+        help: Your Medicaid notice says which group you're in.
+      person.hasMedicare:
+        ask: Do you have Medicare Part A or Part B?
+      person.isAmericanIndianOrAlaskaNative:
+        ask: Are you American Indian or Alaska Native?
+      person.isVeteranWithTotalDisability:
+        ask: Are you a veteran with a total (100%) disability rating from the VA?
+      person.isFormerFosterYouth:
+        ask: Were you in foster care when you turned 18?
+      person.isPregnantOrPostpartum:
+        ask: Are you pregnant, or getting postpartum Medicaid after a recent birth?
+      person.caresForChildUnder14:
+        ask: Do you regularly take care of a child who is 13 or younger?
+        help: >-
+          You don't have to be the parent. The child depends on someone for care, and you help regularly, not
+          just now and then.
+      person.caresForPersonWithDisability:
+        ask: Do you regularly take care of someone with a disability?
+      person.careRelationship:
+        ask: How are you connected to the person you care for?
+        labels:
+          parent_or_guardian: I'm their parent, guardian or caretaker relative
+          relative: I'm a relative
+          lives_with: We live together
+          other: None of these
+      person.caregivingHoursPerMonth:
+        ask: About how many hours a month do you spend caring for them?
+        help: 'Matters only if you don''t live with them and aren''t related: {caregiverMinimumMonthlyHours} hours or more counts.'
+      person.meetsTanfWorkRequirements:
+        ask: Do you get TANF cash assistance and meet its work requirements?
+      person.inSnapHousehold:
+        ask: Does your household get SNAP (food assistance)?
+      person.subjectToSnapWorkRules:
+        ask: Do you have to follow SNAP's work rules?
+        help: >-
+          SNAP's general work rules or its time limit. You only need to be required to follow them. If SNAP
+          says you're exempt, answer no.
+      person.inSubstanceUseTreatment:
+        ask: Are you in a drug or alcohol treatment program?
+      person.isIncarcerated:
+        ask: Are you in jail or prison now?
+      health.isBlindOrDisabled:
+        ask: >-
+          Are you blind, or do you have a disability that keeps you from working, as Social Security defines
+          it?
+      health.hasSubstanceUseDisorder:
+        ask: Do you have a substance use disorder?
+      health.yearsInRecovery:
+        ask: If you're in recovery, for how many years?
+      health.hasDisablingMentalDisorder:
+        ask: Do you have a mental health condition that is disabling?
+      health.hasDisabilityLimitingDailyActivities:
+        ask: >-
+          Do you have a physical, intellectual or developmental disability that makes daily activities like
+          bathing, dressing or eating much harder?
+      health.hasSeriousOrComplexCondition:
+        ask: Do you have a serious or complex medical condition?
+        help: >-
+          One that is life threatening, seriously disabling, causes significant pain, needs a major caregiver
+          commitment, needs frequent monitoring, affects several organ systems, or needs several specialists.
+      health.conditionSignificantlyImpairsAbilityToMeetRequirement:
+        ask: Does your condition make it much harder for you to work, volunteer or go to school {monthlyHoursRequired} hours a month?
+        help: A diagnosis alone is not enough.
+      months[].wasExempt:
+        ask: In this month, did any situation that excuses you apply, even for part of it?
+        help: For example, the child you care for was still 13.
+      months[].wasUnder19:
+        ask: Were you under 19 at any point this month?
+      months[].hadMedicare:
+        ask: Did you have Medicare at any point this month?
+      months[].wasInOtherMandatoryGroup:
+        ask: Were you in another mandatory Medicaid group this month, such as low-income parents or SSI?
+      months[].wasIncarceratedInPrior3Months:
+        ask: Were you in jail or prison at any time in the 3 months before this month?
+      months[].countyHadDisasterOrEmergency:
+        ask: Did the President declare an emergency or disaster for your county this month?
+      months[].countyHadHighUnemployment:
+        ask: Did your county have high unemployment this month?
+      months[].receivedInpatientCare:
+        ask: Were you in a hospital, nursing home, or inpatient mental health care this month?
+      months[].hadMedicalTravel:
+        ask: >-
+          Did you, or someone who depends on you, have to travel outside your community for treatment of a
+          serious or complex condition?
+      months[].askedForHardship:
+        ask: Do you want to ask for a hardship exception for this month?
+        help: The state won't apply a hospital-stay or medical-travel hardship unless you ask.
+      months[].hoursWorked:
+        ask: How many hours did you work this month?
+        help: Paid work, work for goods or services, and unpaid work like an internship.
+      months[].hoursCommunityService:
+        ask: How many hours of community service or volunteering did you do, through an organization?
+      months[].hoursWorkProgram:
+        ask: How many hours were you in a job training or work program?
+      months[].enrolledHalfTimeOrMore:
+        ask: Were you enrolled at least half-time in school or a training program, as your school counts it?
+      months[].educationCreditHours:
+        ask: How many credit hours are you taking?
+      months[].educationClassHours:
+        ask: If your program doesn't use credits, how many hours were you in class this month?
+      months[].householdIncome:
+        ask: What was your household's income this month, before taxes?
+        help: ${incomeRequired} or more counts, even if someone else in your household earned it.
+      months[].isSeasonalWorker:
+        ask: Is your work seasonal, like farm work?
+      months[].sixMonthAverageIncome:
+        ask: About how much did you earn a month, on average, over the last 6 months?
+      verification.stateDataConfirms:
+        ask: Do the state's records already confirm this?
+        help: In a real application the state checks its own data; here, say what you expect it to find.
+      verification.response:
+        ask: Did you get a notice asking for information, and have you answered it?
+        labels:
+          not_yet: Not yet, or I haven't gotten one
+          responded: Yes, I answered it
+          no_response: No, and it has been more than 30 days
+      verification.proofSent:
+        ask: What did you send?
+        labels:
+          none: Nothing yet
+          statement: A signed statement
+          documents: Documents, like pay stubs, a class schedule or a doctor's note
+      verification.documentsReasonablyAvailable:
+        ask: Can you get documents that show this?
+      verification.frailtyStatementAlreadyUsed:
+        ask: Was a medical-frailty statement already accepted this enrollment period?
+    lists:
+      months:
+        count:
+          ask: How many months has it been since your last Medicaid decision?
+          help: >-
+            At application, the state looks at the months just before. At renewal, the months since its last
+            decision. You'll answer a few questions about each one.
+          suggestFrom: monthsRequired
+        itemNumber: monthsBefore
+        item:
+          one: The month before you applied or renewed
+          other: '{n} months before you applied or renewed'
+  snap:
+    name: SNAP
+    ruleset: snapWorkRequirements
+    questions:
+      person.age:
+        ask: How old are you?
+      person.isAmericanIndian:
+        ask: Are you an American Indian, or the child or grandchild of an American Indian?
+      person.hasChild:
+        ask: Is there a child under the age of 14 that lives in your household?
+      person.isPregnant:
+        ask: Are you pregnant?
+      person.caringForChildUnder6:
+        ask: Do you care for a child under age 6 who cannot care for themselves?
+      person.caringForDisabledOrIllPerson:
+        ask: Do you care for someone who is ill or has a disability and cannot care for themselves?
+      person.hasUnemploymentBenefits:
+        ask: Do you get, or are you applying for unemployment benefits?
+      person.receivingBenefitsSsdi:
+        ask: Do you get Social Security Disability Benefits (SSDI)?
+      person.receivingBenefitsSsi:
+        ask: Do you get Supplemental Security Income (SSI)?
+      person.receivingBenefitsVeteransDisability:
+        ask: Do you get veteran's disability benefits?
+      person.receivingBenefitsWorkersCompensation:
+        ask: Do you get workers' compensation?
+      person.receivingBenefitsDisabilityPension:
+        ask: Do you get a disability pension?
+      person.receivingBenefitsInsurancePayments:
+        ask: Do you get disability insurance payments?
+      person.receivingBenefitsDisabilityMedicaid:
+        ask: Do you get disability-related Medicaid?
+      person.receivingBenefitsOther:
+        ask: Do you get any other disability benefits?
+      person.isMigrantFarmworker:
+        ask: Are you a seasonal or migrant farmworker who will start a job in the next 30 days?
+      person.isStudent:
+        ask: Do you go to school full-time, or at least half-time?
+      person.isInAlcoholTreatmentProgram:
+        ask: Are you in a drug or alcohol treatment program?
+      person.preventingWorkPlaceToSleep:
+        ask: Do you not have a regular place to sleep and shower?
+      person.preventingWorkDrugsAlcohol:
+        ask: Are you struggling with drugs or alcohol?
+      person.preventingWorkDomesticViolence:
+        ask: Are you experiencing, or have you recently experienced, domestic abuse?
+      person.preventingWorkMedicalCondition:
+        ask: Do you have a medical condition, physical or mental, that keeps you from working?
+      person.preventingWorkOther:
+        ask: Is anything else keeping you from working?
+      person.isWorking:
+        ask: Are you working?
+      person.workingHours:
+        ask: How many hours a week do you usually work?
+      person.workingWeeklyEarnings:
+        ask: How much do you earn each week before taxes?
+      person.isVolunteer:
+        ask: Do you volunteer or do any community service?
+      person.volunteeringHours:
+        ask: How many hours a week do you volunteer?
+      person.isInWorkTraining:
+        ask: Are you in a job or work training program?
+      person.workTrainingHours:
+        ask: How many hours a week do you attend this program?
+      person.hasHsDiploma:
+        ask: Do you have a high school diploma or equivalent degree (for example, a GED)?
+      person.workedLastFiveYears:
+        ask: Have you worked for pay in the last five years?
+      person.earnedMoreThanThreshold:
+        ask: In the last five years, did you ever earn more than $1,690 per month?
+      person.healthConditionsPreventingWork:
+        ask: Do you have any mental or physical health conditions that make it hard to work?
+      person.teachesHomeschool:
+        ask: Do you teach home school?
+      person.homeschoolHours:
+        ask: How many hours a week do you teach home school?

@@ -1,0 +1,234 @@
+# What the page shows: section titles, and the words for each result. Wording
+# is the page's, so it lives here, keyed by the rules' facts and the values they
+# take. Medicaid's text is adapted from the draft rules the ruleset was ported
+# from; SNAP's exemption labels restate the self-advocacy tool's questions.
+#
+#   sections      each fact that's a decision worth its own step: its title, a
+#                 line of help under it, and labels for its values under "How it
+#                 was decided" where Yes and No don't read well. Which questions go in each, and the order,
+#                 come from the graph: a question goes under the nearest titled
+#                 fact that reads it, and steps run from the inputs toward the
+#                 outcome.
+#   otherSection  where a question goes that no titled fact reads
+#   headline      the output that answers it, and its words. instead: words to
+#                 use when every output in `when` is decided with that value
+#   because       outputs that say why, in order; the first that's decided and
+#                 has words for its value is the reason. skip: values to pass over
+#   next          an output saying what to do, shown under the reason
+#   details       words for an output's values. A per-item output's words sum up
+#                 each item where its answers are listed: whether a month counted,
+#                 and why.
+#
+#   done          the outputs that must be decided before the page is done, which
+#                 is what decides which questions it asks.
+#
+# {name} in a label is a constant's value in the selected state, or a fact's
+# once the rules have decided it.
+
+programs:
+  medicaid:
+    done: [satisfiesRequirement, coverageResult, nextStep]
+    sections:
+      isApplication:
+        title: About your application
+        labels: { 'true': Applying, 'false': Renewing }
+      requirementApplies:
+        title: Does the requirement apply to you?
+      isExempt:
+        title: Are you exempt?
+      isMedicallyFrail:
+        title: Are you medically frail?
+      meetsRequirement:
+        title: Did you meet it in enough months?
+        help: >-
+          A month counts if you worked, volunteered, were in a work program or went to school
+          {monthlyHoursRequired} hours, your household earned ${incomeRequired}, or something
+          excused you that month. Months you need: {monthsRequired}.
+      isCovered:
+        title: Can you prove it?
+        labels: { 'true': 'Yes', 'false': Not yet }
+    otherSection: About your application
+    headline:
+      output: satisfiesRequirement
+      'yes': You satisfy the work requirement
+      'no': You don't satisfy it yet
+      instead:
+        - when: { requirementApplies: false }
+          text: The work requirement doesn't apply to you
+      undecided: Not decided yet
+      undecidedReason: Keep answering. Your result shows here as soon as the rules can decide it.
+    because:
+      - output: notApplicableReason
+        skip:
+          - applies
+        labels:
+          not_yet_in_effect: The work requirement doesn't start until {effectiveDate}.
+          renewal_started_before_requirement: >-
+            Your renewal started before the requirement took effect on {effectiveDate}, so it's decided
+            without it.
+          not_in_expansion_group: The work requirement applies only to people covered through Medicaid expansion.
+          has_medicare: The work requirement doesn't apply to people who have Medicare.
+          outside_age_range: The work requirement applies only to adults {minimumAge} to {maximumAge}.
+      - output: isExempt
+        labels:
+          'true': >-
+            You don't have to meet the work requirement right now, because of your situation. The state may
+            check again at a later renewal.
+      - output: meetsRequirement
+        labels:
+          'true': You meet the work requirement for this period.
+          'false': >-
+            Based on your answers, you don't meet the work requirement yet. There may be other ways to
+            qualify: a situation that excuses you, or a different month that counts.
+    next:
+      output: nextStep
+      skip:
+        - none
+      title: What to do next
+      labels:
+        none: Nothing more to do now.
+        send_statement_or_documents: >-
+          Answer the notice within 30 days. A signed statement describing your situation is enough, or you can
+          send documents.
+        send_documents: >-
+          Answer the notice within 30 days with documents, such as pay stubs, a class schedule or transcript,
+          or a letter from a program. If documents don't exist or you can't get them, tell the state; it must
+          accept other information.
+        send_health_records: >-
+          Answer the notice within 30 days with health records that show your condition and how it limits you.
+          You've already used the one signed statement allowed during this enrollment.
+        ask_for_hardship_exception: >-
+          You may qualify for a hardship exception for a hospital stay or medical travel, but only if you ask.
+          Ask when you answer the notice, within 30 days.
+        show_another_way_to_qualify: >-
+          Answer the notice within 30 days if anything changes your answers: a situation that excuses you, a
+          month you worked, volunteered or went to school {monthlyHoursRequired} hours, a month your household made ${incomeRequired}, or a
+          hardship.
+        reapply_or_ask_for_reconsideration: >-
+          You can apply again at any time. If your coverage ended, you have at least 90 days to send the
+          missing information and be reconsidered.
+    details:
+      - output: exemptions
+        title: Why you're exempt
+        labels:
+          american_indian_or_alaska_native: You're American Indian or Alaska Native.
+          veteran_with_total_disability: You're a veteran with a total disability rating.
+          former_foster_youth: You were in foster care and are under 26.
+          medically_frail: A health condition makes it much harder for you to meet the requirement.
+          caregiver_of_child_under_14: You care for a child 13 or younger.
+          caregiver_of_person_with_disability: You care for someone with a disability.
+          pregnant_or_postpartum: You're pregnant or getting postpartum coverage.
+          snap_work_rules: Your household gets SNAP and you must follow SNAP's work rules.
+          tanf_work_rules: You get TANF and meet its work requirements.
+          substance_use_treatment: You're in a drug or alcohol treatment program.
+          incarcerated: You're in jail or prison now.
+      - output: reviewMonths[].qualifiesBy
+        title: Your months
+        item:
+          one: The month before
+          other: '{n} months before'
+        itemNumber: monthsBefore
+        labels:
+          mandatory_exception: Counts automatically, because of your situation that month.
+          automatic_hardship: Counts because of a disaster or high unemployment in your county.
+          requested_hardship: Counts because you asked for a hardship exception.
+          income: Counts because your household's income was at least ${incomeRequired}.
+          seasonal_income: Counts because your seasonal income averaged at least ${incomeRequired} a month.
+          half_time_education: Counts because you were in school at least half-time.
+          activity_hours: Counts because your hours added up to at least {monthlyHoursRequired}.
+          none: Doesn't count.
+      - output: coverageResult
+        title: Your coverage
+        labels:
+          gets_coverage: You can get Medicaid, if you meet its other rules.
+          keeps_coverage: You can keep your Medicaid, if you meet its other rules.
+          notice_respond_within_30_days: >-
+            The state couldn't confirm this from its records, so it will send you a notice. You have 30 days
+            from when you get it to respond. The state can't deny or end your coverage during those 30 days.
+          application_denied: >-
+            Your application can be denied. First the state must check whether you qualify for Medicaid
+            another way, and send you a notice with your right to a fair hearing. You can apply again at any
+            time.
+          loses_coverage: >-
+            Your coverage can end. First the state must check whether you qualify for Medicaid another way,
+            and send you a notice at least 10 days ahead with your right to a fair hearing.
+  snap:
+    done: [satisfiesRequirement, requiresProof, needsProofOfVolunteering, americanIndianExemptionRequiresProof]
+    sections:
+      requirementApplies:
+        title: Do the work rules apply to you?
+      hasExemption:
+        title: Are you exempt?
+      hasEarningsExemption:
+        title: Does your work exempt you?
+      meetsRequirement:
+        title: Do you work, volunteer or train {weeklyHoursRequired} hours a week?
+      requiresProof:
+        title: Will you need proof?
+    otherSection: About you
+    headline:
+      output: satisfiesRequirement
+      'yes': You satisfy the work rules
+      'no': You don't satisfy them yet
+      instead:
+        - when: { requirementApplies: false }
+          text: SNAP's work rules don't apply to you
+      undecided: Not decided yet
+      undecidedReason: Keep answering. Your result shows here as soon as the rules can decide it.
+    because:
+      - output: notApplicableReason
+        skip:
+          - applies
+        labels:
+          under_minimum_age: SNAP's work rules apply from age {workRulesMinimumAge}.
+          over_maximum_age: SNAP's work rules apply only up to age {workRulesMaximumAge}.
+      - output: isExempt
+        labels:
+          'true': You don't have to meet SNAP's work rules, because of your situation.
+      - output: meetsRequirement
+        labels:
+          'true': You meet SNAP's work rules.
+          'false': >-
+            Based on your answers, you don't meet SNAP's work rules yet: {weeklyHoursRequired} hours a week of work, volunteering
+            and training together.
+    details:
+      - output: exemptions
+        title: Why you're exempt
+        labels:
+          receiving_benefits_ssdi: You get Social Security Disability Benefits (SSDI).
+          receiving_benefits_ssi: You get Supplemental Security Income (SSI).
+          receiving_benefits_veterans_disability: You get veteran's disability benefits.
+          receiving_benefits_workers_compensation: You get workers' compensation.
+          receiving_benefits_disability_pension: You get a disability pension.
+          receiving_benefits_insurance_payments: You get disability insurance payments.
+          receiving_benefits_disability_medicaid: You get disability-related Medicaid.
+          receiving_benefits_other: You get other disability benefits.
+          preventing_work_domestic_violence: Domestic abuse keeps you from working.
+          preventing_work_drugs_alcohol: Struggling with drugs or alcohol keeps you from working.
+          preventing_work_medical_condition: A medical condition keeps you from working.
+          preventing_work_other: Something else keeps you from working.
+          preventing_work_place_to_sleep: Not having a regular place to sleep and shower keeps you from working.
+          caring_for_child_under_6: You care for a child under 6.
+          caring_for_disabled_or_ill_person: You care for someone who is ill or has a disability.
+          has_child: A child under 14 lives in your household.
+          has_unemployment_benefits: You get, or are applying for, unemployment benefits.
+          is_american_indian: You're an American Indian, or the child or grandchild of one.
+          is_in_alcohol_treatment_program: You're in a drug or alcohol treatment program.
+          is_migrant_farmworker: You're a seasonal or migrant farmworker starting a job within 30 days.
+          is_pregnant: You're pregnant.
+          is_student: You go to school at least half-time.
+          earnings_exemption: You work at least {earningsExemptionWeeklyHours} hours a week, or earn at least ${earningsExemptionWeeklyAmount} a week.
+          exemption_age_no_diploma: >-
+            You're 55 to 64, without a diploma or recent substantial work, and a health condition limits your
+            work.
+          exemption_homeschool: You teach home school at least {homeschoolExemptionWeeklyHours} hours a week.
+      - output: requiresProof
+        title: Proof
+        labels:
+          'true': You'll need to show proof of what you told us.
+      - output: needsProofOfVolunteering
+        labels:
+          'true': You'll need proof of your volunteer hours.
+      - output: americanIndianExemptionRequiresProof
+        labels:
+          'true': You'll need proof of your American Indian status.

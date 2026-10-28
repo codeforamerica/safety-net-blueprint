@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work requirements: SNAP and Medicaid</title>
+<!--
+  The work requirements demo. Built by build.js into standalone.html, which
+  inlines the rules engine, the compiled rulesets for the federal rules and
+  each state, this folder's questions and results wording, and the explorer's
+  palette. Edit this file, questions.yaml or results.yaml, then run
+  `node demos/work-requirements/build.js`.
+-->
+<style>
+/* THEME */
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font: 16px/1.55 var(--font); color: var(--text); background: var(--sandMid); }
+  a { color: var(--midBlue); }
+  code { font: .85em ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .top { background: var(--white); border-bottom: 1px solid var(--sandDark); }
+  .top-inner { max-width: 72rem; margin: 0 auto; padding: 1.2rem 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; justify-content: space-between; }
+  .brand h1 { margin: 0; font-size: 1.35rem; color: var(--darkBlue); letter-spacing: -.01em; }
+  .brand p { margin: .15rem 0 0; color: var(--textLight); font-size: .92rem; max-width: 34rem; }
+  .pickers { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+  .picker { display: flex; flex-direction: column; gap: .2rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--textLight); }
+  .picker select { font: 600 .95rem var(--font); color: var(--darkBlue); padding: .45rem 2rem .45rem .75rem; border: 1.5px solid var(--lightBlue); border-radius: 999px; background: var(--white); appearance: none; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--darkBlue) 50%), linear-gradient(135deg, var(--darkBlue) 50%, transparent 50%);
+    background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px; background-repeat: no-repeat; }
+
+  .layout { max-width: 72rem; margin: 0 auto; padding: 1.75rem 1.5rem 3rem; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+  @media (max-width: 52rem) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--white); border-radius: 12px; box-shadow: 0 1px 2px rgba(43,26,120,.06), 0 6px 20px rgba(43,26,120,.06); }
+
+  .step { padding: 1.5rem 1.75rem 1.75rem; }
+  .eyebrow { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--midBlue); margin: 0 0 .25rem; }
+  .step h2 { margin: 0 0 1.25rem; font-size: 1.35rem; color: var(--darkBlue); }
+  .q { border: 0; margin: 0 0 1.4rem; padding: 0; transition: opacity .2s; }
+  .q legend, .q > label { font-weight: 600; font-size: 1.02rem; margin-bottom: .5rem; padding: 0; display: block; }
+  .q .help { color: var(--textLight); font-size: .9rem; margin: -.2rem 0 .6rem; }
+  .options { display: grid; gap: .5rem; }
+  .options.yesno { grid-template-columns: repeat(2, minmax(0, 9rem)); }
+  .option { position: relative; }
+  .option input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .option span { display: block; padding: .65rem .9rem; border: 1.5px solid var(--lightBlue); border-radius: 8px; background: var(--white); font-weight: 600; color: var(--darkBlue); transition: background .15s, border-color .15s; }
+  .options.yesno .option span { text-align: center; }
+  .option input:hover + span { border-color: var(--midBlue); }
+  .option input:focus-visible + span { outline: 3px solid var(--warmYellow); outline-offset: 2px; }
+  .option input:checked + span { background: var(--darkBlue); border-color: var(--darkBlue); color: var(--white); }
+  .q input[type=number] { font: 600 1.05rem var(--font); width: 9rem; padding: .6rem .8rem; border: 1.5px solid var(--lightBlue); border-radius: 8px; }
+  .q input[type=number]:focus { outline: 3px solid var(--warmYellow); outline-offset: 1px; border-color: var(--midBlue); }
+  .error { color: var(--richRed); font-weight: 600; font-size: .92rem; margin: 0 0 .75rem; }
+  .actions { display: flex; gap: 1rem; align-items: center; margin-top: .5rem; }
+  .btn { font: 700 1rem var(--font); padding: .75rem 1.6rem; border-radius: 999px; border: 0; background: var(--darkBlue); color: var(--white); cursor: pointer; }
+  .btn:hover { background: var(--midBlue); }
+  .link { font: 600 .92rem var(--font); background: none; border: 0; color: var(--midBlue); cursor: pointer; padding: 0; text-decoration: underline; }
+  .link:disabled { color: var(--textLight); text-decoration: none; cursor: default; }
+  .done p { color: var(--textLight); }
+  /* A step indicator, after USWDS's no-labels variant: one segment per decision. */
+  .steps { display: flex; gap: 4px; list-style: none; margin: 0 0 .9rem; padding: 0; }
+  .steps li { flex: 1; height: 8px; background: var(--paleBlue); }
+  .steps li.settled { background: var(--darkBlue); }
+  .steps li.active { background: var(--midBlue); }
+  .how-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--textLight); margin: 1.1rem 0 .4rem; }
+  .how { list-style: none; margin: 0; padding: 0; font-size: .88rem; }
+  .how li { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem 0; border-bottom: 1px solid var(--bg); }
+  .how li b { color: var(--darkBlue); }
+  .how li.pending { color: var(--textLight); }
+  /* The decisions, and each one's scenarios with what it comes to in them. */
+  .browse { grid-column: 1 / -1; }
+  .groups { margin: 0 0 .5rem; }
+  .group-help { margin: 0 0 .7rem; }
+  .scenarios { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .scenario { font: 600 .88rem var(--font); color: var(--darkBlue); background: var(--white); border: 1.5px solid var(--lightBlue); border-radius: 8px; padding: .4rem .7rem; cursor: pointer; display: inline-flex; gap: .5rem; align-items: center; }
+  .scenario:hover { border-color: var(--midBlue); }
+  .scenario.active { border-color: var(--darkBlue); box-shadow: inset 0 0 0 1px var(--darkBlue); background: var(--paleBlue); }
+  .scenario .chip { font-weight: 700; font-size: .75rem; padding: 0 .45rem; border-radius: 999px; background: var(--paleBlue); }
+  .scenario.active .chip { background: var(--white); }
+  .focus { border-bottom: 1px solid var(--bg); padding-bottom: .6rem; margin-bottom: .2rem; }
+  .scenario-name { font-size: 1.3rem; color: var(--darkBlue); margin: .1rem 0 .3rem; }
+  .story { color: var(--text); margin: 0 0 .4rem; }
+  .review-head { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--textLight); margin: 1.4rem 0 .2rem; }
+  .review .q { margin: .6rem 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 .2rem; }
+  .tab { font: 600 .85rem var(--font); color: var(--darkBlue); background: var(--white); border: 1.5px solid var(--lightBlue); border-radius: 999px; padding: .35rem .8rem; cursor: pointer; display: inline-flex; gap: .45rem; align-items: center; }
+  .tab.active { background: var(--darkBlue); border-color: var(--darkBlue); color: var(--white); }
+  .tab .chip { font-weight: 700; font-size: .75rem; padding: 0 .45rem; border-radius: 999px; background: var(--paleBlue); color: var(--darkBlue); }
+  .tab.active .chip { background: var(--white); }
+  .tab-panel { border-top: 1px solid var(--bg); margin-top: .6rem; padding-top: .4rem; }
+  .decision { font-size: 1.05rem; margin: .6rem 0; }
+  .decision b { color: var(--darkBlue); margin-left: .4rem; }
+  .why { font-size: .9rem; margin: .2rem 0 .3rem; }
+  .turns { margin: 0; padding-left: 1.1rem; font-size: .88rem; }
+  .turns li { margin: .2rem 0; }
+  details.review-item { border: 1px solid var(--bg); border-radius: 8px; padding: .5rem .8rem; margin: .5rem 0; }
+  details.review-item summary { cursor: pointer; font-size: .92rem; }
+  details.review-item summary b { color: var(--darkBlue); margin-right: .4rem; }
+  .how li .link { padding: 0; text-align: left; }
+  details.unused { margin-top: 1.4rem; }
+  details.unused summary { cursor: pointer; font-weight: 600; color: var(--midBlue); font-size: .92rem; }
+  .flip-q { color: var(--textLight); }
+  .flip-then { color: var(--darkBlue); }
+  .step-count { font-size: .8rem; font-weight: 700; color: var(--midBlue); margin: 0 0 .2rem; }
+  .step-count b { display: inline-grid; place-items: center; min-width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--midBlue); color: var(--white); margin-right: .35rem; }
+  .item-title { font-size: .95rem; font-weight: 700; color: var(--midBlue); margin: 0 0 .8rem; }
+
+  .result { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
+  .band { height: 8px; background: var(--warmYellow); }
+  .band.yes { background: var(--midGreen); } .band.no { background: var(--richRed); }
+  .result-body { padding: 1.25rem 1.5rem 1.4rem; }
+  .verdict { font-size: 1.2rem; font-weight: 700; color: var(--darkBlue); margin: .1rem 0 .4rem; }
+  .reason { margin: 0 0 .8rem; color: var(--text); }
+  .next { background: var(--paleBlue); border-radius: 8px; padding: .7rem .9rem; margin: 0 0 .8rem; font-size: .95rem; }
+  .next b { color: var(--darkBlue); display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .15rem; }
+  .still { margin: 0; padding-left: 1.1rem; font-size: .9rem; }
+  .chips { margin-top: .4rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+  .chips a, .chips span { font-size: .78rem; padding: .15rem .6rem; border-radius: 999px; background: var(--paleBlue); color: var(--darkBlue); text-decoration: none; border: 1px solid var(--lightBlue); }
+  .muted { color: var(--textLight); font-size: .9rem; }
+  .policies { list-style: none; padding: 0 !important; margin: .4rem 0 0; }
+  .policies li { border-left: 3px solid var(--lightBlue); padding: .1rem 0 .1rem .7rem; margin-bottom: .6rem; font-size: .88rem; color: var(--text); }
+  .policies a { font-weight: 700; text-decoration: none; color: var(--darkBlue); display: inline-block; margin-bottom: .1rem; }
+
+  /* Before and after: the result the person started from beside this one. */
+  .compare { margin: .3rem 0 .9rem; }
+  .compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin: .3rem 0 .4rem; }
+  .side { background: var(--bg); border-left: 4px solid var(--warmYellow); border-radius: 8px; padding: .55rem .75rem; }
+  .side.yes { border-left-color: var(--midGreen); } .side.no { border-left-color: var(--richRed); }
+  .side-label { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--textLight); }
+  .side .verdict { font-size: 1rem; margin: .15rem 0 .25rem; }
+  .side .reason { font-size: .85rem; margin: 0; }
+  .diff { list-style: none; margin: 0; padding: 0; font-size: .88rem; }
+  .diff li { padding: .3rem 0; border-bottom: 1px solid var(--bg); }
+  .diff .was { color: var(--textLight); }
+  .diff b { color: var(--darkBlue); }
+  .compare .actions { flex-wrap: wrap; gap: .4rem 1.2rem; margin-top: .7rem; }
+
+  .s-complete { color: var(--deepGreen); } .s-missing, .s-placeholder { color: #8a5a00; } .s-error { color: var(--richRed); }
+</style>
+</head>
+<body>
+<div class="top"><div class="top-inner">
+  <div class="brand">
+    <h1>Work requirements</h1>
+    <p>What decides SNAP's and Medicaid's work requirements, one decision at a time. Pick a decision and a
+       scenario, then change its answers to see what would change the result.</p>
+  </div>
+  <div class="pickers">
+    <label class="picker">Program<select id="program"></select></label>
+    <label class="picker">State<select id="jurisdiction"></select></label>
+  </div>
+</div></div>
+
+<div class="layout">
+  <nav class="browse" aria-label="Scenarios">
+    <div class="tabs groups" id="groups"></div>
+    <p class="muted group-help" id="group-help"></p>
+    <div class="scenarios" id="scenarios"></div>
+  </nav>
+  <section class="card step" aria-labelledby="step-title">
+    <form id="step" novalidate></form>
+  </section>
+  <aside class="card result" aria-live="polite" id="result"></aside>
+</div>
+
+
+<!-- ENGINE -->
+<!-- DATA -->
+<script>
+'use strict';
+// A generic interview over a compiled rules graph. Everything it asks, where,
+// in what order, with which control, and when it's done comes from the graph;
+// questions.yaml and results.yaml give only the words. No program, fact or
+// answer path is named in this script.
+const DATA = JSON.parse(document.getElementById('demo-data').textContent);
+
+const page = { program: Object.keys(DATA.questions)[0], jurisdiction: DATA.jurisdictions[0].code, values: {}, history: [], nodes: {}, error: '', restore: null, scenario: null, reviewTab: null, baseline: null, group: 0 };
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const jurisdiction = () => DATA.jurisdictions.find((j) => j.code === page.jurisdiction);
+const current = () => jurisdiction().programs[page.program];
+const federal = () => DATA.jurisdictions[0].programs[page.program];
+const wording = () => DATA.questions[page.program];
+const shape = () => DATA.results[page.program];
+const titleOf = (fact) => { const title = shape().sections[fact]?.title; return title && fill(title); };
+
+/**
+ * A label's {name}s, filled with the selected state's constants, or a fact's
+ * value once the rules have decided it: the income a month needs is a fact,
+ * worked out from two constants.
+ */
+const fill = (text) => String(text).replace(/\{(\w+)\}/g, (_, name) => {
+  const constant = current().graph.constants?.[name];
+  const node = page.nodes?.[name];
+  const value = constant ? constant.value : node && ['complete', 'placeholder'].includes(node.state) ? node.value : undefined;
+  if (value === undefined || (typeof value === 'object' && value !== null)) return `{${name}}`;
+  // A date constant reads as a date: January 1, 2027. A fraction, as money does: 217.50.
+  if (constant?.format === 'date') return new Date(`${value}T00:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  if (typeof value === 'number' && !Number.isInteger(value)) return value.toFixed(2);
+  return String(value);
+});
+
+// ── Inputs and answers ───────────────────────────────────────────────────────
+// Inputs as the graph names them: `$.person.age`, a list `$.months[]`, and a
+// field of each of its items `$.months[].hoursWorked`. An answer is addressed
+// by its path without `$.` and, for an item's field, the item's position.
+
+const graphInput = (path) => current().graph.inputs[`$.${path}`];
+const listOf = (path) => (path.includes('[].') ? path.slice(0, path.indexOf('[].')) : null);
+const fieldOf = (path) => path.slice(path.indexOf('[].') + 3);
+
+function read(values, path, item) {
+  const list = listOf(path);
+  if (list) return valueAt(values, list)?.[item]?.[fieldOf(path)];
+  return valueAt(values, path);
+}
+function valueAt(values, path) {
+  return path.split('.').reduce((v, key) => (v == null ? undefined : v[key]), values);
+}
+function write(values, path, value, item) {
+  const list = listOf(path);
+  const [target, key] = list ? [valueAt(values, list)[item], fieldOf(path)] : [path.split('.').slice(0, -1).reduce((v, k) => (v[k] ??= {}), values), path.split('.').at(-1)];
+  if (value === undefined) delete target[key];
+  else target[key] = value;
+}
+
+/** A path as the rules name it in `missing`: `$.person.age`, `$.months[1].hoursWorked`. */
+const missingPath = (path, item) => (listOf(path) ? `$.${listOf(path)}[${item}].${fieldOf(path)}` : `$.${path}`);
+
+/** A path in `missing`, back to a question's path and item: `$.months[1].hoursWorked` is months[].hoursWorked, item 1. */
+function fromMissing(path) {
+  const m = path.match(/^\$\.(.+?)\[(\d+)\]\.(.+)$/);
+  if (m) return { path: `${m[1]}[].${m[3]}`, item: Number(m[2]) };
+  return { path: path.slice(2), item: null };
+}
+
+function coerce(path, raw) {
+  const type = graphInput(path)?.type;
+  if (type === 'boolean') return raw === 'true';
+  if (type === 'integer') return parseInt(raw, 10);
+  if (type === 'number') return parseFloat(raw);
+  return raw;
+}
+
+const evaluateState = (state) => window.RulesEngine.evaluate(current().graph, state.values);
+
+/** Every input the outputs that must be decided still need. */
+function neededBy(nodes) {
+  const paths = new Set();
+  for (const output of shape().done) {
+    const node = nodes[output];
+    if (node?.state === 'missing') for (const p of node.missing) paths.add(p);
+  }
+  return paths;
+}
+
+// ── Sections, from the graph ─────────────────────────────────────────────────
+// Each titled fact is a section. A question goes under the nearest titled fact
+// above the facts that still need its input — the answers so far can leave
+// only some of its readers needing it: a renewal's decision date, needed only
+// for proof once the start date decides whether the requirement applies — or,
+// once it's answered, above every fact that reads it. Sections run in the order of how
+// far each is from the inputs: the decisions closest to the answers first,
+// ties in the order results.yaml lists them,
+// narrowing toward the outcome. Not nested: decisions share facts — proof
+// reads whether you're exempt, which reads whether the requirement applies —
+// so no one of them holds another.
+
+function graphShape(nodes = null) {
+  const { graph, reads } = current();
+  const users = {};                       // what reads each fact
+  for (const [fact, deps] of Object.entries(graph.dependencies)) {
+    for (const dep of deps) if (!dep.startsWith('$.')) (users[dep] ??= []).push(fact);
+  }
+  const depth = {};
+  const depthOf = (fact) => {
+    if (depth[fact] !== undefined) return depth[fact];
+    depth[fact] = 0;
+    const facts = (graph.dependencies[fact] ?? []).filter((d) => !d.startsWith('$.') && graph.facts[d]);
+    return (depth[fact] = 1 + Math.max(0, ...facts.map(depthOf)));
+  };
+  // Nearest the inputs first; where two are equally near, the order
+  // results.yaml lists them in.
+  const listed = Object.keys(shape().sections);
+  const byLayer = (a, b) => (depthOf(a) - depthOf(b)) || (listed.indexOf(a) - listed.indexOf(b));
+  /**
+   * The nearest titled fact at or above any of these facts, and the facts
+   * walked to reach it: [first reader, …, titled fact].
+   */
+  const nearestTitled = (facts) => {
+    const from = Object.fromEntries(facts.map((f) => [f, null]));
+    let frontier = facts;
+    while (frontier.length) {
+      const titled = frontier.filter((f) => titleOf(f)).sort(byLayer);
+      if (titled.length) {
+        const route = [];
+        for (let f = titled[0]; f; f = from[f]) route.unshift(f);
+        return route;
+      }
+      frontier = frontier.flatMap((f) => (users[f] ?? []).filter((u) => !(u in from) && ((from[u] = f), true)));
+    }
+    return [];
+  };
+  const readers = {};                     // the facts that read each input
+  for (const [fact, inputs] of Object.entries(reads)) for (const input of inputs) (readers[input] ??= []).push(fact);
+  const readersOf = (path) => readers[`$.${path}`] ?? [];
+  const needs = (fact, path) => nodes?.[fact]?.missing?.some((m) => m.replace(/\[\d+\]/g, '[]') === `$.${path}`);
+  const routeOf = (path) => {
+    const all = readersOf(path);
+    const needing = all.filter((fact) => needs(fact, path));
+    return nearestTitled(needing.length ? needing : all);
+  };
+  const sectionOf = (path) => routeOf(path).at(-1) ?? '';
+  // Questions no titled fact reads come last.
+  const ordered = [...listed.slice().sort(byLayer), ''];
+  // The section a fact belongs to: the nearest titled fact at or above it.
+  const sectionOfFact = (fact) => nearestTitled([fact]).at(-1) ?? '';
+  return { ordered, sectionOf, routeOf, readersOf, sectionOfFact };
+}
+
+/** The questions still needed, by section, in order: [{ section, path, item }]. */
+function stillNeeded(nodes) {
+  const { ordered, sectionOf } = graphShape(nodes);
+  const asked = [...neededBy(nodes)].map((p) => ({ ...fromMissing(p), raw: p })).map((q) => ({ ...q, section: sectionOf(q.path) }));
+  return asked.sort((a, b) => (ordered.indexOf(a.section) - ordered.indexOf(b.section)) || ((a.item ?? -1) - (b.item ?? -1)) || questionOrder(a.path) - questionOrder(b.path));
+}
+const questionOrder = (path) => Object.keys(wording().questions).indexOf(path);
+
+// ── The step ─────────────────────────────────────────────────────────────────
+
+function evaluate() {
+  try { page.nodes = evaluateState(page); page.error = ''; }
+  catch (e) { page.nodes = {}; page.error = e.message; }
+}
+
+/** What to ask now: the first section with a question, and its questions for one item at a time. */
+function nextStep(nodes = page.nodes) {
+  const need = stillNeeded(nodes);
+  if (!need.length) return { kind: 'done' };
+  const first = need[0];
+  if (first.path.endsWith('[]') || !listOf(first.path) && graphInput(first.path)?.type === 'array') {
+    return { kind: 'list', section: first.section, list: first.path.replace(/\[\]$/, '') };
+  }
+  const asked = need.filter((q) => q.section === first.section && q.item === first.item && !q.path.endsWith('[]'));
+  return { kind: 'questions', section: first.section, item: first.item, asked };
+}
+
+function itemName(list, item) {
+  const config = wording().lists?.[list];
+  const number = config?.itemNumber ? valueAt(page.values, list)?.[item]?.[config.itemNumber] : item + 1;
+  return config?.item ? fill((number === 1 ? config.item.one : config.item.other).replace('{n}', number)) : `Item ${item + 1}`;
+}
+
+/**
+ * The decisions, as a step indicator: one segment for each that is settled or
+ * still needs an answer, and which one this step is.
+ */
+/**
+ * The decisions in play, in order: those the person answered questions for,
+ * and those still asking. One the rules settled on the way — whether you're
+ * exempt, once the requirement doesn't apply — isn't one the person made.
+ */
+function decisions(nodes, values = page.values) {
+  const { ordered, sectionOf } = graphShape();
+  const need = new Set(stillNeeded(nodes).map((q) => q.section));
+  const answered = new Set();
+  for (const path of Object.keys(current().graph.inputs).map((p) => p.slice(2))) {
+    const list = listOf(path);
+    const given = list ? (valueAt(values, list) ?? []).some((it) => it?.[fieldOf(path)] !== undefined) : valueAt(values, path.replace(/\[\]$/, '')) !== undefined;
+    if (given) answered.add(sectionOf(path));
+  }
+  const shown = ordered.filter((fact) => fact && (need.has(fact) || (answered.has(fact) && ['complete', 'placeholder'].includes(nodes[fact]?.state))));
+  return { shown, need };
+}
+
+function renderSteps(step) {
+  const { shown, need } = decisions(page.nodes);
+  const segments = shown.map((fact) => {
+    const settled = !need.has(fact);
+    const cls = step.section === fact ? 'active' : settled ? 'settled' : '';
+    return `<li class="${cls}" title="${esc(titleOf(fact))}"></li>`;
+  }).join('');
+  const at = shown.indexOf(step.section);
+  const count = at >= 0 ? `<p class="step-count"><b>${at + 1}</b>of ${shown.length}</p>` : '';
+  return `<ol class="steps" aria-label="Progress">${segments}</ol>${count}`;
+}
+
+function renderStep() {
+  const form = document.getElementById('step');
+  const step = page.step = nextStep();
+  const back = page.history.length ? '<button type="button" class="link" id="back">Back</button>' : '';
+  if (page.error) { form.innerHTML = `<p class="error">The rules couldn't be evaluated: ${esc(page.error)}</p>`; return; }
+  const title = step.section ? titleOf(step.section) : shape().otherSection;
+  if (step.kind === 'done') {
+    const review = reviewAnswers();
+    const sc = page.scenario;
+    form.dataset.kind = 'review';
+    form.innerHTML = `<div class="done"><div class="review">${review.html}</div>
+      <div class="actions">${page.history.length ? '<button type="button" class="link" id="back">Undo last change</button>' : ''}` +
+      `${sc ? '<button type="button" class="link" id="reset">Back to the scenario</button>' : ''}</div></div>`;
+    for (const a of review.given) prefill(form, form.querySelector(`[data-name="q${a.i}"]`), a.value);
+    return;
+  }
+  if (step.kind === 'list') {
+    const config = wording().lists?.[step.list] ?? {};
+    const suggested = page.nodes[config.count?.suggestFrom]?.value;
+    form.dataset.kind = 'list';
+    form.dataset.list = step.list;
+    form.innerHTML = renderSteps(step) + `<h2 id="step-title">${esc(title)}</h2>
+      <div class="q"><label for="count">${esc(config.count?.ask ?? `How many ${step.list}?`)}</label>
+      ${config.count?.help ? `<p class="help">${esc(config.count.help)}</p>` : ''}
+      <input type="number" id="count" name="count" min="1" step="1"${(restoredCount(step.list) ?? suggested) ? ` value="${esc(restoredCount(step.list) ?? suggested)}"` : ''}></div>
+      <p class="error" id="step-error" hidden></p><div class="actions"><button type="submit" class="btn">Continue</button>${back}</div>`;
+    return;
+  }
+  form.dataset.kind = 'questions';
+  form.dataset.item = step.item ?? '';
+  const sub = step.item !== null ? `<p class="item-title">${esc(itemName(listOf(step.asked[0].path), step.item))}</p>` : '';
+  const sectionHelp = shape().sections[step.section]?.help;
+  form.innerHTML = renderSteps(step) + `<h2 id="step-title">${esc(title)}</h2>${sectionHelp ? `<p class="help section-help">${esc(fill(sectionHelp))}</p>` : ''}${sub}` +
+    step.asked.map((q, i) => field(q.path, i)).join('') +
+    `<p class="error" id="step-error" hidden></p>` +
+    `<p class="muted" id="settled" hidden>That's everything the rules need. Change an answer to see what changes.</p>` +
+    `<div class="actions"><button type="submit" class="btn" id="continue">Continue</button>${back}</div>`;
+  if (page.restore) {
+    for (const el of form.querySelectorAll('[data-path]')) prefill(form, el, read(page.restore, el.dataset.path, step.item));
+  }
+  recheck(form);
+}
+
+/** Show an earlier answer in a question's control. */
+function prefill(form, el, value) {
+  if (value === undefined) return;
+  const radio = [...form.querySelectorAll(`input[type=radio][name="${el.dataset.name}"]`)].find((r) => r.value === String(value));
+  if (radio) radio.checked = true;
+  const box = form.querySelector(`input:not([type=radio])[name="${el.dataset.name}"]`);
+  if (box) box.value = String(value);
+}
+
+/**
+ * The answers the result uses: those an interview would ask for, found as one
+ * would — start with none, add what the rules still need, until they need
+ * nothing more these answers can give.
+ */
+function usedAnswers(values) {
+  const used = {};
+  for (let guard = 0; guard < 100; guard++) {
+    let added = false;
+    for (const missing of neededBy(window.RulesEngine.evaluate(current().graph, used))) {
+      const { path, item } = fromMissing(missing);
+      const list = path.replace(/\[\]$/, '');
+      if (path.endsWith('[]') || (!listOf(path) && graphInput(path)?.type === 'array')) {
+        const items = valueAt(values, list);
+        if (Array.isArray(items) && valueAt(used, list) === undefined) { write(used, list, items.map(() => ({}))); added = true; }
+        continue;
+      }
+      const value = read(values, path, item);
+      if (value !== undefined && read(used, path, item) === undefined && (!listOf(path) || valueAt(used, listOf(path)))) {
+        write(used, path, value, item);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return used;
+}
+
+/** A decision's value as the person reads it: its label, or Yes or No. */
+const decisionLabel = (fact, v) => shape().sections[fact]?.labels?.[String(v)] ?? (typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v);
+
+/** Every input a fact reads, directly or through the facts it reads, as paths: `person.age`, `months[].hoursWorked`. */
+function inputsUnder(fact) {
+  const { graph, reads } = current();
+  const seen = new Set(), inputs = new Set();
+  const walk = (f) => {
+    if (seen.has(f)) return;
+    seen.add(f);
+    for (const input of reads[f] ?? []) inputs.add(input.slice(2));
+    for (const dep of graph.dependencies[f] ?? []) if (!dep.startsWith('$.')) walk(dep);
+  };
+  walk(fact);
+  return inputs;
+}
+
+/**
+ * The answers given, in order, and which of them the decision in front reads:
+ * { all, mine, rest }. An answer the result doesn't use isn't one it reads.
+ */
+function focusAnswers() {
+  const used = usedAnswers(page.values);
+  const under = inputsUnder(page.reviewTab);
+  const all = answered(page.values).map((a, i) => ({ ...a, i, used: read(used, a.path, a.item) !== undefined }))
+    .sort((a, b) => ((a.item ?? -1) - (b.item ?? -1)) || questionOrder(a.path) - questionOrder(b.path));
+  const mine = all.filter((a) => a.used && under.has(a.path));
+  return { all, mine, rest: all.filter((a) => !mine.includes(a)) };
+}
+
+/**
+ * The answers the decision in front reads, each in its own control so it can
+ * be changed, and the policies behind it. Every other answer is folded below.
+ * The decision itself, and what it turned on, head the result.
+ */
+function reviewAnswers() {
+  const { sectionOfFact } = graphShape(page.nodes);
+  const tab = page.reviewTab;
+  const { all, mine, rest } = focusAnswers();
+  // What an item came to, in the words results.yaml gives a per-item detail:
+  // whether a month counted, and why.
+  const itemOutcome = (item) => (shape().details ?? []).filter((d) => d.output.includes('[].') && d.labels).map((d) => {
+    const v = page.nodes[d.output]?.value?.[item];
+    return v == null ? '' : fill(d.labels[String(v)] ?? '');
+  }).find(Boolean) ?? '';
+  const controls = (answers) => {
+    const groups = new Map();
+    for (const a of answers) groups.set(a.item, [...(groups.get(a.item) ?? []), a]);
+    const fields = (list) => list.map((a) => field(a.path, a.i).replace('data-path=', `data-item="${a.item ?? ''}" data-path=`)).join('');
+    // Each item folded, its summary saying what it came to.
+    return [...groups].map(([item, list]) => (item === null ? fields(list)
+      : `<details class="review-item"><summary><b>${esc(itemName(listOf(list[0].path), item))}</b> <span class="muted">${esc(itemOutcome(item))}</span></summary>${fields(list)}</details>`)).join('');
+  };
+  const facts = Object.keys(current().graph.facts).filter((f) => sectionOfFact(f) === tab);
+  const cited = policiesCited(facts.flatMap((f) => current().citations[f] ?? []));
+  const html =
+    (mine.length ? controls(mine) : '<p class="muted">None of this scenario\'s answers.</p>') +
+    (rest.length ? `<details class="unused" id="rest"${page.restOpen ? ' open' : ''}><summary>The scenario's other answers (${rest.length})</summary>${controls(rest)}</details>` : '') +
+    (cited ? `<h3 class="review-head">The rules behind it</h3>${cited}` : '');
+  return { html, given: all };
+}
+
+/**
+ * Which of a decision's answers it turned on: those that, changed, change it.
+ * Worked out in the background, like what would change the result, and
+ * remembered for the answers and decision it was worked out for.
+ */
+const turnedOnSeen = new Map();
+function renderTurnedOn(fact, answers) {
+  const key = JSON.stringify([page.program, page.jurisdiction, fact, page.values]);
+  const found = turnedOnSeen.get(key);
+  if (!found) {
+    if (!turnedOnSeen.has(`pending:${key}`)) {
+      turnedOnSeen.set(`pending:${key}`, true);
+      const values = page.values;
+      setTimeout(() => {
+        // Gone by the time it's this one's turn: skip it, and work it out again
+        // if it comes back, so clicking through scenarios doesn't queue them all.
+        if (JSON.stringify([page.program, page.jurisdiction, fact, page.values]) !== key || page.reviewTab !== fact) {
+          turnedOnSeen.delete(`pending:${key}`);
+          return;
+        }
+        const turns = [];
+        const decisionWith = (a, value) => {
+          const trial = clone(values);
+          write(trial, a.path, value, a.item);
+          try {
+            const after = window.RulesEngine.evaluate(current().graph, trial);
+            return { key: JSON.stringify([after[fact]?.state, after[fact]?.value]), label: isDecided(after, fact) ? decisionLabel(fact, after[fact].value) : 'not decided yet' };
+          } catch { return null; }
+        };
+        for (const a of answers) {
+          // What each other answer would make it, grouped by what it makes it.
+          const changes = new Map();
+          for (const c of changesTo(a.path, a.value, (v) => decisionWith(a, v))) changes.set(c.now, [...(changes.get(c.now) ?? []), c.words]);
+          if (changes.size) turns.push({ ...a, changes: [...changes] });
+        }
+        turnedOnSeen.set(key, turns);
+        if (JSON.stringify([page.program, page.jurisdiction, fact, page.values]) === key && page.reviewTab === fact) renderResult();
+      }, 0);
+    }
+    return '<p class="muted why">Working out what it turned on…</p>';
+  }
+  if (!found.length) return '<p class="muted why">No one answer here changes it on its own.</p>';
+  return '<h3 class="review-head">Why</h3><p class="why">It turned on these answers; changing any one changes it.</p><ul class="turns">' +
+    found.map((t) => `<li><span class="flip-q">${esc(questionLabel(t.path, t.item))}</span> <b>${esc(answerLabel(t.path, t.value))}</b>` +
+      ` <span class="flip-then">(${t.changes.map(([now, words]) => `${esc(words.join(', or '))} would make it ${esc(now)}`).join('; ')})</span></li>`).join('') + '</ul>';
+}
+
+/** An answer changed in the review: kept, and Back undoes it. */
+function changeAnswer(target) {
+  const el = target.closest('[data-path]');
+  if (!el || !entered(target)) return;
+  const value = coerce(el.dataset.path, target.value);
+  const item = el.dataset.item === '' ? null : Number(el.dataset.item);
+  if ((typeof value === 'number' && Number.isNaN(value)) || value === read(page.values, el.dataset.path, item)) return;
+  remember();
+  write(page.values, el.dataset.path, value, item);
+  update();
+}
+
+/** A question's control, from the input's type and enum. */
+function field(path, i) {
+  const q = wording().questions[path] ?? {};
+  const input = graphInput(path) ?? {};
+  const name = `q${i}`;
+  const ask = fill(q.ask ?? path);
+  const help = q.help ? `<p class="help">${esc(fill(q.help))}</p>` : '';
+  const options = input.type === 'boolean' ? { true: 'Yes', false: 'No' }
+    : input.enum ? Object.fromEntries(input.enum.map((v) => [v, q.labels?.[v] ?? v])) : null;
+  if (options) {
+    return `<fieldset class="q" data-path="${esc(path)}" data-name="${name}"><legend>${esc(ask)}</legend>${help}` +
+      `<div class="options${input.type === 'boolean' ? ' yesno' : ''}">` +
+      Object.entries(options).map(([value, label]) =>
+        `<label class="option"><input type="radio" name="${name}" value="${esc(value)}"><span>${esc(label)}</span></label>`).join('') +
+      '</div></fieldset>';
+  }
+  const kind = input.type === 'integer' || input.type === 'number' ? 'number' : input.format === 'date' ? 'date' : 'text';
+  return `<div class="q" data-path="${esc(path)}" data-name="${name}"><label for="${name}">${esc(ask)}</label>${help}` +
+    `<input type="${kind}" id="${name}" name="${name}"${kind === 'number' ? ` min="0" step="${input.type === 'integer' ? 1 : 'any'}" inputmode="decimal"` : ''}></div>`;
+}
+
+/**
+ * Whether a field holds a whole answer. A browser's date field reports a date
+ * while the year is still being typed — 0202-10-20 on the way to 2026 — so a
+ * date counts only once its year has four digits.
+ */
+function entered(input) {
+  if (!input || input.value === '') return false;
+  return input.type !== 'date' || Number(input.value.slice(0, input.value.indexOf('-', 1))) >= 1000;
+}
+
+function formAnswers(form) {
+  return [...form.querySelectorAll('[data-path]')].map((el) => {
+    const input = form.querySelector(`[name="${el.dataset.name}"]:checked`) ?? form.querySelector(`input:not([type=radio])[name="${el.dataset.name}"]`);
+    const raw = entered(input) ? input.value : undefined;
+    return { el, path: el.dataset.path, value: raw === undefined ? undefined : coerce(el.dataset.path, raw) };
+  });
+}
+
+/**
+ * As answers are chosen, show the result they come to, hide the questions
+ * they make moot, and offer Continue only when what's still needed includes a
+ * question on another step.
+ */
+function recheck(form) {
+  if (form.dataset.kind !== 'questions') return;
+  const item = form.dataset.item === '' ? null : Number(form.dataset.item);
+  const items = formAnswers(form);
+  /** The step's answers so far, or only those above one question. */
+  const withAnswers = (above) => {
+    const trial = clone({ values: page.values });
+    for (const it of above === null ? items : items.slice(0, items.indexOf(above))) {
+      if (it.value !== undefined) write(trial.values, it.path, it.value, item);
+    }
+    return trial;
+  };
+  try {
+    const trial = withAnswers(null);
+    const nodes = evaluateState(trial);
+    renderResult(nodes, trial.values);
+    const here = new Set(items.map((it) => missingPath(it.path, item)));
+    const need = neededBy(nodes);
+    document.getElementById('continue').hidden = ![...need].some((p) => !here.has(p));
+    document.getElementById('settled').hidden = need.size > 0;
+  } catch { /* the step's own result stands */ }
+  // A question is moot when the answers above it settle it, as a person reads
+  // down the step. Judged by every other answer instead, two answers that each
+  // settle the result alone — a decision date before the start, and a start
+  // date before it — would each hide the other.
+  for (const it of items) {
+    let needed = true;
+    try { needed = neededBy(evaluateState(withAnswers(it))).has(missingPath(it.path, item)); } catch { /* leave it shown */ }
+    it.el.hidden = !needed;
+  }
+}
+
+// A date applies when the person leaves the field, not as each part is typed.
+document.getElementById('step').addEventListener('change', (event) => {
+  if (event.target.type === 'date' && event.target === document.activeElement) return;
+  if (event.currentTarget.dataset.kind === 'review') changeAnswer(event.target);
+  else recheck(event.currentTarget);
+});
+document.getElementById('step').addEventListener('focusout', (event) => {
+  if (event.target.type !== 'date') return;
+  if (event.currentTarget.dataset.kind === 'review') changeAnswer(event.target);
+  else recheck(event.currentTarget);
+});
+
+document.getElementById('step').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const error = document.getElementById('step-error');
+  if (form.dataset.kind === 'list') {
+    const count = parseInt(form.elements.count.value, 10);
+    if (!(count >= 1)) { error.textContent = 'Enter a number, 1 or more.'; error.hidden = false; return; }
+    remember();
+    const number = wording().lists?.[form.dataset.list]?.itemNumber;
+    write(page.values, form.dataset.list, Array.from({ length: count }, (_, i) => (number ? { [number]: i + 1 } : {})));
+    return update();
+  }
+  const item = form.dataset.item === '' ? null : Number(form.dataset.item);
+  const shown = formAnswers(form).filter((it) => !it.el.hidden);
+  if (shown.some((it) => it.value === undefined)) { error.textContent = 'Answer each question to continue.'; error.hidden = false; return; }
+  remember();
+  for (const it of shown) write(page.values, it.path, it.value, item);
+  update();
+});
+
+document.addEventListener('click', (event) => {
+  if (event.target.id === 'back') goBack();
+  if (event.target.id === 'undo-changes') undoChanges();
+  if (event.target.id === 'compare-from-here') { page.baseline = snapshot(page.nodes, page.values); renderResult(); }
+  const tab = event.target.closest?.('[data-tab]');
+  if (tab) { page.reviewTab = tab.dataset.tab; renderResult(); renderStep(); }
+});
+
+// ── The result ───────────────────────────────────────────────────────────────
+
+/** What the policies behind an output say, each linked to its source. */
+function policies(output) {
+  return policiesCited(current().citations[output] ?? []);
+}
+function policiesCited(ids) {
+  const known = jurisdiction().policies;
+  const cites = [...new Set(ids)].map((id) => known[id] ?? { citation: id });
+  if (!cites.length) return '';
+  return '<ul class="policies">' + cites.map((c) => '<li>' +
+    (c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.citation)}</a>` : `<b>${esc(c.citation)}</b>`) +
+    (c.description ? `<br>${esc(c.description)}` : '') + '</li>').join('') + '</ul>';
+}
+
+/** The decisions so far, each with its answer: how the result was reached. */
+function howDecided(nodes, values) {
+  const { shown, need } = decisions(nodes, values);
+  if (!shown.length) return '';
+  const answer = (fact, v) => shape().sections[fact].labels?.[String(v)] ?? (typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v);
+  return '<h3 class="how-title">How it was decided</h3><ol class="how">' + shown.map((fact) => need.has(fact)
+    ? `<li class="pending"><span>${esc(titleOf(fact))}</span><span>…</span></li>`
+    : `<li><button type="button" class="link" data-tab="${esc(fact)}">${esc(titleOf(fact))}</button><b>${esc(answer(fact, nodes[fact].value))}</b></li>`).join('') + '</ol>';
+}
+
+const isDecided = (nodes, name) => ['complete', 'placeholder'].includes(nodes[name]?.state);
+
+/** The result as the card reads it: whether it's decided, the headline, and the reason under it. */
+function summary(nodes) {
+  const r = shape();
+  const decided = (name) => isDecided(nodes, name);
+  const label = (entry, value) => entry.labels?.[String(value)];
+  const answer = decided(r.headline.output) ? nodes[r.headline.output].value : undefined;
+  const instead = answer === undefined ? null
+    : (r.headline.instead ?? []).find((i) => Object.entries(i.when).every(([output, value]) => decided(output) && nodes[output].value === value));
+  const verdict = instead ? instead.text : answer === undefined ? r.headline.undecided : answer ? r.headline.yes : r.headline.no;
+  let reason = r.headline.undecidedReason;
+  if (answer !== undefined) {
+    const because = r.because.find((b) => decided(b.output) && !(b.skip ?? []).includes(nodes[b.output].value) && label(b, nodes[b.output].value));
+    reason = because ? label(because, nodes[because.output].value) : '';
+  }
+  return { answer, verdict, reason: reason ? fill(reason) : '' };
+}
+
+function renderResult(nodes = page.nodes, values = page.values) {
+  const r = shape();
+  const decided = (name) => isDecided(nodes, name);
+  const label = (entry, value) => entry.labels?.[String(value)];
+  const { answer, verdict, reason } = summary(nodes);
+  const tone = answer === undefined ? '' : answer ? 'yes' : 'no';
+  let next = '';
+  if (r.next && decided(r.next.output) && !(r.next.skip ?? []).includes(nodes[r.next.output].value)) {
+    next = `<div class="next"><b>${esc(r.next.title)}</b>${esc(fill(label(r.next, nodes[r.next.output].value) ?? nodes[r.next.output].value))}</div>`;
+  }
+
+  const need = stillNeeded(nodes);
+  const more = !need.length || answer !== undefined ? '' : `<h3 class="how-title">Still to answer</h3><ul class="still">${need.slice(0, 6).map((q) => `<li>${esc(wording().questions[q.path]?.ask ?? (wording().lists?.[q.path.replace(/\[\]$/, '')]?.count?.ask) ?? q.path)}</li>`).join('')}${need.length > 6 ? `<li>and ${need.length - 6} more</li>` : ''}</ul>`;
+
+  // The scenario, and the decision in front: what it is, and what it turned on.
+  let focus = '';
+  if (page.scenario && nodes === page.nodes && !neededBy(nodes).size) {
+    const tab = page.reviewTab;
+    const help = shape().sections[tab]?.help;
+    focus = `<div class="focus"><h2 class="scenario-name">${esc(page.scenario.name ?? '')}</h2><p class="story">${esc(page.scenario.story)}</p>` +
+      `<p class="decision">${esc(titleOf(tab))} <b>${esc(isDecided(nodes, tab) ? decisionLabel(tab, nodes[tab].value) : 'Not needed')}</b></p>` +
+      (help ? `<p class="help">${esc(fill(help))}</p>` : '') + renderTurnedOn(tab, focusAnswers().mine) +
+      '</div><h3 class="how-title">The result</h3>';
+  }
+  const now = page.baseline && snapshot(nodes, values);
+  const head = now && changedAnswers(page.baseline, now).length ? renderComparison(page.baseline, now)
+    : `<p class="verdict">${esc(verdict)}</p>${reason ? `<p class="reason">${esc(reason)}</p>` : ''}`;
+  document.getElementById('result').innerHTML =
+    `<div class="band ${tone}"></div><div class="result-body"><p class="eyebrow">${esc(wording().name)} · ${esc(jurisdiction().name)}</p>` +
+    `${focus}${head}${next}${howDecided(nodes, values)}` +
+    more + '</div>';
+}
+
+// ── Before and after ─────────────────────────────────────────────────────────
+// The first result the person reaches is where a what-if starts. Change an
+// answer, or the state, and the card shows that result beside the new one,
+// the answers changed, and the decisions that changed with them.
+
+/** A result as the comparison reads it: its verdict, its decisions, and the answers it came from. */
+function snapshot(nodes, values) {
+  const { answer, verdict, reason } = summary(nodes);
+  const decisions = {};
+  for (const fact of Object.keys(shape().sections).filter(titleOf)) {
+    decisions[fact] = { title: titleOf(fact), label: isDecided(nodes, fact) ? String(decisionLabel(fact, nodes[fact].value)) : null };
+  }
+  const answers = {};
+  for (const a of answered(values)) answers[`${a.path}#${a.item}`] = { question: questionLabel(a.path, a.item), label: answerLabel(a.path, a.value), value: a.value };
+  return { jurisdiction: page.jurisdiction, place: jurisdiction().name, values: clone(values), answer, verdict, reason, decisions, answers };
+}
+
+/** What differs between two results' answers, the state first: [what, was, is]. */
+function changedAnswers(before, now) {
+  const rows = before.jurisdiction === now.jurisdiction ? [] : [['State', before.place, now.place]];
+  for (const key of new Set([...Object.keys(before.answers), ...Object.keys(now.answers)])) {
+    const was = before.answers[key], is = now.answers[key];
+    if (was?.value !== is?.value) rows.push([(is ?? was).question, was?.label ?? 'Not answered', is?.label ?? 'Not answered']);
+  }
+  return rows;
+}
+
+function renderComparison(before, now) {
+  const tone = (s) => (s.answer === undefined ? '' : s.answer ? 'yes' : 'no');
+  const side = (label, s) => `<div class="side ${tone(s)}"><span class="side-label">${esc(label)}</span>` +
+    `<p class="verdict">${esc(s.verdict)}</p>${s.reason ? `<p class="reason">${esc(s.reason)}</p>` : ''}</div>`;
+  const row = ([what, was, is]) => `<li><span class="flip-q">${esc(what)}</span> <span class="was">${esc(was)}</span> → <b>${esc(is)}</b></li>`;
+  const decisionRows = Object.keys(now.decisions)
+    .filter((fact) => before.decisions[fact]?.label !== now.decisions[fact].label)
+    .map((fact) => [now.decisions[fact].title, before.decisions[fact]?.label ?? 'Not needed', now.decisions[fact].label ?? 'Not needed']);
+  return `<div class="compare"><div class="compare-grid">${side('Before', before)}${side('With your changes', now)}</div>` +
+    `<h3 class="how-title">What you changed</h3><ul class="diff">${changedAnswers(before, now).map(row).join('')}</ul>` +
+    `<h3 class="how-title">Decisions that changed</h3>` +
+    (decisionRows.length ? `<ul class="diff">${decisionRows.map(row).join('')}</ul>` : '<p class="muted">None. These changes don\'t change any decision.</p>') +
+    '<div class="actions"><button type="button" class="link" id="undo-changes">Undo these changes</button>' +
+    '<button type="button" class="link" id="compare-from-here">Compare from here instead</button></div></div>';
+}
+
+/** Back to the answers and state the comparison started from. Back undoes this too. */
+function undoChanges() {
+  remember();
+  page.values = clone(page.baseline.values);
+  if (page.jurisdiction !== page.baseline.jurisdiction) {
+    page.jurisdiction = stateSelect.value = page.baseline.jurisdiction;
+  }
+  update();
+}
+
+// ── What a decision turned on ────────────────────────────────────────────────
+// An answer given, swapped for the others it could be and run through the
+// rules again, shows whether a decision turns on it. The others: a yes or no's
+// opposite, a choice's other options, and for a date or a number, each side of
+// the values it's compared with — the date constants, and the constants and
+// facts named by the facts it feeds. Nothing here knows a program.
+
+/** Every answer given: [{ path, item, value }]. */
+function answered(values) {
+  const found = [];
+  for (const [key, input] of Object.entries(current().graph.inputs)) {
+    if (key.endsWith('[]') || input.type === 'array' || input.type === 'object') continue;
+    const path = key.slice(2);
+    const list = listOf(path);
+    if (list) (valueAt(values, list) ?? []).forEach((item, i) => item?.[fieldOf(path)] !== undefined && found.push({ path, item: i, value: item[fieldOf(path)] }));
+    else if (valueAt(values, path) !== undefined) found.push({ path, item: null, value: valueAt(values, path) });
+  }
+  return found;
+}
+
+const plainNumber = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+const DAY = 86400000;
+const toDays = (date) => Date.parse(`${date}T00:00:00Z`) / DAY;
+const fromDays = (days) => new Date(days * DAY).toISOString().slice(0, 10);
+
+/**
+ * The other answers that change a decision, found by asking the rules, not by
+ * reading their expressions: { value, words, now }. A yes or no tries the
+ * other; a choice, each other option. A date or a number tries each far end —
+ * a century either way, zero or ten times as much — and where that changes
+ * the decision, halves the gap until it finds the first value that does. So
+ * "before January 1, 2027" is where the rules change, whatever compares it.
+ *
+ * @param {(value: *) => { key: string, label: string }|null} decide - the decision with this answer
+ */
+function changesTo(path, value, decide) {
+  const input = graphInput(path) ?? {};
+  const was = decide(value)?.key;
+  const tried = (v, words) => { const d = decide(v); return d && d.key !== was ? { value: v, words: words ?? answerLabel(path, v), now: d.label } : null; };
+  if (input.type === 'boolean') return [tried(!value)].filter(Boolean);
+  if (input.enum) return input.enum.filter((v) => v !== value).map((v) => tried(v)).filter(Boolean);
+  const date = input.format === 'date';
+  const number = input.type === 'integer' || input.type === 'number';
+  if (!date && !number) return [];
+  // In whole days, whole numbers, or hundredths.
+  const unit = date ? 1 : input.type === 'integer' ? 1 : 0.01;
+  const here = date ? toDays(value) : value;
+  const as = (x) => (date ? fromDays(x) : Math.round(x / unit) * unit);
+  const changesAt = (x) => decide(as(x))?.key !== was;
+  // Between a value that doesn't change it and one that does, the one that
+  // does nearest the first.
+  const edge = (near, out) => {
+    while (Math.abs(out - near) > unit) {
+      const mid = Math.round((near + out) / 2 / unit) * unit;
+      if (mid === near || mid === out) break;
+      if (changesAt(mid)) out = mid; else near = mid;
+    }
+    return out;
+  };
+  // Where to look on each side: the far end, and each side of every constant
+  // of the answer's kind, since a range — ages 19 to 64 — changes it only
+  // between two of them.
+  const constants = Object.values(current().graph.constants ?? {})
+    .filter((c) => (date ? c.format === 'date' : typeof c.value === 'number'))
+    .map((c) => (date ? toDays(c.value) : c.value));
+  const probes = [...new Set(constants.flatMap((c) => [c - unit, c, c + unit]))];
+  const found = [];
+  for (const dir of [-1, 1]) {
+    const far = dir < 0 ? (date ? here - 36500 : 0) : (date ? here + 36500 : Math.max(here * 10, here + 1000));
+    if (dir < 0 && far >= here) continue;
+    // Nearest first.
+    const points = [...probes.filter((p) => (dir < 0 ? p < here && p > far : p > here && p < far)), far].sort((a, b) => dir * (a - b));
+    const hit = points.findIndex(changesAt);
+    if (hit < 0) continue;
+    const start = edge(here, points[hit]);
+    // Where it stops changing it again, if it does.
+    const past = points.slice(hit + 1).find((p) => !changesAt(p));
+    const end = past === undefined ? null : edge(past, points[hit]);
+    const [lo, hi] = [start, end ?? start].sort((a, b) => a - b);
+    const words = end !== null
+      ? (date ? `${longDate(fromDays(lo))} to ${longDate(fromDays(hi))}` : `${plainNumber(as(lo))} to ${plainNumber(as(hi))}`)
+      : dir < 0
+        ? (date ? `before ${longDate(fromDays(start + 1))}` : unit === 1 ? `${plainNumber(as(start))} or less` : `less than ${plainNumber(as(start + unit))}`)
+        : (date ? `on or after ${longDate(fromDays(start))}` : `${plainNumber(as(start))} or more`);
+    found.push(tried(as(start), words));
+  }
+  return found.filter(Boolean);
+}
+
+const longDate = (date) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+
+/** An answer as the person would read it. */
+function answerLabel(path, value) {
+  const q = wording().questions[path] ?? {};
+  const input = graphInput(path) ?? {};
+  if (input.type === 'boolean') return q.labels?.[String(value)] ?? (value ? 'Yes' : 'No');
+  if (input.enum) return q.labels?.[value] ?? value;
+  if (input.format === 'date') return longDate(value);
+  return String(value);
+}
+
+const questionLabel = (path, item) => (item !== null ? `${itemName(listOf(path), item)}: ` : '') + fill(wording().questions[path]?.ask ?? path);
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+
+const remember = () => page.history.push(clone({ values: page.values }));
+/**
+ * Back to the step before, with its answers shown, so going back changes an
+ * answer rather than clearing it. What this step had been given comes along,
+ * shown again if it's asked again.
+ */
+function goBack() {
+  const previous = page.history.pop();
+  if (!previous) return;
+  const form = document.getElementById('step');
+  const restore = clone({ values: page.values }).values;
+  if (form.dataset.kind === 'questions') {
+    const item = form.dataset.item === '' ? null : Number(form.dataset.item);
+    for (const it of formAnswers(form)) if (it.value !== undefined) write(restore, it.path, it.value, item);
+  }
+  page.values = previous.values;
+  page.restore = restore;
+  update();
+}
+/**
+ * Open one of the scenarios the rules are tested with, under the selected
+ * state's rules: its answers, compared from here on, with the group's decision
+ * in front.
+ */
+function loadScenario(scenario) {
+  page.values = clone(scenario.values);
+  page.history = [];
+  page.restore = null;
+  const group = groups()[page.group];
+  page.scenario = { ...scenario, name: group.scenarios.find((s) => s.id === scenario.id)?.name };
+  page.baseline = null;
+  page.reviewTab = group.decision;
+  update();
+}
+const restoredCount = (list) => page.restore && valueAt(page.restore, list)?.length;
+
+function update() {
+  evaluate();
+  // The first finished result is the one a what-if compares with.
+  if (!page.baseline && !page.error && nextStep().kind === 'done') page.baseline = snapshot(page.nodes, page.values);
+  renderBrowse();
+  renderResult();
+  // Last: a step that starts with answers filled in shows what they come to.
+  renderStep();
+}
+
+// ── The scenarios, by decision ───────────────────────────────────────────────
+// A tab for each decision scenarios.yaml groups by, and its scenarios for the
+// selected state, each showing what the decision comes to in it: side by side,
+// they show the kinds of things it turns on. A state lists its own scenarios,
+// then the federal ones its rules can decide, run under its rules.
+
+const groups = () => DATA.groups[page.program];
+const scenarioById = (id) => DATA.scenarios[page.program].find((s) => s.id === id);
+
+/**
+ * What a decision comes to in a scenario as written, under the selected
+ * state's rules, or null when they need answers the scenario doesn't give: a
+ * federal SNAP case, in a state that asks questions of its own.
+ */
+const asWritten = new Map();
+function decisionIn(scenario, fact) {
+  const key = JSON.stringify([page.program, page.jurisdiction, scenario.id, fact]);
+  if (!asWritten.has(key)) {
+    let label = null;
+    try {
+      const nodes = window.RulesEngine.evaluate(current().graph, scenario.values);
+      if (!neededBy(nodes).size) label = isDecided(nodes, fact) ? decisionLabel(fact, nodes[fact].value) : 'Not needed';
+    } catch { /* not listed */ }
+    asWritten.set(key, label);
+  }
+  return asWritten.get(key);
+}
+
+/** A group's scenarios for the selected state: [{ id, name, label }]. */
+function shownIn(group) {
+  const ofState = (state) => group.scenarios.filter(({ id }) => scenarioById(id).state === state);
+  const list = page.jurisdiction === 'US' ? ofState('US') : [...ofState(page.jurisdiction), ...ofState('US')];
+  return list.map((s) => ({ ...s, label: decisionIn(scenarioById(s.id), group.decision) })).filter((s) => s.label !== null);
+}
+
+function renderBrowse() {
+  const list = groups();
+  const group = list[page.group];
+  document.getElementById('groups').innerHTML = list.map((g, i) =>
+    `<button type="button" class="tab${i === page.group ? ' active' : ''}" aria-pressed="${i === page.group}" data-group="${i}">${esc(g.title)}</button>`).join('');
+  document.getElementById('group-help').textContent = group.help ? `What it turns on: ${group.help}` : '';
+  const shown = shownIn(group);
+  document.getElementById('scenarios').innerHTML = !shown.length ? `<p class="muted">No scenarios for ${esc(jurisdiction().name)} here.</p>` : shown.map(({ id, name, label }) => {
+    const active = page.scenario?.id === id;
+    return `<button type="button" class="scenario${active ? ' active' : ''}" aria-pressed="${active}" data-scenario="${esc(id)}" title="${esc(scenarioById(id).story)}">` +
+      `${esc(name)}<span class="chip">${esc(label)}</span></button>`;
+  }).join('');
+}
+
+function openGroup(index) {
+  page.group = index;
+  const first = shownIn(groups()[index])[0];
+  if (first) return loadScenario(scenarioById(first.id));
+  page.scenario = null;
+  page.values = {};
+  page.baseline = null;
+  update();
+}
+
+document.addEventListener('click', (event) => {
+  const group = event.target.closest?.('[data-group]');
+  if (group) openGroup(Number(group.dataset.group));
+  const scenario = event.target.closest?.('[data-scenario]');
+  if (scenario) loadScenario(scenarioById(scenario.dataset.scenario));
+  if (event.target.id === 'reset' && page.scenario) loadScenario(page.scenario);
+});
+document.getElementById('step').addEventListener('toggle', (event) => {
+  if (event.target.id === 'rest') page.restOpen = event.target.open;
+}, true);
+
+const programSelect = document.getElementById('program');
+programSelect.innerHTML = Object.entries(DATA.questions).map(([key, p]) => `<option value="${esc(key)}">${esc(p.name)}</option>`).join('');
+programSelect.addEventListener('change', () => { page.program = programSelect.value; openGroup(0); });
+
+// Changing state keeps the scenario and its answers, when the state lists it,
+// to show how its rules decide them; otherwise it opens the state's first.
+const stateSelect = document.getElementById('jurisdiction');
+stateSelect.innerHTML = DATA.jurisdictions.map((j) => `<option value="${esc(j.code)}">${esc(j.name)}</option>`).join('');
+stateSelect.addEventListener('change', () => {
+  page.jurisdiction = stateSelect.value;
+  if (page.scenario && shownIn(groups()[page.group]).some((s) => s.id === page.scenario.id)) update();
+  else openGroup(page.group);
+});
+
+openGroup(0);
+</script>
+</body>
+</html>
