@@ -49,8 +49,11 @@ rulesets:
         inputs:
           person:
             age: 30
+            isWorking: true
             workingHours: 5
+            isVolunteer: true
             volunteeringHours: 7
+            isInWorkTraining: true
             workTrainingHours: 9
       - description: Exempt by age, 65 or older (tool factory trait :age_exempt)
         inputs:

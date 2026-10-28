@@ -777,8 +777,10 @@ export function toFactGraph(graph, untranslated = new Map()) {
   // Constants are Derived facts holding a literal — FactGraph's own way of
   // writing a value no one supplies — so a fact resting on one is complete in
   // both evaluators. A number without a type is a double in CEL, so a Rational
-  // here. A list or a record has no literal form; facts reading one are refused.
-  for (const [name, { value, type }] of Object.entries(graph.constants ?? {})) {
+  // here. A date is a Day, as a date input is. A list or a record has no
+  // literal form, and a date-time has no type at all; facts reading one are
+  // refused.
+  for (const [name, { value, type, format }] of Object.entries(graph.constants ?? {})) {
     const fgp = `/constants_${name}`;
     ctx.inputFgPaths.set(`constants.${name}`, fgp);
     const valueType = type ?? (Array.isArray(value) ? 'array' : typeof value);
@@ -786,7 +788,12 @@ export function toFactGraph(graph, untranslated = new Map()) {
       ctx.blockedFgPaths.set(fgp, `FactGraph has no literal for a constant of type ${valueType}`);
       continue;
     }
-    lines.push(`  <Fact path="${fgp}"><Derived>${placeholderValueXml(schemaTypeToFgType(valueType), value)}</Derived></Fact>`);
+    const unsupported = untranslatableInput({ type: valueType, format });
+    if (unsupported) {
+      ctx.blockedFgPaths.set(fgp, unsupported);
+      continue;
+    }
+    lines.push(`  <Fact path="${fgp}"><Derived>${placeholderValueXml(schemaTypeToFgType({ type: valueType, format }), value)}</Derived></Fact>`);
   }
 
   // Derived output facts — translated first, emitted after, because whether a

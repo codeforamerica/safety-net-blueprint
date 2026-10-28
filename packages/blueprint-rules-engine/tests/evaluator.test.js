@@ -325,6 +325,18 @@ describe('evaluator — constants', () => {
     const nodes = evaluate(graph, { w: { weekly: 250 }, p: { age: 9 }, constants: { weeklyToMonthly: 1 } });
     assert.strictEqual(nodes.monthly.value, 1075);
   });
+
+  it('a date constant compares with a date input', () => {
+    const dated = {
+      outputs: ['startedBefore'],
+      inputs: { '$.d.startedOn': { type: 'string', format: 'date' } },
+      constants: { effectiveDate: { value: '2027-01-01', type: 'string', format: 'date' } },
+      facts: { startedBefore: { expression: 'd.startedOn < constants.effectiveDate' } },
+      dependencies: { startedBefore: ['$.d.startedOn'] },
+    };
+    assert.strictEqual(evaluate(dated, { d: { startedOn: '2026-12-31' } }).startedBefore.value, true);
+    assert.strictEqual(evaluate(dated, { d: { startedOn: '2027-01-01' } }).startedBefore.value, false);
+  });
 });
 
 /**

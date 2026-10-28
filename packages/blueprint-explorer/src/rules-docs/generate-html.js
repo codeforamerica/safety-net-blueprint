@@ -317,7 +317,7 @@ function legendHtml(hasConstants) {
 // ── Per-ruleset page ──────────────────────────────────────────────────────────
 
 export function generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, opts) {
-  const { hubHref, endpointInfo, registryTypes = new Set(), constantAnnotations = {} } = opts;
+  const { hubHref, endpointInfo, registryTypes = new Set(), constantAnnotations = {}, inputAnnotations = {} } = opts;
   const rulesetName = graph.ruleset;
   const domainBadge = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">${esc(graph.domain)}</span>`;
 
@@ -348,6 +348,7 @@ export function generateRulesetHtml(graph, annotations, registries, examples, ru
   const rulesetInputsJson = JSON.stringify(rulesetInputs);
   const registryFieldsJson = JSON.stringify([...registryTypes]);
   const constantAnnotJson = JSON.stringify(constantAnnotations);
+  const inputAnnotJson = JSON.stringify(inputAnnotations);
   const constantCount = Object.keys(graph.constants ?? {}).length;
 
   const body = `
@@ -385,6 +386,7 @@ ${graphLayout.toString()}
 ${graphEdgePath.toString()}
 const ANNOTATIONS = ${annotJson};
 const CONSTANT_ANNOTATIONS = ${constantAnnotJson};
+const INPUT_ANNOTATIONS = ${inputAnnotJson};
 const CONSTANTS_NODE = ${JSON.stringify(CONSTANTS_NODE)};
 const REGISTRIES = ${registriesJson};
 const EXAMPLES = ${examplesJson};
@@ -605,12 +607,12 @@ function constantField(name, c) {
   const locked = isExperimentMode ? '' : ' disabled';
   const control = typeof c.value === 'boolean'
     ? '<input type="checkbox" id="' + escHtml(id) + '" data-constant="' + escHtml(name) + '"' + (value ? ' checked' : '') + locked + '>'
-    : '<input type="' + (typeof c.value === 'number' ? 'number' : 'text') + '" id="' + escHtml(id) + '" data-constant="' + escHtml(name) + '"' + locked +
+    : '<input type="' + (typeof c.value === 'number' ? 'number' : c.format === 'date' ? 'date' : 'text') + '" id="' + escHtml(id) + '" data-constant="' + escHtml(name) + '"' + locked +
       (c.type === 'integer' ? ' step="1"' : typeof c.value === 'number' ? ' step="any"' : '') +
       ' value="' + escHtml(String(value)) + '" style="font:12px ui-monospace,monospace;width:110px;padding:2px 4px;border:1px solid #d1d5db;border-radius:3px;">';
   return '<div style="padding:8px 0;border-top:1px solid #f3f4f6;">' +
     '<label for="' + escHtml(id) + '" style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,monospace;color:#111827;">' +
-      '<b>' + escHtml(name) + '</b>' + control + (c.type ? '<span style="color:#9ca3af;">(' + escHtml(c.type) + ')</span>' : '') + edited +
+      '<b>' + escHtml(name) + '</b>' + control + (c.type ? '<span style="color:#9ca3af;">(' + escHtml(c.format || c.type) + ')</span>' : '') + edited +
     '</label>' +
     (c.description ? '<div style="font-size:11px;color:#374151;margin:4px 0;">' + escHtml(c.description.trim()) + '</div>' : '') +
     (CONSTANT_ANNOTATIONS[name] ? '<div style="margin-top:6px;">' + renderAnnotFields(CONSTANT_ANNOTATIONS[name]) + '</div>' : '') +
@@ -695,6 +697,7 @@ function showDetail(nodeName) {
       '<li style="font-size:10.5px;font-family:ui-monospace,monospace;color:#374151;margin-bottom:3px;">' + escHtml(p) +
       (def?.type ? ' <span style="color:#9ca3af;">(' + escHtml(def.type) + ')</span>' : '') +
       (def?.description ? '<br><span style="font-size:10px;color:#9ca3af;">' + escHtml(def.description) + '</span>' : '') +
+      (INPUT_ANNOTATIONS[p.slice(2)] ? '<div style="margin-top:4px;font-family:system-ui,sans-serif;">' + renderAnnotFields(INPUT_ANNOTATIONS[p.slice(2)]) + '</div>' : '') +
       '</li>'
     ).join('') + '</ul>';
   }

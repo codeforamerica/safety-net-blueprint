@@ -100,25 +100,24 @@ for (const ef of examplesFiles) {
   }
 }
 
-// ── Load annotations by domain, indexed by fact path ──────────────────────────
+// ── Load annotations by domain, indexed by key ────────────────────────────────
+// Every annotation file, not only {domain}-annotations.yaml: a domain can split
+// its annotations across files ({domain}-annotations-{name}.yaml), so entries
+// for the same key are merged.
 
 const annotationsByDomain = {};
 const constantAnnotationsByDomain = {};
-const annotationFiles = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-annotations.yaml'))
-  .map(f => join(resolvedDir, f));
-for (const af of annotationFiles) {
-  const doc = load(readFileSync(af, 'utf8'));
+const inputAnnotationsByDomain = {};
+const mergeInto = (target, entries) => {
+  for (const [key, value] of Object.entries(entries ?? {})) target[key] = { ...target[key], ...value };
+};
+for (const file of discover(resolvedDir, 'annotations')) {
+  const doc = loadDoc(file).content;
   const domain = doc?.domain;
   if (!domain) continue;
-  if (!annotationsByDomain[domain]) annotationsByDomain[domain] = {};
-  for (const [key, value] of Object.entries(doc.facts ?? {})) {
-    annotationsByDomain[domain][key] = value;
-  }
-  if (!constantAnnotationsByDomain[domain]) constantAnnotationsByDomain[domain] = {};
-  for (const [key, value] of Object.entries(doc.constants ?? {})) {
-    constantAnnotationsByDomain[domain][key] = value;
-  }
+  mergeInto(annotationsByDomain[domain] ??= {}, doc.facts);
+  mergeInto(constantAnnotationsByDomain[domain] ??= {}, doc.constants);
+  mergeInto(inputAnnotationsByDomain[domain] ??= {}, doc.inputs);
 }
 
 // ── Build endpoint index and registry types ───────────────────────────────────
@@ -159,13 +158,14 @@ for (const graphFile of graphFiles) {
     .map(([key, value]) => [key.slice(rulesetName.length + 1), value]));
   const annotations = forRuleset(annotationsByDomain[domain]);
   const constantAnnotations = forRuleset(constantAnnotationsByDomain[domain]);
+  const inputAnnotations = forRuleset(inputAnnotationsByDomain[domain]);
 
   const examples = examplesByDomainRuleset[domain]?.[rulesetName] ?? [];
   const rulesetInputs = rulesetInputsByDomainRuleset[domain]?.[rulesetName] ?? {};
   const slug = `${domain}-${rulesetName}`;
   const endpoint = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
   const endpointInfo = endpoint && { ...endpoint, page: apiPageFor(domain, endpoint) };
-  const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes, constantAnnotations });
+  const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes, constantAnnotations, inputAnnotations });
   writeFileSync(join(outputDir, `${slug}.html`), html);
   allRulesets.push({ domain, rulesetName, slug });
   console.log(`  ✓ ${domain}/${rulesetName}`);

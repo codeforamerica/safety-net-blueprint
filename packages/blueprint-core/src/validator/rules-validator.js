@@ -210,6 +210,19 @@ export function validateRuleset(domain, rulesetName, ruleset) {
       });
     }
     inputNames.add('constants');
+    // A date constant that doesn't parse would reach the evaluator as a plain
+    // string, and every comparison with a date input would fail to evaluate.
+    for (const [name, constant] of Object.entries(ruleset.constants)) {
+      if (!['date', 'date-time'].includes(constant?.format)) continue;
+      const pattern = constant.format === 'date' ? /^\d{4}-\d{2}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}T/;
+      if (typeof constant.value !== 'string' || !pattern.test(constant.value) || Number.isNaN(Date.parse(constant.value))) {
+        errors.push({
+          rule: 'constant-format',
+          message: `Constant "${name}" is a ${constant.format}, but its value ${JSON.stringify(constant.value)} is not one. Write it as ${constant.format === 'date' ? '2027-01-01' : '2027-01-01T00:00:00Z'}.`,
+          path: `${base}.constants.${name}`,
+        });
+      }
+    }
   }
   const paths = new Set();
   for (const { path } of ruleset.facts || []) {

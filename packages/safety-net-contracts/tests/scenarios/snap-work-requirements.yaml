@@ -301,17 +301,33 @@ cases:
   - name: 20 combined hours complies
     person:
       age: 30
+      isWorking: true
       workingHours: 10
+      isVolunteer: true
       volunteeringHours: 5
+      isInWorkTraining: true
       workTrainingHours: 5
     expect:
       meetsRequirement: true
+    note: The port added the hours whether or not the person said they work, volunteer or train; the rules count each only when they do.
   - name: 19 combined hours does not
     person:
       age: 30
+      isWorking: true
       workingHours: 10
+      isVolunteer: true
       volunteeringHours: 5
+      isInWorkTraining: true
       workTrainingHours: 4
+    expect:
+      meetsRequirement: false
+  - name: hours for something the person doesn't do don't count
+    person:
+      age: 30
+      isWorking: true
+      workingHours: 15
+      isVolunteer: false
+      volunteeringHours: 5
     expect:
       meetsRequirement: false
   - name: no proof of American Indian status federally

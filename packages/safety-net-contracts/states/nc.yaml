@@ -40,9 +40,9 @@ actions:
     file: domains/eligibility/eligibility-rules.yaml
     description: 'Medicaid: acceptsFrailtyStatements'
     update: false
-  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBefore2028.value
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBeforeDocumentationRequired.value
     file: domains/eligibility/eligibility-rules.yaml
-    description: 'Medicaid: acceptsStatementsBefore2028'
+    description: 'Medicaid: acceptsStatementsBeforeDocumentationRequired'
     update: false
   - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsForMandatoryExceptions.value
     file: domains/eligibility/eligibility-rules.yaml
@@ -209,3 +209,124 @@ actions:
             isPregnant: true
             isWorking: true
             workingHours: 30
+
+  - target: $.inputs
+    file: domains/eligibility/eligibility-annotations-source.yaml
+    description: 'SNAP: how North Carolina''s inputs differ from the tool'
+    update:
+      snapWorkRequirements.person.hasHsDiploma:
+        source: nc_screeners.has_hs_diploma
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, yes-no-answer]
+        note: co-snap defaulted this to true; the ruleset has no default.
+      snapWorkRequirements.person.workedLastFiveYears:
+        source: nc_screeners.worked_last_five_years
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, yes-no-answer]
+        note: >-
+          co-snap defaulted this to true, which exempted someone who left it blank but said they
+          didn't earn over the threshold; the tool doesn't. With no default, the ruleset waits
+          on the answer instead, so that gap is gone. The tool says false while it is blank.
+      snapWorkRequirements.person.earnedMoreThanThreshold:
+        source: nc_screeners.earned_more_than_threshold
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, yes-no-answer]
+        note: >-
+          co-snap defaulted this to true; the ruleset has no default. The tool asks it only
+          after a yes to working in the last five years, and the ruleset reads it only then.
+      snapWorkRequirements.person.healthConditionsPreventingWork:
+        source: nc_screeners.health_conditions_preventing_work
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, yes-no-answer]
+        note: >-
+          The tool asks this only after "worked, and didn't earn over the threshold", and clears
+          it on save for someone who hasn't worked in five years. The ruleset reads it in both
+          cases. For a 55-to-64-year-old with no diploma, no work in five years and no medical
+          condition, the port waits on this answer, and a yes exempts them. The tool never asks,
+          and doesn't exempt them.
+      snapWorkRequirements.person.teachesHomeschool:
+        source: nc_screeners.teaches_homeschool
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, yes-no-answer]
+      snapWorkRequirements.person.homeschoolHours:
+        source: nc_screeners.homeschool_hours
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+        mapping: changed
+        mapping-rules: [state-table-fields, number-answer]
+
+  - target: $.constants
+    file: domains/eligibility/eligibility-annotations-source.yaml
+    description: 'SNAP: how North Carolina''s constants differ from the tool'
+    update:
+      snapWorkRequirements.homeschoolExemptionWeeklyHours:
+        source: NcScreener#operating_homeschool_30_or_more_hours?
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/nc_screener.rb
+        mapping: changed
+        mapping-rules: [literal-to-constant]
+        note: The literal 30 in the method.
+      snapWorkRequirements.ageWorkEducationHealthExemptionMinimumAge:
+        source: WorkRulesPolicy::NorthCarolina#age_work_education_health_exemption?
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+        mapping: changed
+        mapping-rules: [age-as-number, literal-to-constant]
+        note: The lower edge of the 55_to_64 range the method checks.
+      snapWorkRequirements.requiresProofOfVolunteering:
+        source: WorkRulesPolicy::NorthCarolina#requires_proof_of_volunteering?
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+        mapping: changed
+        mapping-rules: [literal-to-constant, subclass-to-overlay]
+        note: >-
+          false, as in the tool. The overlay notes that NC's manual (FNS 260.04 B.3.c) asks for
+          proof of volunteer hours, so this may be the tool's own choice, not the agency's.
+
+  - target: $.facts
+    file: domains/eligibility/eligibility-annotations-source.yaml
+    description: 'SNAP: how North Carolina''s facts differ from the tool'
+    update:
+      snapWorkRequirements.ageWorkEducationHealthExemption:
+        source: WorkRulesPolicy::NorthCarolina#age_work_education_health_exemption?
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+        mapping: changed
+        mapping-rules: [age-as-number, threshold-name]
+        note: >-
+          Checks the age against its own lower age and the federal workRulesMaximumAge, not the
+          55_to_64 range. So changing the federal maximum also moves this exemption's top age.
+          Its code is exemption_age_no_diploma, not the tool's exemption_55_no_diploma. See
+          healthConditionsPreventingWork for the one case where the answer differs.
+      snapWorkRequirements.operatingHomeschoolExemptionHours:
+        source: NcScreener#operating_homeschool_30_or_more_hours?
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/nc_screener.rb
+        mapping: renamed
+        mapping-rules: [threshold-name, literal-to-constant]
+      snapWorkRequirements.stateExemptionReasons:
+        source: WorkRulesPolicy::NorthCarolina#state_exemption_reasons
+        sourceFile: >-
+          https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+        mapping: changed
+        mapping-rules: [subclass-to-overlay, threshold-name]
+        note: >-
+          The 55-to-64 code is exemption_age_no_diploma here, exemption_55_no_diploma in the
+          tool. The homeschool code is the same. The ruleset doesn't add either code to a
+          declared list of codes, where co-snap's overlay did.
+      snapWorkRequirements.hasStateExemption:
+        mapping: introduced
+        mapping-rules: [no-list, subclass-to-overlay]
+        note: >-
+          Either NC exemption. The tool gets the same answer from its list of state exemption
+          reasons.

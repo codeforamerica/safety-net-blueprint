@@ -320,7 +320,7 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
   // without any evaluator noticing.
   const constants = Object.fromEntries(Object.entries(ruleset.constants ?? {}).map(([name, p]) => [
     name,
-    { value: p.value, ...(p.type ? { type: p.type } : {}), ...(p.description ? { description: p.description } : {}) },
+    { value: p.value, ...(p.type ? { type: p.type } : {}), ...(p.format ? { format: p.format } : {}), ...(p.description ? { description: p.description } : {}) },
   ]));
 
   // The format's edition, raised only by what the graph uses, so a graph

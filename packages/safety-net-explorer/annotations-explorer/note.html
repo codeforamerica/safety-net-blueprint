@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>note — Annotation Explorer — Safety Net Blueprint</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">note</a></div>
+    
+      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">note</code></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
+      </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+        <div class="nav-section-label">eligibility</div>
+        <a class="nav-link" href="#entry--medicaidworkrequirements-acceptsstatementsbeforedocumentationrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-americanindianoralaskanativeexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.americanIndianOrAlaskaNativeExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-beforedocumentationrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.beforeDocumentationRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-caregiverofchildunder14exemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.caregiverOfChildUnder14Exemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-caregiverofpersonwithdisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.caregiverOfPersonWithDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-date" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.date</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-exemptatlastdetermination" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.exemptAtLastDetermination</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-renewalstartedon" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.renewalStartedOn</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-documentationrequiredfrom" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.documentationRequiredFrom</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-effectivedate" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.effectiveDate</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-exemptions" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.exemptions</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-exemptionshown" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.exemptionShown</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-formerfosteryouthexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.formerFosterYouthExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-hasexemptionotherthanfrailty" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.hasExemptionOtherThanFrailty</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-incarceratedexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.incarceratedExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-incomerequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.incomeRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-isexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.isExempt</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-lostexemptstatus" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.lostExemptStatus</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-meetsrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.meetsRequirement</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[]</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---askedforhardship" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].askedForHardship</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---countyhaddisasteroremergency" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].countyHadDisasterOrEmergency</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---countyhadhighunemployment" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].countyHadHighUnemployment</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---educationclasshours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].educationClassHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---educationcredithours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].educationCreditHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---enrolledhalftimeormore" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].enrolledHalfTimeOrMore</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hadmedicaltravel" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hadMedicalTravel</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hadmedicare" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hadMedicare</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hourscommunityservice" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursCommunityService</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hoursworked" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursWorked</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hoursworkprogram" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursWorkProgram</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---householdincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].householdIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---isseasonalworker" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].isSeasonalWorker</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---monthsbefore" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].monthsBefore</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---receivedinpatientcare" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].receivedInpatientCare</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---sixmonthaverageincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].sixMonthAverageIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasExempt</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasincarceratedinprior3months" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasIncarceratedInPrior3Months</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasinothermandatorygroup" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasInOtherMandatoryGroup</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasunder19" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasUnder19</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-notapplicablereason" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.notApplicableReason</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-pregnantorpostpartumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.pregnantOrPostpartumExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-requirementineffect" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.requirementInEffect</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---automatichardshipexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].automaticHardshipException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---educationhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].educationHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---hardshipavailableifrequested" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].hardshipAvailableIfRequested</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---mandatoryexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].mandatoryException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsactivityhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsActivityHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsseasonalincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsSeasonalIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---proofrule" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].proofRule</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---qualifies" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].qualifies</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---qualifiesby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].qualifiesBy</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---requestedhardshipexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].requestedHardshipException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---totalactivityhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].totalActivityHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-satisfiesrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.satisfiesRequirement</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-snapworkrulesexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.snapWorkRulesExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-statementacceptedforexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.statementAcceptedForExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-statementacceptedgenerally" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.statementAcceptedGenerally</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-substanceusetreatmentexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.substanceUseTreatmentExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-tanfworkrulesexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.tanfWorkRulesExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-veteranwithtotaldisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.veteranWithTotalDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ageovermaximumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageOverMaximumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ageunderminimumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageUnderMinimumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-anylistedpreventingwork" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.anyListedPreventingWork</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-anypreventingwork" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.anyPreventingWork</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-countedvolunteeringhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.countedVolunteeringHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-countedworkinghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.countedWorkingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-countedworktraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.countedWorkTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsaboveminimum" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsAboveMinimum</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyamount" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-exemptions" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.exemptions</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasotherexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasOtherExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasstateexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasStateExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isageexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isAgeExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexemptfromworkrules" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExemptFromWorkRules</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-meetsrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.meetsRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-notapplicablereason" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.notApplicableReason</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-age" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.age</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isinworktraining" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isInWorkTraining</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isvolunteer" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isVolunteer</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isworking" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isWorking</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-workingweeklyearnings" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-worktraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingdisabilitybenefits" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingDisabilityBenefits</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requirementapplies" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requirementApplies</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproof" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProof</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofamericanindianstatus" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofvolunteering" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfVolunteering</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-satisfiesrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.satisfiesRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-totalworkvolunteerandtraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-weeklyhoursrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.weeklyHoursRequired</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesmaximumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMaximumAge</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesminimumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMinimumAge</code>
+        </a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div style="padding:2rem 0.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>note</code></h1>
+      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">98 annotations</p>
+      <div id="entry--medicaidworkrequirements-acceptsstatementsbeforedocumentationrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same state option, same default (true). The name no longer bakes in 2028, since the date it refers to is now the constant documentationRequiredFrom.</div>
+        </div><div id="entry--medicaidworkrequirements-americanindianoralaskanativeexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.americanIndianOrAlaskaNativeExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's american_indian_or_alaska_native term inside exclusions, as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-beforedocumentationrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.beforeDocumentationRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Compares the decision date to the date documentationRequiredFrom, where the draft compared the decision year to a year (435.557).</div>
+        </div><div id="entry--medicaidworkrequirements-caregiverofchildunder14exemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.caregiverOfChildUnder14Exemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's caregiver_of_child_under_14 term inside exclusions, as its own fact. It reads isQualifyingCaregiver only after caresForChildUnder14, so someone who cares for no child isn't asked how they're related.</div>
+        </div><div id="entry--medicaidworkrequirements-caregiverofpersonwithdisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.caregiverOfPersonWithDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's caregiver_of_person_with_disability term inside exclusions, as its own fact. It reads isQualifyingCaregiver only after caresForPersonWithDisability.</div>
+        </div><div id="entry--medicaidworkrequirements-determination-date" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.date</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft asked for the year of the decision, as an integer. The ruleset asks for the day it's decided, as a date, so a start partway through a year, like Iowa's December 1, 2026, can be expressed. A renewal is never asked this to decide whether the requirement applies; it's still asked for the proof rules (beforeDocumentationRequired).</div>
+        </div><div id="entry--medicaidworkrequirements-determination-exemptatlastdetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.exemptAtLastDetermination</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same question, with &quot;exempt&quot; for the draft's &quot;excluded&quot;.</div>
+        </div><div id="entry--medicaidworkrequirements-determination-renewalstartedon" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.renewalStartedOn</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft asked yes or no: was the application submitted, or the renewal started, before the requirement took effect? The ruleset asks for the day a renewal started, as a date, and only renewals read it, because 42 CFR 435.559(c) excuses only a renewal started before the start. The draft also excused an application submitted before, which 435.559 doesn't say.</div>
+        </div><div id="entry--medicaidworkrequirements-documentationrequiredfrom" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.documentationRequiredFrom</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft held the year documents are required from (2028). The ruleset holds the first day, as a date ('2028-01-01') (435.557).</div>
+        </div><div id="entry--medicaidworkrequirements-effectivedate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.effectiveDate</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft held the first year in effect (2027). The ruleset holds the first day, as a date ('2027-01-01'), so Iowa's December 1, 2026 start can be expressed.</div>
+        </div><div id="entry--medicaidworkrequirements-exemptions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.exemptions</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same list, same values, same order, longest-lasting first (435.554). It now gathers the per-exemption facts instead of testing each condition inline. Medical frailty still reads isMedicallyFrail directly; it has no separate exemption fact. Also an output.</div>
+        </div><div id="entry--medicaidworkrequirements-exemptionshown" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.exemptionShown</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic.</div>
+        </div><div id="entry--medicaidworkrequirements-formerfosteryouthexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.formerFosterYouthExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's former_foster_youth term inside exclusions (former foster youth, age at most formerFosterYouthMaximumAge), as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-hasexemptionotherthanfrailty" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.hasExemptionOtherThanFrailty</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic.</div>
+        </div><div id="entry--medicaidworkrequirements-incarceratedexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.incarceratedExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's incarcerated term inside exclusions, as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-incomerequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.incomeRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same amount (monthlyHoursRequired times federalMinimumWage, $580). Worked out once for the person instead of once per month, since it doesn't depend on the month.</div>
+        </div><div id="entry--medicaidworkrequirements-isexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.isExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic (requirementApplies and at least one exemption). Also an output.</div>
+        </div><div id="entry--medicaidworkrequirements-lostexemptstatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.lostExemptStatus</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, reading the renamed input exemptAtLastDetermination. Also an output.</div>
+        </div><div id="entry--medicaidworkrequirements-meetsrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.meetsRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic (qualifying months at least monthsRequired, 435.556). Renamed to match the SNAP ruleset's vocabulary, and now an output; the draft didn't output it.</div>
+        </div><div id="entry--medicaidworkrequirements-months--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's person-level ruleset took reviewMonths, a list of results already run through the separate reviewMonth ruleset (default an empty list), with monthsBefore expected on each. The ruleset takes the raw answers for each month as `months`, one object per month, and works out each month's result itself (see the fact reviewMonths).</div>
+        </div><div id="entry--medicaidworkrequirements-months---askedforhardship" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].askedForHardship</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---countyhaddisasteroremergency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].countyHadDisasterOrEmergency</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft marked it as filled from state data.</div>
+        </div><div id="entry--medicaidworkrequirements-months---countyhadhighunemployment" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].countyHadHighUnemployment</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft marked it as filled from state data, and its comment gave the threshold (the lesser of 8% or 1.5 times the national rate, with CMS approval, 435.555); the ruleset drops both.</div>
+        </div><div id="entry--medicaidworkrequirements-months---educationclasshours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].educationClassHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---educationcredithours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].educationCreditHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---enrolledhalftimeormore" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].enrolledHalfTimeOrMore</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---hadmedicaltravel" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hadMedicalTravel</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft's help text carried a condition the rules don't check: if the dependent traveled alone, the person must show they missed work or activities. The ruleset has no help text, so that condition is gone.</div>
+        </div><div id="entry--medicaidworkrequirements-months---hadmedicare" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hadMedicare</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---hourscommunityservice" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursCommunityService</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---hoursworked" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursWorked</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft's help text said unpaid work, like an internship, counts; the ruleset has no help text.</div>
+        </div><div id="entry--medicaidworkrequirements-months---hoursworkprogram" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursWorkProgram</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---householdincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].householdIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft's comment said it's MAGI-based monthly household income; the ruleset doesn't say.</div>
+        </div><div id="entry--medicaidworkrequirements-months---isseasonalworker" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].isSeasonalWorker</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---monthsbefore" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].monthsBefore</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft marked it required and filled from state data; the ruleset has neither marker.</div>
+        </div><div id="entry--medicaidworkrequirements-months---receivedinpatientcare" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].receivedInpatientCare</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---sixmonthaverageincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].sixMonthAverageIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Whether an exemption applied for any part of the month (435.553), with &quot;exempt&quot; for &quot;excluded&quot;.</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasincarceratedinprior3months" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasIncarceratedInPrior3Months</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasinothermandatorygroup" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasInOtherMandatoryGroup</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`. The draft marked it as filled from state data.</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasunder19" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasUnder19</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Now a field of each item in `months`.</div>
+        </div><div id="entry--medicaidworkrequirements-notapplicablereason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.notApplicableReason</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Says why the requirement doesn't apply: renewal_started_before_requirement, not_yet_in_effect, not_in_expansion_group, has_medicare, outside_age_range, or applies. It names the first condition that settles it, so a caller can explain the result without asking anything requirementApplies didn't. Also an output.</div>
+        </div><div id="entry--medicaidworkrequirements-pregnantorpostpartumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.pregnantOrPostpartumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's pregnant_or_postpartum term inside exclusions, as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-requirementineffect" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.requirementInEffect</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Follows 42 CFR 435.559. A renewal is checked if it started on or after effectiveDate (435.559(c)); anything else, if it's decided on or after it, since coverage from then on is subject (435.559(a)). The draft compared the decision year and excused anything started before, applications included. Written as a conditional so a renewal is never asked its decision date here, nor an application its start.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same filter: at application, only months with monthsBefore at most applicationReviewMonths; otherwise every month (435.556). It now filters the raw `months` input, and each item it keeps carries the per-month facts (reviewMonths[].…). So per-month results exist only for months in the review period; the draft worked out every month given, then filtered.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---automatichardshipexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].automaticHardshipException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic (435.555), now a fact on each review-period month.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---educationhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].educationHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same arithmetic (credit hours times 3 times 4.33, plus class hours), now a fact on each month.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---hardshipavailableifrequested" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].hardshipAvailableIfRequested</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic (435.555), now a fact on each review-period month, and a per-month output.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---mandatoryexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].mandatoryException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic (435.553), reading month.wasExempt for month.wasExcluded.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsactivityhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsActivityHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, now a fact on each review-period month.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, now a fact on each month, reading the person-level incomeRequired.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsseasonalincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsSeasonalIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, now a fact on each month, reading the person-level incomeRequired.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---proofrule" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].proofRule</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same values (none_needed, exception, standard), now a fact on each month, and a per-month output.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---qualifies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].qualifies</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, now a fact on each review-period month, and a per-month output.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---qualifiesby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].qualifiesBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same order and values, now a fact on each review-period month, and a per-month output.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---requestedhardshipexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].requestedHardshipException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, now a fact on each review-period month.</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---totalactivityhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].totalActivityHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same sum (435.552), now a fact on each review-period month, and a per-month output.</div>
+        </div><div id="entry--medicaidworkrequirements-satisfiesrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.satisfiesRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Replaces the draft's four-value status string with yes or no: the requirement doesn't apply, the person is exempt, or enough months counted. It is true wherever status wasn't does_not_meet_requirement. The other distinctions status made are in requirementApplies, isExempt and meetsRequirement, all outputs. Whether it's shown is still isCovered's job.</div>
+        </div><div id="entry--medicaidworkrequirements-snapworkrulesexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.snapWorkRulesExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's snap_work_rules term inside exclusions (in a SNAP household and subject to SNAP's work rules), as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-statementacceptedforexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.statementAcceptedForExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic.</div>
+        </div><div id="entry--medicaidworkrequirements-statementacceptedgenerally" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.statementAcceptedGenerally</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Same logic, operands swapped: the state option comes before the date check, so a state that doesn't take statements before documents are required is never asked the decision date for this.</div>
+        </div><div id="entry--medicaidworkrequirements-substanceusetreatmentexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.substanceUseTreatmentExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's substance_use_treatment term inside exclusions, as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-tanfworkrulesexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.tanfWorkRulesExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's tanf_work_rules term inside exclusions, as its own fact.</div>
+        </div><div id="entry--medicaidworkrequirements-veteranwithtotaldisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.veteranWithTotalDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The draft's veteran_with_total_disability term inside exclusions, as its own fact.</div>
+        </div><div id="entry--snapworkrequirements-ageovermaximumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageOverMaximumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool adds the code age_65_or_older to its exemption list. The ruleset adds no code for it to exemptions; it feeds requirementApplies and notApplicableReason instead. The name still ends in Exemption.</div>
+        </div><div id="entry--snapworkrequirements-ageunderminimumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageUnderMinimumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool adds the code age_under_18 to its exemption list. The ruleset adds no code for it to exemptions; it feeds requirementApplies and notApplicableReason instead. The name still ends in Exemption.</div>
+        </div><div id="entry--snapworkrequirements-anylistedpreventingwork" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.anyListedPreventingWork</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The yes answers in Screener::PREVENTING_WORK_ATTRIBUTES, the first half of any_preventing_work?, as a fact of its own so hasExemption and anyPreventingWork can read it.</div>
+        </div><div id="entry--snapworkrequirements-anypreventingwork" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.anyPreventingWork</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool loops over PREVENTING_WORK_ATTRIBUTES, then asks the state. The ruleset joins anyListedPreventingWork and extraPreventingWork with or. The tool uses it only on the signature page and in the PDF packet.</div>
+        </div><div id="entry--snapworkrequirements-countedvolunteeringhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.countedVolunteeringHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Volunteering hours if isVolunteer is true, otherwise 0.</div>
+        </div><div id="entry--snapworkrequirements-countedworkinghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.countedWorkingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Working hours if isWorking is true, otherwise 0.</div>
+        </div><div id="entry--snapworkrequirements-countedworktraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.countedWorkTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Training hours if isInWorkTraining is true, otherwise 0.</div>
+        </div><div id="entry--snapworkrequirements-earningsaboveminimum" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsAboveMinimum</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Neither checks whether the person works. The tool reads blank earnings as 0 and clears them when is_working is no, so for a non-worker this is false. The ruleset has no 0 to fall back on, so it waits on the earnings answer even from someone who said they don't work, unlike the counted hours facts, which check isWorking first.</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyamount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The literal 217.50 in earnings_above_minimum?. The ruleset's description explains it as the federal minimum wage times 30; the tool has only the number.</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The literal 30 in working_30_or_more_hours?.</div>
+        </div><div id="entry--snapworkrequirements-exemptions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.exemptions</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Leaves out the age codes the tool puts first. Read as a set; the tool keeps an order for its exemptions_found record. The ruleset declares no item list or uniqueness, where co-snap declared both. It also waits on every exemption question. So for someone exempt by, say, pregnancy, it waits on isWorking, a question the tool skips once has_exemption? is true.</div>
+        </div><div id="entry--snapworkrequirements-hasexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool checks non_earnings_exemption_reasons.any?. Like the tool, it counts age, so it is true for a 70-year-old whose isExempt is false. The tool uses it to skip the work, volunteering and training questions.</div>
+        </div><div id="entry--snapworkrequirements-hasotherexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasOtherExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The yes answers in Screener::OTHER_EXEMPTION_ATTRIBUTES, gathered so hasExemption can read one fact.</div>
+        </div><div id="entry--snapworkrequirements-hasstateexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasStateExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Whether the state adds an exemption, as a yes or no the state's overlay replaces. The tool gets the same answer by checking whether non_earnings_exemption_reasons, which includes state_exemption_reasons, has anything in it.</div>
+        </div><div id="entry--snapworkrequirements-isageexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isAgeExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool checks for the under_18 or 65_or_older range. The ruleset compares the age with two constants, through the two age facts.</div>
+        </div><div id="entry--snapworkrequirements-isexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">requirementApplies and isExemptFromWorkRules. False for someone age-exempt, where the tool's exempt_from_work_rules? is true. It matches the tool's exempt outcome, which only people past the age check reach. An earnings exemption counts, as in the tool.</div>
+        </div><div id="entry--snapworkrequirements-isexemptfromworkrules" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExemptFromWorkRules</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool checks exemption_reasons.any?; the ruleset joins hasExemption and hasEarningsExemption with or. It still counts age, as the tool does. co-snap made it an output; the ruleset keeps it as a fact only, and isExempt is the output.</div>
+        </div><div id="entry--snapworkrequirements-meetsrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.meetsRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">co-snap's compliesWithWorkRules, renamed to Medicaid's word.</div>
+        </div><div id="entry--snapworkrequirements-notapplicablereason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.notApplicableReason</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Which age cutoff the person is past: under_minimum_age or over_maximum_age, else applies. The tool's codes were age_under_18 and age_65_or_older; co-snap's were age_under_minimum and age_over_maximum. The applies value has no counterpart.</div>
+        </div><div id="entry--snapworkrequirements-person-age" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.age</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool asks for one of five ranges; the ruleset takes an age in whole years, at least 0, with no upper limit. The tool also asks for a birth date later on (screeners.birth_date), but no rule reads it.</div>
+        </div><div id="entry--snapworkrequirements-person-isinworktraining" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isInWorkTraining</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">No rule in the tool reads is_in_work_training; it only clears the training hours on save when the answer is no. co-snap kept it as an input nothing read. The ruleset reads it to decide whether training hours count.</div>
+        </div><div id="entry--snapworkrequirements-person-isvolunteer" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isVolunteer</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool's rules read is_volunteer only in volunteering?, for proof. The ruleset also reads it to decide whether volunteering hours count toward the 20.</div>
+        </div><div id="entry--snapworkrequirements-person-isworking" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isWorking</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool's rules read is_working only for the earnings exemption. The ruleset also reads it to decide whether working hours count toward the 20.</div>
+        </div><div id="entry--snapworkrequirements-person-workingweeklyearnings" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A decimal column in the tool, cleared when is_working is no. The ruleset reads it even for someone who doesn't work (see earningsAboveMinimum), so it can be asked of a person the tool would never ask.</div>
+        </div><div id="entry--snapworkrequirements-person-worktraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool stores this as a string column, validates it as a whole number, and reads it with to_i. The ruleset takes an integer.</div>
+        </div><div id="entry--snapworkrequirements-receivingdisabilitybenefits" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingDisabilityBenefits</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool loops over DISABILITY_BENEFIT_ATTRIBUTES. The ruleset joins the eight exemption facts with or. co-snap called this same; the answer is the same, but the shape is that of hasExemption, which co-snap called changed.</div>
+        </div><div id="entry--snapworkrequirements-requirementapplies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requirementApplies</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Not age-exempt. Careful with the words: in the tool, the &quot;work rules apply&quot; pages (WorkRulesApplyMetController, WorkRulesApplyUnmetController) mean the person isn't exempt at all. Here requirementApplies is only about age, and stays true for someone exempt.</div>
+        </div><div id="entry--snapworkrequirements-requiresproof" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProof</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The same expression as the tool's. Two things differ. Through earningsAboveMinimum, it waits on earnings from someone who doesn't work, where the tool reads 0. And the ruleset answers it for everyone, so a 70-year-old student gets true; the tool shows it only on the proof page, which only people exempt for a reason other than age reach.</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofamericanindianstatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The method returns false; the Delaware subclass returns true.</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofvolunteering" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfVolunteering</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The method returns true; the NorthCarolina subclass returns false.</div>
+        </div><div id="entry--snapworkrequirements-satisfiesrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.satisfiesRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">True when the requirement doesn't apply, the person is exempt, or the hours are met; false only for the tool's not_exempt_work_rules_not_met. The four-way outcome is gone; it can be rebuilt from requirementApplies, isExempt and meetsRequirement.</div>
+        </div><div id="entry--snapworkrequirements-totalworkvolunteerandtraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool adds working_hours, volunteering_hours and work_training_hours whatever the yes-or-no answers say, reading blanks as 0. Through the tool's screens the total is the same, because a no clears the hours on save. Called directly, it differs: the tool's own spec adds 5, 7 and 9 hours with no yes-or-no answers and gets 21; the ruleset waits on isWorking, isVolunteer and isInWorkTraining.</div>
+        </div><div id="entry--snapworkrequirements-weeklyhoursrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.weeklyHoursRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The literal 20 in complies_with_work_rules?.</div>
+        </div><div id="entry--snapworkrequirements-workrulesmaximumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMaximumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool has no number here. 64 is one below the 65_or_older range that age_exempt? checks. North Carolina's 55-to-64 exemption also reads it as its upper age.</div>
+        </div><div id="entry--snapworkrequirements-workrulesminimumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMinimumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">The tool has no number here. 18 is the upper edge of the under_18 range that age_exempt? checks.</div>
+        </div>
+    </div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+</body>
+</html>

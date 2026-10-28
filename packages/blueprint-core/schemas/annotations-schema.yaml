@@ -24,6 +24,8 @@ description: >
                  (e.g., snapInterviewProbes.incomeInconsistency)
     constants  — Ruleset constants, keyed by {ruleset}.{constantName}
                  (e.g., snapWorkRequirements.weeklyHoursRequired)
+    inputs     — Ruleset inputs, keyed by {ruleset}.{input path}
+                 (e.g., medicaidWorkRequirements.months[].hoursWorked)
 
   Annotations reference policies by ID from the policy registry. They never
   embed citation text directly.
@@ -81,6 +83,12 @@ properties:
       A constant a policy sets, such as a threshold, an age or a number of
       hours, cites that policy here, as a fact does.
     $ref: "#/$defs/ConstantsAnnotationMap"
+
+  inputs:
+    description: >
+      Annotations for ruleset inputs, keyed by {ruleset}.{input path}: what a
+      caller sends, such as determination.startedOn or months[].hoursWorked.
+    $ref: "#/$defs/InputsAnnotationMap"
 
 $defs:
   SchemaAnnotationMap:
@@ -143,6 +151,18 @@ $defs:
     minProperties: 1
     propertyNames:
       pattern: "^[a-z][a-zA-Z0-9]*\\.[a-zA-Z][a-zA-Z0-9]*$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  InputsAnnotationMap:
+    type: object
+    description: >
+      Map of ruleset input keys to annotation objects.
+      Keys are {ruleset}.{input path}, where the path is the input's field
+      path with [] marking a list (e.g., medicaidWorkRequirements.months[].hoursWorked).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-zA-Z0-9]*\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

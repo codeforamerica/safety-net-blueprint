@@ -684,6 +684,32 @@ describe('constants', () => {
     assert.deepStrictEqual([...untranslated.keys()], ['monthly']);
     assert.match(untranslated.get('monthly'), /no literal for a constant of type array/);
   });
+
+  it('a date constant is a Day, and agrees with CEL', () => {
+    const dated = {
+      outputs: ['startedBefore'],
+      inputs: { '$.d.startedOn': { type: 'string', format: 'date' } },
+      constants: { effectiveDate: { value: '2027-01-01', type: 'string', format: 'date' } },
+      facts: { startedBefore: { expression: 'd.startedOn < constants.effectiveDate' } },
+      dependencies: { startedBefore: ['$.d.startedOn'] },
+    };
+    assert.match(toFactGraph(dated), /path="\/constants_effectiveDate">\s*<Derived>\s*<Day>2027-01-01<\/Day>/);
+    for (const startedOn of ['2026-12-31', '2027-01-01']) {
+      assertOutputParity(toGraph(dated).evaluate({ d: { startedOn } }), toGraphWithFactGraph(dated).evaluate({ d: { startedOn } }), startedOn);
+    }
+  });
+
+  it('a date-time constant is left out, with its reason', () => {
+    const untranslated = new Map();
+    toFactGraph({
+      outputs: ['late'],
+      inputs: { '$.d.at': { type: 'string', format: 'date-time' } },
+      constants: { cutoff: { value: '2027-01-01T12:00:00Z', type: 'string', format: 'date-time' } },
+      facts: { late: { expression: 'constants.cutoff < timestamp("2028-01-01T00:00:00Z")' } },
+      dependencies: { late: [] },
+    }, untranslated);
+    assert.match(untranslated.get('late') ?? '', /no timestamp type/);
+  });
 });
 
 describe('conditionals, size(), and membership', () => {

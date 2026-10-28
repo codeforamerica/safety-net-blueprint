@@ -16,6 +16,7 @@
 
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
 import { indexByRelativePath } from './ref-lookup.js';
+import { expandInputs } from './rules.js';
 
 const ENDPOINT_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -213,7 +214,9 @@ export function buildActionIndex(docs) {
 }
 
 /**
- * Facts and constants each ruleset declares, with the domain that owns it.
+ * Facts, constants and input paths each ruleset declares, with the domain
+ * that owns it. An input path is the graph's, without its `$.`:
+ * `months[].hoursWorked`.
  *
  * Read from the rules documents, which declare the facts, and from compiled
  * graphs for a set that has only those. It used to read graphs alone, and
@@ -221,18 +224,19 @@ export function buildActionIndex(docs) {
  * passed resolve and failed later, in a separate validate run.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>}
+ * @returns {Map<string, { domain: string, facts: Set<string>, constants: Set<string>, inputs: Set<string> }>}
  */
 export function buildGraphIndex(docs) {
   const index = new Map();
 
   for (const doc of docs) {
     if (doc.type === 'rules') {
-      for (const [ruleset, { facts = [], constants = {} } = {}] of Object.entries(doc.content?.rulesets ?? {})) {
+      for (const [ruleset, { facts = [], constants = {}, inputs = {} } = {}] of Object.entries(doc.content?.rulesets ?? {})) {
         index.set(ruleset, {
           domain: doc.content.domain,
           facts: new Set(facts.map((fact) => fact?.path).filter(Boolean)),
           constants: new Set(Object.keys(constants ?? {})),
+          inputs: inputPaths(expandInputs(inputs)),
         });
       }
     } else if (doc.type === 'graph' && doc.content?.ruleset && !index.has(doc.content.ruleset)) {
@@ -240,11 +244,17 @@ export function buildGraphIndex(docs) {
         domain: doc.content.domain,
         facts: new Set(Object.keys(doc.content.facts ?? {})),
         constants: new Set(Object.keys(doc.content.constants ?? {})),
+        inputs: inputPaths(doc.content.inputs),
       });
     }
   }
 
   return index;
+}
+
+/** A graph's input paths, without their `$.`. */
+function inputPaths(graphInputs) {
+  return new Set(Object.keys(graphInputs ?? {}).map((path) => path.replace(/^\$\./, '')));
 }
 
 /**

@@ -129,12 +129,17 @@ function buildUsageHref(section, key, domain) {
     }
     case 'events':
       return eventCatalogHref(key);
-    case 'facts': {
+    case 'facts':
+    case 'constants':
+    case 'inputs': {
       const dot = key.indexOf('.');
       if (dot < 0) return null;
       const rulesetName = key.slice(0, dot);
-      const factName = key.slice(dot + 1);
-      return rulesDocsHref(domain, rulesetName, factName);
+      const name = key.slice(dot + 1);
+      // A rules page has one node for all the constants, and one for each
+      // top-level input, which lists its paths.
+      const node = section === 'facts' ? name : section === 'constants' ? 'constants' : name.split(/[.[]/)[0];
+      return rulesDocsHref(domain, rulesetName, node);
     }
     default:
       return null;

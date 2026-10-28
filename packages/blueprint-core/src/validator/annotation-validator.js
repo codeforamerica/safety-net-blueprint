@@ -2,7 +2,8 @@
  * Check that annotation keys point at things that exist.
  *
  * An annotation file attaches documentation and metadata to contract elements
- * by key — a schema field path, an operation, an event, a fact. None of those
+ * by key — a schema field path, an operation, an event, a ruleset's fact,
+ * constant or input. None of those
  * keys are checked by the annotation schema itself, so a typo or a renamed
  * field leaves an annotation attached to nothing: it silently stops appearing
  * in the explorer and in generated documentation, with no error anywhere.
@@ -19,7 +20,7 @@ import { resolveSchemaRefs, resolveRef, collectTopLevelProperties, getPropertyAt
  * @param {Map<string, *>} context.byRelativePath - The set, for following cross-file $refs
  * @param {Set<string>} context.actions - "<object>.<action>" keys from state machines
  * @param {Set<string>} context.channels - Every AsyncAPI channel
- * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>} context.graphs - Facts and constants per ruleset
+ * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string>, inputs: Set<string> }>} context.graphs - Facts, constants and inputs per ruleset
  * @param {Map<string, Set<string>>} context.registryEntryIds - Entry IDs per registry type
  * @returns {{ rule: string, message: string, path: string }[]}
  */
@@ -34,6 +35,7 @@ export function validateAnnotations(doc, context) {
       context.channels.has(key) ? null : `Event "${key}" is not a channel in any AsyncAPI document.`, 'events'),
     ...checkKeys(doc.content?.facts, (key) => rulesetMemberError(key, context.graphs, domain, 'facts'), 'facts'),
     ...checkKeys(doc.content?.constants, (key) => rulesetMemberError(key, context.graphs, domain, 'constants'), 'constants'),
+    ...checkKeys(doc.content?.inputs, (key) => rulesetMemberError(key, context.graphs, domain, 'inputs'), 'inputs'),
     ...citationErrors(doc, context.registryEntryIds),
   ];
 }
@@ -221,21 +223,22 @@ function buildSubResourceMap(spec, relativePath, byRelativePath) {
 }
 
 /**
- * Why a `facts:` or `constants:` key does not resolve, or null when it does.
+ * Why a `facts:`, `constants:` or `inputs:` key does not resolve, or null
+ * when it does.
  *
  * Keys are `{ruleset}.{name}`. The ruleset must be declared, belong to the
- * annotating domain, and declare the fact or constant.
+ * annotating domain, and declare the fact, constant or input path.
  *
  * @param {string} key
- * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string> }>} graphs
+ * @param {Map<string, { domain: string, facts: Set<string>, constants: Set<string>, inputs: Set<string> }>} graphs
  * @param {string|null} domain
- * @param {'facts'|'constants'} section
+ * @param {'facts'|'constants'|'inputs'} section
  * @returns {string|null}
  */
 function rulesetMemberError(key, graphs, domain, section) {
   if (graphs.size === 0) return null; // no rulesets to check against
 
-  const kind = section === 'facts' ? 'Fact' : 'Constant';
+  const kind = { facts: 'Fact', constants: 'Constant', inputs: 'Input' }[section];
   const dot = key.indexOf('.');
   if (dot === -1) return `${kind} key "${key}" must be {ruleset}.{name}.`;
 
@@ -265,7 +268,7 @@ function rulesetMemberError(key, graphs, domain, section) {
 function citationErrors(doc, registryEntryIds) {
   const errors = [];
 
-  for (const section of ['schema', 'operations', 'events', 'facts', 'constants']) {
+  for (const section of ['schema', 'operations', 'events', 'facts', 'constants', 'inputs']) {
     for (const [key, annotation] of Object.entries(doc.content?.[section] ?? {})) {
       for (const [field, value] of Object.entries(annotation ?? {})) {
         const ids = registryEntryIds.get(field);

@@ -427,6 +427,24 @@ test('constants', async (t) => {
     assert.equal(errors.filter((e) => e.rule === 'constants-input').length, 1);
   });
 
+  await t.test('a date constant compiles with its format', () => {
+    const graph = compileRuleset('intake', 'flags', ruleset({
+      constants: { effectiveDate: { value: '2027-01-01', type: 'string', format: 'date' } },
+      facts: [{ path: 'isChild', expression: 'true' }],
+    }));
+    assert.deepEqual(graph.constants.effectiveDate, { value: '2027-01-01', type: 'string', format: 'date' });
+  });
+
+  await t.test('a date constant whose value is not a date is refused', () => {
+    for (const value of ['2027', 'January 1, 2027', '2027-13-45', 2027]) {
+      const errors = validateRuleset('intake', 'flags', ruleset({
+        constants: { effectiveDate: { value, type: 'string', format: 'date' } },
+        facts: [{ path: 'isChild', expression: 'true' }],
+      }));
+      assert.equal(errors.filter((e) => e.rule === 'constant-format').length, 1, String(value));
+    }
+  });
+
   await t.test('a fact named constants is refused, grouped or not', () => {
     for (const path of ['constants', 'constants.x']) {
       const errors = validateRuleset('intake', 'flags', ruleset({

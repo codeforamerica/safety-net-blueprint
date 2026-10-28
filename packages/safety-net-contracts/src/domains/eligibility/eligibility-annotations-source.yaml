@@ -1,0 +1,1225 @@
+$schema: annotations-schema.yaml
+version: '1.0'
+domain: eligibility
+
+# ---------------------------------------------------------------------------
+# Where the work requirements rulesets differ from their sources
+#
+#   snapWorkRequirements      the SNAP work rules of the self-advocacy tool,
+#                             codeforamerica/work-requirements-self-advocacy-tool
+#                             at commit 7de6bff (2026-10-13), by way of
+#                             co-snap-interview-prompts' workRules
+#                             (feature/work-rules). The tool is the source:
+#                             every difference here is from the tool.
+#   medicaidWorkRequirements  the draft Medicaid community engagement rules:
+#                             rules.yaml (two rulesets, one per month and one
+#                             per person), states.yaml and scenarios.yaml.
+#
+# Only what differs is listed. An input, constant or fact that is one-to-one
+# with its source, under the same name and logic, has no entry.
+#
+#   source        the source's name for it; none when it's introduced
+#   sourceFile    a link to it in the tool, pinned to the commit
+#   mapping       renamed     the same logic under another name
+#                 changed     one-to-one, but reshaped: a different type,
+#                             logic or structure
+#                 derived     no single counterpart: built from part of
+#                             something in the source
+#                 introduced  nothing in the source corresponds; the note
+#                             says why it's here
+#   mapping-rules the translation rules it follows, stated once in
+#                 eligibility-registry-mapping-rules.yaml
+#   note          what's particular to it
+#
+# North Carolina's overlay (states/nc.yaml) adds entries for the inputs,
+# constants and facts it adds.
+#
+# What has no input, constant or fact to annotate:
+#
+# SNAP
+#   - No outcome string (the tool's four outcomes): satisfiesRequirement,
+#     requirementApplies, isExempt and meetsRequirement carry the same
+#     information. The tool's record of exemptions found, and when, is gone.
+#   - No state input or unsupported location: a state's rules come from its
+#     file in states/, and the rules always answer. County and zip code, used
+#     only to find an office, are gone.
+#   - No order of questions (the tool's ScreenerNavigation and each page's
+#     show?). The tool skips questions — none after an age exemption, no work
+#     questions once a person has another exemption — and reads a skipped
+#     question as no. Here a result waits on the answers it needs.
+#   - The tool clears answers on save: hours and earnings when the person
+#     says no, and North Carolina answers its pages didn't ask. The counted
+#     hours facts do this for hours; nothing does it for earnings or North
+#     Carolina's health question (see earningsAboveMinimum and, in the NC
+#     overlay, healthConditionsPreventingWork).
+#   - No range on hours (the tool takes 1 to 168) and no question wording.
+#   - The tool's "none of these" boxes, its birth date and age, and fields no
+#     rule reads (names, contact details, signature, survey answers) aren't
+#     ported.
+#   - Scenarios (tests/scenarios/snap-work-requirements.yaml) are co-snap's
+#     cases, as YAML, with an `unanswered` block for the defaults that are
+#     gone. Age cases expect requirementApplies false and no age code in
+#     exemptions. Outcome cases check the four results instead of a string.
+#     Combined-hours cases say yes to working, volunteering and training.
+#     New: hours for something the person doesn't do don't count. co-snap's
+#     per-exemption cases and its Fact Graph comparison weren't ported.
+#   - Delaware: requiresProofOfAmericanIndianStatus is true, as in the tool.
+#     The other states' files change nothing for SNAP; the tool supports only
+#     Delaware and North Carolina.
+#
+# Medicaid
+#   - The draft's per-month ruleset is per-item facts on reviewMonths, worked
+#     out only for months in the review period (rule one-ruleset). A
+#     scenario's expectMonths counts review-period months.
+#   - The draft's status output (four values) is satisfiesRequirement, with
+#     requirementApplies, isExempt and meetsRequirement.
+#   - No question wording, and with it two conditions that lived only there:
+#     caregiving must be regular, and a person whose dependent traveled for
+#     care without them must show they missed work or activities.
+#   - answers.yaml (resident-facing text and FAQ) and the county
+#     unemployment list aren't ported.
+#   - Scenarios (tests/scenarios/medicaid-work-requirements.yaml): the
+#     draft's 44, plus other-application-submitted-before and
+#     iowa-before-start. Each status expectation is the separate results it
+#     stood for; years are dates; an `unanswered` block holds the draft's
+#     defaults, with a renewal started on the federal start day.
+#   - States: seven have overlays (AR, DE, IA, ID, IN, NC, UT), matching
+#     states.yaml apart from renamed constants and Iowa's start as a date.
+#     The other 37 in states.yaml have none, so the federal values apply,
+#     including Montana's and Nebraska's earlier starts. Two notes at the top
+#     of states.yaml aren't carried: renewalMonthsRequired reads KFF's
+#     "renewal look-back period", and frailtyDefinitionPlan was asked before
+#     the federal rule.
+# ---------------------------------------------------------------------------
+
+inputs:
+
+  medicaidWorkRequirements.determination.date:
+    source: determination.year
+    mapping: changed
+    mapping-rules: [dates-not-years, no-defaults]
+    note: >-
+      The draft asked for the year of the decision, as an integer. The ruleset asks for the day it's
+      decided, as a date, so a start partway through a year, like Iowa's December 1, 2026, can be
+      expressed. A renewal is never asked this to decide whether the requirement applies; it's
+      still asked for the proof rules (beforeDocumentationRequired).
+
+  medicaidWorkRequirements.determination.renewalStartedOn:
+    source: determination.startedBeforeRequirement
+    mapping: changed
+    mapping-rules: [dates-not-years, no-defaults]
+    note: >-
+      The draft asked yes or no: was the application submitted, or the renewal started, before the
+      requirement took effect? The ruleset asks for the day a renewal started, as a date, and only
+      renewals read it, because 42 CFR 435.559(c) excuses only a renewal started before the start.
+      The draft also excused an application submitted before, which 435.559 doesn't say.
+
+  medicaidWorkRequirements.determination.exemptAtLastDetermination:
+    source: determination.excludedAtLastDetermination
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions, no-defaults]
+    note: Same question, with "exempt" for the draft's "excluded".
+
+  medicaidWorkRequirements.months[].monthsBefore:
+    source: reviewMonth.month.monthsBefore
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-questions]
+    note: >-
+      Now a field of each item in `months`. The draft marked it required and filled from state
+      data; the ruleset has neither marker.
+
+  medicaidWorkRequirements.months[].wasExempt:
+    source: reviewMonth.month.wasExcluded
+    mapping: renamed
+    mapping-rules: [one-ruleset, exclusions-are-exemptions, no-defaults]
+    note: >-
+      Whether an exemption applied for any part of the month (435.553), with "exempt" for
+      "excluded".
+
+  medicaidWorkRequirements.months[].wasUnder19:
+    source: reviewMonth.month.wasUnder19
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].hadMedicare:
+    source: reviewMonth.month.hadMedicare
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].wasInOtherMandatoryGroup:
+    source: reviewMonth.month.wasInOtherMandatoryGroup
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults, no-questions]
+    note: Now a field of each item in `months`. The draft marked it as filled from state data.
+
+  medicaidWorkRequirements.months[].wasIncarceratedInPrior3Months:
+    source: reviewMonth.month.wasIncarceratedInPrior3Months
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].countyHadDisasterOrEmergency:
+    source: reviewMonth.month.countyHadDisasterOrEmergency
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults, no-questions]
+    note: Now a field of each item in `months`. The draft marked it as filled from state data.
+
+  medicaidWorkRequirements.months[].countyHadHighUnemployment:
+    source: reviewMonth.month.countyHadHighUnemployment
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults, no-questions]
+    note: >-
+      Now a field of each item in `months`. The draft marked it as filled from state data, and its
+      comment gave the threshold (the lesser of 8% or 1.5 times the national rate, with CMS
+      approval, 435.555); the ruleset drops both.
+
+  medicaidWorkRequirements.months[].receivedInpatientCare:
+    source: reviewMonth.month.receivedInpatientCare
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].hadMedicalTravel:
+    source: reviewMonth.month.hadMedicalTravel
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults, no-questions]
+    note: >-
+      Now a field of each item in `months`. The draft's help text carried a condition the rules
+      don't check: if the dependent traveled alone, the person must show they missed work or
+      activities. The ruleset has no help text, so that condition is gone.
+
+  medicaidWorkRequirements.months[].askedForHardship:
+    source: reviewMonth.month.askedForHardship
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].hoursWorked:
+    source: reviewMonth.month.hoursWorked
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults, no-questions]
+    note: >-
+      Now a field of each item in `months`. The draft's help text said unpaid work, like an
+      internship, counts; the ruleset has no help text.
+
+  medicaidWorkRequirements.months[].hoursCommunityService:
+    source: reviewMonth.month.hoursCommunityService
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].hoursWorkProgram:
+    source: reviewMonth.month.hoursWorkProgram
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].enrolledHalfTimeOrMore:
+    source: reviewMonth.month.enrolledHalfTimeOrMore
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].educationCreditHours:
+    source: reviewMonth.month.educationCreditHours
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].educationClassHours:
+    source: reviewMonth.month.educationClassHours
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].householdIncome:
+    source: reviewMonth.month.householdIncome
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: >-
+      Now a field of each item in `months`. The draft's comment said it's MAGI-based monthly
+      household income; the ruleset doesn't say.
+
+  medicaidWorkRequirements.months[].isSeasonalWorker:
+    source: reviewMonth.month.isSeasonalWorker
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[].sixMonthAverageIncome:
+    source: reviewMonth.month.sixMonthAverageIncome
+    mapping: renamed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: Now a field of each item in `months`.
+
+  medicaidWorkRequirements.months[]:
+    source: reviewMonths (with reviewMonth.month)
+    mapping: changed
+    mapping-rules: [one-ruleset, no-defaults]
+    note: >-
+      The draft's person-level ruleset took reviewMonths, a list of results already run through
+      the separate reviewMonth ruleset (default an empty list), with monthsBefore expected on
+      each. The ruleset takes the raw answers for each month as `months`, one object per month, and
+      works out each month's result itself (see the fact reviewMonths).
+
+  snapWorkRequirements.person.age:
+    source: screeners.age_range
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [age-as-number]
+    note: >-
+      The tool asks for one of five ranges; the ruleset takes an age in whole years, at least 0, with
+      no upper limit. The tool also asks for a birth date later on (screeners.birth_date), but no
+      rule reads it.
+
+  snapWorkRequirements.person.isAmericanIndian:
+    source: screeners.is_american_indian
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.hasChild:
+    source: screeners.has_child
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.caringForChildUnder6:
+    source: screeners.caring_for_child_under_6
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.caringForDisabledOrIllPerson:
+    source: screeners.caring_for_disabled_or_ill_person
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.isPregnant:
+    source: screeners.is_pregnant
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.hasUnemploymentBenefits:
+    source: screeners.has_unemployment_benefits
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsSsdi:
+    source: screeners.receiving_benefits_ssdi
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsSsi:
+    source: screeners.receiving_benefits_ssi
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsVeteransDisability:
+    source: screeners.receiving_benefits_veterans_disability
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsWorkersCompensation:
+    source: screeners.receiving_benefits_workers_compensation
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsDisabilityPension:
+    source: screeners.receiving_benefits_disability_pension
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsInsurancePayments:
+    source: screeners.receiving_benefits_insurance_payments
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsDisabilityMedicaid:
+    source: screeners.receiving_benefits_disability_medicaid
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.receivingBenefitsOther:
+    source: screeners.receiving_benefits_other
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.isMigrantFarmworker:
+    source: screeners.is_migrant_farmworker
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.isStudent:
+    source: screeners.is_student
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.isInAlcoholTreatmentProgram:
+    source: screeners.is_in_alcohol_treatment_program
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.preventingWorkPlaceToSleep:
+    source: screeners.preventing_work_place_to_sleep
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.preventingWorkDrugsAlcohol:
+    source: screeners.preventing_work_drugs_alcohol
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.preventingWorkDomesticViolence:
+    source: screeners.preventing_work_domestic_violence
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.preventingWorkMedicalCondition:
+    source: screeners.preventing_work_medical_condition
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.preventingWorkOther:
+    source: screeners.preventing_work_other
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer]
+
+  snapWorkRequirements.person.isWorking:
+    source: screeners.is_working
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer, counted-hours]
+    note: >-
+      The tool's rules read is_working only for the earnings exemption. The ruleset also reads it to
+      decide whether working hours count toward the 20.
+
+  snapWorkRequirements.person.workingHours:
+    source: screeners.working_hours
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [number-answer]
+
+  snapWorkRequirements.person.workingWeeklyEarnings:
+    source: screeners.working_weekly_earnings
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [number-answer]
+    note: >-
+      A decimal column in the tool, cleared when is_working is no. The ruleset reads it even for
+      someone who doesn't work (see earningsAboveMinimum), so it can be asked of a person the tool
+      would never ask.
+
+  snapWorkRequirements.person.isVolunteer:
+    source: screeners.is_volunteer
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer, counted-hours]
+    note: >-
+      The tool's rules read is_volunteer only in volunteering?, for proof. The ruleset also reads it
+      to decide whether volunteering hours count toward the 20.
+
+  snapWorkRequirements.person.volunteeringHours:
+    source: screeners.volunteering_hours
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [number-answer]
+
+  snapWorkRequirements.person.isInWorkTraining:
+    source: screeners.is_in_work_training
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [yes-no-answer, counted-hours]
+    note: >-
+      No rule in the tool reads is_in_work_training; it only clears the training hours on save
+      when the answer is no. co-snap kept it as an input nothing read. The ruleset reads it to decide
+      whether training hours count.
+
+  snapWorkRequirements.person.workTrainingHours:
+    source: screeners.work_training_hours
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb
+    mapping: changed
+    mapping-rules: [number-answer]
+    note: >-
+      The tool stores this as a string column, validates it as a whole number, and reads it with
+      to_i. The ruleset takes an integer.
+
+constants:
+
+  medicaidWorkRequirements.effectiveDate:
+    source: firstYearInEffect
+    mapping: changed
+    mapping-rules: [parameters-are-constants, dates-not-years]
+    note: >-
+      The draft held the first year in effect (2027). The ruleset holds the first day, as a date
+      ('2027-01-01'), so Iowa's December 1, 2026 start can be expressed.
+
+  medicaidWorkRequirements.documentationRequiredFrom:
+    source: documentationRequiredFromYear
+    mapping: changed
+    mapping-rules: [parameters-are-constants, dates-not-years]
+    note: >-
+      The draft held the year documents are required from (2028). The ruleset holds the first day, as
+      a date ('2028-01-01') (435.557).
+
+  medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired:
+    source: acceptsStatementsBefore2028
+    mapping: renamed
+    mapping-rules: [parameters-are-constants]
+    note: >-
+      Same state option, same default (true). The name no longer bakes in 2028, since the date it
+      refers to is now the constant documentationRequiredFrom.
+
+  snapWorkRequirements.workRulesMinimumAge:
+    source: Screener#age_exempt?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [age-as-number, literal-to-constant]
+    note: >-
+      The tool has no number here. 18 is the upper edge of the under_18 range that age_exempt?
+      checks.
+
+  snapWorkRequirements.workRulesMaximumAge:
+    source: Screener#age_exempt?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [age-as-number, literal-to-constant]
+    note: >-
+      The tool has no number here. 64 is one below the 65_or_older range that age_exempt? checks.
+      North Carolina's 55-to-64 exemption also reads it as its upper age.
+
+  snapWorkRequirements.weeklyHoursRequired:
+    source: WorkRulesPolicy::Base#complies_with_work_rules?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant]
+    note: The literal 20 in complies_with_work_rules?.
+
+  snapWorkRequirements.earningsExemptionWeeklyHours:
+    source: Screener#working_30_or_more_hours?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant]
+    note: The literal 30 in working_30_or_more_hours?.
+
+  snapWorkRequirements.earningsExemptionWeeklyAmount:
+    source: Screener#earnings_above_minimum?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant]
+    note: >-
+      The literal 217.50 in earnings_above_minimum?. The ruleset's description explains it as the
+      federal minimum wage times 30; the tool has only the number.
+
+  snapWorkRequirements.requiresProofOfVolunteering:
+    source: WorkRulesPolicy::Base#requires_proof_of_volunteering?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant, subclass-to-overlay]
+    note: The method returns true; the NorthCarolina subclass returns false.
+
+  snapWorkRequirements.requiresProofOfAmericanIndianStatus:
+    source: WorkRulesPolicy::Base#requires_proof_of_american_indian_status?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant, subclass-to-overlay]
+    note: The method returns false; the Delaware subclass returns true.
+
+facts:
+
+  medicaidWorkRequirements.requirementInEffect:
+    source: requirementInEffect
+    mapping: changed
+    mapping-rules: [dates-not-years, short-circuit]
+    note: >-
+      Follows 42 CFR 435.559. A renewal is checked if it started on or after effectiveDate
+      (435.559(c)); anything else, if it's decided on or after it, since coverage from then on is
+      subject (435.559(a)). The draft compared the decision year and excused anything started
+      before, applications included. Written as a conditional so a renewal is never asked its
+      decision date here, nor an application its start.
+
+  medicaidWorkRequirements.notApplicableReason:
+    mapping: introduced
+    note: >-
+      Says why the requirement doesn't apply: renewal_started_before_requirement,
+      not_yet_in_effect, not_in_expansion_group, has_medicare, outside_age_range, or applies. It
+      names the first condition that settles it, so a caller can explain the result without asking
+      anything requirementApplies didn't. Also an output.
+
+  medicaidWorkRequirements.americanIndianOrAlaskaNativeExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's american_indian_or_alaska_native term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.veteranWithTotalDisabilityExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's veteran_with_total_disability term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.formerFosterYouthExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: >-
+      The draft's former_foster_youth term inside exclusions (former foster youth, age at most
+      formerFosterYouthMaximumAge), as its own fact.
+
+  medicaidWorkRequirements.caregiverOfChildUnder14Exemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: >-
+      The draft's caregiver_of_child_under_14 term inside exclusions, as its own fact. It reads
+      isQualifyingCaregiver only after caresForChildUnder14, so someone who cares for no child
+      isn't asked how they're related.
+
+  medicaidWorkRequirements.caregiverOfPersonWithDisabilityExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: >-
+      The draft's caregiver_of_person_with_disability term inside exclusions, as its own fact. It
+      reads isQualifyingCaregiver only after caresForPersonWithDisability.
+
+  medicaidWorkRequirements.pregnantOrPostpartumExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's pregnant_or_postpartum term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.snapWorkRulesExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: >-
+      The draft's snap_work_rules term inside exclusions (in a SNAP household and subject to
+      SNAP's work rules), as its own fact.
+
+  medicaidWorkRequirements.tanfWorkRulesExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's tanf_work_rules term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.substanceUseTreatmentExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's substance_use_treatment term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.incarceratedExemption:
+    source: exclusions
+    mapping: derived
+    mapping-rules: [per-exemption-facts]
+    note: The draft's incarcerated term inside exclusions, as its own fact.
+
+  medicaidWorkRequirements.exemptions:
+    source: exclusions
+    mapping: changed
+    mapping-rules: [exclusions-are-exemptions, per-exemption-facts]
+    note: >-
+      Same list, same values, same order, longest-lasting first (435.554). It now gathers the
+      per-exemption facts instead of testing each condition inline. Medical frailty still reads
+      isMedicallyFrail directly; it has no separate exemption fact. Also an output.
+
+  medicaidWorkRequirements.isExempt:
+    source: isExcluded
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions]
+    note: Same logic (requirementApplies and at least one exemption). Also an output.
+
+  medicaidWorkRequirements.lostExemptStatus:
+    source: lostExcludedStatus
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions]
+    note: Same logic, reading the renamed input exemptAtLastDetermination. Also an output.
+
+  medicaidWorkRequirements.reviewMonths:
+    source: countedMonths
+    mapping: changed
+    mapping-rules: [one-ruleset]
+    note: >-
+      Same filter: at application, only months with monthsBefore at most applicationReviewMonths;
+      otherwise every month (435.556). It now filters the raw `months` input, and each item it
+      keeps carries the per-month facts (reviewMonths[].…). So per-month results exist only for
+      months in the review period; the draft worked out every month given, then filtered.
+
+  medicaidWorkRequirements.incomeRequired:
+    source: reviewMonth.incomeRequired
+    mapping: changed
+    mapping-rules: [one-ruleset]
+    note: >-
+      Same amount (monthlyHoursRequired times federalMinimumWage, $580). Worked out once for the
+      person instead of once per month, since it doesn't depend on the month.
+
+  medicaidWorkRequirements.reviewMonths[].mandatoryException:
+    source: reviewMonth.mandatoryException
+    mapping: renamed
+    mapping-rules: [one-ruleset, exclusions-are-exemptions]
+    note: Same logic (435.553), reading month.wasExempt for month.wasExcluded.
+
+  medicaidWorkRequirements.reviewMonths[].automaticHardshipException:
+    source: reviewMonth.automaticHardshipException
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic (435.555), now a fact on each review-period month.
+
+  medicaidWorkRequirements.reviewMonths[].hardshipAvailableIfRequested:
+    source: reviewMonth.hardshipAvailableIfRequested
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic (435.555), now a fact on each review-period month, and a per-month output.
+
+  medicaidWorkRequirements.reviewMonths[].requestedHardshipException:
+    source: reviewMonth.requestedHardshipException
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic, now a fact on each review-period month.
+
+  medicaidWorkRequirements.reviewMonths[].educationHours:
+    source: reviewMonth.educationHours
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: >-
+      Same arithmetic (credit hours times 3 times 4.33, plus class hours), now a fact on each
+      month.
+
+  medicaidWorkRequirements.reviewMonths[].totalActivityHours:
+    source: reviewMonth.totalActivityHours
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same sum (435.552), now a fact on each review-period month, and a per-month output.
+
+  medicaidWorkRequirements.reviewMonths[].meetsActivityHours:
+    source: reviewMonth.meetsActivityHours
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic, now a fact on each review-period month.
+
+  medicaidWorkRequirements.reviewMonths[].meetsIncome:
+    source: reviewMonth.meetsIncome
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic, now a fact on each month, reading the person-level incomeRequired.
+
+  medicaidWorkRequirements.reviewMonths[].meetsSeasonalIncome:
+    source: reviewMonth.meetsSeasonalIncome
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic, now a fact on each month, reading the person-level incomeRequired.
+
+  medicaidWorkRequirements.reviewMonths[].qualifies:
+    source: reviewMonth.qualifies
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same logic, now a fact on each review-period month, and a per-month output.
+
+  medicaidWorkRequirements.reviewMonths[].qualifiesBy:
+    source: reviewMonth.qualifiesBy
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: Same order and values, now a fact on each review-period month, and a per-month output.
+
+  medicaidWorkRequirements.reviewMonths[].proofRule:
+    source: reviewMonth.proofRule
+    mapping: renamed
+    mapping-rules: [one-ruleset]
+    note: >-
+      Same values (none_needed, exception, standard), now a fact on each month, and a per-month
+      output.
+
+  medicaidWorkRequirements.meetsRequirement:
+    source: meetsReviewPeriod
+    mapping: renamed
+    note: >-
+      Same logic (qualifying months at least monthsRequired, 435.556). Renamed to match the SNAP
+      ruleset's vocabulary, and now an output; the draft didn't output it.
+
+  medicaidWorkRequirements.beforeDocumentationRequired:
+    source: beforeDocumentationYear
+    mapping: changed
+    mapping-rules: [dates-not-years]
+    note: >-
+      Compares the decision date to the date documentationRequiredFrom, where the draft compared
+      the decision year to a year (435.557).
+
+  medicaidWorkRequirements.statementAcceptedGenerally:
+    source: statementAcceptedGenerally
+    mapping: changed
+    mapping-rules: [short-circuit]
+    note: >-
+      Same logic, operands swapped: the state option comes before the date check, so a state that
+      doesn't take statements before documents are required is never asked the decision date for
+      this.
+
+  medicaidWorkRequirements.hasExemptionOtherThanFrailty:
+    source: hasExclusionOtherThanFrailty
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions]
+    note: Same logic.
+
+  medicaidWorkRequirements.statementAcceptedForExemption:
+    source: statementAcceptedForExclusion
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions]
+    note: Same logic.
+
+  medicaidWorkRequirements.exemptionShown:
+    source: exclusionShown
+    mapping: renamed
+    mapping-rules: [exclusions-are-exemptions]
+    note: Same logic.
+
+  medicaidWorkRequirements.satisfiesRequirement:
+    source: status
+    mapping: derived
+    note: >-
+      Replaces the draft's four-value status string with yes or no: the requirement doesn't apply,
+      the person is exempt, or enough months counted. It is true wherever status wasn't
+      does_not_meet_requirement. The other distinctions status made are in requirementApplies,
+      isExempt and meetsRequirement, all outputs. Whether it's shown is still isCovered's job.
+
+  snapWorkRequirements.ageUnderMinimumExemption:
+    source: WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_under_18'
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code, age-as-number, threshold-name, age-decides-applicability]
+    note: >-
+      The tool adds the code age_under_18 to its exemption list. The ruleset adds no code for it to
+      exemptions; it feeds requirementApplies and notApplicableReason instead. The name still ends
+      in Exemption.
+
+  snapWorkRequirements.ageOverMaximumExemption:
+    source: WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_65_or_older'
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code, age-as-number, threshold-name, age-decides-applicability]
+    note: >-
+      The tool adds the code age_65_or_older to its exemption list. The ruleset adds no code for it
+      to exemptions; it feeds requirementApplies and notApplicableReason instead. The name still
+      ends in Exemption.
+
+  snapWorkRequirements.receivingBenefitsSsdiExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_ssdi
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsSsiExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_ssi
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_veterans_disability
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsWorkersCompensationExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_workers_compensation
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsDisabilityPensionExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_disability_pension
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_insurance_payments
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_disability_medicaid
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.receivingBenefitsOtherExemption:
+    source: Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_other
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.preventingWorkDomesticViolenceExemption:
+    source: Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_domestic_violence
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.preventingWorkDrugsAlcoholExemption:
+    source: Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_drugs_alcohol
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.preventingWorkMedicalConditionExemption:
+    source: Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_medical_condition
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.preventingWorkOtherExemption:
+    source: Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_other
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.preventingWorkPlaceToSleepExemption:
+    source: Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_place_to_sleep
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.caringForChildUnder6Exemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :caring_for_child_under_6
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.caringForDisabledOrIllPersonExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :caring_for_disabled_or_ill_person
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.hasChildExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :has_child
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.hasUnemploymentBenefitsExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :has_unemployment_benefits
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.isAmericanIndianExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_american_indian
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.isInAlcoholTreatmentProgramExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_in_alcohol_treatment_program
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.isMigrantFarmworkerExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_migrant_farmworker
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.isPregnantExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_pregnant
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.isStudentExemption:
+    source: Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_student
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: derived
+    mapping-rules: [exemption-per-code]
+
+  snapWorkRequirements.hasStateExemption:
+    mapping: introduced
+    mapping-rules: [no-list, subclass-to-overlay]
+    note: >-
+      Whether the state adds an exemption, as a yes or no the state's overlay replaces. The tool
+      gets the same answer by checking whether non_earnings_exemption_reasons, which includes
+      state_exemption_reasons, has anything in it.
+
+  snapWorkRequirements.isAgeExempt:
+    source: Screener#age_exempt?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [names, age-as-number]
+    note: >-
+      The tool checks for the under_18 or 65_or_older range. The ruleset compares the age with two
+      constants, through the two age facts.
+
+  snapWorkRequirements.receivingDisabilityBenefits:
+    source: Screener#receiving_disability_benefits?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [no-list]
+    note: >-
+      The tool loops over DISABILITY_BENEFIT_ATTRIBUTES. The ruleset joins the eight exemption facts
+      with or. co-snap called this same; the answer is the same, but the shape is that of
+      hasExemption, which co-snap called changed.
+
+  snapWorkRequirements.anyListedPreventingWork:
+    mapping: introduced
+    note: >-
+      The yes answers in Screener::PREVENTING_WORK_ATTRIBUTES, the first half of
+      any_preventing_work?, as a fact of its own so hasExemption and anyPreventingWork can read
+      it.
+
+  snapWorkRequirements.hasOtherExemption:
+    mapping: introduced
+    note: >-
+      The yes answers in Screener::OTHER_EXEMPTION_ATTRIBUTES, gathered so hasExemption can read
+      one fact.
+
+  snapWorkRequirements.hasExemption:
+    source: WorkRulesPolicy::Base#has_exemption?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [no-list]
+    note: >-
+      The tool checks non_earnings_exemption_reasons.any?. Like the tool, it counts age, so it is
+      true for a 70-year-old whose isExempt is false. The tool uses it to skip the work,
+      volunteering and training questions.
+
+  snapWorkRequirements.earningsAboveMinimum:
+    source: Screener#earnings_above_minimum?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [literal-to-constant, number-answer]
+    note: >-
+      Neither checks whether the person works. The tool reads blank earnings as 0 and clears them
+      when is_working is no, so for a non-worker this is false. The ruleset has no 0 to fall back on,
+      so it waits on the earnings answer even from someone who said they don't work, unlike the
+      counted hours facts, which check isWorking first.
+
+  snapWorkRequirements.workingEarningsExemptionHours:
+    source: Screener#working_30_or_more_hours?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: renamed
+    mapping-rules: [threshold-name, literal-to-constant]
+
+  snapWorkRequirements.isExemptFromWorkRules:
+    source: WorkRulesPolicy::Base#exempt_from_work_rules?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [no-list, shared-vocabulary]
+    note: >-
+      The tool checks exemption_reasons.any?; the ruleset joins hasExemption and hasEarningsExemption
+      with or. It still counts age, as the tool does. co-snap made it an output; the ruleset keeps it
+      as a fact only, and isExempt is the output.
+
+  snapWorkRequirements.anyPreventingWork:
+    source: Screener#any_preventing_work?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [no-list, results-for-everyone]
+    note: >-
+      The tool loops over PREVENTING_WORK_ATTRIBUTES, then asks the state. The ruleset joins
+      anyListedPreventingWork and extraPreventingWork with or. The tool uses it only on the
+      signature page and in the PDF packet.
+
+  snapWorkRequirements.countedWorkingHours:
+    mapping: introduced
+    mapping-rules: [counted-hours]
+    note: Working hours if isWorking is true, otherwise 0.
+
+  snapWorkRequirements.countedVolunteeringHours:
+    mapping: introduced
+    mapping-rules: [counted-hours]
+    note: Volunteering hours if isVolunteer is true, otherwise 0.
+
+  snapWorkRequirements.countedWorkTrainingHours:
+    mapping: introduced
+    mapping-rules: [counted-hours]
+    note: Training hours if isInWorkTraining is true, otherwise 0.
+
+  snapWorkRequirements.totalWorkVolunteerAndTrainingHours:
+    source: Screener#total_work_volunteer_and_training_hours
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [counted-hours, number-answer]
+    note: >-
+      The tool adds working_hours, volunteering_hours and work_training_hours whatever the
+      yes-or-no answers say, reading blanks as 0. Through the tool's screens the total is the
+      same, because a no clears the hours on save. Called directly, it differs: the tool's own
+      spec adds 5, 7 and 9 hours with no yes-or-no answers and gets 21; the ruleset waits on
+      isWorking, isVolunteer and isInWorkTraining.
+
+  snapWorkRequirements.meetsRequirement:
+    source: WorkRulesPolicy::Base#complies_with_work_rules?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: renamed
+    mapping-rules: [shared-vocabulary, literal-to-constant]
+    note: co-snap's compliesWithWorkRules, renamed to Medicaid's word.
+
+  snapWorkRequirements.isVolunteering:
+    source: Screener#volunteering?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: renamed
+    mapping-rules: [names]
+
+  snapWorkRequirements.requiresProof:
+    source: Screener#requires_proof?
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb
+    mapping: changed
+    mapping-rules: [results-for-everyone, number-answer]
+    note: >-
+      The same expression as the tool's. Two things differ. Through earningsAboveMinimum, it waits
+      on earnings from someone who doesn't work, where the tool reads 0. And the ruleset answers it
+      for everyone, so a 70-year-old student gets true; the tool shows it only on the proof page,
+      which only people exempt for a reason other than age reach.
+
+  snapWorkRequirements.requirementApplies:
+    source: Screener#age_exempt?, and the AGE_EXEMPT outcome AgeExemptionController saves
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/age_exemption_controller.rb
+    mapping: derived
+    mapping-rules: [shared-vocabulary, age-decides-applicability]
+    note: >-
+      Not age-exempt. Careful with the words: in the tool, the "work rules apply" pages
+      (WorkRulesApplyMetController, WorkRulesApplyUnmetController) mean the person isn't exempt at
+      all. Here requirementApplies is only about age, and stays true for someone exempt.
+
+  snapWorkRequirements.notApplicableReason:
+    source: WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_under_18', 'age_65_or_older'
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: derived
+    mapping-rules: [shared-vocabulary, age-decides-applicability, threshold-name]
+    note: >-
+      Which age cutoff the person is past: under_minimum_age or over_maximum_age, else applies.
+      The tool's codes were age_under_18 and age_65_or_older; co-snap's were age_under_minimum and
+      age_over_maximum. The applies value has no counterpart.
+
+  snapWorkRequirements.isExempt:
+    source: >-
+      WorkRulesPolicy::Base#exempt_from_work_rules?, and the EXEMPT outcome DownloadFormController
+      saves
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/download_form_controller.rb
+    mapping: derived
+    mapping-rules: [shared-vocabulary, age-decides-applicability]
+    note: >-
+      requirementApplies and isExemptFromWorkRules. False for someone age-exempt, where the tool's
+      exempt_from_work_rules? is true. It matches the tool's exempt outcome, which only people
+      past the age check reach. An earnings exemption counts, as in the tool.
+
+  snapWorkRequirements.exemptions:
+    source: WorkRulesPolicy::Base#exemption_reasons
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb
+    mapping: changed
+    mapping-rules: [shared-vocabulary, age-decides-applicability, yes-no-answer]
+    note: >-
+      Leaves out the age codes the tool puts first. Read as a set; the tool keeps an order for its
+      exemptions_found record. The ruleset declares no item list or uniqueness, where co-snap
+      declared both. It also waits on every exemption question. So for someone exempt by, say,
+      pregnancy, it waits on isWorking, a question the tool skips once has_exemption? is true.
+
+  snapWorkRequirements.satisfiesRequirement:
+    source: >-
+      Screener outcomes: AGE_EXEMPT, EXEMPT, NOT_EXEMPT_WORK_RULES_MET,
+      NOT_EXEMPT_WORK_RULES_NOT_MET
+    sourceFile: >-
+      https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/question_controller.rb
+    mapping: derived
+    mapping-rules: [shared-vocabulary]
+    note: >-
+      True when the requirement doesn't apply, the person is exempt, or the hours are met; false
+      only for the tool's not_exempt_work_rules_not_met. The four-way outcome is gone; it can be
+      rebuilt from requirementApplies, isExempt and meetsRequirement.

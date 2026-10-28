@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>source — Annotation Explorer — Safety Net Blueprint</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">source</a></div>
+    
+      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">source</code></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
+      </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+        <div class="nav-section-label">eligibility</div>
+        <a class="nav-link" href="#entry--medicaidworkrequirements-acceptsstatementsbeforedocumentationrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-americanindianoralaskanativeexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.americanIndianOrAlaskaNativeExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-beforedocumentationrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.beforeDocumentationRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-caregiverofchildunder14exemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.caregiverOfChildUnder14Exemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-caregiverofpersonwithdisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.caregiverOfPersonWithDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-date" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.date</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-exemptatlastdetermination" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.exemptAtLastDetermination</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-determination-renewalstartedon" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.determination.renewalStartedOn</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-documentationrequiredfrom" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.documentationRequiredFrom</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-effectivedate" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.effectiveDate</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-exemptions" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.exemptions</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-exemptionshown" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.exemptionShown</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-formerfosteryouthexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.formerFosterYouthExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-hasexemptionotherthanfrailty" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.hasExemptionOtherThanFrailty</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-incarceratedexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.incarceratedExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-incomerequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.incomeRequired</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-isexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.isExempt</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-lostexemptstatus" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.lostExemptStatus</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-meetsrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.meetsRequirement</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[]</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---askedforhardship" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].askedForHardship</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---countyhaddisasteroremergency" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].countyHadDisasterOrEmergency</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---countyhadhighunemployment" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].countyHadHighUnemployment</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---educationclasshours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].educationClassHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---educationcredithours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].educationCreditHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---enrolledhalftimeormore" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].enrolledHalfTimeOrMore</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hadmedicaltravel" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hadMedicalTravel</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hadmedicare" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hadMedicare</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hourscommunityservice" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursCommunityService</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hoursworked" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursWorked</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---hoursworkprogram" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].hoursWorkProgram</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---householdincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].householdIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---isseasonalworker" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].isSeasonalWorker</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---monthsbefore" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].monthsBefore</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---receivedinpatientcare" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].receivedInpatientCare</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---sixmonthaverageincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].sixMonthAverageIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasExempt</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasincarceratedinprior3months" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasIncarceratedInPrior3Months</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasinothermandatorygroup" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasInOtherMandatoryGroup</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-months---wasunder19" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.months[].wasUnder19</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-pregnantorpostpartumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.pregnantOrPostpartumExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-requirementineffect" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.requirementInEffect</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---automatichardshipexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].automaticHardshipException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---educationhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].educationHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---hardshipavailableifrequested" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].hardshipAvailableIfRequested</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---mandatoryexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].mandatoryException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsactivityhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsActivityHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---meetsseasonalincome" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].meetsSeasonalIncome</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---proofrule" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].proofRule</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---qualifies" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].qualifies</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---qualifiesby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].qualifiesBy</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---requestedhardshipexception" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].requestedHardshipException</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-reviewmonths---totalactivityhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.reviewMonths[].totalActivityHours</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-satisfiesrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.satisfiesRequirement</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-snapworkrulesexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.snapWorkRulesExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-statementacceptedforexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.statementAcceptedForExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-statementacceptedgenerally" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.statementAcceptedGenerally</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-substanceusetreatmentexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.substanceUseTreatmentExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-tanfworkrulesexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.tanfWorkRulesExemption</code>
+        </a><a class="nav-link" href="#entry--medicaidworkrequirements-veteranwithtotaldisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">medicaidWorkRequirements.veteranWithTotalDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ageovermaximumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageOverMaximumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ageunderminimumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageUnderMinimumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-anypreventingwork" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.anyPreventingWork</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-caringforchildunder6exemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.caringForChildUnder6Exemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-caringfordisabledorillpersonexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.caringForDisabledOrIllPersonExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsaboveminimum" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsAboveMinimum</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyamount" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-exemptions" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.exemptions</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-haschildexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasChildExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasunemploymentbenefitsexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasUnemploymentBenefitsExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isageexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isAgeExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isamericanindianexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isAmericanIndianExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexemptfromworkrules" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExemptFromWorkRules</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isinalcoholtreatmentprogramexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isInAlcoholTreatmentProgramExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ismigrantfarmworkerexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isMigrantFarmworkerExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ispregnantexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isPregnantExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isstudentexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isStudentExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isvolunteering" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isVolunteering</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-meetsrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.meetsRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-notapplicablereason" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.notApplicableReason</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-age" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.age</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-caringforchildunder6" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.caringForChildUnder6</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-caringfordisabledorillperson" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.caringForDisabledOrIllPerson</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-haschild" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.hasChild</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-hasunemploymentbenefits" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.hasUnemploymentBenefits</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isamericanindian" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isAmericanIndian</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isinalcoholtreatmentprogram" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isInAlcoholTreatmentProgram</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isinworktraining" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isInWorkTraining</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-ismigrantfarmworker" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isMigrantFarmworker</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-ispregnant" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isPregnant</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isstudent" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isStudent</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isvolunteer" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isVolunteer</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isworking" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isWorking</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkdomesticviolence" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkDomesticViolence</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkdrugsalcohol" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkDrugsAlcohol</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkmedicalcondition" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkMedicalCondition</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkother" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkOther</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkplacetosleep" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkPlaceToSleep</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsdisabilitymedicaid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsDisabilityMedicaid</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsdisabilitypension" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsDisabilityPension</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsinsurancepayments" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsInsurancePayments</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsother" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsOther</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsssdi" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsSsdi</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsssi" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsSsi</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsveteransdisability" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsVeteransDisability</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsworkerscompensation" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsWorkersCompensation</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-volunteeringhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.volunteeringHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-workinghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-workingweeklyearnings" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-worktraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkdomesticviolenceexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkDomesticViolenceExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkdrugsalcoholexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkDrugsAlcoholExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkmedicalconditionexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkMedicalConditionExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkotherexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkOtherExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkplacetosleepexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkPlaceToSleepExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsdisabilitymedicaidexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsdisabilitypensionexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsDisabilityPensionExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsinsurancepaymentsexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsotherexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsOtherExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsssdiexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsSsdiExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsssiexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsSsiExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsveteransdisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsworkerscompensationexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsWorkersCompensationExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingdisabilitybenefits" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingDisabilityBenefits</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requirementapplies" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requirementApplies</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproof" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProof</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofamericanindianstatus" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofvolunteering" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfVolunteering</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-satisfiesrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.satisfiesRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-totalworkvolunteerandtraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-weeklyhoursrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.weeklyHoursRequired</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workingearningsexemptionhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workingEarningsExemptionHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesmaximumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMaximumAge</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesminimumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMinimumAge</code>
+        </a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div style="padding:2rem 0.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>source</code></h1>
+      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">139 annotations</p>
+      <div id="entry--medicaidworkrequirements-acceptsstatementsbeforedocumentationrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">acceptsStatementsBefore2028</div>
+        </div><div id="entry--medicaidworkrequirements-americanindianoralaskanativeexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.americanIndianOrAlaskaNativeExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-beforedocumentationrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.beforeDocumentationRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">beforeDocumentationYear</div>
+        </div><div id="entry--medicaidworkrequirements-caregiverofchildunder14exemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.caregiverOfChildUnder14Exemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-caregiverofpersonwithdisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.caregiverOfPersonWithDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-determination-date" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.date</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">determination.year</div>
+        </div><div id="entry--medicaidworkrequirements-determination-exemptatlastdetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.exemptAtLastDetermination</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">determination.excludedAtLastDetermination</div>
+        </div><div id="entry--medicaidworkrequirements-determination-renewalstartedon" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.determination.renewalStartedOn</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">determination.startedBeforeRequirement</div>
+        </div><div id="entry--medicaidworkrequirements-documentationrequiredfrom" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.documentationRequiredFrom</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">documentationRequiredFromYear</div>
+        </div><div id="entry--medicaidworkrequirements-effectivedate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.effectiveDate</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">firstYearInEffect</div>
+        </div><div id="entry--medicaidworkrequirements-exemptions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.exemptions</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-exemptionshown" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.exemptionShown</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusionShown</div>
+        </div><div id="entry--medicaidworkrequirements-formerfosteryouthexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.formerFosterYouthExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-hasexemptionotherthanfrailty" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.hasExemptionOtherThanFrailty</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">hasExclusionOtherThanFrailty</div>
+        </div><div id="entry--medicaidworkrequirements-incarceratedexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.incarceratedExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-incomerequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.incomeRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.incomeRequired</div>
+        </div><div id="entry--medicaidworkrequirements-isexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.isExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">isExcluded</div>
+        </div><div id="entry--medicaidworkrequirements-lostexemptstatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.lostExemptStatus</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">lostExcludedStatus</div>
+        </div><div id="entry--medicaidworkrequirements-meetsrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.meetsRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">meetsReviewPeriod</div>
+        </div><div id="entry--medicaidworkrequirements-months--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonths (with reviewMonth.month)</div>
+        </div><div id="entry--medicaidworkrequirements-months---askedforhardship" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].askedForHardship</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.askedForHardship</div>
+        </div><div id="entry--medicaidworkrequirements-months---countyhaddisasteroremergency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].countyHadDisasterOrEmergency</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.countyHadDisasterOrEmergency</div>
+        </div><div id="entry--medicaidworkrequirements-months---countyhadhighunemployment" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].countyHadHighUnemployment</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.countyHadHighUnemployment</div>
+        </div><div id="entry--medicaidworkrequirements-months---educationclasshours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].educationClassHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.educationClassHours</div>
+        </div><div id="entry--medicaidworkrequirements-months---educationcredithours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].educationCreditHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.educationCreditHours</div>
+        </div><div id="entry--medicaidworkrequirements-months---enrolledhalftimeormore" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].enrolledHalfTimeOrMore</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.enrolledHalfTimeOrMore</div>
+        </div><div id="entry--medicaidworkrequirements-months---hadmedicaltravel" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hadMedicalTravel</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.hadMedicalTravel</div>
+        </div><div id="entry--medicaidworkrequirements-months---hadmedicare" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hadMedicare</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.hadMedicare</div>
+        </div><div id="entry--medicaidworkrequirements-months---hourscommunityservice" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursCommunityService</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.hoursCommunityService</div>
+        </div><div id="entry--medicaidworkrequirements-months---hoursworked" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursWorked</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.hoursWorked</div>
+        </div><div id="entry--medicaidworkrequirements-months---hoursworkprogram" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].hoursWorkProgram</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.hoursWorkProgram</div>
+        </div><div id="entry--medicaidworkrequirements-months---householdincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].householdIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.householdIncome</div>
+        </div><div id="entry--medicaidworkrequirements-months---isseasonalworker" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].isSeasonalWorker</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.isSeasonalWorker</div>
+        </div><div id="entry--medicaidworkrequirements-months---monthsbefore" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].monthsBefore</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.monthsBefore</div>
+        </div><div id="entry--medicaidworkrequirements-months---receivedinpatientcare" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].receivedInpatientCare</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.receivedInpatientCare</div>
+        </div><div id="entry--medicaidworkrequirements-months---sixmonthaverageincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].sixMonthAverageIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.sixMonthAverageIncome</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.wasExcluded</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasincarceratedinprior3months" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasIncarceratedInPrior3Months</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.wasIncarceratedInPrior3Months</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasinothermandatorygroup" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasInOtherMandatoryGroup</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.wasInOtherMandatoryGroup</div>
+        </div><div id="entry--medicaidworkrequirements-months---wasunder19" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.months[].wasUnder19</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.month.wasUnder19</div>
+        </div><div id="entry--medicaidworkrequirements-pregnantorpostpartumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.pregnantOrPostpartumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-requirementineffect" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.requirementInEffect</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">requirementInEffect</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">countedMonths</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---automatichardshipexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].automaticHardshipException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.automaticHardshipException</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---educationhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].educationHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.educationHours</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---hardshipavailableifrequested" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].hardshipAvailableIfRequested</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.hardshipAvailableIfRequested</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---mandatoryexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].mandatoryException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.mandatoryException</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsactivityhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsActivityHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.meetsActivityHours</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.meetsIncome</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---meetsseasonalincome" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].meetsSeasonalIncome</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.meetsSeasonalIncome</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---proofrule" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].proofRule</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.proofRule</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---qualifies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].qualifies</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.qualifies</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---qualifiesby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].qualifiesBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.qualifiesBy</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---requestedhardshipexception" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].requestedHardshipException</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.requestedHardshipException</div>
+        </div><div id="entry--medicaidworkrequirements-reviewmonths---totalactivityhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.reviewMonths[].totalActivityHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">reviewMonth.totalActivityHours</div>
+        </div><div id="entry--medicaidworkrequirements-satisfiesrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.satisfiesRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">status</div>
+        </div><div id="entry--medicaidworkrequirements-snapworkrulesexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.snapWorkRulesExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-statementacceptedforexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.statementAcceptedForExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">statementAcceptedForExclusion</div>
+        </div><div id="entry--medicaidworkrequirements-statementacceptedgenerally" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.statementAcceptedGenerally</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">statementAcceptedGenerally</div>
+        </div><div id="entry--medicaidworkrequirements-substanceusetreatmentexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.substanceUseTreatmentExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-tanfworkrulesexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.tanfWorkRulesExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--medicaidworkrequirements-veteranwithtotaldisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">medicaidWorkRequirements.veteranWithTotalDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">exclusions</div>
+        </div><div id="entry--snapworkrequirements-ageovermaximumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageOverMaximumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_65_or_older'</div>
+        </div><div id="entry--snapworkrequirements-ageunderminimumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageUnderMinimumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_under_18'</div>
+        </div><div id="entry--snapworkrequirements-anypreventingwork" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.anyPreventingWork</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#any_preventing_work?</div>
+        </div><div id="entry--snapworkrequirements-caringforchildunder6exemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.caringForChildUnder6Exemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :caring_for_child_under_6</div>
+        </div><div id="entry--snapworkrequirements-caringfordisabledorillpersonexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.caringForDisabledOrIllPersonExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :caring_for_disabled_or_ill_person</div>
+        </div><div id="entry--snapworkrequirements-earningsaboveminimum" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsAboveMinimum</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#earnings_above_minimum?</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyamount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#earnings_above_minimum?</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#working_30_or_more_hours?</div>
+        </div><div id="entry--snapworkrequirements-exemptions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.exemptions</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#exemption_reasons</div>
+        </div><div id="entry--snapworkrequirements-haschildexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasChildExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :has_child</div>
+        </div><div id="entry--snapworkrequirements-hasexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#has_exemption?</div>
+        </div><div id="entry--snapworkrequirements-hasunemploymentbenefitsexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasUnemploymentBenefitsExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :has_unemployment_benefits</div>
+        </div><div id="entry--snapworkrequirements-isageexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isAgeExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#age_exempt?</div>
+        </div><div id="entry--snapworkrequirements-isamericanindianexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isAmericanIndianExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_american_indian</div>
+        </div><div id="entry--snapworkrequirements-isexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#exempt_from_work_rules?, and the EXEMPT outcome DownloadFormController saves</div>
+        </div><div id="entry--snapworkrequirements-isexemptfromworkrules" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExemptFromWorkRules</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#exempt_from_work_rules?</div>
+        </div><div id="entry--snapworkrequirements-isinalcoholtreatmentprogramexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isInAlcoholTreatmentProgramExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_in_alcohol_treatment_program</div>
+        </div><div id="entry--snapworkrequirements-ismigrantfarmworkerexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isMigrantFarmworkerExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_migrant_farmworker</div>
+        </div><div id="entry--snapworkrequirements-ispregnantexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isPregnantExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_pregnant</div>
+        </div><div id="entry--snapworkrequirements-isstudentexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isStudentExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::OTHER_EXEMPTION_ATTRIBUTES — :is_student</div>
+        </div><div id="entry--snapworkrequirements-isvolunteering" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isVolunteering</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#volunteering?</div>
+        </div><div id="entry--snapworkrequirements-meetsrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.meetsRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#complies_with_work_rules?</div>
+        </div><div id="entry--snapworkrequirements-notapplicablereason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.notApplicableReason</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#non_earnings_exemption_reasons — 'age_under_18', 'age_65_or_older'</div>
+        </div><div id="entry--snapworkrequirements-person-age" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.age</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.age_range</div>
+        </div><div id="entry--snapworkrequirements-person-caringforchildunder6" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.caringForChildUnder6</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.caring_for_child_under_6</div>
+        </div><div id="entry--snapworkrequirements-person-caringfordisabledorillperson" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.caringForDisabledOrIllPerson</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.caring_for_disabled_or_ill_person</div>
+        </div><div id="entry--snapworkrequirements-person-haschild" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.hasChild</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.has_child</div>
+        </div><div id="entry--snapworkrequirements-person-hasunemploymentbenefits" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.hasUnemploymentBenefits</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.has_unemployment_benefits</div>
+        </div><div id="entry--snapworkrequirements-person-isamericanindian" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isAmericanIndian</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_american_indian</div>
+        </div><div id="entry--snapworkrequirements-person-isinalcoholtreatmentprogram" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isInAlcoholTreatmentProgram</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_in_alcohol_treatment_program</div>
+        </div><div id="entry--snapworkrequirements-person-isinworktraining" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isInWorkTraining</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_in_work_training</div>
+        </div><div id="entry--snapworkrequirements-person-ismigrantfarmworker" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isMigrantFarmworker</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_migrant_farmworker</div>
+        </div><div id="entry--snapworkrequirements-person-ispregnant" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isPregnant</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_pregnant</div>
+        </div><div id="entry--snapworkrequirements-person-isstudent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isStudent</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_student</div>
+        </div><div id="entry--snapworkrequirements-person-isvolunteer" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isVolunteer</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_volunteer</div>
+        </div><div id="entry--snapworkrequirements-person-isworking" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isWorking</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.is_working</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkdomesticviolence" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkDomesticViolence</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.preventing_work_domestic_violence</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkdrugsalcohol" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkDrugsAlcohol</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.preventing_work_drugs_alcohol</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkmedicalcondition" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkMedicalCondition</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.preventing_work_medical_condition</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkother" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkOther</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.preventing_work_other</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkplacetosleep" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkPlaceToSleep</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.preventing_work_place_to_sleep</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsdisabilitymedicaid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsDisabilityMedicaid</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_disability_medicaid</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsdisabilitypension" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsDisabilityPension</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_disability_pension</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsinsurancepayments" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsInsurancePayments</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_insurance_payments</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsother" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsOther</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_other</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsssdi" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsSsdi</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_ssdi</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsssi" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsSsi</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_ssi</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsveteransdisability" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsVeteransDisability</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_veterans_disability</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsworkerscompensation" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsWorkersCompensation</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.receiving_benefits_workers_compensation</div>
+        </div><div id="entry--snapworkrequirements-person-volunteeringhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.volunteeringHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.volunteering_hours</div>
+        </div><div id="entry--snapworkrequirements-person-workinghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.working_hours</div>
+        </div><div id="entry--snapworkrequirements-person-workingweeklyearnings" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.working_weekly_earnings</div>
+        </div><div id="entry--snapworkrequirements-person-worktraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">screeners.work_training_hours</div>
+        </div><div id="entry--snapworkrequirements-preventingworkdomesticviolenceexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkDomesticViolenceExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_domestic_violence</div>
+        </div><div id="entry--snapworkrequirements-preventingworkdrugsalcoholexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkDrugsAlcoholExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_drugs_alcohol</div>
+        </div><div id="entry--snapworkrequirements-preventingworkmedicalconditionexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkMedicalConditionExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_medical_condition</div>
+        </div><div id="entry--snapworkrequirements-preventingworkotherexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkOtherExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_other</div>
+        </div><div id="entry--snapworkrequirements-preventingworkplacetosleepexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkPlaceToSleepExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::PREVENTING_WORK_ATTRIBUTES — :preventing_work_place_to_sleep</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsdisabilitymedicaidexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_disability_medicaid</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsdisabilitypensionexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsDisabilityPensionExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_disability_pension</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsinsurancepaymentsexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_insurance_payments</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsotherexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsOtherExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_other</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsssdiexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsSsdiExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_ssdi</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsssiexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsSsiExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_ssi</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsveteransdisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_veterans_disability</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsworkerscompensationexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsWorkersCompensationExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener::DISABILITY_BENEFIT_ATTRIBUTES — :receiving_benefits_workers_compensation</div>
+        </div><div id="entry--snapworkrequirements-receivingdisabilitybenefits" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingDisabilityBenefits</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#receiving_disability_benefits?</div>
+        </div><div id="entry--snapworkrequirements-requirementapplies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requirementApplies</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#age_exempt?, and the AGE_EXEMPT outcome AgeExemptionController saves</div>
+        </div><div id="entry--snapworkrequirements-requiresproof" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProof</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#requires_proof?</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofamericanindianstatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#requires_proof_of_american_indian_status?</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofvolunteering" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfVolunteering</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#requires_proof_of_volunteering?</div>
+        </div><div id="entry--snapworkrequirements-satisfiesrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.satisfiesRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener outcomes: AGE_EXEMPT, EXEMPT, NOT_EXEMPT_WORK_RULES_MET, NOT_EXEMPT_WORK_RULES_NOT_MET</div>
+        </div><div id="entry--snapworkrequirements-totalworkvolunteerandtraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#total_work_volunteer_and_training_hours</div>
+        </div><div id="entry--snapworkrequirements-weeklyhoursrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.weeklyHoursRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">WorkRulesPolicy::Base#complies_with_work_rules?</div>
+        </div><div id="entry--snapworkrequirements-workingearningsexemptionhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workingEarningsExemptionHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#working_30_or_more_hours?</div>
+        </div><div id="entry--snapworkrequirements-workrulesmaximumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMaximumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#age_exempt?</div>
+        </div><div id="entry--snapworkrequirements-workrulesminimumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMinimumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Screener#age_exempt?</div>
+        </div>
+    </div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+</body>
+</html>

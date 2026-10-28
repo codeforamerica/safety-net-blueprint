@@ -1,6 +1,7 @@
 /**
- * Annotation keys in `facts:` and `constants:` are checked against the facts
- * and constants each ruleset declares, read from its rules document.
+ * Annotation keys in `facts:`, `constants:` and `inputs:` are checked against
+ * the facts, constants and input paths each ruleset declares, read from its
+ * rules document.
  *
  * They used to be checked only against compiled graphs in the set, and
  * resolve validates before any graph is compiled, so a key naming no fact
@@ -36,7 +37,10 @@ const rules = {
   rulesets: {
     hours: {
       endpoint: { path: '/hours' },
-      inputs: { person: { type: 'object', properties: { hoursWorked: { type: 'number' } } } },
+      inputs: {
+        person: { type: 'object', properties: { hoursWorked: { type: 'number' } } },
+        months: { type: 'array', items: { type: 'object', properties: { hours: { type: 'number' } } } },
+      },
       constants: { hoursRequired: { value: 80 } },
       outputs: { meetsHours: {} },
       facts: [{ path: 'meetsHours', expression: 'person.hoursWorked >= constants.hoursRequired' }],
@@ -96,5 +100,36 @@ describe('annotation constant keys', () => {
       'domains/eligibility/eligibility-rules.yaml': rules,
       'domains/eligibility/eligibility-annotations.yaml': annotations({ constants: { 'hours.meetsHours': { reason: 'Why.' } } }),
     }, (docs) => assert.equal(errorsOf(docs, 'unknown-annotation-constants-key').length, 1));
+  });
+});
+
+describe('annotation input keys', () => {
+  const inputKeyErrors = (docs) => errorsOf(docs, 'unknown-annotation-inputs-key');
+
+  test('a key naming an input path passes, including a field of each item of a list', () => {
+    withSet({
+      'domains/eligibility/eligibility-rules.yaml': rules,
+      'domains/eligibility/eligibility-annotations.yaml': annotations({
+        inputs: { 'hours.person.hoursWorked': { reason: 'Why.' }, 'hours.months[].hours': { reason: 'Why.' } },
+      }),
+    }, (docs) => assert.deepEqual(inputKeyErrors(docs), []));
+  });
+
+  test('a key naming no input is reported, naming it', () => {
+    withSet({
+      'domains/eligibility/eligibility-rules.yaml': rules,
+      'domains/eligibility/eligibility-annotations.yaml': annotations({ inputs: { 'hours.person.hoursWorkd': { reason: 'Why.' } } }),
+    }, (docs) => {
+      const [error] = inputKeyErrors(docs);
+      assert.match(error?.message ?? '', /Input "person.hoursWorkd" is not declared by ruleset "hours"/);
+    });
+  });
+
+  test('an input cites registry entries that must exist', () => {
+    withSet({
+      'domains/eligibility/eligibility-rules.yaml': rules,
+      'domains/eligibility/eligibility-annotations.yaml': annotations({ inputs: { 'hours.person.hoursWorked': { policies: ['no-such-policy'] } } }),
+      'domains/platform/platform-registry-policies.yaml': { $schema: 'registry-schema.yaml', version: '1.0', domain: 'platform', type: 'policies', entries: { real: { description: 'Real.' } } },
+    }, (docs) => assert.equal(errorsOf(docs, 'unknown-registry-citation').length, 1));
   });
 });

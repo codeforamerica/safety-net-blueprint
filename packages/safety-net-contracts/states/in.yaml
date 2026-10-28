@@ -10,7 +10,7 @@
 # Notes:
 #   - Renewal: three months, checked after each quarterly compliance check.
 #   - News reports of FSSA's announcement say exemptions need documentation;
-#     acceptsStatementsBefore2028 is left at the default until the state plan confirms it.
+#     acceptsStatementsBeforeDocumentationRequired is left at the default until the state plan confirms it.
 #
 # Recorded in the survey; no rule reads these:
 #   checksBetweenRenewals: quarterly

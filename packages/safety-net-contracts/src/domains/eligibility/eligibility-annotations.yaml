@@ -20,6 +20,10 @@ facts:
     policies: [medicaid-community-engagement-statute, medicaid-community-engagement-applicability, medicaid-community-engagement-transition]
     programs: [medicaid]
 
+  medicaidWorkRequirements.notApplicableReason:
+    policies: [medicaid-community-engagement-applicability, medicaid-community-engagement-transition]
+    programs: [medicaid]
+
   medicaidWorkRequirements.exemptions:
     reason: >
       Each exemption the person has, longest-lasting first. Any one is enough, and which ones
@@ -209,6 +213,9 @@ facts:
   snapWorkRequirements.requirementApplies:
     policies: [snap-abawd-work-requirement]
     programs: [snap]
+  snapWorkRequirements.notApplicableReason:
+    policies: [snap-abawd-work-requirement]
+    programs: [snap]
   snapWorkRequirements.isExempt:
     policies: [snap-general-work-requirement, snap-abawd-work-requirement]
     programs: [snap]
@@ -232,7 +239,7 @@ constants:
 
   # ── Medicaid work requirements ─────────────────────────────────────────────
 
-  medicaidWorkRequirements.firstYearInEffect:
+  medicaidWorkRequirements.effectiveDate:
     policies: [medicaid-community-engagement-statute, medicaid-community-engagement-applicability]
     programs: [medicaid]
   medicaidWorkRequirements.minimumAge:
@@ -271,10 +278,10 @@ constants:
   medicaidWorkRequirements.renewalMonthsRequired:
     policies: [medicaid-community-engagement-review-period]
     programs: [medicaid]
-  medicaidWorkRequirements.documentationRequiredFromYear:
+  medicaidWorkRequirements.documentationRequiredFrom:
     policies: [medicaid-community-engagement-verification]
     programs: [medicaid]
-  medicaidWorkRequirements.acceptsStatementsBefore2028:
+  medicaidWorkRequirements.acceptsStatementsBeforeDocumentationRequired:
     policies: [medicaid-community-engagement-verification]
     programs: [medicaid]
   medicaidWorkRequirements.acceptsStatementsForMandatoryExceptions:

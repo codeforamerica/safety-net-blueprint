@@ -42,9 +42,9 @@ actions:
     file: domains/eligibility/eligibility-rules.yaml
     description: 'Medicaid: acceptsFrailtyStatements'
     update: false
-  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBefore2028.value
+  - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsBeforeDocumentationRequired.value
     file: domains/eligibility/eligibility-rules.yaml
-    description: 'Medicaid: acceptsStatementsBefore2028'
+    description: 'Medicaid: acceptsStatementsBeforeDocumentationRequired'
     update: false
   - target: $.rulesets.medicaidWorkRequirements.constants.acceptsStatementsForMandatoryExceptions.value
     file: domains/eligibility/eligibility-rules.yaml

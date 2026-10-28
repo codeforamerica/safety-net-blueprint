@@ -11,7 +11,6 @@
 # present it as Iowa's rule: applicationReviewMonths, acceptsFrailtyStatements.
 #
 # Recorded in the survey; no rule reads these:
-#   startDate: 2026-12-01
 #   checksBetweenRenewals: undecided
 #   frailtyDefinitionPlan: undecided
 #   hasStateFrailtyDefinition: true
@@ -29,7 +28,7 @@ actions:
     file: domains/eligibility/eligibility-rules.yaml
     description: 'Medicaid: offersHardshipExceptions'
     update: false
-  - target: $.rulesets.medicaidWorkRequirements.constants.firstYearInEffect.value
+  - target: $.rulesets.medicaidWorkRequirements.constants.effectiveDate.value
     file: domains/eligibility/eligibility-rules.yaml
-    description: 'Medicaid: firstYearInEffect'
-    update: 2026
+    description: 'Medicaid: effectiveDate'
+    update: '2026-12-01'

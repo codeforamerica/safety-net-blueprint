@@ -159,6 +159,8 @@ properties:
         value: {}
         type:
           type: string
+        format:
+          type: string
         description:
           type: string
     propertyNames:

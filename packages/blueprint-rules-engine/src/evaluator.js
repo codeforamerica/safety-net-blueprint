@@ -370,9 +370,9 @@ export function evaluate(graph, inputs) {
   // nothing a caller sends replaces them and nothing resting on them is a
   // placeholder.
   if (graph.constants) {
-    scope.constants = Object.fromEntries(Object.entries(graph.constants).map(([name, { value, type }]) => [
+    scope.constants = Object.fromEntries(Object.entries(graph.constants).map(([name, { value, type, format }]) => [
       name,
-      coerceDeclared({ type }, value) ?? value,
+      coerceDeclared({ type, format }, value) ?? value,
     ]));
   }
 

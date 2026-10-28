@@ -1244,6 +1244,7 @@ entries:
     citation: "42 CFR § 435.559"
     citationUrl: "https://www.ecfr.gov/current/title-42/section-435.559"
     description: >
-      An application submitted, or a renewal started, before the requirement took effect is
-      decided without it.
+      The requirement is a condition of coverage from January 1, 2027, or a state's earlier
+      start. Someone already enrolled is first checked at their first renewal started on or
+      after that date.
     programs: [medicaid]

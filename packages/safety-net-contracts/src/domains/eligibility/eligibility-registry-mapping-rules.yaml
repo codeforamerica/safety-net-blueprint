@@ -1,0 +1,169 @@
+# How the work requirements rulesets were translated from their sources — the
+# rules that apply to many inputs, constants and facts, stated once. A source
+# annotation names the rules it follows (`mapping-rules: [...]`); see
+# eligibility-annotations-source.yaml. `programs` says which ruleset's
+# translation a rule describes: SNAP's from the self-advocacy tool, Medicaid's
+# from the draft rules.
+$schema: registry-schema.yaml
+version: '1.0'
+domain: eligibility
+type: mapping-rules
+entries:
+  names:
+    description: >-
+      The tool's snake_case name, camelCased. A Ruby predicate's ? is dropped, with `is` added
+      where the bare name would not read as yes or no (age_exempt? → isAgeExempt, volunteering?
+      → isVolunteering). Applies to every entry; listed only where the result is not the tool's
+      name camelCased.
+    programs: [snap]
+  person-object:
+    description: >-
+      The answers sit under `person`, as in Medicaid's work requirements, not under co-snap's
+      `screener`. Applies to every input; not listed per entry.
+    programs: [snap]
+  yes-no-answer:
+    description: >-
+      The tool stores a yes-or-no question as unfilled, yes or no, and reads unfilled (a skipped
+      question) as no. Here it is a boolean with no default. An unanswered question is missing,
+      and so is any result that needs it, naming the question to ask. The test cases fill
+      unanswered questions with no, from the scenario file's `unanswered` block.
+    programs: [snap]
+  number-answer:
+    description: >-
+      The tool reads a blank number as 0 with to_i or to_f, and accepts 1 to 168 hours. Here a
+      blank number is missing, and there is no range.
+    programs: [snap]
+  state-table-fields:
+    description: >-
+      The tool keeps a state's own answers in a table of their own (North Carolina's in
+      nc_screeners). Here they are fields the state's overlay adds to `person`, with no defaults
+      like the rest.
+    programs: [snap]
+  exemption-per-code:
+    description: >-
+      The tool has no method per exemption: non_earnings_exemption_reasons loops over lists of
+      columns and adds each one answered yes. Each exemption is a fact here, named from its
+      code, camelCased, plus Exemption (is_pregnant → isPregnantExemption).
+    programs: [snap]
+  literal-to-constant:
+    description: >-
+      A number or switch written into the tool's code is a constant here, with the tool's value.
+      co-snap made each an input with a default that a caller could override. Here a caller
+      can't send it; a state changes it with an overlay, and a result resting on it is final.
+    programs: [snap]
+  subclass-to-overlay:
+    description: >-
+      The tool varies a rule by state with a subclass that overrides a method, chosen from the
+      person's state. Here the federal rule is the baseline, and a state's file in states/
+      changes a constant's value or replaces a fact's expression when the contract is built.
+    programs: [snap]
+  threshold-name:
+    description: >-
+      A name that stated a number names the rule instead, since a state can change the number
+      (working_30_or_more_hours? → workingEarningsExemptionHours, age_65_or_older →
+      ageOverMaximumExemption).
+    programs: [snap]
+  age-as-number:
+    description: >-
+      The tool asks for one of five ranges (under 18, 18 to 49, 50 to 54, 55 to 64, 65 or
+      older). Here the input is an age in whole years and each cutoff is a constant. Every rule
+      cuts at a range edge, so any age inside one of the tool's ranges gives the tool's result.
+    programs: [snap]
+  no-list:
+    description: >-
+      Where the tool checks whether a list of reasons is empty, the rule here joins with or the
+      facts the list is built from. The answer is the same.
+    programs: [snap]
+  counted-hours:
+    description: >-
+      Hours count only when the person says they do that activity: one fact each for working,
+      volunteering and training hours, 0 when the answer is no. Each is its own fact because the
+      engine settles a condition only at the top of an expression, not inside a sum. So someone
+      who doesn't work, volunteer or train is never asked for hours. The tool adds the hours
+      whatever the answer, but clears them on save when the answer is no.
+    programs: [snap]
+  shared-vocabulary:
+    description: >-
+      The outputs use the names Medicaid's work requirements use: requirementApplies,
+      notApplicableReason, exemptions, isExempt, meetsRequirement, satisfiesRequirement. They
+      replace co-snap's outcome, exemptionReasons, isExemptFromWorkRules and
+      compliesWithWorkRules.
+    programs: [snap]
+  age-decides-applicability:
+    description: >-
+      Age decides whether the requirement applies, not whether the person is exempt. The tool
+      treats an age outside 18 to 64 as an exemption, with its own code. Here it sets
+      requirementApplies to false, and exemptions and isExempt leave it out.
+    programs: [snap]
+  results-for-everyone:
+    description: >-
+      The tool shows some results only on certain pages (proof only to people exempt for a
+      reason other than age, proof of volunteering only to people who meet the hours). The ruleset
+      answers every output for everyone.
+    programs: [snap]
+  one-ruleset:
+    description: >-
+      The draft's two rulesets, reviewMonth and communityEngagement, are one ruleset.
+      reviewMonth's inputs are the fields of each item in `months`. Its facts are per-item facts
+      on the reviewMonths list, reading `month.X` for each other. Its parameters joined the
+      constants under the same names and values (monthlyHoursRequired, federalMinimumWage,
+      creditHourWeeklyHours, weeksPerMonth, offersHardshipExceptions), and its outputs are the
+      reviewMonths[] outputs. Per-month facts are worked out only for months in the review
+      period.
+    programs: [medicaid]
+  no-defaults:
+    description: >-
+      Draft inputs had defaults; the ruleset has none. An unanswered question leaves every result
+      that needs it missing, and the result names the question. Because everything is now
+      effectively required, the draft's `required: true` markers are gone too. The scenario
+      file's `unanswered` block supplies the draft's defaults for tests, including the two that
+      weren't the "grants nothing" kind: inAdultExpansionGroup (true) and careRelationship
+      (other).
+    programs: [medicaid]
+  no-questions:
+    description: >-
+      The ruleset's inputs carry type and enum only. The draft's `ask`, `help`, option labels and
+      `from: state` markers (which flagged inputs a state's own data should fill) were dropped.
+      Two conditions that lived only in question wording went with them: caregiving must be
+      regular, and a person whose dependent traveled for care without them must show they missed
+      work or activities.
+    programs: [medicaid]
+  exclusions-are-exemptions:
+    description: >-
+      The draft's "exclusions" (the regulation's word, 435.554) are "exemptions" in the ruleset:
+      exclusions, isExcluded, lostExcludedStatus, excludedAtLastDetermination, wasExcluded,
+      hasExclusionOtherThanFrailty, statementAcceptedForExclusion and exclusionShown are renamed
+      to match. The list values, like caregiver_of_child_under_14, are unchanged.
+    programs: [medicaid]
+  parameters-are-constants:
+    description: >-
+      The draft's `parameters` are the ruleset's `constants`. Each now has a `value`, and some a
+      `type`, `format` or `description`. A state overlay changes a constant's value.
+    programs: [medicaid]
+  dates-not-years:
+    description: >-
+      Every year in the draft is a date in the ruleset: determination.year, firstYearInEffect and
+      documentationRequiredFromYear, and the comparisons that read them.
+    programs: [medicaid]
+  per-exemption-facts:
+    description: >-
+      Each exemption the draft tested inline in `exclusions` is its own fact, and only that fact
+      reads the answers that grant it. The engine evaluates with partial answers, so this keeps
+      a question an exemption doesn't need from being asked, like how a caregiver is related for
+      someone who cares for no one.
+    programs: [medicaid]
+  short-circuit:
+    description: >-
+      Expressions reordered or split into conditionals so the engine can settle a result without
+      asking an answer it doesn't need: requirementInEffect and statementAcceptedGenerally.
+    programs: [medicaid]
+  follows-renames:
+    description: >-
+      These facts keep their name and logic; their expressions changed only because something
+      they read was renamed (countedMonths, meetsReviewPeriod, isExcluded, exclusionShown,
+      hasExclusionOtherThanFrailty, statementAcceptedForExclusion, beforeDocumentationYear,
+      acceptsStatementsBefore2028): qualifyingMonthCount, couldAskForHardship,
+      frailtyStatementAccepted, monthsNeedingNoProof, monthsShownByExceptionStatement,
+      statementAccepted, reviewPeriodShown, hasBasis, isCovered, nextStep. Not listed under
+      facts.
+    programs: [medicaid]

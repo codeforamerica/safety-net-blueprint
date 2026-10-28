@@ -26,12 +26,18 @@ rulesets:
           kind:
             type: string
             enum: [application, renewal, change_in_circumstances]
-          year:
-            type: integer
-          # Applications submitted, or renewals started, before the requirement
-          # took effect are decided without it (435.559).
-          startedBeforeRequirement:
-            type: boolean
+          # The day the application, renewal or change is decided. Coverage
+          # from the day the requirement takes effect is subject to it
+          # (435.559(a)), and from documentationRequiredFrom the state can ask
+          # for documents (435.557).
+          date:
+            type: string
+            format: date
+          # The day the renewal started. A renewal started before the
+          # requirement took effect is decided without it (435.559(c)).
+          renewalStartedOn:
+            type: string
+            format: date
           exemptAtLastDetermination:
             type: boolean
 
@@ -164,9 +170,10 @@ rulesets:
             type: boolean
 
     constants:
-      firstYearInEffect:
-        value: 2027
-        type: integer
+      effectiveDate:
+        value: '2027-01-01'
+        type: string
+        format: date
         description: Earlier at state option; later only under a CMS good-faith exemption, by December 31, 2028.
       minimumAge:
         value: 19
@@ -203,11 +210,12 @@ rulesets:
         value: 1
         type: integer
         description: Months, consecutive or not, since the last determination.
-      documentationRequiredFromYear:
-        value: 2028
-        type: integer
-        description: From this year, documents where reasonably available (435.557).
-      acceptsStatementsBefore2028:
+      documentationRequiredFrom:
+        value: '2028-01-01'
+        type: string
+        format: date
+        description: From this date, documents where reasonably available (435.557).
+      acceptsStatementsBeforeDocumentationRequired:
         value: true
         description: State option.
       acceptsStatementsForMandatoryExceptions:
@@ -219,6 +227,7 @@ rulesets:
 
     outputs:
       requirementApplies: {}
+      notApplicableReason: {}
       exemptions: {}
       isExempt: {}
       lostExemptStatus: {}
@@ -240,12 +249,27 @@ rulesets:
 
     facts:
       # ── Does the requirement apply? (435.551, 435.559) ──────────────────────
+      # A renewal is checked only if it started on or after the requirement took
+      # effect (435.559(c)); anything else, by when it's decided, since coverage
+      # from then on is subject to it (435.559(a)). So a renewal is never asked
+      # its decision date here, nor an application its start.
       - path: requirementInEffect
-        expression: determination.year >= constants.firstYearInEffect && !determination.startedBeforeRequirement
+        expression: >-
+          determination.kind == 'renewal'
+            ? determination.renewalStartedOn >= constants.effectiveDate
+            : determination.date >= constants.effectiveDate
       - path: inAgeRange
         expression: person.age >= constants.minimumAge && person.age <= constants.maximumAge
       - path: requirementApplies
         expression: requirementInEffect && person.inAdultExpansionGroup && inAgeRange && !person.hasMedicare
+      # Which condition it doesn't apply by, the first that settles it, so a
+      # caller can say why without asking anything requirementApplies didn't.
+      - path: notApplicableReason
+        expression: >-
+          !requirementInEffect ? (determination.kind == 'renewal' ? 'renewal_started_before_requirement' : 'not_yet_in_effect') :
+          !person.inAdultExpansionGroup ? 'not_in_expansion_group' :
+          person.hasMedicare ? 'has_medicare' :
+          !inAgeRange ? 'outside_age_range' : 'applies'
 
       # ── Medical frailty (435.554(c)(5)) ─────────────────────────────────────
       - path: substanceUseDisorderCounts
@@ -261,23 +285,46 @@ rulesets:
         expression: size(frailtyCategories) > 0 && health.conditionSignificantlyImpairsAbilityToMeetRequirement
 
       # ── Is the person exempt? (435.554), longest-lasting first ──────────────
+      # One fact per exemption, and only these read the answers that grant one,
+      # so a question an exemption doesn't need — how a caregiver is related,
+      # for someone who cares for no one — is never asked.
       - path: isQualifyingCaregiver
         expression: >-
           person.careRelationship != 'other' ||
           person.caregivingHoursPerMonth >= constants.caregiverMinimumMonthlyHours
+      - path: americanIndianOrAlaskaNativeExemption
+        expression: person.isAmericanIndianOrAlaskaNative
+      - path: veteranWithTotalDisabilityExemption
+        expression: person.isVeteranWithTotalDisability
+      - path: formerFosterYouthExemption
+        expression: person.isFormerFosterYouth && person.age <= constants.formerFosterYouthMaximumAge
+      - path: caregiverOfChildUnder14Exemption
+        expression: person.caresForChildUnder14 && isQualifyingCaregiver
+      - path: caregiverOfPersonWithDisabilityExemption
+        expression: person.caresForPersonWithDisability && isQualifyingCaregiver
+      - path: pregnantOrPostpartumExemption
+        expression: person.isPregnantOrPostpartum
+      - path: snapWorkRulesExemption
+        expression: person.inSnapHousehold && person.subjectToSnapWorkRules
+      - path: tanfWorkRulesExemption
+        expression: person.meetsTanfWorkRequirements
+      - path: substanceUseTreatmentExemption
+        expression: person.inSubstanceUseTreatment
+      - path: incarceratedExemption
+        expression: person.isIncarcerated
       - path: exemptions
         expression: >-
-          (person.isAmericanIndianOrAlaskaNative ? ['american_indian_or_alaska_native'] : []) +
-          (person.isVeteranWithTotalDisability ? ['veteran_with_total_disability'] : []) +
-          (person.isFormerFosterYouth && person.age <= constants.formerFosterYouthMaximumAge ? ['former_foster_youth'] : []) +
+          (americanIndianOrAlaskaNativeExemption ? ['american_indian_or_alaska_native'] : []) +
+          (veteranWithTotalDisabilityExemption ? ['veteran_with_total_disability'] : []) +
+          (formerFosterYouthExemption ? ['former_foster_youth'] : []) +
           (isMedicallyFrail ? ['medically_frail'] : []) +
-          (person.caresForChildUnder14 && isQualifyingCaregiver ? ['caregiver_of_child_under_14'] : []) +
-          (person.caresForPersonWithDisability && isQualifyingCaregiver ? ['caregiver_of_person_with_disability'] : []) +
-          (person.isPregnantOrPostpartum ? ['pregnant_or_postpartum'] : []) +
-          (person.inSnapHousehold && person.subjectToSnapWorkRules ? ['snap_work_rules'] : []) +
-          (person.meetsTanfWorkRequirements ? ['tanf_work_rules'] : []) +
-          (person.inSubstanceUseTreatment ? ['substance_use_treatment'] : []) +
-          (person.isIncarcerated ? ['incarcerated'] : [])
+          (caregiverOfChildUnder14Exemption ? ['caregiver_of_child_under_14'] : []) +
+          (caregiverOfPersonWithDisabilityExemption ? ['caregiver_of_person_with_disability'] : []) +
+          (pregnantOrPostpartumExemption ? ['pregnant_or_postpartum'] : []) +
+          (snapWorkRulesExemption ? ['snap_work_rules'] : []) +
+          (tanfWorkRulesExemption ? ['tanf_work_rules'] : []) +
+          (substanceUseTreatmentExemption ? ['substance_use_treatment'] : []) +
+          (incarceratedExemption ? ['incarcerated'] : [])
       - path: isExempt
         expression: requirementApplies && size(exemptions) > 0
       - path: lostExemptStatus
@@ -346,16 +393,18 @@ rulesets:
         expression: '!meetsRequirement && reviewMonths.exists(m, !m.qualifies && m.hardshipAvailableIfRequested)'
 
       # ── Can it be shown? (435.557) ──────────────────────────────────────────
-      - path: beforeDocumentationYear
-        expression: determination.year < constants.documentationRequiredFromYear
+      - path: beforeDocumentationRequired
+        expression: determination.date < constants.documentationRequiredFrom
+      # The state's option first, so a state that doesn't take statements
+      # before then never asks when the decision is.
       - path: statementAcceptedGenerally
         expression: >-
-          (beforeDocumentationYear && constants.acceptsStatementsBefore2028) ||
+          (constants.acceptsStatementsBeforeDocumentationRequired && beforeDocumentationRequired) ||
           !verification.documentsReasonablyAvailable
       - path: frailtyStatementAccepted
         expression: >-
           isMedicallyFrail && constants.acceptsFrailtyStatements &&
-          (beforeDocumentationYear ? constants.acceptsStatementsBefore2028 : !verification.frailtyStatementAlreadyUsed)
+          (beforeDocumentationRequired ? constants.acceptsStatementsBeforeDocumentationRequired : !verification.frailtyStatementAlreadyUsed)
       - path: hasExemptionOtherThanFrailty
         expression: 'size(exemptions) > (isMedicallyFrail ? 1 : 0)'
       - path: statementAcceptedForExemption
@@ -519,6 +568,7 @@ rulesets:
 
     outputs:
       requirementApplies: {}
+      notApplicableReason: {}
       exemptions: {}
       isExempt: {}
       meetsRequirement: {}
@@ -663,10 +713,22 @@ rulesets:
         type: boolean
         expression: anyListedPreventingWork || extraPreventingWork
 
-      # Whether the work rules are met.
+      # Whether the work rules are met. Hours count only for what the person
+      # does, so someone who doesn't volunteer is never asked how many hours.
+      # One fact each: the engine settles a conditional at the top of an
+      # expression, not inside a sum.
+      - path: countedWorkingHours
+        type: integer
+        expression: 'person.isWorking ? person.workingHours : 0'
+      - path: countedVolunteeringHours
+        type: integer
+        expression: 'person.isVolunteer ? person.volunteeringHours : 0'
+      - path: countedWorkTrainingHours
+        type: integer
+        expression: 'person.isInWorkTraining ? person.workTrainingHours : 0'
       - path: totalWorkVolunteerAndTrainingHours
         type: integer
-        expression: person.workingHours + person.volunteeringHours + person.workTrainingHours
+        expression: countedWorkingHours + countedVolunteeringHours + countedWorkTrainingHours
       - path: meetsRequirement
         type: boolean
         expression: totalWorkVolunteerAndTrainingHours >= constants.weeklyHoursRequired
@@ -693,6 +755,10 @@ rulesets:
       - path: requirementApplies
         type: boolean
         expression: '!isAgeExempt'
+      # Which age cutoff it doesn't apply by.
+      - path: notApplicableReason
+        type: string
+        expression: "ageUnderMinimumExemption ? 'under_minimum_age' : ageOverMaximumExemption ? 'over_maximum_age' : 'applies'"
       - path: isExempt
         type: boolean
         expression: requirementApplies && isExemptFromWorkRules

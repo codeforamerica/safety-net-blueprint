@@ -13,33 +13,19 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { graphFor } from '../rulesets.js';
+import { scenariosFor } from '../scenarios.js';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const { unanswered, cases } = yaml.load(readFileSync(join(here, '..', 'scenarios', 'snap-work-requirements.yaml'), 'utf8'));
 const graph = graphFor('snapWorkRequirements');
-
-/**
- * A case's answers, with every question it leaves out answered so it grants
- * nothing, North Carolina's own questions included for a case there. Age has
- * no such answer.
- */
-const inputsOf = (person, state) => ({
-  person: { ...unanswered.person, ...(state === 'NC' ? unanswered.northCarolina : {}), ...person },
-});
 
 /** A list of exemption codes is a set: the order is the rules' own, and nothing depends on it. */
 const sorted = (value) => (Array.isArray(value) ? [...value].sort() : value);
 
 describe('SNAP work requirements cases', () => {
-  for (const c of cases) {
-    test(c.state ? `${c.name} (${c.state})` : c.name, () => {
-      const nodes = evaluate(c.state ? graphFor('snapWorkRequirements', c.state) : graph, inputsOf(c.person, c.state));
+  for (const c of scenariosFor('snapWorkRequirements')) {
+    test(c.state ? `${c.id} (${c.state})` : c.id, () => {
+      const nodes = evaluate(c.state ? graphFor('snapWorkRequirements', c.state) : graph, c.inputs);
       for (const [fact, expected] of Object.entries(c.expect)) {
         const node = nodes[fact];
         if (expected === null) {
@@ -51,4 +37,20 @@ describe('SNAP work requirements cases', () => {
       }
     });
   }
+});
+
+describe('SNAP work requirements, why they don\'t apply', () => {
+  test('names the age cutoff, or says they apply', () => {
+    const reason = (age) => evaluate(graph, { person: { age } }).notApplicableReason.value;
+    assert.equal(reason(16), 'under_minimum_age');
+    assert.equal(reason(70), 'over_maximum_age');
+    assert.equal(reason(30), 'applies');
+  });
+});
+
+describe('SNAP work requirements, what they ask', () => {
+  test('someone who doesn\'t work, volunteer or train is never asked how many hours', () => {
+    const nodes = evaluate(graph, { person: { age: 30, isWorking: false, isVolunteer: false, isInWorkTraining: false } });
+    assert.deepEqual([nodes.meetsRequirement.state, nodes.meetsRequirement.value], ['complete', false]);
+  });
 });

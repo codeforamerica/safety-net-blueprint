@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>sourceFile — Annotation Explorer — Safety Net Blueprint</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">sourceFile</a></div>
+    
+      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">sourceFile</code></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
+      </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+        <div class="nav-section-label">eligibility</div>
+        <a class="nav-link" href="#entry--snapworkrequirements-ageovermaximumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageOverMaximumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ageunderminimumexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.ageUnderMinimumExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-anypreventingwork" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.anyPreventingWork</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-caringforchildunder6exemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.caringForChildUnder6Exemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-caringfordisabledorillpersonexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.caringForDisabledOrIllPersonExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsaboveminimum" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsAboveMinimum</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyamount" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-earningsexemptionweeklyhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-exemptions" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.exemptions</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-haschildexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasChildExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-hasunemploymentbenefitsexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.hasUnemploymentBenefitsExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isageexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isAgeExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isamericanindianexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isAmericanIndianExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexempt" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExempt</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isexemptfromworkrules" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isExemptFromWorkRules</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isinalcoholtreatmentprogramexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isInAlcoholTreatmentProgramExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ismigrantfarmworkerexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isMigrantFarmworkerExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-ispregnantexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isPregnantExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isstudentexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isStudentExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-isvolunteering" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.isVolunteering</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-meetsrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.meetsRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-notapplicablereason" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.notApplicableReason</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-age" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.age</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-caringforchildunder6" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.caringForChildUnder6</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-caringfordisabledorillperson" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.caringForDisabledOrIllPerson</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-haschild" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.hasChild</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-hasunemploymentbenefits" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.hasUnemploymentBenefits</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isamericanindian" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isAmericanIndian</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isinalcoholtreatmentprogram" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isInAlcoholTreatmentProgram</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isinworktraining" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isInWorkTraining</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-ismigrantfarmworker" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isMigrantFarmworker</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-ispregnant" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isPregnant</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isstudent" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isStudent</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isvolunteer" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isVolunteer</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-isworking" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.isWorking</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkdomesticviolence" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkDomesticViolence</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkdrugsalcohol" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkDrugsAlcohol</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkmedicalcondition" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkMedicalCondition</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkother" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkOther</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-preventingworkplacetosleep" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.preventingWorkPlaceToSleep</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsdisabilitymedicaid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsDisabilityMedicaid</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsdisabilitypension" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsDisabilityPension</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsinsurancepayments" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsInsurancePayments</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsother" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsOther</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsssdi" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsSsdi</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsssi" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsSsi</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsveteransdisability" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsVeteransDisability</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-receivingbenefitsworkerscompensation" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.receivingBenefitsWorkersCompensation</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-volunteeringhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.volunteeringHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-workinghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-workingweeklyearnings" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-person-worktraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.person.workTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkdomesticviolenceexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkDomesticViolenceExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkdrugsalcoholexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkDrugsAlcoholExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkmedicalconditionexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkMedicalConditionExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkotherexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkOtherExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-preventingworkplacetosleepexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.preventingWorkPlaceToSleepExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsdisabilitymedicaidexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsdisabilitypensionexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsDisabilityPensionExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsinsurancepaymentsexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsotherexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsOtherExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsssdiexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsSsdiExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsssiexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsSsiExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsveteransdisabilityexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingbenefitsworkerscompensationexemption" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingBenefitsWorkersCompensationExemption</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-receivingdisabilitybenefits" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.receivingDisabilityBenefits</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requirementapplies" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requirementApplies</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproof" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProof</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofamericanindianstatus" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-requiresproofofvolunteering" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.requiresProofOfVolunteering</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-satisfiesrequirement" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.satisfiesRequirement</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-totalworkvolunteerandtraininghours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-weeklyhoursrequired" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.weeklyHoursRequired</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workingearningsexemptionhours" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workingEarningsExemptionHours</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesmaximumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMaximumAge</code>
+        </a><a class="nav-link" href="#entry--snapworkrequirements-workrulesminimumage" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">snapWorkRequirements.workRulesMinimumAge</code>
+        </a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div style="padding:2rem 0.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>sourceFile</code></h1>
+      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">77 annotations</p>
+      <div id="entry--snapworkrequirements-ageovermaximumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageOverMaximumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-ageunderminimumexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.ageUnderMinimumExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-anypreventingwork" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.anyPreventingWork</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-caringforchildunder6exemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.caringForChildUnder6Exemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-caringfordisabledorillpersonexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.caringForDisabledOrIllPersonExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-earningsaboveminimum" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsAboveMinimum</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyamount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyAmount</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-earningsexemptionweeklyhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.earningsExemptionWeeklyHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-exemptions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.exemptions</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-haschildexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasChildExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-hasexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-hasunemploymentbenefitsexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.hasUnemploymentBenefitsExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-isageexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isAgeExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-isamericanindianexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isAmericanIndianExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-isexempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExempt</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/download_form_controller.rb</div>
+        </div><div id="entry--snapworkrequirements-isexemptfromworkrules" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isExemptFromWorkRules</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-isinalcoholtreatmentprogramexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isInAlcoholTreatmentProgramExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-ismigrantfarmworkerexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isMigrantFarmworkerExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-ispregnantexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isPregnantExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-isstudentexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isStudentExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-isvolunteering" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.isVolunteering</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-meetsrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.meetsRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-notapplicablereason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.notApplicableReason</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-person-age" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.age</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-person-caringforchildunder6" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.caringForChildUnder6</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-caringfordisabledorillperson" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.caringForDisabledOrIllPerson</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-haschild" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.hasChild</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-hasunemploymentbenefits" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.hasUnemploymentBenefits</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isamericanindian" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isAmericanIndian</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isinalcoholtreatmentprogram" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isInAlcoholTreatmentProgram</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isinworktraining" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isInWorkTraining</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-ismigrantfarmworker" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isMigrantFarmworker</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-ispregnant" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isPregnant</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isstudent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isStudent</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isvolunteer" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isVolunteer</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-isworking" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.isWorking</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkdomesticviolence" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkDomesticViolence</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkdrugsalcohol" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkDrugsAlcohol</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkmedicalcondition" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkMedicalCondition</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkother" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkOther</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-preventingworkplacetosleep" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.preventingWorkPlaceToSleep</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsdisabilitymedicaid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsDisabilityMedicaid</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsdisabilitypension" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsDisabilityPension</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsinsurancepayments" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsInsurancePayments</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsother" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsOther</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsssdi" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsSsdi</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsssi" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsSsi</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsveteransdisability" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsVeteransDisability</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-receivingbenefitsworkerscompensation" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.receivingBenefitsWorkersCompensation</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-volunteeringhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.volunteeringHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-workinghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-workingweeklyearnings" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workingWeeklyEarnings</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-person-worktraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">inputs</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.person.workTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/db/schema.rb</div>
+        </div><div id="entry--snapworkrequirements-preventingworkdomesticviolenceexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkDomesticViolenceExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-preventingworkdrugsalcoholexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkDrugsAlcoholExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-preventingworkmedicalconditionexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkMedicalConditionExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-preventingworkotherexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkOtherExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-preventingworkplacetosleepexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.preventingWorkPlaceToSleepExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsdisabilitymedicaidexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsDisabilityMedicaidExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsdisabilitypensionexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsDisabilityPensionExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsinsurancepaymentsexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsInsurancePaymentsExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsotherexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsOtherExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsssdiexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsSsdiExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsssiexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsSsiExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsveteransdisabilityexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsVeteransDisabilityExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingbenefitsworkerscompensationexemption" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingBenefitsWorkersCompensationExemption</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-receivingdisabilitybenefits" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.receivingDisabilityBenefits</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-requirementapplies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requirementApplies</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/age_exemption_controller.rb</div>
+        </div><div id="entry--snapworkrequirements-requiresproof" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProof</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofamericanindianstatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfAmericanIndianStatus</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-requiresproofofvolunteering" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.requiresProofOfVolunteering</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-satisfiesrequirement" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.satisfiesRequirement</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/controllers/question_controller.rb</div>
+        </div><div id="entry--snapworkrequirements-totalworkvolunteerandtraininghours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.totalWorkVolunteerAndTrainingHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-weeklyhoursrequired" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.weeklyHoursRequired</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/work_rules_policy.rb</div>
+        </div><div id="entry--snapworkrequirements-workingearningsexemptionhours" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">facts</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workingEarningsExemptionHours</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-workrulesmaximumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMaximumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div><div id="entry--snapworkrequirements-workrulesminimumage" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">constants</span>
+            <code style="font-size:12px;font-weight:700;">snapWorkRequirements.workRulesMinimumAge</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">https://github.com/codeforamerica/work-requirements-self-advocacy-tool/blob/7de6bff2aa63b9de1687cfb7e7204c34ee4ca6ae/app/models/screener.rb</div>
+        </div>
+    </div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+</body>
+</html>

@@ -165,8 +165,22 @@ $defs:
           What CEL sees the value as. `integer` is a whole number in integer
           arithmetic — compare it with another integer, such as an age; a
           number without a type is a double.
+      format:
+        type: string
+        enum: [date, date-time]
+        description: >
+          For a string, what CEL sees it as: `date` or `date-time` is a
+          timestamp, compared with a date input the same way — a date is read
+          at UTC midnight. Only with `type: string`.
       description:
         type: string
+    # A format says how to read a string, so it needs one.
+    dependentSchemas:
+      format:
+        required: [type]
+        properties:
+          type:
+            const: string
 
   Fact:
     # Example — derived fact:
