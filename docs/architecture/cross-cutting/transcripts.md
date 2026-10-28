@@ -14,8 +14,8 @@ for the contract approach.
 A transcript is the written record of one conversation: who said what, and
 when, including the stretches that were off the record and the stretches that
 were lost. It is not tied to audio — a chat or a text-message interview produces
-one too — and everything that comes after it, from fact extraction to the words
-quoted as evidence for a suggestion, needs only the record, not how it was
+one too — and everything that comes after it, from fact extraction to the lines
+a suggestion cites as evidence, needs only the record, not how it was
 captured. The first use is the interview assistant: a worker interviews an
 applicant, and the transcript is what the assistant works from. The blueprint
 holds the record and the rules for keeping it; turning speech into text is done

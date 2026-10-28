@@ -215,7 +215,7 @@ and nothing else new:
 
 | Service type | Input | Result | Status |
 |---|---|---|---|
-| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the quoted words it came from | To define |
+| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the transcript lines it came from | To define |
 | `document_classification` | A document | Its type, with a confidence | To define |
 | `document_extraction` | A document and the schema to fill | Values matching it | To define |
 | `notice_drafting` | The notice's facts and template | Draft text | To define |
@@ -254,7 +254,7 @@ services:
         modelId: <model id>
         prompt: >
           Record only what the applicant or worker actually said. Leave out
-          anything not stated. Quote the words each value came from.
+          anything not stated. Give the ids of the lines each value came from.
       request:
         POST: /model/$config.modelId/converse
         body:
@@ -315,28 +315,67 @@ AWS. An adapter contract. *To define.*
 
 ### New resources
 
-**Suggestion**, on platform. Anything an assistant, or a rule, puts in front of
-a worker, and the worker's decision on it. Platform knows only two kinds:
+**Suggestion**, on platform. Anything an assistant, a rule or a person puts in
+front of a worker, and the worker's decision on it. It's on platform, not the
+transcript's domain, because every domain contributes suggestions and every
+contract set gets it. Platform knows only two kinds:
 
-- **Proposes an operation.** Carries the operation and its arguments, the
-  evidence, the source and a confidence. Accepting it performs the operation,
-  with the guards and audit trail of any other request. Recording a household
-  member is one; so is marking a required item covered, which is just an
-  operation on the interview.
-- **Informs.** No operation; the worker acknowledges or dismisses it. A
+- **Proposes an operation.** Names the operation by its `operationId`, with its
+  parameters and body, as an Arazzo step does; both are checked against the
+  contracts when it's proposed. Accepting it performs the operation as the
+  worker who accepts, with the guards and audit trail of any other request, and
+  the operation's events name the acceptance as their `causationid`. The worker
+  may correct the arguments first. Recording a household member is one; so is
+  marking a required item covered, which is just an operation on the interview.
+- **Informs.** No operation; accepting it means the worker took it up. A
   question to ask, a risk to probe, an inconsistency to resolve.
 
-Owning domains declare **categories**, each with its own payload schema —
-eligibility declares "missing determination input", intake "risk",
-"inconsistency" and "required item covered" — the same per-type-schema pattern Data Exchange
-uses for service types. Platform owns the lifecycle — proposed, then accepted,
-rejected, expired or superseded — and knows nothing about interviews. The
-suggestion record is also the provenance: what was proposed, from which words,
-by what, and who decided. *To define.*
+Owning domains declare **categories** for informing suggestions, each with its
+own payload schema — eligibility declares "missing determination input", intake
+"risk", "inconsistency" — the same per-type-schema pattern Data Exchange uses
+for service types. An operation suggestion needs none: the operation is its
+type. One suggestion is one change, so a patch of five changes becomes five
+suggestions, each decided on its own.
+
+Platform owns the lifecycle and knows nothing about interviews:
+
+- **proposed**, then **accepted**, **dismissed** (with a reason), **expired**
+  or **superseded**.
+- **refused** when accepting fails — the operation's guard says no, the worker
+  may not perform it, or the arguments don't match — with the attempt
+  recorded. A person can retry; after the most attempts allowed, or no retry
+  before a timeout, it is **failed**: someone said yes, and it couldn't be
+  done. Anyone can subscribe to that, such as workflow making a task.
+- Whoever created a suggestion decides when it no longer applies: an interview
+  completing expires its own. One nothing else closes can carry `expiresAt`.
+
+The suggestion record is also the provenance: what was proposed, from what, by
+whom (`proposedBy`, in the events' `authtype` and `authid`), with what
+`confidence` (0 to 1, from a model only), and who decided. Its **evidence**
+refers to where it came from — transcript lines, a document page, a ruleset
+fact, a data match — rather than quoting it, so nothing sensitive is copied out
+of its source, and the source's own access rules apply when it's shown.
+Metadata, by the cross-domain pass-through convention, ties it to the interview
+it came from.
+
+**A dismissed change isn't proposed again.** A service re-reading a whole
+transcript keeps finding the same changes, so the API refuses a proposal whose
+fingerprint matches a dismissed one for the same subject. What identifies the
+same change is declared, not guessed: an operation's `x-fingerprint` names its
+identifying request fields, in the format of `x-sortable`, and a category names
+its payload's. The fingerprint is a keyed hash of their normalized values, so
+personal values can't be read back from it.
 
 The worker's acceptance is what vouches that a value is *true*; schema
 validation only says it has the right shape. So a worker's screen must show
 each suggestion's evidence beside it.
+
+Accepting needs two things the state machine DSL doesn't have yet, which data
+exchange's retries (#407) need too, in the shape Step Functions, Serverless
+Workflow and Arazzo share: a `call:` that names an operation by `operationId`,
+and on a call, `onFailure:` — steps to run instead, and `to:` the state the
+transition ends in — and `retry:` limits, with defaults declared once on the
+machine and changed through overlays. The full design is in #469.
 
 **Interview**, in intake, extended. `safety-net-contracts` already declares an
 `Interview` in `intake-openapi.yaml` — the regulatory record that the interview
@@ -356,8 +395,9 @@ when recertification is modeled. *To define.*
 Declared in the `emits:` of each resource's state machine, in whichever domain
 owns it, and generated into that domain's events AsyncAPI document. A
 transcript's paused, resumed and closed exist, and an entry's created event
-covers a line or gap recorded. Still to come: `suggestion.proposed`,
-`.accepted`, `.rejected` and `.expired`; `interview.started` and
+covers a line or gap recorded. Still to come: `platform.suggestion.proposed`,
+`.accepted`, `.dismissed`, `.refused`, `.failed`, `.expired` and
+`.superseded`, one for each state; `interview.started` and
 `interview.completed`. *To define.*
 
 **Whether an event is stored could be declared too.** Some events are wanted
@@ -465,8 +505,8 @@ conversation, or returning a patch or flags would travel the same path.
    it is filling in.
 4. **The mock makes the call** to the model, from the catalog entry, and
    completes it. A declared step turns the result into suggestions — four
-   household members, each proposing "add household member", with the words each
-   came from.
+   household members, each proposing "add household member", citing the lines
+   each came from.
 5. **The worker accepts them.** Each performs its operation, with the guards and
    audit trail of any request.
 6. **The application changed, so the interview re-runs its guidance.** Partial
@@ -898,8 +938,8 @@ the mock serves a contract the moment it is declared.
    streaming to Transcribe from a page and writing to it — the first proof that
    a page with no backend reaches an AI service securely and the blueprint
    follows the conversation.
-2. **The suggestion resource**, on the same domain: its two kinds, its lifecycle
-   and its events. Usable at once — create, accept and reject suggestions
+2. **The suggestion resource**, on platform: its two kinds, its lifecycle and
+   its events (#469). Usable at once — propose, accept and dismiss suggestions
    against the mock — with no model and no AWS.
 3. **The interview's conduct and its requirements**, in
    `safety-net-contracts`: consent, start, its transcript, the
@@ -956,6 +996,7 @@ Larger and later:
   per version of a document — and whether rules and parameters share one
   mechanism.
 - Who supplies Colorado's values for a Colorado demo.
-- Whether transcripts are ever kept. The transcription tools keep them out of
-  storage, so a suggestion's evidence is the quoted words, not a reference to a
-  stored transcript. Keeping them is a policy decision, not a technical one.
+- How long transcripts are kept. A suggestion's evidence refers to transcript
+  lines rather than quoting them, so a transcript is kept at least as long as
+  the suggestions that cite it; the transcription tools keep transcripts out of
+  storage today. How long beyond that is a policy decision, not a technical one.
