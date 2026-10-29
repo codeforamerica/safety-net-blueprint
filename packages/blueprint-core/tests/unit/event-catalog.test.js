@@ -6,7 +6,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { toDoc } from '../../src/doc.js';
-import { generate } from '../../src/generate.js';
+import { eventsAsyncapis } from '../../src/generate.js';
 import { validate } from '../../src/validate.js';
 
 const ok = (name, status = 200) => ({ [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${name}` } } } } });
@@ -49,7 +49,7 @@ const machine = toDoc({
 });
 
 describe('the generated event catalog', () => {
-  const [catalog] = generate([api, machine], 'events-asyncapi');
+  const [catalog] = eventsAsyncapis([api, machine]);
 
   test('is written beside the API it documents', () => {
     assert.equal(catalog.relativePath, 'domains/case-management/case-management-events-asyncapi.yaml');

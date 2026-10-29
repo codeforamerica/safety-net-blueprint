@@ -193,13 +193,17 @@ describe('generate', () => {
     assert.deepEqual(grouped['Application'].map((r) => r.data.id).sort(), ['a1', 'a2']);
   });
 
-  test('a state machine action projects an RPC overlay onto its spec', () => {
-    const overlays = generate(docs, 'overlay');
-    assert.ok(overlays.length > 0, 'at least one overlay generated');
-    assert.ok(
-      overlays.every((o) => (o.actions ?? []).every((a) => a.target)),
-      'every action names a target'
-    );
+  test('what a contract set generates for itself is not a public artifact', () => {
+    // resolve adds these after the state's overlays; a caller that built them
+    // itself would get the base contracts' version.
+    for (const type of ['overlay', 'rules-api', 'events-asyncapi']) {
+      assert.throws(() => generate(docs, type), new RegExp(`unknown artifact type "${type}"`));
+    }
+  });
+
+  test('resolve adds them: a state machine action\'s endpoint is in the resolved API', () => {
+    const spec = resolve(docs).docs.find((d) => d.type === 'openapi' && d.relativePath.endsWith('intake-openapi.yaml'));
+    assert.ok(spec.content.paths['/applications/{id}/submit']?.post, Object.keys(spec.content.paths).join(', '));
   });
 });
 
@@ -218,7 +222,7 @@ describe('resolve', () => {
 
   before(() => {
     resolved = resolve(docs, {
-      overlays: [OVERLAY, ...generate(docs, 'overlay')],
+      overlays: [OVERLAY],
       envTarget: 'production',
       envVariables: { SUPPORT_EMAIL: 'help@example.gov' },
     });
@@ -288,7 +292,7 @@ describe('resolve reports unresolved placeholders', () => {
   // channel it was stamped onto, so validation would pass.
   test('names a placeholder nothing supplied', () => {
     const result = resolve(docs, {
-      overlays: [OVERLAY, ...generate(docs, 'overlay')],
+      overlays: [OVERLAY],
       envVariables: {},
     });
 
@@ -297,7 +301,7 @@ describe('resolve reports unresolved placeholders', () => {
 
   test('nothing is unresolved once every placeholder has a value', () => {
     const result = resolve(docs, {
-      overlays: [OVERLAY, ...generate(docs, 'overlay')],
+      overlays: [OVERLAY],
       envVariables: { SUPPORT_EMAIL: 'help@example.gov' },
     });
 
@@ -307,7 +311,7 @@ describe('resolve reports unresolved placeholders', () => {
 
 describe('validate', () => {
   test('checks the resolved set and reports per document', () => {
-    const resolved = resolve(docs, { overlays: generate(docs, 'overlay') });
+    const resolved = resolve(docs);
     const result = validate(resolved.docs);
 
     assert.equal(typeof result.ok, 'boolean');
