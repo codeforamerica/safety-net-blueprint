@@ -621,7 +621,7 @@ describe('evaluator — a list item missing a field', () => {
     dependencies: Object.fromEntries(Object.keys(facts).map((k) => [k, Object.keys(inputs).filter((p) => p.endsWith('[]'))])),
   });
 
-  it('is found by a macro inside a macro, naming the inner item\'s path', () => {
+  it('is found by a macro inside a macro, naming the inner item', () => {
     // Each wage record against the incomes of the same member, as the
     // interview flags compare them.
     const g = graph(
@@ -633,7 +633,7 @@ describe('evaluator — a list item missing a field', () => {
     );
     const nodes = evaluate(g, { h: { records: [{ memberId: 'a', amount: 100 }], incomes: [{ memberId: 'a' }] } });
     assert.strictEqual(nodes.unmatched.state, 'missing');
-    assert.deepStrictEqual(nodes.unmatched.missing, ['$.h.incomes[].amount']);
+    assert.deepStrictEqual(nodes.unmatched.missing, ['$.h.incomes[0].amount']);
   });
 
   it('is missing for a date an item doesn\'t have, and settled by another item\'s date', () => {

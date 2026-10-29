@@ -796,6 +796,20 @@ export function toFactGraph(graph, untranslated = new Map()) {
     const expr = factDecl?.expression;
     if (!expr) continue;
 
+    // FactGraph has these as collection facts (`/h_months/*/qualifies`), but
+    // they aren't translated yet, and neither is a fact reading one.
+    if (factDecl.as || factName.includes('[].')) {
+      untranslated.set(factName, factDecl.as
+        ? 'a list fact with per-item facts is not translated to FactGraph yet'
+        : 'a per-item fact is not translated to FactGraph yet');
+      continue;
+    }
+    const list = (graph.dependencies?.[factName] ?? []).find((d) => graph.facts[d]?.as);
+    if (list) {
+      untranslated.set(factName, `reads '${list}', a list fact with per-item facts, which is not translated to FactGraph yet`);
+      continue;
+    }
+
     try {
       const ast = parse(expr);
       derived.set(factName, astToXml(ast, { ...ctx, filterVar: null, filterCollPath: null }));

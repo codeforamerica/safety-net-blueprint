@@ -9,7 +9,14 @@
  *   state       — 'complete' | 'placeholder' | 'missing' | 'error'
  *   value       — resolved value (null when state is missing or error)
  *   message     — error description (state: 'error' only)
- *   missing     — list of unresolved input paths (state: 'missing' only)
+ *   missing     — list of unresolved input paths (state: 'missing' only). A
+ *                 field of one item of a list is named at its position:
+ *                 `$.household.members[1].age`.
+ *
+ * A per-item fact (`reviewMonths[].qualifies`) is computed once for each item
+ * of its list fact. Its node has the same shape: `value` has one entry per
+ * item, null where that item is unresolved, and `missing` names what those
+ * items need.
  *
  * States mirror FactGraph's Complete/Placeholder/Incomplete, and are pinned to
  * it fact for fact by the parity tests in tests/fact-graph.test.js:
@@ -32,7 +39,7 @@ import { timestampFromDate, TimestampSchema } from '@bufbuild/protobuf/wkt';
 import { reflect } from '@bufbuild/protobuf/reflect';
 
 import { parse } from '@bufbuild/cel';
-import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
+import { evaluateCEL, inputOf } from '@codeforamerica/blueprint-core/cel';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
 
@@ -314,8 +321,9 @@ function coerceDeclaredInputs(scope, inputs, graphInputs) {
  * was absent, and required the caller to hold the rules contract this engine
  * deliberately does not depend on.
  *
- * Collection sub-fields ($.household.members[].age) are skipped: there is no
- * item to default into until the collection itself is supplied.
+ * Collection sub-fields ($.household.members[].age) are skipped here: there
+ * is no item to default into until the collection is supplied. Each item's
+ * defaults are filled when its list's items are registered, by registerItems.
  */
 function buildDefaultedPaths(graphInputs, inputs) {
   const defaults = new Map();
@@ -335,6 +343,7 @@ function buildDefaultedPaths(graphInputs, inputs) {
  * @returns {Object}              - plain map of fact names to typed nodes
  */
 export function evaluate(graph, inputs) {
+  checkFormatVersion(graph);
   const outputSet = new Set(graph.outputs);
   const factNames = Object.keys(graph.facts);
   const ordered = topoSort(factNames, graph.dependencies);
@@ -351,6 +360,11 @@ export function evaluate(graph, inputs) {
 
   // Last, so it also covers values written in by the two passes above.
   coerceDeclaredInputs(scope, inputs, graph.inputs);
+
+  // Every item of every list the caller sent, with where it sits, so a field
+  // one item lacks is named at its position.
+  const ctx = { items: new Map(), results: new Map(), info: new WeakMap(), graph };
+  registerItems(scope, inputs, graph.inputs, ctx.info);
 
   // The ruleset's constants, from the graph — given values, not inputs, so
   // nothing a caller sends replaces them and nothing resting on them is a
@@ -373,7 +387,11 @@ export function evaluate(graph, inputs) {
     const defaultedDeps = new Set();
 
     for (const dep of deps) {
-      if (dep.startsWith('$.')) {
+      if (isPerItem(dep)) {
+        // A per-item fact has a state for each item, error included, checked
+        // only where an expression reads it on an item (fieldStanding).
+        continue;
+      } else if (dep.startsWith('$.')) {
         if (inputTypeErrors.has(dep)) {
           erroredDeps.add(dep);
         } else if (nullCollectionPaths.has(dep) || defaultedPaths.has(dep)) {
@@ -423,6 +441,10 @@ export function evaluate(graph, inputs) {
     // What each dependency contributes, read by the evaluation below for
     // whichever part of the expression mentions it.
     const depState = (dep) => {
+      if (isPerItem(dep)) {
+        const node = nodes[dep];
+        return node?.state === 'missing' ? { state: 'missing', missing: node.missing } : { state: node?.state ?? 'complete' };
+      }
       if (defaultedDeps.has(dep)) return { state: 'placeholder' };
       if (!dep.startsWith('$.')) {
         if (resolved[dep] !== undefined) return { state: 'complete' };
@@ -431,15 +453,25 @@ export function evaluate(graph, inputs) {
       return missingPaths.has(dep) ? { state: 'missing', missing: [dep] } : { state: 'complete' };
     };
 
+    const list = listFactOf(factName);
+    if (list) {
+      try {
+        nodes[factName] = { type, ...evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, nodes) };
+      } catch (err) {
+        nodes[factName] = { type, state: 'error', value: null, message: failureMessage(expr, err) };
+      }
+      continue;
+    }
+
     let outcome;
     try {
-      outcome = evaluateWithStates(expr, deps, depState, scope);
+      outcome = evaluateWithStates(expr, deps, depState, scope, ctx);
     } catch (err) {
       nodes[factName] = {
         type,
         state: 'error',
         value: null,
-        message: `Expression failed to evaluate: ${expr} — ${err.message}`,
+        message: failureMessage(expr, err),
       };
       continue;
     }
@@ -457,6 +489,11 @@ export function evaluate(graph, inputs) {
     // plain JS number; only the value CEL reads back is widened.
     scope[factName] =
       factDecl?.type === 'integer' && Number.isInteger(result) ? BigInt(result) : result;
+    // A list fact's items carry the facts computed on them, so the scope holds
+    // its own copies of them; the node keeps the items as they came.
+    if (factDecl.as && Array.isArray(result)) {
+      scope[factName] = listItems(factName, parse(expr).expr, result, scope, ctx, { at: '', standing: outcome.state });
+    }
 
     nodes[factName] = { type, state: outcome.state, value: result };
   }
@@ -493,23 +530,24 @@ const lessSettled = (a, b) => (STANDING[a] >= STANDING[b] ? a : b);
  * can turn out wrong.
  *
  * Errors are not part of this: a wrong-type input still errors every fact that
- * reads it, before any evaluation, as the conformance corpus requires.
+ * reads it, before any evaluation, as the conformance corpus requires. A
+ * per-item fact that failed on an item errors any part that reads it there.
  *
  * @returns {{ state: 'complete'|'placeholder'|'missing', value?: *, missing?: string[] }}
  */
-function evaluateWithStates(expr, deps, depState, scope) {
+function evaluateWithStates(expr, deps, depState, scope, ctx) {
   const parsed = parse(expr);
-  return statesOf(parsed.expr, deps, depState, scope, NO_LOOP);
+  return statesOf(parsed.expr, deps, depState, scope, ctx);
 }
 
 /**
- * What a part of an expression is evaluated inside: the loop variables of the
- * list macros around it, each with the input path its items come from, and
- * the state of each macro's running result.
+ * What a part of an expression is evaluated inside: the items bound by name
+ * around it — a list macro's loop variable, or a list fact's `as` — each with
+ * what is known about it, and the state of each macro's running result. With
+ * them, the graph and every registered item's ItemInfo.
  *
- * @typedef {{ items: Map<string, string|null>, results: Map<string, object> }} LoopContext
+ * @typedef {{ items: Map<string, ItemInfo|null>, results: Map<string, object>, info: WeakMap<object, ItemInfo>, graph: object }} LoopContext
  */
-const NO_LOOP = { items: new Map(), results: new Map() };
 
 function statesOf(node, deps, depState, scope, loop) {
   if (node.exprKind.case === 'comprehensionExpr') return comprehensionStates(node, deps, depState, scope, loop);
@@ -585,21 +623,24 @@ function statesOf(node, deps, depState, scope, loop) {
  */
 function comprehensionStates(node, deps, depState, scope, loop) {
   const c = node.exprKind.value;
-  const range = statesOf(c.iterRange, deps, depState, scope, loop);
+  const chain = chainOf(c.iterRange);
+  // Walking a list fact needs the list, not the facts on its items: those are
+  // read item by item below, so one unresolved item settles nothing early.
+  const range = chain && loop.graph?.facts[chain]?.as
+    ? { ...depState(chain), value: lookupChain(chain, scope) }
+    : statesOf(c.iterRange, deps, depState, scope, loop);
   if (range.state === 'missing') return range;
 
   // The items as the scope holds them, so a declared date is still a date.
   // A range that is computed — another macro's result — has only its value.
-  const chain = chainOf(c.iterRange);
   const items = (chain && lookupChain(chain, scope)) ?? range.value;
   if (!Array.isArray(items)) return leafStates(node, deps, depState, scope, loop);
 
-  const source = chain ? inputPathOf(chain, loop) : null;
-  if (!hasUnknownItem(c, items, scope)) return leafStates(node, deps, depState, scope, loop);
+  if (!hasUnknownItem(c, items, scope, loop)) return leafStates(node, deps, depState, scope, loop);
 
   let result = statesOf(c.accuInit, deps, depState, scope, loop);
   for (const item of items) {
-    const inside = withResult(withItem(loop, c.iterVar, source), c.accuVar, result);
+    const inside = withResult(withItem(loop, c.iterVar, loop.info?.get(item) ?? null), c.accuVar, result);
     const bound = { ...scope, [c.iterVar]: item, [c.accuVar]: result.value };
     const proceed = statesOf(c.loopCondition, deps, depState, bound, inside);
     if (proceed.state !== 'missing' && proceed.value === false) break;
@@ -624,18 +665,19 @@ function comprehensionStates(node, deps, depState, scope, loop) {
  * @param {object} scope
  * @returns {boolean}
  */
-function hasUnknownItem(c, items, scope) {
+function hasUnknownItem(c, items, scope, loop) {
   const read = readFields(c.loopStep, c.iterVar);
   const nested = nestedComprehensions(c.loopStep);
   return items.some((item) => {
-    if (read.some((path) => valueAt(item, path) == null)) return true;
+    const info = loop.info?.get(item);
+    if (read.some((path) => fieldStanding(info, path)?.state !== 'complete' || valueAt(item, path) == null)) return true;
     const bound = { ...scope, [c.iterVar]: item };
     return nested.some((n) => {
       const inner = n.exprKind.value;
       const chain = chainOf(inner.iterRange);
       if (!chain) return true;
       const innerItems = lookupChain(chain, bound);
-      return Array.isArray(innerItems) && hasUnknownItem(inner, innerItems, bound);
+      return Array.isArray(innerItems) && hasUnknownItem(inner, innerItems, bound, loop);
     });
   });
 }
@@ -654,12 +696,12 @@ function nestedComprehensions(node) {
   return found;
 }
 
-function withItem(loop, name, source) {
-  return { items: new Map(loop.items).set(name, source), results: loop.results };
+function withItem(loop, name, info) {
+  return { ...loop, items: new Map(loop.items).set(name, info) };
 }
 
 function withResult(loop, name, state) {
-  return { items: loop.items, results: new Map(loop.results).set(name, state) };
+  return { ...loop, results: new Map(loop.results).set(name, state) };
 }
 
 /** `household.members` for an expression that is just a dotted name, else null. */
@@ -684,20 +726,6 @@ function valueAt(value, path) {
     node = node[part];
   }
   return node;
-}
-
-/**
- * The input path a list's items come from, as the graph names it:
- * `$.current.members[]` for `current.members`, and `$.a[].b[]` for `x.b` when
- * `x` is an item of `a`. Null when the list isn't an input.
- */
-function inputPathOf(chain, loop) {
-  const [head, ...rest] = chain.split('.');
-  if (loop.items.has(head)) {
-    const outer = loop.items.get(head);
-    return outer ? `${outer}.${rest.join('.')}[]` : null;
-  }
-  return `$.${chain}[]`;
 }
 
 /**
@@ -739,9 +767,10 @@ function readFields(node, itemVar) {
  * its identifier, an input by the dotted path it starts with — `screener.isWorking`
  * mentions `$.screener.isWorking`, and `household.members` mentions every
  * `$.household.members[]` path. Over-matching only ever makes a part less
- * settled than it could be, never gives it a wrong value.
+ * settled than it could be, never gives it a wrong value. A per-item fact is
+ * read on an item, so its state is that item's, not the list's.
  */
-function leafStates(node, deps, depState, scope, loop = NO_LOOP) {
+function leafStates(node, deps, depState, scope, loop) {
   const chains = new Set();
   // Names read for their value, not only asked about with has(): what an
   // item of a list macro must have for this part to be evaluated.
@@ -772,6 +801,8 @@ function leafStates(node, deps, depState, scope, loop = NO_LOOP) {
   })(node);
 
   const mentions = (dep) => {
+    // A per-item fact is read on an item, and its state is that item's.
+    if (isPerItem(dep)) return false;
     if (!dep.startsWith('$.')) return chains.has(dep);
     const base = dep.slice(2).split('[]')[0];
     for (const c of chains) {
@@ -788,22 +819,359 @@ function leafStates(node, deps, depState, scope, loop = NO_LOOP) {
     else state = lessSettled(state, s.state);
   }
 
-  // Inside a list macro: a running result carries its own state, and a field
-  // this item doesn't have is missing, named by the input path it comes from.
+  // Inside a list macro or a per-item fact: a running result carries its own
+  // state, a fact on an item carries that item's, a field filled by its
+  // default is a placeholder, and a field this item doesn't have is missing,
+  // named where the item sits.
   for (const chain of needed) {
     const [head, ...path] = chain.split('.');
     if (loop.results.has(head)) {
       const s = loop.results.get(head);
       if (s.state === 'missing') missing.push(...s.missing);
       else state = lessSettled(state, s.state);
-    } else if (loop.items.has(head) && path.length && valueAt(scope[head], path) == null) {
-      const source = loop.items.get(head);
-      missing.push(source ? `${source}.${path.join('.')}` : chain);
+    } else if (loop.items.has(head) && path.length) {
+      const info = loop.items.get(head);
+      const standing = fieldStanding(info, path);
+      if (standing?.state === 'missing') missing.push(...standing.missing);
+      else if (standing) state = lessSettled(state, standing.state);
+      else if (valueAt(scope[head], path) == null) missing.push(info?.path ? `${info.path}.${path.join('.')}` : chain);
     }
+  }
+
+  // A macro inside this part is evaluated whole, so what each item it walks
+  // carries is checked here: a fact on an item with that item's state, a
+  // defaulted field as a placeholder.
+  for (const n of nestedComprehensions(node)) {
+    const s = itemStandings(n.exprKind.value, scope, loop);
+    missing.push(...s.missing);
+    state = lessSettled(state, s.state);
   }
 
   if (missing.length) return { state: 'missing', missing: [...new Set(missing)] };
   return { state, value: evaluateCEL(node, scope) };
+}
+
+/**
+ * The standing of what a macro reads from the items it walks, item by item:
+ * the per-item facts and defaulted fields among them, and so on into the
+ * macros inside it. A macro over a list another expression computes is
+ * checked through the macros that compute it.
+ *
+ * @returns {{ state: 'complete'|'placeholder', missing: string[] }}
+ */
+function itemStandings(c, scope, loop) {
+  let state = 'complete';
+  const missing = [];
+  const merge = (s) => {
+    if (s.state === 'missing') missing.push(...s.missing);
+    else state = lessSettled(state, s.state);
+  };
+  for (const n of nestedComprehensions(c.iterRange)) merge(itemStandings(n.exprKind.value, scope, loop));
+
+  const chain = chainOf(c.iterRange);
+  const items = chain && lookupChain(chain, scope);
+  if (Array.isArray(items)) {
+    const read = readFields(c.loopStep, c.iterVar);
+    const inner = nestedComprehensions(c.loopStep);
+    for (const item of items) {
+      const info = loop.info?.get(item);
+      for (const path of read) {
+        const s = fieldStanding(info, path);
+        if (s) merge(s);
+      }
+      const bound = { ...scope, [c.iterVar]: item };
+      for (const n of inner) merge(itemStandings(n.exprKind.value, bound, withItem(loop, c.iterVar, info ?? null)));
+    }
+  }
+  return { state, missing };
+}
+
+// ── Items and per-item facts ─────────────────────────────────────────────────
+
+/**
+ * What is known about one item of a list: where it sits, for naming what it
+ * lacks, and the standing of what it carries.
+ *
+ * @typedef {object} ItemInfo
+ * @property {string|null} path - Where a missing field is named: the item's
+ *   position in the input (`$.months[1]`), or, for an item a list fact built,
+ *   its position in that list (`reviewMonths[0]`)
+ * @property {Set<string>} defaulted - Fields filled by their declared default
+ * @property {string} [list] - The list fact the item belongs to
+ * @property {string} [at] - Its position in that list fact, e.g. `reviewMonths[0].reviewWeeks[1]`
+ * @property {string} [standing] - The list fact's state for the list holding it
+ * @property {Object<string, object>} [facts] - Each per-item fact's state for it, by name
+ */
+
+/** A per-item fact read on an item it failed on. */
+class DependencyError extends Error {
+  constructor(fact, detail, at) {
+    super(`Dependency error: '${fact}' — ${detail} (on ${at})`);
+    Object.assign(this, { fact, detail });
+  }
+}
+
+function failureMessage(expr, err) {
+  return err instanceof DependencyError ? err.message : `Expression failed to evaluate: ${expr} — ${err.message}`;
+}
+
+/** What failed on one item, without naming it, so items failing alike are listed together. */
+function itemFailure(expr, err) {
+  return err instanceof DependencyError ? `Dependency error: '${err.fact}' — ${err.detail}` : failureMessage(expr, err);
+}
+
+/** The graph format editions this engine runs: any 1.x up to this one. */
+const FORMAT_VERSION = '1.1';
+
+/**
+ * Refuse a graph written in an edition this engine doesn't know, rather than
+ * evaluate what it doesn't understand. A minor edition only adds, so every
+ * earlier one runs; a later one may use what this engine lacks, and another
+ * major means something else. No edition is 1.0.
+ */
+function checkFormatVersion(graph) {
+  const version = graph.formatVersion ?? '1.0';
+  const [major, minor] = String(version).split('.').map(Number);
+  const [knownMajor, knownMinor] = FORMAT_VERSION.split('.').map(Number);
+  if (major !== knownMajor || !(minor <= knownMinor)) {
+    throw new Error(`This graph is written in format ${version}; this engine runs format ${knownMajor}.0 through ${FORMAT_VERSION}. Use an engine that supports ${version}.`);
+  }
+}
+
+/** Whether a dependency is a per-item fact: a fact, not an input, with `[].` in its path. */
+function isPerItem(dep) {
+  return !dep.startsWith('$.') && dep.includes('[].');
+}
+
+/** The list fact a per-item fact is on: `a[].b[].c` is on `a[].b`. */
+function listFactOf(factPath) {
+  const at = factPath.lastIndexOf('[].');
+  return at < 0 ? null : factPath.slice(0, at);
+}
+
+/**
+ * Copy every item of every list the graph declares into the scope, fill each
+ * item's declared defaults, and record where each sits. Lists inside items
+ * are reached through their items, outermost first: `$.months[].weeks[]`
+ * after `$.months[]`.
+ *
+ * The scope's items are its own copies, so nothing written into them — a
+ * default, a fact computed on them — reaches the caller's objects.
+ */
+function registerItems(scope, inputs, graphInputs, info) {
+  const lists = Object.keys(graphInputs ?? {})
+    .filter((path) => path.endsWith('[]'))
+    .sort((a, b) => a.split('[]').length - b.split('[]').length);
+  const registered = new Map();
+
+  for (const list of lists) {
+    const owner = listFactOf(list.slice(0, -2));
+    const field = list.slice(owner ? owner.length + 3 : 2, -2);
+    const holders = owner ? registered.get(`${owner}[]`) ?? [] : [{ value: scope, path: '$' }];
+    const fieldDefaults = Object.entries(graphInputs)
+      .filter(([path, spec]) => spec.default !== undefined && path.startsWith(`${list}.`) && !path.slice(list.length + 1).includes('[]'))
+      .map(([path, spec]) => [path.slice(list.length + 1).split('.'), coerceDeclared(spec, spec.default) ?? spec.default]);
+
+    const items = [];
+    for (const holder of holders) {
+      const parts = field.split('.');
+      const arr = valueAt(holder.value, parts);
+      if (!Array.isArray(arr)) continue;
+      const copies = arr.map((item, i) => {
+        if (item === null || typeof item !== 'object') return item;
+        const copy = { ...item };
+        const defaulted = new Set();
+        for (const [fieldPath, value] of fieldDefaults) {
+          if (valueAt(copy, fieldPath) == null) { writeAt(copy, fieldPath, value); defaulted.add(fieldPath.join('.')); }
+        }
+        const path = `${holder.path}.${field}[${i}]`;
+        info.set(copy, { path, defaulted });
+        items.push({ value: copy, path });
+        return copy;
+      });
+      if (holder.value === scope) setScopePath(scope, inputs, parts, copies);
+      else writeAt(holder.value, parts, copies);
+    }
+    registered.set(list, items);
+  }
+}
+
+/** Write a value at a path inside an object the evaluator owns, copying objects on the way down. */
+function writeAt(obj, path, value) {
+  let node = obj;
+  for (const part of path.slice(0, -1)) {
+    node[part] = node[part] != null && typeof node[part] === 'object' ? { ...node[part] } : {};
+    node = node[part];
+  }
+  node[path[path.length - 1]] = value;
+}
+
+/**
+ * The standing of a field an item carries, when the item knows it: a fact
+ * computed on the item has that item's state, and a field filled by its
+ * default is a placeholder. Undefined for a field the item simply has or
+ * lacks — the caller checks its value.
+ */
+function fieldStanding(info, path) {
+  if (!info) return undefined;
+  if (info.facts && path[0] in info.facts) {
+    const standing = info.facts[path[0]];
+    if (standing.state === 'error') throw new DependencyError(`${info.list}[].${path[0]}`, standing.message, info.at);
+    return standing;
+  }
+  if (info.defaulted?.has(path.join('.'))) return { state: 'placeholder' };
+  return undefined;
+}
+
+/**
+ * The scope's copies of a list fact's items, each registered with what is
+ * known about it, so the facts computed on them can be written in and read
+ * back by name.
+ *
+ * When the items are an input's items (inputOf), they are found among the
+ * scope's own items, so each keeps its position in the input and the defaults
+ * it was given. Otherwise they are new, and named by their position in the
+ * list fact.
+ *
+ * @param {string} list - The list fact
+ * @param {object} expr - Its parsed expression
+ * @param {unknown[]} value - Its value, as evaluated
+ * @param {object} scope - The scope it was evaluated in, items bound
+ * @param {LoopContext} ctx
+ * @param {{ at: string, standing: string }} parent - Where the list sits, and the state it rests on
+ */
+function listItems(list, expr, value, scope, ctx, parent) {
+  const name = list.includes('[].') ? list.slice(list.lastIndexOf('[].') + 3) : list;
+  const sources = inputOf(ctx.graph, list) ? itemsOfInput(expr, scope) : value;
+  return sources.map((source, i) => {
+    const from = ctx.info.get(source);
+    const at = `${parent.at ? `${parent.at}.` : ''}${name}[${i}]`;
+    const copy = source !== null && typeof source === 'object' ? { ...source } : source;
+    if (copy !== source) {
+      ctx.info.set(copy, {
+        path: from?.path ?? at,
+        defaulted: from?.defaulted ?? new Set(),
+        list,
+        at,
+        standing: parent.standing,
+        facts: {},
+      });
+    }
+    return copy;
+  });
+}
+
+/**
+ * The scope's own items a list fact keeps, for an expression inputOf has
+ * found to keep an input's items: the input, a field of an item, `filter` of
+ * one, or `? :` between them. Each is evaluated as CEL evaluates it, so the
+ * items found are the items the list fact's value holds.
+ *
+ * `filter` expands to a loop whose step is `p ? @result + [m] : @result`, as
+ * the CEL specification defines the macro; `p` is read from that step.
+ */
+function itemsOfInput(expr, scope) {
+  const { case: kind, value } = expr.exprKind;
+  if (kind === 'comprehensionExpr') {
+    const keeps = value.loopStep.exprKind.value.args[0];
+    return itemsOfInput(value.iterRange, scope).filter((item) => evaluateCEL(keeps, { ...scope, [value.iterVar]: item }) === true);
+  }
+  if (kind === 'callExpr' && value.function === '_?_:_') {
+    return itemsOfInput(evaluateCEL(value.args[0], scope) ? value.args[1] : value.args[2], scope);
+  }
+  return lookupChain(chainOf(expr), scope);
+}
+
+/**
+ * A per-item fact, computed once for each item of its list.
+ *
+ * Each item is bound by its list's `as` name, and each enclosing list's item
+ * by that list's, and the expression is evaluated with the same rules as any
+ * fact. What it gives each item is written onto that item, so a later
+ * expression reads it as a field.
+ *
+ * The node's `value` has one entry per item, in the list's order, null where
+ * that item is unresolved; on an inner list, one list per outer item. Its
+ * state is the least settled of its items', and `missing` names what the
+ * unresolved ones need.
+ */
+function evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, nodes) {
+  const root = factName.slice(0, factName.indexOf('[].'));
+  if (!Array.isArray(scope[root])) {
+    return nodes[root]?.state === 'missing'
+      ? { state: 'missing', value: null, missing: nodes[root].missing }
+      : { state: 'missing', value: null, missing: [root] };
+  }
+
+  const name = factName.slice(list.length + 3);
+  const expr = parse(factDecl.expression).expr;
+  const missing = [];
+  // Each item it failed on, by message, so the node names every one.
+  const failures = new Map();
+  const fail = (message, at) => failures.set(message, [...(failures.get(message) ?? []), at]);
+  let state = 'complete';
+
+  // Every item of `list`, with the items enclosing it bound by name. An outer
+  // item whose inner list is unresolved has no items; its entry is null and
+  // the list's own state for it stands.
+  const each = (listPath, fn) => {
+    const outer = listFactOf(listPath);
+    if (!outer) return fn(scope[listPath], { ...scope }, ctx);
+    const inner = listPath.slice(outer.length + 3);
+    const as = ctx.graph.facts[outer].as;
+    return each(outer, (items, bound, loop) => items.map((item) => {
+      const info = ctx.info.get(item);
+      const itemBound = { ...bound, [as]: item };
+      const itemLoop = withItem(loop, as, info ?? null);
+      const standing = info?.facts?.[inner];
+      if (standing?.state === 'error') {
+        fail(`Dependency error: '${info.list}[].${inner}' — ${standing.message}`, info.at);
+        return null;
+      }
+      if (!Array.isArray(item?.[inner])) {
+        if (standing?.state === 'missing') missing.push(...standing.missing);
+        state = 'missing';
+        return null;
+      }
+      return fn(item[inner], itemBound, itemLoop);
+    }));
+  };
+
+  const as = ctx.graph.facts[list].as;
+  const value = each(list, (items, bound, loop) => items.map((item) => {
+    const info = ctx.info.get(item);
+    let outcome;
+    try {
+      outcome = statesOf(expr, deps, depState, { ...bound, [as]: item }, withItem(loop, as, info ?? null));
+    } catch (err) {
+      // Failing on one item fails only what reads this fact on that item.
+      const message = itemFailure(factDecl.expression, err);
+      if (info) info.facts[name] = { state: 'error', message };
+      fail(message, info?.at);
+      return null;
+    }
+    const settled = outcome.state === 'missing' ? outcome : { ...outcome, state: lessSettled(outcome.state, info?.standing ?? 'complete') };
+    if (info) info.facts[name] = settled;
+    if (settled.state === 'missing') {
+      missing.push(...settled.missing);
+      state = 'missing';
+      return null;
+    }
+    if (state !== 'missing') state = lessSettled(state, settled.state);
+    item[name] = factDecl.type === 'integer' && Number.isInteger(settled.value) ? BigInt(settled.value) : settled.value;
+    if (factDecl.as && Array.isArray(settled.value)) {
+      item[name] = listItems(factName, expr, settled.value, { ...bound, [as]: item }, ctx, { at: info?.at ?? '', standing: settled.state });
+    }
+    return settled.value;
+  }));
+
+  if (failures.size) {
+    const message = [...failures].map(([m, ats]) => `${m} (on ${ats.join(', ')})`).join('; ');
+    return { state: 'error', value: null, message };
+  }
+  return state === 'missing'
+    ? { state, value, missing: [...new Set(missing)] }
+    : { state, value };
 }
 
 // ── Internal fluent API (intra-package use only; not exported from index.js) ──

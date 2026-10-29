@@ -198,7 +198,22 @@ $defs:
           ruleset's answer names it by it — so a consumer reads the group from
           the name, whatever the ruleset. A path can't be both a fact and a
           group: `risks` and `risks.earnedIncomeVaries` in one ruleset is refused.
-        pattern: "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*$"
+
+          `[].` names a fact on each item of a list fact: `reviewMonths[].qualifies`
+          is computed once for each item of `reviewMonths`, which must declare
+          `as`. Lists nest: `reviewMonths[].reviewWeeks[].worked`.
+        pattern: "^[a-zA-Z][a-zA-Z0-9]*((\\.|\\[\\]\\.)[a-zA-Z][a-zA-Z0-9]*)*$"
+      as:
+        type: string
+        description: >
+          Makes this fact a list fact, and names one of its items. Facts at
+          `<path>[].<name>` are computed once for each item, and their
+          expressions read the item by this name: `month.hoursWorked` for an
+          item field, `month.qualifies` for another fact on the item. A fact
+          inside a nested list reads each enclosing item by its own name.
+          Outside, the list is read with a macro, and each item carries its
+          facts: `size(reviewMonths.filter(m, m.qualifies))`.
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
       expression:
         type: string
         description: >
