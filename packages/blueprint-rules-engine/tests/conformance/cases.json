@@ -470,6 +470,9 @@
         },
         "anyMonthQualifies": {
           "expression": "reviewMonths.exists(m, m.qualifies)"
+        },
+        "reviewMonths[].monthsPerYear": {
+          "expression": "12 / month.monthsBefore"
         }
       },
       "dependencies": {
@@ -501,7 +504,8 @@
           "reviewMonths[].qualifies",
           "reviewMonths[].reviewWeeks",
           "reviewMonths[].reviewWeeks[].worked",
-          "reviewMonths[].everyWeekWorked"
+          "reviewMonths[].everyWeekWorked",
+          "reviewMonths[].monthsPerYear"
         ],
         "anyMonthQualifies": [
           "reviewMonths",
@@ -509,7 +513,11 @@
           "reviewMonths[].qualifies",
           "reviewMonths[].reviewWeeks",
           "reviewMonths[].reviewWeeks[].worked",
-          "reviewMonths[].everyWeekWorked"
+          "reviewMonths[].everyWeekWorked",
+          "reviewMonths[].monthsPerYear"
+        ],
+        "reviewMonths[].monthsPerYear": [
+          "reviewMonths"
         ]
       }
     }
@@ -1698,6 +1706,45 @@
           "missing": [
             "$.h.months[2].hoursWorked"
           ]
+        }
+      }
+    },
+    {
+      "name": "a per-item fact that fails on an item errors only what reads it there",
+      "graph": "perItemFacts",
+      "note": "A side calculation failing on one month does not take down a count that never reads it, though the count depends on every fact on the months. The failure stays on the fact that failed.",
+      "inputs": {
+        "h": {
+          "kind": "renewal",
+          "months": [
+            {
+              "monthsBefore": 0,
+              "hadMedicare": false,
+              "hoursWorked": 90
+            },
+            {
+              "monthsBefore": 1,
+              "hadMedicare": false,
+              "hoursWorked": 40
+            }
+          ]
+        }
+      },
+      "expect": {
+        "reviewMonths[].monthsPerYear": {
+          "state": "error",
+          "value": null
+        },
+        "reviewMonths[].qualifies": {
+          "state": "complete",
+          "value": [
+            true,
+            false
+          ]
+        },
+        "qualifyingMonthCount": {
+          "state": "complete",
+          "value": 1
         }
       }
     }

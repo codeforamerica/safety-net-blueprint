@@ -388,8 +388,9 @@ export function evaluate(graph, inputs) {
 
     for (const dep of deps) {
       if (isPerItem(dep)) {
-        // A per-item fact has a state for each item, read where an item is.
-        if (nodes[dep]?.state === 'error') erroredDeps.add(dep);
+        // A per-item fact has a state for each item, error included, checked
+        // only where an expression reads it on an item (fieldStanding).
+        continue;
       } else if (dep.startsWith('$.')) {
         if (inputTypeErrors.has(dep)) {
           erroredDeps.add(dep);
@@ -457,7 +458,7 @@ export function evaluate(graph, inputs) {
       try {
         nodes[factName] = { type, ...evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, nodes) };
       } catch (err) {
-        nodes[factName] = { type, state: 'error', value: null, message: `Expression failed to evaluate: ${expr} — ${err.message}` };
+        nodes[factName] = { type, state: 'error', value: null, message: failureMessage(expr, err) };
       }
       continue;
     }
@@ -470,7 +471,7 @@ export function evaluate(graph, inputs) {
         type,
         state: 'error',
         value: null,
-        message: `Expression failed to evaluate: ${expr} — ${err.message}`,
+        message: failureMessage(expr, err),
       };
       continue;
     }
@@ -529,7 +530,8 @@ const lessSettled = (a, b) => (STANDING[a] >= STANDING[b] ? a : b);
  * can turn out wrong.
  *
  * Errors are not part of this: a wrong-type input still errors every fact that
- * reads it, before any evaluation, as the conformance corpus requires.
+ * reads it, before any evaluation, as the conformance corpus requires. A
+ * per-item fact that failed on an item errors any part that reads it there.
  *
  * @returns {{ state: 'complete'|'placeholder'|'missing', value?: *, missing?: string[] }}
  */
@@ -901,6 +903,23 @@ function itemStandings(c, scope, loop) {
  * @property {Object<string, object>} [facts] - Each per-item fact's state for it, by name
  */
 
+/** A per-item fact read on an item it failed on. */
+class DependencyError extends Error {
+  constructor(fact, detail, at) {
+    super(`Dependency error: '${fact}' — ${detail} (on ${at})`);
+    Object.assign(this, { fact, detail });
+  }
+}
+
+function failureMessage(expr, err) {
+  return err instanceof DependencyError ? err.message : `Expression failed to evaluate: ${expr} — ${err.message}`;
+}
+
+/** What failed on one item, without naming it, so items failing alike are listed together. */
+function itemFailure(expr, err) {
+  return err instanceof DependencyError ? `Dependency error: '${err.fact}' — ${err.detail}` : failureMessage(expr, err);
+}
+
 /** The graph format editions this engine runs: any 1.x up to this one. */
 const FORMAT_VERSION = '1.1';
 
@@ -995,7 +1014,11 @@ function writeAt(obj, path, value) {
  */
 function fieldStanding(info, path) {
   if (!info) return undefined;
-  if (info.facts && path[0] in info.facts) return info.facts[path[0]];
+  if (info.facts && path[0] in info.facts) {
+    const standing = info.facts[path[0]];
+    if (standing.state === 'error') throw new DependencyError(`${info.list}[].${path[0]}`, standing.message, info.at);
+    return standing;
+  }
   if (info.defaulted?.has(path.join('.'))) return { state: 'placeholder' };
   return undefined;
 }
@@ -1083,6 +1106,9 @@ function evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, n
   const name = factName.slice(list.length + 3);
   const expr = parse(factDecl.expression).expr;
   const missing = [];
+  // Each item it failed on, by message, so the node names every one.
+  const failures = new Map();
+  const fail = (message, at) => failures.set(message, [...(failures.get(message) ?? []), at]);
   let state = 'complete';
 
   // Every item of `list`, with the items enclosing it bound by name. An outer
@@ -1098,6 +1124,10 @@ function evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, n
       const itemBound = { ...bound, [as]: item };
       const itemLoop = withItem(loop, as, info ?? null);
       const standing = info?.facts?.[inner];
+      if (standing?.state === 'error') {
+        fail(`Dependency error: '${info.list}[].${inner}' — ${standing.message}`, info.at);
+        return null;
+      }
       if (!Array.isArray(item?.[inner])) {
         if (standing?.state === 'missing') missing.push(...standing.missing);
         state = 'missing';
@@ -1110,7 +1140,16 @@ function evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, n
   const as = ctx.graph.facts[list].as;
   const value = each(list, (items, bound, loop) => items.map((item) => {
     const info = ctx.info.get(item);
-    const outcome = statesOf(expr, deps, depState, { ...bound, [as]: item }, withItem(loop, as, info ?? null));
+    let outcome;
+    try {
+      outcome = statesOf(expr, deps, depState, { ...bound, [as]: item }, withItem(loop, as, info ?? null));
+    } catch (err) {
+      // Failing on one item fails only what reads this fact on that item.
+      const message = itemFailure(factDecl.expression, err);
+      if (info) info.facts[name] = { state: 'error', message };
+      fail(message, info?.at);
+      return null;
+    }
     const settled = outcome.state === 'missing' ? outcome : { ...outcome, state: lessSettled(outcome.state, info?.standing ?? 'complete') };
     if (info) info.facts[name] = settled;
     if (settled.state === 'missing') {
@@ -1126,6 +1165,10 @@ function evaluatePerItem(factName, list, factDecl, deps, depState, scope, ctx, n
     return settled.value;
   }));
 
+  if (failures.size) {
+    const message = [...failures].map(([m, ats]) => `${m} (on ${ats.join(', ')})`).join('; ');
+    return { state: 'error', value: null, message };
+  }
   return state === 'missing'
     ? { state, value, missing: [...new Set(missing)] }
     : { state, value };

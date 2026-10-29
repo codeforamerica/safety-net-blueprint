@@ -283,6 +283,69 @@ describe('per-item facts — a wrong-type answer on an item', () => {
   });
 });
 
+describe('per-item facts — an item an expression fails on', () => {
+  const failing = review([
+    { path: 'reviewMonths', as: 'month', expression: 'months' },
+    { path: 'reviewMonths[].meetsHours', expression: 'month.hoursWorked >= constants.monthlyHoursRequired' },
+    { path: 'reviewMonths[].monthsPerYear', expression: '12 / month.monthsBefore' },
+    { path: 'reviewMonths[].shortReview', expression: 'month.monthsPerYear > 6' },
+    { path: 'meetsHoursCount', expression: 'size(reviewMonths.filter(m, m.meetsHours))' },
+    { path: 'anyShortReview', expression: 'reviewMonths.exists(m, m.monthsPerYear > 6)' },
+    { path: 'everyEarlierMonthCounted', expression: 'reviewMonths.filter(m, m.monthsBefore > 0).all(m, m.monthsPerYear >= 1)' },
+  ], ['meetsHoursCount', 'anyShortReview', 'everyEarlierMonthCounted']);
+
+  // 12 / 0 fails on the first and third months.
+  const nodes = evaluate(failing, renewal([
+    { monthsBefore: 0, hoursWorked: 90 },
+    { monthsBefore: 1, hoursWorked: 40 },
+    { monthsBefore: 0, hoursWorked: 85 },
+  ]));
+
+  it('a fact that does not read it still answers', () => {
+    assert.deepStrictEqual(settled(nodes.meetsHoursCount), ['complete', 2]);
+  });
+
+  it('a fact that reads it only on items it did not fail on still answers', () => {
+    assert.deepStrictEqual(settled(nodes.everyEarlierMonthCounted), ['complete', true]);
+  });
+
+  it('errors, naming every item it failed on', () => {
+    const node = nodes['reviewMonths[].monthsPerYear'];
+    assert.deepStrictEqual(settled(node), ['error', null]);
+    assert.match(node.message, /int divide by zero \(on reviewMonths\[0\], reviewMonths\[2\]\)$/);
+  });
+
+  it('a per-item fact reading it errors on the same items', () => {
+    const node = nodes['reviewMonths[].shortReview'];
+    assert.strictEqual(node.state, 'error');
+    assert.match(node.message, /^Dependency error: 'reviewMonths\[\]\.monthsPerYear' — .* \(on reviewMonths\[0\], reviewMonths\[2\]\)$/);
+  });
+
+  it('a fact reading it across the items errors, naming an item it failed on', () => {
+    const node = nodes.anyShortReview;
+    assert.strictEqual(node.state, 'error');
+    assert.match(node.message, /^Dependency error: 'reviewMonths\[\]\.monthsPerYear' — .* \(on reviewMonths\[0\]\)$/);
+  });
+
+  it('an inner list that fails on one outer item errors what reads it there, and nothing else', () => {
+    const nested = review([
+      { path: 'reviewMonths', as: 'month', expression: 'months' },
+      { path: 'reviewMonths[].meetsHours', expression: 'month.hoursWorked >= constants.monthlyHoursRequired' },
+      { path: 'reviewMonths[].reviewWeeks', as: 'week', expression: 'month.weeks.filter(w, 12 / month.monthsBefore > 0)' },
+      { path: 'reviewMonths[].reviewWeeks[].worked', expression: 'week.hours > 0.0' },
+      { path: 'reviewMonths[].everyWeekWorked', expression: 'month.reviewWeeks.all(w, w.worked)' },
+    ], ['reviewMonths[].meetsHours', 'reviewMonths[].everyWeekWorked']);
+    const result = evaluate(nested, renewal([
+      { monthsBefore: 0, hoursWorked: 90, weeks: [{ hours: 10 }] },
+      { monthsBefore: 1, hoursWorked: 40, weeks: [{ hours: 10 }] },
+    ]));
+    assert.match(result['reviewMonths[].reviewWeeks'].message, /\(on reviewMonths\[0\]\)$/);
+    assert.match(result['reviewMonths[].reviewWeeks[].worked'].message, /^Dependency error: 'reviewMonths\[\]\.reviewWeeks' — .* \(on reviewMonths\[0\]\)$/);
+    assert.match(result['reviewMonths[].everyWeekWorked'].message, /^Dependency error: 'reviewMonths\[\]\.reviewWeeks' — .* \(on reviewMonths\[0\]\)$/);
+    assert.deepStrictEqual(settled(result['reviewMonths[].meetsHours']), ['complete', [true, false]]);
+  });
+});
+
 describe('per-item facts — the caller\'s input', () => {
   it('is left untouched: computed facts are not written onto the caller\'s items', () => {
     const months = [{ monthsBefore: 1, hadMedicare: false, hoursWorked: 90, householdIncome: 0 }];
