@@ -443,9 +443,11 @@ async function main() {
   }
 
   // blueprint-core's base contracts. Shared schemas, components and the
-  // platform domain — infrastructure every set needs — always come along. A
-  // capability, any other domain the framework provides, comes along only when
-  // the set lists it in `x-capabilities`.
+  // platform domain — infrastructure every set needs — declare no capability
+  // and always come along. Every other framework file declares the capability
+  // it belongs to, and comes along only when the set lists that capability in
+  // `x-capabilities` — so a set takes the framework's transcripts without
+  // anything else the framework adds to communication.
   if (!existsSync(baseContractsDir)) {
     console.error(`Error: blueprint-core base-contracts directory not found: ${baseContractsDir}`);
     console.error('This usually means blueprint-core was installed from an incomplete tarball. Re-install @codeforamerica/blueprint-core.');
@@ -454,8 +456,7 @@ async function main() {
 
   const allBaseDocs = discover(baseContractsDir)
     .map((file) => load({ ...file, relativePath: `base/${file.relativePath}` }));
-  const isCapability = (doc) => doc.domain && doc.domain !== 'platform';
-  const available = [...new Set(allBaseDocs.filter(isCapability).map((doc) => doc.domain))].sort();
+  const available = [...new Set(allBaseDocs.map((doc) => doc.capability).filter(Boolean))].sort();
   const wanted = authoredOverlays.map((overlay) => overlay.config?.['x-capabilities']).find(Array.isArray) ?? [];
   const unknown = wanted.filter((name) => !available.includes(name));
   if (unknown.length > 0) {
@@ -463,7 +464,7 @@ async function main() {
     process.exit(1);
   }
 
-  const baseDocs = allBaseDocs.filter((doc) => !isCapability(doc) || wanted.includes(doc.domain));
+  const baseDocs = allBaseDocs.filter((doc) => !doc.capability || wanted.includes(doc.capability));
   docs.push(...baseDocs);
   console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s)${wanted.length ? `; capabilities: ${wanted.join(', ')}` : ''})`);
 

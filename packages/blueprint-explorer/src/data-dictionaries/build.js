@@ -171,7 +171,7 @@ function renderFieldCard(path, meta, ann, allowedAnnotations, registryTypes = ne
     : () => true;
 
   // Known annotation fields to skip (metadata, not display fields)
-  const SKIP_ANN_FIELDS = new Set(['$schema', 'version', 'domain']);
+  const SKIP_ANN_FIELDS = new Set(['$schema', 'version', 'domain', 'capability']);
 
   // Longest an annotation value may be and still sit on a shared row. Program
   // codes and field names fit; the interview questions annotations carry do

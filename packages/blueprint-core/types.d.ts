@@ -91,6 +91,12 @@ export interface Doc {
   type: ContractType;
   /** Same derivation as `DiscoveredFile`; falls back to what the content states. */
   domain: string | null;
+  /**
+   * The framework capability the document belongs to: `info.x-capability`,
+   * or a top-level `capability`. Null for platform's files and for every
+   * file a contract set writes itself.
+   */
+  capability: string | null;
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;

@@ -38,10 +38,11 @@ import {
 } from './indexes.js';
 import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
-import { readConfigs } from './contract-readers.js';
+import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
 import { generate } from './generate.js';
+import { unlistedCapabilityNames, withCapability } from './capabilities.js';
 
 /**
  * Contract types with no validator of their own.
@@ -133,6 +134,16 @@ export function validate(docs) {
       warnings: warnings.map((finding) => normalize(finding, doc)),
     };
   });
+
+  // A finding naming something from a framework capability the set has not
+  // listed says so: the unknown operation or domain is not a typo, it is a
+  // capability left out. Worked out only when there is something to explain.
+  if (results.some((r) => !r.ok)) {
+    const unlisted = unlistedCapabilityNames(docs, generate);
+    for (const finding of results.flatMap((r) => r.errors)) {
+      finding.message = withCapability(finding.message, unlisted);
+    }
+  }
 
   return {
     ok: results.every((r) => r.ok),
@@ -579,7 +590,7 @@ function configCatalogs(doc, docs, schemaIndex) {
   // Anything past the envelope is a catalog. One in another shape — a bare
   // list, as catalogs once were — would otherwise seed nothing, silently.
   for (const [key, value] of Object.entries(doc.content ?? {})) {
-    if (['$schema', 'version', 'domain'].includes(key)) continue;
+    if (CONFIG_METADATA_KEYS.has(key)) continue;
     if (typeof value?.resource !== 'string' || !Array.isArray(value?.entries)) {
       errors.push({
         rule: 'not-a-catalog',

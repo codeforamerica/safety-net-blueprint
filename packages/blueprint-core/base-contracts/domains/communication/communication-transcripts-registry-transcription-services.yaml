@@ -4,6 +4,7 @@
 $schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
 version: "1.0.0"
 domain: communication
+capability: transcripts
 type: transcription-services
 
 entries:

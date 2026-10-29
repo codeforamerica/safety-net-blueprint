@@ -1,9 +1,10 @@
 # Example transcripts, seeded into the mock for any contract set that includes
-# the transcription capability. Fictional. An interview being transcribed, with
+# the transcripts capability. Fictional. An interview being transcribed, with
 # a few lines, a dropped connection and a pause the applicant asked for, and a
 # typed chat with no transcription service.
 
 domain: communication
+capability: transcripts
 
 TranscriptExample1:
   id: 7a1e0c2d-0000-4000-8000-000000000001

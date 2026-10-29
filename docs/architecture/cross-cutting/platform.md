@@ -148,7 +148,7 @@ and what a set is made to carry.
 **Decision:** A capability's name comes from the files that declare it, as a
 domain's does, so a misspelled one is caught by nothing declaring it. What one
 capability needs from another is not listed: a reference to a capability the
-set has not included fails resolve, naming the capability it belongs to.
+set has not included fails validation, naming the capability it belongs to.
 
 ## Customization
 

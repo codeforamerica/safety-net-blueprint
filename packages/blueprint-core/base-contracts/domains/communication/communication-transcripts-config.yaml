@@ -1,6 +1,7 @@
-$schema: communication-config-schema.yaml
+$schema: communication-transcripts-config-schema.yaml
 version: "1.0"
 domain: communication
+capability: transcripts
 
 # Profile catalog — the transcription service and languages for each kind of
 # conversation. A starting point: states overlay this file to choose their own

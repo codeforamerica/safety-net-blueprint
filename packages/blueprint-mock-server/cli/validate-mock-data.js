@@ -5,8 +5,11 @@
 
 import { resolve } from 'path';
 import { apiSpecsFromDocs } from '../src/spec-loader.js';
-import { discover, load } from '@codeforamerica/blueprint-core';
+import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { validateMockData } from '../src/mock-data-validator.js';
+import { createMemoryStore } from '../src/stores/memory-store.js';
+import { seedAllDatabases } from '../src/seeder.js';
+import { seedConfigs } from '../src/config-registry.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -40,7 +43,16 @@ Flags:
 
   try {
     const docs = discover(specsDir).map(load);
-    const errors = validateMockData(docs, apiSpecsFromDocs(docs));
+    // Seeded the way the server seeds at boot, mock data and config alike, so
+    // a record is checked as it's served: an expanded relationship inlined.
+    // Checked without the store, a record pointing at a config-seeded profile
+    // kept its bare profileId, which the read schema doesn't have.
+    const store = createMemoryStore();
+    seedAllDatabases(docs, store, { seeded: true });
+    seedConfigs(extract(docs, 'config'), store, { verbose: false });
+    const errors = validateMockData(docs, apiSpecsFromDocs(docs), {
+      lookup: (collection, id) => store.findById(collection, id),
+    });
 
     if (errors.length === 0) {
       console.log('✓ All mock data valid');

@@ -45,7 +45,7 @@ config:
     - transcripts
 ```
 
-A name no framework file declares stops resolve, listing the ones they do. So does a reference into a capability the set has not listed, naming that capability.
+A name no framework file declares stops resolve, listing the ones they do. A reference into a capability the set has not listed — a scenario calling one of its operations, a file in a domain only it defines — fails validation, naming that capability.
 
 ---
 

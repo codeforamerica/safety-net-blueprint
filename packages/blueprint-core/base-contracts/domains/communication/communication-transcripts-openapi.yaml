@@ -19,6 +19,7 @@ info:
   title: Transcripts
   version: 0.1.0
   x-domain: communication
+  x-capability: transcripts
   x-status: alpha
   x-visibility: internal
   description: |

@@ -1,12 +1,13 @@
-# JSON Schema for communication-config.yaml
+# JSON Schema for communication-transcripts-config.yaml
 # Extends the generic config envelope (schemas/config-schema.yaml)
 # with validation of the profile catalog's entries.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "https://blueprint.codeforamerica.org/base/domains/communication/communication-config-schema.yaml"
+$id: "https://blueprint.codeforamerica.org/base/domains/communication/communication-transcripts-config-schema.yaml"
 title: Communication Config
 domain: communication
-description: Schema for communication-config.yaml. Validates the profile catalog's entries.
+capability: transcripts
+description: Schema for communication-transcripts-config.yaml. Validates the profile catalog's entries.
 
 allOf:
   - $ref: "https://blueprint.codeforamerica.org/schemas/config-schema.yaml"

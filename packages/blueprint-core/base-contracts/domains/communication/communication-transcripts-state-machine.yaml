@@ -17,6 +17,7 @@
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: communication
+capability: transcripts
 machines:
   - object: Transcript
     states:

@@ -28,7 +28,7 @@ import { rulesetEndpointPath } from './rules.js';
 import { expandEmits } from './event-names.js';
 
 /** Envelope keys a config document carries that are not catalogs. */
-const CONFIG_METADATA_KEYS = new Set(['$schema', 'version', 'domain']);
+export const CONFIG_METADATA_KEYS = new Set(['$schema', 'version', 'domain', 'capability']);
 
 /** @param {import('../types.js').Doc[]} docs @param {string} type */
 const ofType = (docs, type) => docs.filter((d) => d.type === type && d.content?.domain);

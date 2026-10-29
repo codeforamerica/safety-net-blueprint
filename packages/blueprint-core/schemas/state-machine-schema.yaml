@@ -69,6 +69,13 @@ properties:
       declaring machines; omitted by a library document that exists only to be
       inherited via extends.
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   apiSpec:
     type: string
     deprecated: true

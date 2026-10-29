@@ -55,6 +55,13 @@ properties:
       Domain namespace (e.g., intake, eligibility). Must match the domain of
       the rules contract whose rulesets these examples exercise.
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   rulesets:
     type: object
     description: >
