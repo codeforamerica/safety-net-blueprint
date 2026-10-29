@@ -7,8 +7,7 @@
 > contracts, for document request notices; their full lifecycle is TBD.
 
 See [Domain Design Overview](domain-design.md) for context, [AI Services](../cross-cutting/ai-services.md)
-for how transcripts fit with suggestions, fact extraction and the interview,
-and [Contract-Driven Architecture](../contract-driven-architecture.md) for the
+for how transcripts fit with suggestions and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md) for the
 contract approach.
 
 ## Overview
@@ -24,31 +23,33 @@ notices itself.
 
 A transcript is the written record of one conversation: who said what, and
 when, including the stretches that were off the record and the stretches that
-were lost. It is not tied to audio — a chat or a text-message interview produces
+were lost. It is not tied to audio — a chat or a text-message exchange produces
 one too — and everything that comes after it, from fact extraction to the lines
 a suggestion cites as evidence, needs only the record, not how it was
-captured. The first use is the interview assistant: a worker interviews an
-applicant, and the transcript is what the assistant works from. The blueprint
+captured. In the safety net contracts, the first use is an assistant following
+an eligibility interview, working from its transcript. The blueprint
 holds the record and the rules for keeping it; turning speech into text is done
-by a transcription service the worker's transcription software talks to directly.
+by a transcription service the staff member's transcription software talks to directly.
 Transcripts are provided by the framework, and a contract set includes them by
-listing the domain as a capability ([Decision 1](#decision-1-a-framework-domain-of-its-own)).
+listing the `transcripts` capability ([Decision 1](#decision-1-a-framework-domain-of-its-own)),
+without taking anything else the framework adds to the domain.
 
 ## What happens during a transcribed conversation
 
-1. The worker starts a transcript for the conversation — an interview, say —
+1. A staff member starts a transcript for the conversation — an interview, say —
    under a profile: the transcription service and languages the state chose for
    that kind of conversation. The software begins sending the audio to that
    service.
 2. As each sentence is finished, the software adds it to the transcript, with
    when it was said and who said it.
-3. If the applicant asks to go off the record, the worker pauses the transcript.
-   Nothing said while paused is kept. When they resume, recording continues.
+3. If the other person asks to go off the record, the staff member pauses the
+   transcript. Nothing said while paused is kept. When they resume, recording
+   continues.
 4. If transcription drops out — a lost connection, a service failure — the
    software records the stretch that was lost once transcription works again.
-5. Anyone following along, such as the worker's own screen, sees each change as
-   it happens.
-6. When the conversation ends, the worker closes the transcript. Nothing more is
+5. Anyone following along, such as the staff member's own screen, sees each
+   change as it happens.
+6. When the conversation ends, the staff member closes the transcript. Nothing more is
    added after that.
 
 ## Entity model
@@ -63,7 +64,8 @@ The record of one conversation.
 
 - **What it records** — the conversation it belongs to, such as an interview,
   and what kind of thing that is. A transcript is reused across conversation
-  types — interviews, calls on an existing case, fair hearings — so it names its
+  types — in a benefits program, interviews, calls on an existing case, fair
+  hearings — so it names its
   subject rather than belonging to one.
 - **What produced it** — the profile it was started under, which names the
   transcription service; the software that wrote it; and the service's model.
@@ -131,7 +133,7 @@ has a start and an end, so one ordering and one set of rules cover every kind.
 | State | Description | SLA clock |
 |---|---|---|
 | Recording | The conversation is on the record; lines are accepted. | none |
-| Paused | The conversation is off the record, usually because the applicant asked. Nothing said now is kept. | none |
+| Paused | The conversation is off the record, usually because the other person asked. Nothing said now is kept. | none |
 | Closed | The conversation has ended. Terminal. | none |
 
 A transcript starts recording. Pausing moves it to paused and begins a pause in
@@ -157,12 +159,12 @@ A refusal names the rule that did not hold.
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `communication.transcript.created` | A conversation began being recorded | Starting a transcript | The worker's screen; anything that will read the transcript |
-| `communication.transcript.paused` | The conversation went off the record | Pausing | The worker's screen; audit |
-| `communication.transcript.resumed` | It is back on the record | Resuming | The worker's screen; audit |
+| `communication.transcript.created` | A conversation began being recorded | Starting a transcript | The staff member's screen; anything that will read the transcript |
+| `communication.transcript.paused` | The conversation went off the record | Pausing | The staff member's screen; audit |
+| `communication.transcript.resumed` | It is back on the record | Resuming | The staff member's screen; audit |
 | `communication.transcript.closed` | The record is complete, so work that needs the whole conversation can begin | Closing | Fact extraction and suggestions |
-| `communication.transcript_entry.created` | A line, a lost stretch or a pause was added | Adding an entry, or pausing | The worker's screen; anything reading the conversation live |
-| `communication.transcript_entry.updated` | A pause ended | Resuming, or closing while paused | The worker's screen |
+| `communication.transcript_entry.created` | A line, a lost stretch or a pause was added | Adding an entry, or pausing | The staff member's screen; anything reading the conversation live |
+| `communication.transcript_entry.updated` | A pause ended | Resuming, or closing while paused | The staff member's screen |
 | `communication.transcript.updated` / `.deleted` | What a transcript records was corrected, or it was removed | Updating or deleting it | Audit |
 | `communication.transcription_profile.created` | A profile was added through the API | Adding a profile | Audit |
 | `communication.transcription_profile.updated` | A profile changed; records each change with what it changed from | Changing a profile | Audit; anyone asking what a transcript was started under |
@@ -239,13 +241,13 @@ In the safety net contract set, `safety-net-contracts/src/domains/communication/
 
 **Status:** Decided: C
 
-**What's being decided:** A transcript has nothing benefits-specific in it and
-is needed by more than the interview, so where it is defined decides who can
-use it.
+**What's being decided:** A transcript has nothing specific to one program or
+one kind of conversation in it, so where it is defined decides who can use it.
 
 **Considerations:**
-- Interviews, calls on an existing case and fair hearings all produce
-  conversations worth a record, across domains and across contract sets.
+- In a benefits program, interviews, calls on an existing case and fair
+  hearings all produce conversations worth a record, across domains and across
+  contract sets.
 - Platform holds infrastructure every domain plugs into — the event log,
   registries. A transcript is a capability some domains use, with its own
   records, lifecycle and rules, the way scheduling and document management are.
@@ -256,12 +258,14 @@ use it.
   documents of one domain combine.
 
 **Options:**
-- **(A)** In intake, beside the interview. Another domain could not use it, and
+- **(A)** In the domain of its first use — intake, in the safety net contracts. Another domain could not use it, and
   since intake belongs to one contract set, neither could another set.
 - **(B)** In the framework's platform domain. Every contract set would get it,
   needed or not.
-- **(C) ✓** In a `communication` domain the framework provides, which a contract
-  set includes by listing it as a capability.
+- **(C) ✓** In a `communication` domain the framework provides, as the
+  `transcripts` capability a contract set includes by listing it. See
+  [Platform](../cross-cutting/platform.md#decision-3-the-platform-is-infrastructure-only)
+  for why a set opts into a capability rather than a whole domain.
 
 ### Decision 2: Live transcription is not a data exchange call
 
@@ -274,7 +278,7 @@ gets a resource and lifecycle of its own.
 **Considerations:**
 - A data exchange call is a request and one answer: the blueprint submits it,
   an adapter performs it, one result comes back.
-- A live transcript is started by a worker, written by the worker's transcription software,
+- A live transcript is started by a staff member, written by their transcription software,
   and grows line by line for an hour, with pauses and lost stretches the call
   lifecycle has no place for.
 - Transcribing a recording after the fact — an uploaded call or hearing — is a
@@ -307,12 +311,12 @@ decides what the blueprint has to understand.
 - **(A)** The software sends audio to the blueprint, which relays it to the
   service and writes the lines itself.
 - **(B) ✓** The software streams audio straight to the service and adds each
-  finished line to the transcript. A state that wants audio kept off workers'
+  finished line to the transcript. A state that wants audio kept off staff
   machines runs a service that implements the transcript contract and
   transcribes on its side.
 
 **Decision:** Only finished lines reach the blueprint. Lines still being
-revised arrive several times a second, and the worker's own screen gets them
+revised arrive several times a second, and the staff member's own screen gets them
 from the software directly.
 
 ### Decision 4: One timeline of entries
@@ -324,7 +328,7 @@ stretches that were off the record, so how they are stored decides how anyone
 reads the whole conversation.
 
 **Considerations:**
-- A reader — a worker, a reviewer, fact extraction — needs the conversation in
+- A reader — a staff member, a reviewer, fact extraction — needs the conversation in
   order, including where it was off the record or lost.
 - Caption formats and contact-center transcripts carry non-speech segments,
   such as silence, inline with the speech.
@@ -347,7 +351,7 @@ rule judges decides whether that line is kept.
 
 **Considerations:**
 - The software is already trusted for when every line was said.
-- A line can begin on the record and run past the moment the worker paused.
+- A line can begin on the record and run past the moment the staff member paused.
 - The point of pausing is that nothing said off the record is kept, even by
   faulty software.
 
@@ -442,7 +446,7 @@ so what the record notes decides what a reader can rely on.
 - **(A)** Record each connection change.
 - **(B) ✓** Record the outcome: a lost stretch, with both times, once
   transcription comes back or the transcript closes, whatever caused it. A
-  "reconnecting" notice on the worker's screen comes from the software.
+  "reconnecting" notice on the staff member's screen comes from the software.
 
 ### Decision 10: A transcript names its profile; the profile's history is the record
 
@@ -501,8 +505,8 @@ profile to another service, or adds a language.
 
 ### Including transcripts
 
-A contract set includes transcripts by listing `communication` as a capability
-in its configuration. A set that does not has none of it.
+A contract set includes transcripts by listing the `transcripts` capability in
+its configuration. A set that does not has none of it.
 
 ### Speaker roles
 
@@ -533,7 +537,7 @@ until they are closed; the profiles the framework provides set 30 minutes.
 - **Capturing audio** — the microphone or the call window, which a browser grants
   only to the page.
 - **Storing audio** — the blueprint keeps the record, not the recording.
-- **Lines still being revised** — shown on the worker's screen by the
+- **Lines still being revised** — shown on the staff member's screen by the
   software, never stored.
 - **Transcribing a recording after the fact** — a data exchange call (Decision 2).
 

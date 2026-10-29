@@ -59,10 +59,14 @@ contract_files:
       first one wins.
 
   framework_files:
-    rule: The framework's base contracts are copied into every set under base/. A capability's domain — communication, say — is included only when the set's configuration lists it in x-capabilities.
+    rule: The framework's base contracts are copied into every set under base/. Platform's files always are; every other framework file declares the capability it belongs to — x-capability in info on OpenAPI, AsyncAPI and Arazzo, capability on everything else — and is included only when the set's configuration lists that capability in x-capabilities.
     rationale: >
       Every set gets the platform's infrastructure without writing it, and opts
-      into a capability rather than carrying contracts it does not use.
+      into a capability rather than carrying contracts it does not use. The
+      unit is the capability, not the domain, so a set can take the framework's
+      transcripts without anything else the framework adds to communication.
+      A capability, like a domain, is declared rather than inferred from a
+      folder or a file name.
 
   generated_files:
     rule: Resolve writes documents a set does not author — an API document beside each rules file, an events AsyncAPI document beside each OpenAPI document — into the resolved set only. They are never edited.

@@ -59,8 +59,8 @@ The work splits by layer, not by feature:
 
 | Layer | What goes there |
 |---|---|
-| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (in a `communication` domain of its own) and Suggestion (in platform, as infrastructure every domain contributes categories to), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them. |
-| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the `fact_extraction` service and its catalog entry. This is program policy, and belongs with the real domain contracts. |
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (the `transcripts` capability, in `communication`), Suggestion (the `suggestions` capability, in `decision-support`, which every domain contributes categories to), the AI service types such as fact extraction (each a capability, in `data-exchange`), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. A contract set includes each capability it lists. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the catalog entry configuring its `fact_extraction` service. This is program policy, and belongs with the real domain contracts. |
 | **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
 
@@ -232,6 +232,22 @@ call receives — one turn, the conversation so far, the current application —
 and what it returns — values, a patch to the application, flags for the worker
 to ask about — are open; see [Open questions](#open-questions).
 
+**Data Exchange moves into the framework first.** Each AI service type is a
+framework capability a set can leave out, but today the catalog, the call and
+its lifecycle are `safety-net-contracts`' own, so a framework capability would
+have nothing to plug into. Built with the first AI service type:
+
+- The framework provides the `data-exchange` domain's general part — the service
+  catalog, the call and its lifecycle, the result events — as a capability. Its
+  paths and events keep their names; only where the files live changes.
+- `safety-net-contracts` adds its federal service types, their schemas and
+  their catalog entries to the same domain, with files of its own.
+- `serviceType` stops being a fixed enum. Its values come from a
+  `service-types` registry, the way a transcript's service comes from
+  `transcription-services`; the framework's AI service types and a set's
+  federal ones each add entries, and each entry names its input and result
+  schemas.
+
 ### How a service call reaches a provider
 
 The catalog entry for each AI service declares how to call its provider: a
@@ -315,67 +331,14 @@ AWS. An adapter contract. *To define.*
 
 ### New resources
 
-**Suggestion**, on platform. Anything an assistant, a rule or a person puts in
-front of a worker, and the worker's decision on it. It's on platform, not the
-transcript's domain, because every domain contributes suggestions and every
-contract set gets it. Platform knows only two kinds:
-
-- **Proposes an operation.** Names the operation by its `operationId`, with its
-  parameters and body, as an Arazzo step does; both are checked against the
-  contracts when it's proposed. Accepting it performs the operation as the
-  worker who accepts, with the guards and audit trail of any other request, and
-  the operation's events name the acceptance as their `causationid`. The worker
-  may correct the arguments first. Recording a household member is one; so is
-  marking a required item covered, which is just an operation on the interview.
-- **Informs.** No operation; accepting it means the worker took it up. A
-  question to ask, a risk to probe, an inconsistency to resolve.
-
-Owning domains declare **categories** for informing suggestions, each with its
-own payload schema — eligibility declares "missing determination input", intake
-"risk", "inconsistency" — the same per-type-schema pattern Data Exchange uses
-for service types. An operation suggestion needs none: the operation is its
-type. One suggestion is one change, so a patch of five changes becomes five
-suggestions, each decided on its own.
-
-Platform owns the lifecycle and knows nothing about interviews:
-
-- **proposed**, then **accepted**, **dismissed** (with a reason), **expired**
-  or **superseded**.
-- **refused** when accepting fails — the operation's guard says no, the worker
-  may not perform it, or the arguments don't match — with the attempt
-  recorded. A person can retry; after the most attempts allowed, or no retry
-  before a timeout, it is **failed**: someone said yes, and it couldn't be
-  done. Anyone can subscribe to that, such as workflow making a task.
-- Whoever created a suggestion decides when it no longer applies: an interview
-  completing expires its own. One nothing else closes can carry `expiresAt`.
-
-The suggestion record is also the provenance: what was proposed, from what, by
-whom (`proposedBy`, in the events' `authtype` and `authid`), with what
-`confidence` (0 to 1, from a model only), and who decided. Its **evidence**
-refers to where it came from — transcript lines, a document page, a ruleset
-fact, a data match — rather than quoting it, so nothing sensitive is copied out
-of its source, and the source's own access rules apply when it's shown.
-Metadata, by the cross-domain pass-through convention, ties it to the interview
-it came from.
-
-**A dismissed change isn't proposed again.** A service re-reading a whole
-transcript keeps finding the same changes, so the API refuses a proposal whose
-fingerprint matches a dismissed one for the same subject. What identifies the
-same change is declared, not guessed: an operation's `x-fingerprint` names its
-identifying request fields, in the format of `x-sortable`, and a category names
-its payload's. The fingerprint is a keyed hash of their normalized values, so
-personal values can't be read back from it.
-
-The worker's acceptance is what vouches that a value is *true*; schema
-validation only says it has the right shape. So a worker's screen must show
-each suggestion's evidence beside it.
-
-Accepting needs two things the state machine DSL doesn't have yet, which data
-exchange's retries (#407) need too, in the shape Step Functions, Serverless
-Workflow and Arazzo share: a `call:` that names an operation by `operationId`,
-and on a call, `onFailure:` — steps to run instead, and `to:` the state the
-transition ends in — and `retry:` limits, with defaults declared once on the
-machine and changed through overlays. The full design is in #469.
+**Suggestion**, the `suggestions` capability, in a `decision-support` domain
+the framework provides. Anything an assistant, a rule or a person puts in front
+of a worker, and the worker's decision on it: a proposed change, which
+accepting makes as the worker, or something to notice. Its evidence refers to
+transcript lines and other sources rather than quoting them. The worker's
+acceptance is what vouches that a value is *true*; schema validation only says
+it has the right shape, so a worker's screen must show each suggestion's
+evidence beside it. Its design is in [Decision Support](../domains/decision-support.md).
 
 **Interview**, in intake, extended. `safety-net-contracts` already declares an
 `Interview` in `intake-openapi.yaml` — the regulatory record that the interview
@@ -395,10 +358,9 @@ when recertification is modeled. *To define.*
 Declared in the `emits:` of each resource's state machine, in whichever domain
 owns it, and generated into that domain's events AsyncAPI document. A
 transcript's paused, resumed and closed exist, and an entry's created event
-covers a line or gap recorded. Still to come: `platform.suggestion.proposed`,
-`.accepted`, `.dismissed`, `.refused`, `.failed`, `.expired` and
-`.superseded`, one for each state; `interview.started` and
-`interview.completed`. *To define.*
+covers a line or gap recorded. Still to come: a suggestion's, one for each
+state (see [Decision Support](../domains/decision-support.md#domain-events));
+`interview.started` and `interview.completed`. *To define.*
 
 **Whether an event is stored could be declared too.** Some events are wanted
 only by whoever is displaying them at that moment — lines still firming up, a
@@ -938,7 +900,7 @@ the mock serves a contract the moment it is declared.
    streaming to Transcribe from a page and writing to it — the first proof that
    a page with no backend reaches an AI service securely and the blueprint
    follows the conversation.
-2. **The suggestion resource**, on platform: its two kinds, its lifecycle and
+2. **The suggestion resource**, the `suggestions` capability in `decision-support`: its two kinds, its lifecycle and
    its events (#469). Usable at once — propose, accept and dismiss suggestions
    against the mock — with no model and no AWS.
 3. **The interview's conduct and its requirements**, in
@@ -947,9 +909,10 @@ the mock serves a contract the moment it is declared.
    complete guarded on them. Useful alone, and it can start before any ruleset
    exists: requirements that always apply need no condition.
 4. **The mock calling services from the catalog** — templates, signing and the
-   adapter role, in the framework — **and the `fact_extraction` service** in
-   `safety-net-contracts`, reading the transcript. The first working assistant
-   end to end.
+   adapter role, in the framework — **and the `fact_extraction` service**, a
+   framework capability once Data Exchange's general part has moved there,
+   configured in `safety-net-contracts` to read the transcript. The first
+   working assistant end to end.
 5. **The risk ruleset**, in `safety-net-contracts`, with severity and probes in
    its annotations.
 6. **The operation extension and toolsets**, then the generator for tool
