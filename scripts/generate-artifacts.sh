@@ -7,7 +7,8 @@
 #   generate-artifacts.sh --commit     — stage and commit regenerated artifacts
 #
 # Artifacts:
-#   packages/safety-net-explorer/  — served from the repo by GitHub Pages
+#   packages/safety-net-explorer/          — served from the repo by GitHub Pages
+#   packages/blueprint-harness/generated/  — the harness's golden outputs
 #
 # The rules-engine browser bundle is not here: the package's "prepare" script
 # builds it on every install and "files"/"exports" ship it to npm, so no one
@@ -20,6 +21,7 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ARTIFACTS=(
   packages/safety-net-explorer/
+  packages/blueprint-harness/generated/
 )
 
 if [ "${1:-}" = "--check-only" ]; then
@@ -52,3 +54,6 @@ node "$ROOT/packages/blueprint-explorer/build.js" \
   --content="$ROOT/packages/safety-net-explorer" \
   --resolved="$ROOT/packages/generated/contracts" \
   --clients="$ROOT/packages/generated/clients" 2>&1
+
+echo "Regenerating blueprint-harness outputs..."
+node "$ROOT/packages/blueprint-harness/scripts/regenerate.js" 2>&1

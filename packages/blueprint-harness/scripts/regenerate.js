@@ -45,8 +45,10 @@ function sourceUrl() {
   // tracked output — every feature branch would diff against main for no
   // reason, and CI would produce different bytes again. The cost is that a
   // file added on a branch links to a 404 until it merges, which is the right
-  // way round: the links describe what has landed.
-  const ref = (git('rev-parse', '--abbrev-ref', 'origin/HEAD') ?? '').replace(/^origin\//, '');
+  // way round: the links describe what has landed. A checkout without
+  // origin/HEAD, such as CI's, asks the remote, so it builds the same bytes.
+  const ref = (git('rev-parse', '--abbrev-ref', 'origin/HEAD') ?? '').replace(/^origin\//, '')
+    || (git('ls-remote', '--symref', 'origin', 'HEAD') ?? '').match(/^ref: refs\/heads\/(\S+)\s+HEAD/m)?.[1];
   if (!remote || !root || !ref) return null;
 
   // git@host:owner/repo.git and https://host/owner/repo.git both become a
