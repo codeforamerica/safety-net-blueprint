@@ -1,5 +1,25 @@
 # @codeforamerica/blueprint-cli
 
+## 0.5.0
+
+### Minor Changes
+
+- **Breaking:** `blueprint-evaluate` now takes only a compiled graph, `--spec=<*-graph.yaml>`, with `--input` or `--examples=<*-rules-examples.yaml>`; it no longer compiles a rules or rules examples file, which missed schemas in other files, and `--engine` is gone. It exits 1 when any fact comes back as an error.
+- Before, `blueprint-resolve` took one `--overlay`, so applying a package's own overlays and then a state's meant copying them into one folder. Now `--overlay` can be given more than once and applies in the order given, and a second `--spec` is refused instead of silently replacing the first. (#478)
+- **Breaking:** Before, a state machine subscribed under `events:` and emitted full event names. Now it subscribes under `on:`, declares its resource's events once under `emits:` and sends them by name (`emit: claimed`), which resolve expands to `{domain}.{resource}.{event}`. (#470)
+- **Breaking:** Resolve now writes `<name>-events-asyncapi.yaml` beside each OpenAPI document, documenting every event its resources and their state machines send, so `x-events` and a state machine's `eventsSpec` are ignored, with a warning, and a hand-written channel for a generated event is a validation error. (#470)
+- A contract set can now include the framework's `communication` capability by listing it in `x-capabilities`: `/communication/transcripts` records transcripts under a profile from `/communication/profiles`, with their timeline at `/transcripts/{id}/entries`. A new `x-enum-source: { registry: <type> }` form draws an enum from a registry. (#470)
+- **Breaking:** Before, the explorer drew sequence diagrams and context-map flows from hand-written `flows:`, `actors:` and `sequence-diagrams/config/` files that drifted from the contracts. Now those are gone: remove `flows:` and `actors:` from your explorer `config.yaml`, which no longer validates with them, and stop calling `buildSequenceDiagrams` or `--only=sequence-diagrams`. (#311)
+
+### Patch Changes
+
+- Before, `blueprint-resolve --bundle` failed on a schema that refers to a `https://blueprint.codeforamerica.org/schemas/...` URL. Now those URLs are read from the installed blueprint. (#470)
+- Before, an overlay file carrying only a `config:` block, with no `actions:`, was skipped, so its settings had no effect. Now resolve reads it. (#470)
+- Before, `blueprint-resolve` built rules graphs, and the endpoints compositions and state machines imply, from the contracts as written, so a state's overlay changed the documents it targeted but not what was generated from them, and the engine ran the base ruleset. Now they're generated after overlays. (#467, #500)
+- Generated rules clients now handle a grouped output, such as `risks.cashIncome`, and a per-item output, such as `reviewMonths[].qualifies`, typing a per-item output as one value per item. (#496)
+- Each package now declares its license, `PolyForm-Noncommercial-1.0.0`, so npm and dependency scanners show it. The terms are unchanged. (#452)
+- Uses @codeforamerica/blueprint-core 0.4.0, @codeforamerica/blueprint-explorer 0.3.0, @codeforamerica/blueprint-rules-engine 0.2.0.
+
 ## 0.4.0
 
 ### Minor Changes
