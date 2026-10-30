@@ -21,13 +21,19 @@
  *     whole or embedded in a string as {$…}
  *   - `successCriteria` simple conditions: ==, !=, <, <=, >, >= joined by &&
  *   - `outputs`
+ *   - workflows that depend on earlier ones (`dependsOn`), reading what they
+ *     produced as `$workflows.<id>.outputs.<name>` — a long scenario in
+ *     sections, each a workflow, on the same server throughout
+ *   - `onFailure` actions of type `retry`, with `retryAfter` (seconds) and
+ *     `retryLimit` — for a step that checks what an asynchronous reaction
+ *     does, which may not have happened the moment the step before it returns
  * Standard enough that Redocly's Respect runs the same documents against a
  * served mock.
  */
 
 import { CONTROL_OPERATIONS } from './platform-routes.js';
 
-const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs']);
+const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs', 'onFailure']);
 
 /**
  * Every operation in the set's OpenAPI documents, by operationId, with the
@@ -109,7 +115,7 @@ function pointer(value, path) {
  * The value of a runtime expression.
  *
  * @param {string} expression - e.g. `$steps.start.outputs.id`
- * @param {object} scope - { inputs, steps, response }
+ * @param {object} scope - { inputs, steps, workflows, response }
  */
 function evaluate(expression, scope) {
   if (expression === '$statusCode') return scope.response?.status;
@@ -117,6 +123,8 @@ function evaluate(expression, scope) {
   if (expression.startsWith('$response.header.')) return scope.response?.headers?.[expression.slice('$response.header.'.length).toLowerCase()];
   const steps = /^\$steps\.([^.]+)\.outputs\.(.+)$/.exec(expression);
   if (steps) return scope.steps[steps[1]]?.outputs?.[steps[2]];
+  const workflows = /^\$workflows\.([^.]+)\.outputs\.(.+)$/.exec(expression);
+  if (workflows) return scope.workflows?.[workflows[1]]?.[workflows[2]];
   const inputs = /^\$inputs\.(.+)$/.exec(expression);
   if (inputs) return pointer(scope.inputs, `/${inputs[1].replace(/\./g, '/')}`);
   throw new Error(`Runtime expression ${expression} is not one this runner supports`);
@@ -202,16 +210,28 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   const results = [];
   const queue = (arazzo.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => ({ workflow, step })));
   const scopes = new Map();
+  const workflowOutputs = {}; // each finished workflow's outputs, by workflowId
+  const stopped = new Set(); // workflows a failed step stopped, or a failed dependency kept from running
   let position = 0;
-  let stopped = null; // the workflow a failed step stopped
 
   const scopeOf = (workflow) => {
     if (!scopes.has(workflow.workflowId)) {
-      scopes.set(workflow.workflowId, { inputs: inputs[workflow.workflowId] ?? {}, steps: {} });
+      scopes.set(workflow.workflowId, { inputs: inputs[workflow.workflowId] ?? {}, steps: {}, workflows: workflowOutputs });
       results.push({ workflowId: workflow.workflowId, summary: workflow.summary, passed: true, steps: [] });
     }
     return scopes.get(workflow.workflowId);
   };
+
+  // A workflow runs after the ones it depends on, which come before it in the
+  // document; when one of them failed, it doesn't run, and fails too.
+  const order = (arazzo.workflows ?? []).map((w) => w.workflowId);
+  for (const workflow of arazzo.workflows ?? []) {
+    for (const dependency of workflow.dependsOn ?? []) {
+      if (!order.includes(dependency)) throw new Error(`Workflow ${workflow.workflowId} depends on ${dependency}, which the document does not declare`);
+      if (order.indexOf(dependency) > order.indexOf(workflow.workflowId)) throw new Error(`Workflow ${workflow.workflowId} depends on ${dependency}, which comes after it; this runner runs workflows in order`);
+    }
+  }
+  const blocked = (workflow) => (workflow.dependsOn ?? []).some((id) => stopped.has(id) || !(id in workflowOutputs));
 
   /** What a step sends, worked out from what the steps before it produced. */
   function requestOf(step, scope) {
@@ -240,30 +260,46 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   async function next() {
-    while (position < queue.length && stopped && queue[position].workflow.workflowId === stopped) position += 1;
-    if (position >= queue.length) return null;
+    for (;;) {
+      while (position < queue.length && stopped.has(queue[position].workflow.workflowId)) position += 1;
+      if (position >= queue.length) return null;
+      const { workflow } = queue[position];
+      if (scopes.has(workflow.workflowId) || !blocked(workflow)) break;
+      // Its dependency failed: it fails without running.
+      scopeOf(workflow);
+      results.find((r) => r.workflowId === workflow.workflowId).passed = false;
+      stopped.add(workflow.workflowId);
+    }
     const { workflow, step } = queue[position];
     position += 1;
     const scope = scopeOf(workflow);
     const request = requestOf(step, scope);
+    const retry = retryOf(step);
 
-    const response = await fetch(new Request(`${origin}${request.path}`, {
-      method: request.method,
-      headers: request.headers,
-      body: request.body === undefined ? undefined
-        : request.multipart ? formOf(request.body, request.operation.files ?? []) : JSON.stringify(request.body),
-    }));
-    const text = await response.text();
-    let parsed = text;
-    try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-    const responseHeaders = Object.fromEntries([...response.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
-    const stepScope = { ...scope, response: { status: response.status, statusText: response.statusText, body: parsed, headers: responseHeaders } };
+    let stepScope;
+    let checks;
+    let passed;
+    for (let attempt = 0; ; attempt += 1) {
+      const response = await fetch(new Request(`${origin}${request.path}`, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body === undefined ? undefined
+          : request.multipart ? formOf(request.body, request.operation.files ?? []) : JSON.stringify(request.body),
+      }));
+      const text = await response.text();
+      let parsed = text;
+      try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+      const responseHeaders = Object.fromEntries([...response.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
+      stepScope = { ...scope, response: { status: response.status, statusText: response.statusText, body: parsed, headers: responseHeaders } };
 
-    const checks = (step.successCriteria ?? []).map((criterion) => {
-      if (criterion.type && criterion.type !== 'simple') throw new Error(`Step ${step.stepId}: ${criterion.type} criteria are not supported`);
-      return { condition: criterion.condition, passed: holds(criterion.condition, stepScope) };
-    });
-    const passed = checks.every((c) => c.passed);
+      checks = (step.successCriteria ?? []).map((criterion) => {
+        if (criterion.type && criterion.type !== 'simple') throw new Error(`Step ${step.stepId}: ${criterion.type} criteria are not supported`);
+        return { condition: criterion.condition, passed: holds(criterion.condition, stepScope) };
+      });
+      passed = checks.every((c) => c.passed);
+      if (passed || !retry || attempt >= retry.limit) break;
+      await new Promise((settle) => setTimeout(settle, retry.after * 1000));
+    }
     const outputs = passed
       ? Object.fromEntries(Object.entries(step.outputs ?? {}).map(([k, e]) => [k, resolve(e, stepScope)]))
       : {};
@@ -285,7 +321,12 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     onStep?.(result);
     // A failed step stops its workflow: later steps would act on what it did
     // not produce.
-    if (!passed) { run.passed = false; stopped = workflow.workflowId; }
+    if (!passed) { run.passed = false; stopped.add(workflow.workflowId); }
+    // A workflow's outputs, once its last step has passed, for the workflows
+    // that depend on it.
+    else if (step === workflow.steps.at(-1)) {
+      workflowOutputs[workflow.workflowId] = Object.fromEntries(Object.entries(workflow.outputs ?? {}).map(([k, e]) => [k, resolve(e, scope)]));
+    }
     return result;
   }
 
@@ -300,7 +341,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   function preview(workflowId, step) {
     const workflow = (arazzo.workflows ?? []).find((w) => w.workflowId === workflowId);
     try {
-      const { method, path, headers, body, multipart } = requestOf(step, scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {} });
+      const { method, path, headers, body, multipart } = requestOf(step, scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {}, workflows: workflowOutputs });
       return { method, url: path, headers, body, multipart };
     } catch {
       return null; // refers to a step that has not run
@@ -308,6 +349,25 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   return { results, next, runUntil, preview, finished: () => position >= queue.length };
+}
+
+/**
+ * A step's retry, from its `onFailure` actions: how long to wait, in seconds,
+ * and how many more times to try. Only `retry` is supported, and only without
+ * `criteria`; any other action is refused by name.
+ *
+ * @param {object} step
+ * @returns {{ after: number, limit: number } | null}
+ */
+function retryOf(step) {
+  if (!step.onFailure) return null;
+  let retry = null;
+  for (const action of step.onFailure) {
+    if (action.type !== 'retry') throw new Error(`Step ${step.stepId}: onFailure actions of type ${action.type} are not supported`);
+    if (action.criteria) throw new Error(`Step ${step.stepId}: onFailure criteria are not supported`);
+    retry = { after: action.retryAfter ?? 0, limit: action.retryLimit ?? 1 };
+  }
+  return retry;
 }
 
 /**

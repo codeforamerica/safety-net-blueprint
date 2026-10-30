@@ -21,6 +21,24 @@ test('a step calling an operation the set does not have', () => {
   assert.deepEqual(rules(errors), ['unknown-operation']);
 });
 
+const sections = (workflows) => toDoc({
+  path: '/s/scenarios/s.arazzo.yaml',
+  relativePath: 'scenarios/s.arazzo.yaml',
+  type: 'arazzo',
+  content: { arazzo: '1.0.1', info: { title: 'S', version: '1', 'x-domain': 'demo' }, sourceDescriptions: [{ name: 'api', url: 'api.yaml' }], workflows },
+});
+
+test('a workflow reads what one it depends on produced, and nothing else', () => {
+  const first = { workflowId: 'first', steps: [{ stepId: 'a', operationId: 'createThing', outputs: { id: '$response.body#/id' } }], outputs: { id: '$steps.a.outputs.id' } };
+  const reading = (value, dependsOn) => ({ workflowId: 'second', dependsOn, steps: [{ stepId: 'b', operationId: 'createThing', parameters: [{ name: 'id', in: 'path', value }] }] });
+  const ops = new Set(['createThing']);
+  assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.id', ['first'])]), ops)), []);
+  assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.id', [])]), ops)), ['unknown-workflow']);
+  assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.name', ['first'])]), ops)), ['unknown-workflow']);
+  assert.deepEqual(rules(validateArazzo(sections([first, reading('x', ['nope'])]), ops)), ['unknown-workflow']);
+  assert.deepEqual(rules(validateArazzo(sections([{ ...first, outputs: { id: '$steps.z.outputs.id' } }]), ops)), ['unknown-step']);
+});
+
 test('a step carrying forward from a step that is not earlier', () => {
   const errors = validateArazzo(scenario([
     { stepId: 'a', operationId: 'createThing', parameters: [{ name: 'id', in: 'path', value: '$steps.b.outputs.id' }] },

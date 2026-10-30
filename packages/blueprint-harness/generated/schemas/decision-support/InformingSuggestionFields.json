@@ -39,6 +39,8 @@
       "type": "string",
       "description": "What kind of thing it points out — an entry of the\n`suggestion-categories` registry, which a contract set declares.\nIts description is what a person reads when there is no message.\nAbsent, it is uncategorized: something no category covers yet,\nfound with `q=kind:informing -category:*`.\n",
       "enum": [
+        "cash-or-self-employment-income",
+        "earned-income-varies",
         "missing-income",
         "name-mismatch"
       ]

@@ -1210,4 +1210,16 @@ describe('onFailure on a call that cannot report a failure', () => {
     }));
     assert.equal(errors.filter((e) => e.rule === 'onfailure-never-runs').length, 2, JSON.stringify(errors));
   });
+
+  test('bind on a call to an operation binds; on a call by method and path it is refused', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [
+        { call: { operationId: 'getThing' }, bind: '$thing' },
+        { call: { POST: 'intake/assessments', body: {} }, bind: '$assessment' },
+      ] }],
+    }));
+    const refused = errors.filter((e) => e.rule === 'bind-never-binds');
+    assert.equal(refused.length, 1, JSON.stringify(errors));
+    assert.match(refused[0].message, /POST intake\/assessments/);
+  });
 });

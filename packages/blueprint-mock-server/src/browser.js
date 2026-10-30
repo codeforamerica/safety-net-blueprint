@@ -34,6 +34,7 @@ import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { createStepCalls } from './step-calls.js';
+import { initRulesIndex } from './state-machine-engine.js';
 export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
 
 
@@ -102,7 +103,9 @@ export async function createMockServer({
   // so one registered on the server it replaces cannot answer here.
   clearAllStubs();
   subscribeStubDispatch(store);
-  if (rulesFiles.length > 0) buildRulesIndex(rulesFiles, graphs);
+  // The rulesets a state machine's `evaluate:` step runs, as the Node server
+  // loads them.
+  initRulesIndex(buildRulesIndex(graphs));
 
   // Registration order is priority — the same order the Node server uses.
   const routes = new Map();

@@ -20,13 +20,15 @@ import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
 // =============================================================================
 
 /**
- * The operationId of a transition endpoint: `claim` on Task is `claimTask`.
- * @param {string} trigger - The action id
+ * The operationId of a transition endpoint: `claim` on Task is `claimTask`,
+ * and an action id of several words is camelCased — `process-suggestions` on
+ * Interview is `processSuggestionsInterview`.
+ * @param {string} trigger - The action id, in kebab-case
  * @param {string} objectName - The machine's object
  * @returns {string}
  */
 export function buildOperationId(trigger, objectName) {
-  return `${trigger}${objectName}`;
+  return `${trigger.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())}${objectName}`;
 }
 
 /**

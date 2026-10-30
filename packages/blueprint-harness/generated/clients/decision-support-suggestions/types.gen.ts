@@ -108,7 +108,7 @@ export type InformingSuggestionFields = unknown & {
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -276,7 +276,7 @@ export type SuggestionCreate = ({
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -406,7 +406,7 @@ export type InformingSuggestionCreate = {
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -573,7 +573,7 @@ export type Suggestion = ({
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -781,7 +781,7 @@ export type InformingSuggestion = {
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -982,7 +982,7 @@ export type SuggestionList = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -1175,7 +1175,7 @@ export type SuggestionWritable = ({
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -1287,7 +1287,7 @@ export type InformingSuggestionWritable = {
      * found with `q=kind:informing -category:*`.
      *
      */
-    category?: 'missing-income' | 'name-mismatch';
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
     /**
      * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
@@ -1392,7 +1392,7 @@ export type SuggestionListWritable = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -1768,7 +1768,7 @@ export type ListSuggestionsResponses = {
              * found with `q=kind:informing -category:*`.
              *
              */
-            category?: 'missing-income' | 'name-mismatch';
+            category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
             /**
              * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
              */
@@ -1944,7 +1944,7 @@ export type CreateSuggestionData = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -2218,7 +2218,7 @@ export type CreateSuggestionResponses = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -2498,7 +2498,7 @@ export type GetSuggestionResponses = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -2846,7 +2846,7 @@ export type AcceptSuggestionResponses = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -3169,7 +3169,7 @@ export type DismissSuggestionResponses = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
@@ -3487,7 +3487,7 @@ export type ExpireSuggestionResponses = {
          * found with `q=kind:informing -category:*`.
          *
          */
-        category?: 'missing-income' | 'name-mismatch';
+        category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
         /**
          * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */

@@ -331,7 +331,10 @@
             "submitted",
             "under_review",
             "withdrawn",
-            "closed"
+            "closed",
+            "scheduled",
+            "in_progress",
+            "completed"
           ]
         },
         "submittedAt": {
@@ -720,7 +723,10 @@
                           "submitted",
                           "under_review",
                           "withdrawn",
-                          "closed"
+                          "closed",
+                          "scheduled",
+                          "in_progress",
+                          "completed"
                         ]
                       },
                       "programsAppliedFor": {

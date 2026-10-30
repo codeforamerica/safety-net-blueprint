@@ -192,7 +192,48 @@ rulesets:
         description: The household says utilities are included in the rent, but reports a utility bill.
         expression: "current.utilitiesIncludedInRent && current.expenses.exists(e, e.type == 'utilities')"
 
+      # ── Flagged records ────────────────────────────────────────────────────
+      # The records behind some of the flags above, for an interview to put to
+      # the worker one at a time (docs/guides/rules-guide.md, "Rulesets that
+      # flag records"). Ids are the household's keys, which are the records'
+      # ids when the household is read from the application's records.
+      - path: flagged.earnedIncomeVaries
+        description: The incomes behind risks.earnedIncomeVaries.
+        expression: >
+          current.incomes.filter(i, i.source == 'earned'
+            && ((has(i.amountVaries) && i.amountVaries) || i.frequency == 'irregular')).map(i, i.id)
+
+      - path: flagged.cashOrSelfEmploymentIncome
+        description: The incomes behind risks.cashOrSelfEmploymentIncome.
+        expression: >
+          current.incomes.filter(i, i.source == 'self_employment' || (has(i.paidInCash) && i.paidInCash)).map(i, i.id)
+
+      - path: flagged.incomeDiffersFromPayStub
+        description: >
+          Each income behind inconsistencies.incomeDiffersFromPayStub, with what its
+          verified pay stub shows — the corrected figure.
+        expression: >
+          verified.filter(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
+            && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
+              && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - constants.differenceAllowed)
+                  || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + constants.differenceAllowed))))
+          .map(v, {'id': v.incomeId, 'amount': v.amount, 'frequency': v.frequency})
+
     outputs:
+      flagged.earnedIncomeVaries:
+        type: array
+        items: { type: string, x-relationship: { resource: ApplicationIncome } }
+      flagged.cashOrSelfEmploymentIncome:
+        type: array
+        items: { type: string, x-relationship: { resource: ApplicationIncome } }
+      flagged.incomeDiffersFromPayStub:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string, x-relationship: { resource: ApplicationIncome } }
+            amount: { type: number }
+            frequency: { type: string }
       risks.earnedIncomeVaries: { type: boolean }
       risks.cashOrSelfEmploymentIncome: { type: boolean }
       risks.incomeChangedSincePrevious: { type: boolean }

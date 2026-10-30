@@ -3,6 +3,9 @@ formatVersion: "1.0"
 domain: intake
 ruleset: interviewFlags
 outputs:
+  - flagged.earnedIncomeVaries
+  - flagged.cashOrSelfEmploymentIncome
+  - flagged.incomeDiffersFromPayStub
   - risks.earnedIncomeVaries
   - risks.cashOrSelfEmploymentIncome
   - risks.incomeChangedSincePrevious
@@ -348,6 +351,24 @@ facts:
     expression: current.utilitiesIncludedInRent && current.expenses.exists(e, e.type == 'utilities')
     type: boolean
     description: The household says utilities are included in the rent, but reports a utility bill.
+  flagged.earnedIncomeVaries:
+    expression: |
+      current.incomes.filter(i, i.source == 'earned'
+        && ((has(i.amountVaries) && i.amountVaries) || i.frequency == 'irregular')).map(i, i.id)
+    description: The incomes behind risks.earnedIncomeVaries.
+  flagged.cashOrSelfEmploymentIncome:
+    expression: |
+      current.incomes.filter(i, i.source == 'self_employment' || (has(i.paidInCash) && i.paidInCash)).map(i, i.id)
+    description: The incomes behind risks.cashOrSelfEmploymentIncome.
+  flagged.incomeDiffersFromPayStub:
+    expression: |
+      verified.filter(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
+        && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
+          && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - constants.differenceAllowed)
+              || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + constants.differenceAllowed))))
+      .map(v, {'id': v.incomeId, 'amount': v.amount, 'frequency': v.frequency})
+    description: |
+      Each income behind inconsistencies.incomeDiffersFromPayStub, with what its verified pay stub shows — the corrected figure.
 dependencies:
   hasElderlyOrDisabledMember:
     - $.current.members[]
@@ -400,3 +421,11 @@ dependencies:
   inconsistencies.utilitiesIncludedButBilled:
     - $.current.utilitiesIncludedInRent
     - $.current.expenses[]
+  flagged.earnedIncomeVaries:
+    - $.current.incomes[]
+  flagged.cashOrSelfEmploymentIncome:
+    - $.current.incomes[]
+  flagged.incomeDiffersFromPayStub:
+    - $.current.incomes[]
+    - $.verified[]
+    - monthlyFactor

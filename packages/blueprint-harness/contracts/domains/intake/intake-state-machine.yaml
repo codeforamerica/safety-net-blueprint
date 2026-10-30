@@ -110,6 +110,191 @@ machines:
               event: review-reminder
               description: Notify supervisors that this application needs immediate attention.
 
+  # An interview puts its flags to the worker as suggestions, pared down to
+  # show the pattern (docs/architecture/domains/decision-support.md, "From
+  # flags to suggestions"): it evaluates interviewFlags when it starts and
+  # again as the household's incomes change, proposes a suggestion for each
+  # flagged record, expires one whose flag cleared, and expires what's left
+  # when it completes. Each suggestion carries the interview, the flag and the
+  # record in metadata.intake, which is how the machine finds its own.
+  - object: Interview
+    states:
+      - id: scheduled
+        slaClock: stopped
+        description: Scheduled, not yet started.
+      - id: in_progress
+        slaClock: stopped
+        description: Under way; its flags are evaluated as the household's incomes change.
+      - id: completed
+        slaClock: stopped
+        description: Finished; its suggestions still open are expired. Terminal.
+    initialState: scheduled
+    emits:
+      - id: started
+        description: The interview started.
+      - id: completed
+        description: The interview finished.
+    actions:
+      - id: start
+        description: Starts the interview and puts its flags to the worker.
+        transition:
+          from: scheduled
+          to: in_progress
+        steps:
+          - set:
+              field: startedAt
+              value: $now
+          - emit: started
+          - call: suggestFlags
+
+      - id: process-suggestions
+        description: >
+          Evaluates the flags again, proposing a suggestion for a newly flagged
+          record and expiring one whose flag cleared — called when the
+          household's incomes change.
+        transition:
+          from: in_progress
+          to: in_progress
+        steps:
+          - call: suggestFlags
+
+      - id: complete
+        description: Finishes the interview and expires its suggestions still open.
+        transition:
+          from: in_progress
+          to: completed
+        steps:
+          - set:
+              field: completedAt
+              value: $now
+          - emit: completed
+          - call: expireOpenSuggestions
+    on:
+      - type: intake.application_income.created
+        description: Evaluates the flags of the application's interview in progress again.
+        context:
+          - income: {from: intake/applications/incomes, where: {id: $this.subject}}
+        steps:
+          - call: processInterviewSuggestions
+      - type: intake.application_income.updated
+        description: Evaluates the flags of the application's interview in progress again.
+        context:
+          - income: {from: intake/applications/incomes, where: {id: $this.subject}}
+        steps:
+          - call: processInterviewSuggestions
+    procedures:
+      - id: processInterviewSuggestions
+        steps:
+          - forEach:
+              from: intake/applications/interviews
+              where: {applicationId: $income.applicationId, status: in_progress}
+              as: interview
+            do:
+              - call:
+                  operationId: processSuggestionsInterview
+                  parameters:
+                    - {name: applicationId, in: path, value: $interview.applicationId}
+                    - {name: interviewId, in: path, value: $interview.id}
+
+      # The household is read from the application's records, through the
+      # interviewFlagsInputs composition; only incomes and what outside records
+      # show are needed by the flags put to the worker here.
+      - id: suggestFlags
+        steps:
+          - call:
+              operationId: getInterviewFlagsInputs
+              parameters:
+                - {name: applicationId, in: path, value: $object.applicationId}
+            bind: $inputs
+          - evaluate: interviewFlags
+            inputs:
+              current: {incomes: $inputs.incomes}
+              verified: $inputs.verified
+            bind:
+              earned: flagged.earnedIncomeVaries
+              cash: flagged.cashOrSelfEmploymentIncome
+              payStub: flagged.incomeDiffersFromPayStub
+          - forEach: {in: $earned, as: id}
+            do:
+              - call: proposeFlag
+                with: {category: earned-income-varies, flag: flagged.earnedIncomeVaries, id: $id}
+          - forEach: {in: $cash, as: id}
+            do:
+              - call: proposeFlag
+                with: {category: cash-or-self-employment-income, flag: flagged.cashOrSelfEmploymentIncome, id: $id}
+          - forEach: {in: $payStub, as: correction}
+            do:
+              - call: proposeCorrection
+                with: {correction: $correction}
+          # A suggestion whose flag no longer finds its record has cleared.
+          - forEach:
+              from: decision-support/suggestions
+              where: {and: [{'==': [{var: metadata.intake.interviewId}, {var: object.id}]}, {in: [{var: status}, [proposed, refused]]}]}
+              as: open
+            do:
+              - if: >
+                  (open.metadata.intake.flag == 'flagged.earnedIncomeVaries' && !(open.metadata.intake.recordId in earned))
+                  || (open.metadata.intake.flag == 'flagged.cashOrSelfEmploymentIncome' && !(open.metadata.intake.recordId in cash))
+                  || (open.metadata.intake.flag == 'flagged.incomeDiffersFromPayStub' && !payStub.exists(c, c.id == open.metadata.intake.recordId))
+                then:
+                  - call: expireSuggestionOf
+                    with: {id: $open.id}
+          - set:
+              field: suggestionsProcessedAt
+              value: $now
+
+      # One suggestion per procedure: a failed call ends the procedure it's
+      # in, so one already open, or dismissed, stops only its own proposal.
+      - id: proposeFlag
+        parameters: [category, flag, id]
+        steps:
+          - call:
+              operationId: createSuggestion
+              body:
+                kind: informing
+                category: $params.category
+                subjectType: application_income
+                subjectId: $params.id
+                metadata:
+                  intake: {interviewId: $object.id, flag: $params.flag, recordId: $params.id}
+            onFailure: {then: []}
+
+      # A flag that knows the corrected figure proposes the change itself.
+      - id: proposeCorrection
+        parameters: [correction]
+        steps:
+          - call:
+              operationId: createSuggestion
+              body:
+                kind: operation
+                call:
+                  operationId: updateApplicationIncome
+                  parameters:
+                    - {name: applicationId, in: path, value: $object.applicationId}
+                    - {name: incomeId, in: path, value: $params.correction.id}
+                  body: {amount: $params.correction.amount, frequency: $params.correction.frequency}
+                metadata:
+                  intake: {interviewId: $object.id, flag: flagged.incomeDiffersFromPayStub, recordId: $params.correction.id}
+            onFailure: {then: []}
+
+      - id: expireOpenSuggestions
+        steps:
+          - forEach:
+              from: decision-support/suggestions
+              where: {and: [{'==': [{var: metadata.intake.interviewId}, {var: object.id}]}, {in: [{var: status}, [proposed, refused]]}]}
+              as: open
+            do:
+              - call: expireSuggestionOf
+                with: {id: $open.id}
+
+      - id: expireSuggestionOf
+        parameters: [id]
+        steps:
+          - call:
+              operationId: expireSuggestion
+              parameters:
+                - {name: suggestionId, in: path, value: $params.id}
+
 $defs:
   CloseRequest:
     type: object

@@ -308,6 +308,8 @@ components:
             Absent, it is uncategorized: something no category covers yet,
             found with `q=kind:informing -category:*`.
           enum:
+            - cash-or-self-employment-income
+            - earned-income-varies
             - missing-income
             - name-mismatch
         message:

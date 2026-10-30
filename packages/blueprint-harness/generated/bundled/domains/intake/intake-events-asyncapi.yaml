@@ -380,6 +380,9 @@ channels:
                             - under_review
                             - withdrawn
                             - closed
+                            - scheduled
+                            - in_progress
+                            - completed
                         submittedAt:
                           type:
                             - string
@@ -682,6 +685,9 @@ channels:
                                           - under_review
                                           - withdrawn
                                           - closed
+                                          - scheduled
+                                          - in_progress
+                                          - completed
                                       programsAppliedFor:
                                         type: array
                                         items:
@@ -1268,6 +1274,514 @@ channels:
                               type: string
                               format: uri-reference
                               description: Link to the related Application resource.
+  intake.application_income.created:
+    address: intake.application_income.created
+    messages:
+      IntakeApplicationIncomeCreated:
+        name: intake.application_income.created
+        summary: A ApplicationIncome was created. Carries the record as created.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.application_income.created
+                data:
+                  allOf:
+                    - type: object
+                      properties:
+                        memberId:
+                          type: string
+                          format: uuid
+                          description: The member who receives it.
+                          x-relationship:
+                            type: fk
+                            resource: ApplicationMember
+                            style: links-only
+                        source:
+                          type: string
+                          enum:
+                            - earned
+                            - self_employment
+                            - unearned
+                        amount:
+                          type: number
+                          minimum: 0
+                          description: The amount received each time it's paid, in dollars.
+                        frequency:
+                          type: string
+                          enum:
+                            - weekly
+                            - biweekly
+                            - semimonthly
+                            - monthly
+                            - irregular
+                          description: How often it's paid.
+                        paidInCash:
+                          type: boolean
+                        amountVaries:
+                          type: boolean
+                          description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            member:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related ApplicationMember resource.
+                    - type: object
+                      required:
+                        - id
+                        - applicationId
+                        - memberId
+                        - source
+                        - amount
+                        - frequency
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                        applicationId:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                          x-relationship:
+                            resource: Application
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            application:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related Application resource.
+  intake.application_income.updated:
+    address: intake.application_income.updated
+    messages:
+      IntakeApplicationIncomeUpdated:
+        name: intake.application_income.updated
+        summary: A ApplicationIncome was changed. Carries each changed field, before and after.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.application_income.updated
+                data:
+                  type: object
+                  description: |
+                    Payload for a CRUD-emitted updated event. Contains a field-level diff
+                    recording which fields changed and their before/after values.
+
+                    Emitted automatically by the mock server on every PATCH request.
+                    Consumers can react to specific field mutations without fetching the
+                    full resource.
+                  required:
+                    - changes
+                  properties:
+                    changes:
+                      type: array
+                      description: List of fields that changed, with before and after values.
+                      items:
+                        type: object
+                        description: A single field change recorded in an updated event.
+                        additionalProperties: false
+                        required:
+                          - field
+                          - before
+                          - after
+                        properties:
+                          field:
+                            type: string
+                            description: |
+                              Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.
+                          before:
+                            description: Value of the field before the update.
+                          after:
+                            description: Value of the field after the update.
+  intake.interview.created:
+    address: intake.interview.created
+    messages:
+      IntakeInterviewCreated:
+        name: intake.interview.created
+        summary: A Interview was created. Carries the record as created.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.interview.created
+                data:
+                  description: |
+                    An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                  allOf:
+                    - type: object
+                      properties:
+                        scheduledFor:
+                          type: string
+                          format: date
+                          description: The date the interview is scheduled for.
+                    - type: object
+                      required:
+                        - id
+                        - applicationId
+                        - status
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                        applicationId:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                          x-relationship:
+                            resource: Application
+                        status:
+                          type: string
+                          readOnly: true
+                          description: Where the interview stands.
+                          enum:
+                            - scheduled
+                            - in_progress
+                            - completed
+                        startedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        completedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        suggestionsProcessedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                          description: When the interview last evaluated its flags and proposed or expired suggestions for them.
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            application:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related Application resource.
   intake.application_member.created:
     address: intake.application_member.created
     messages:
@@ -1611,6 +2125,9 @@ channels:
                                 - under_review
                                 - withdrawn
                                 - closed
+                                - scheduled
+                                - in_progress
+                                - completed
                             programsAppliedFor:
                               type: array
                               items:
@@ -2328,6 +2845,224 @@ channels:
                 type:
                   type: string
                   const: intake.application.review-reminder
+  intake.interview.started:
+    address: intake.interview.started
+    messages:
+      IntakeInterviewStarted:
+        name: intake.interview.started
+        summary: The interview started.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.interview.started
+  intake.interview.completed:
+    address: intake.interview.completed
+    messages:
+      IntakeInterviewCompleted:
+        name: intake.interview.completed
+        summary: The interview finished.
+        payload:
+          allOf:
+            - allOf:
+                - allOf:
+                    - type: object
+                      required:
+                        - type
+                      properties:
+                        type:
+                          type: string
+                          description: |
+                            Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                        description:
+                          type: string
+                          description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                    - type: object
+                      properties:
+                        subject:
+                          type: string
+                          description: |
+                            CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                        causationid:
+                          type: string
+                          description: |
+                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        data:
+                          type: object
+                          additionalProperties: true
+                          description: Event-specific payload. Field values are value expressions resolved at emit time.
+                - type: object
+                  required:
+                    - specversion
+                    - id
+                    - source
+                    - subject
+                    - time
+                    - datacontenttype
+                  properties:
+                    specversion:
+                      type: string
+                      const: "1.0"
+                      description: CloudEvents specification version.
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique event identifier.
+                    source:
+                      type: string
+                      description: Domain base path that produced the event (e.g., /intake, /workflow).
+                      example: /intake
+                    subject:
+                      type: string
+                      format: uuid
+                      description: Entity ID the event pertains to.
+                    time:
+                      type: string
+                      format: date-time
+                      description: When the event occurred.
+                    datacontenttype:
+                      type: string
+                      const: application/json
+                      description: Media type of the event payload.
+                    traceparent:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                    causationid:
+                      type:
+                        - string
+                        - "null"
+                      format: uuid
+                      description: |
+                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    authid:
+                      type:
+                        - string
+                        - "null"
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                    authtype:
+                      type:
+                        - string
+                        - "null"
+                      enum:
+                        - user
+                        - service_account
+                        - api_key
+                        - system
+                        - unauthenticated
+                        - unknown
+                        - null
+                      description: |
+                        CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                    data:
+                      type: object
+                      description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+            - type: object
+              properties:
+                type:
+                  type: string
+                  const: intake.interview.completed
 components:
   messages:
     IntakeApplicationCreated:
@@ -2702,6 +3437,9 @@ components:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -3004,6 +3742,9 @@ components:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
                                       type: array
                                       items:
@@ -3581,6 +4322,505 @@ components:
                             type: string
                             format: uri-reference
                             description: Link to the related Application resource.
+    IntakeApplicationIncomeCreated:
+      name: intake.application_income.created
+      summary: A ApplicationIncome was created. Carries the record as created.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.application_income.created
+              data:
+                allOf:
+                  - type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                        description: The member who receives it.
+                        x-relationship:
+                          type: fk
+                          resource: ApplicationMember
+                          style: links-only
+                      source:
+                        type: string
+                        enum:
+                          - earned
+                          - self_employment
+                          - unearned
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: The amount received each time it's paid, in dollars.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                          - irregular
+                        description: How often it's paid.
+                      paidInCash:
+                        type: boolean
+                      amountVaries:
+                        type: boolean
+                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          member:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related ApplicationMember resource.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - memberId
+                      - source
+                      - amount
+                      - frequency
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+    IntakeApplicationIncomeUpdated:
+      name: intake.application_income.updated
+      summary: A ApplicationIncome was changed. Carries each changed field, before and after.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.application_income.updated
+              data:
+                type: object
+                description: |
+                  Payload for a CRUD-emitted updated event. Contains a field-level diff
+                  recording which fields changed and their before/after values.
+
+                  Emitted automatically by the mock server on every PATCH request.
+                  Consumers can react to specific field mutations without fetching the
+                  full resource.
+                required:
+                  - changes
+                properties:
+                  changes:
+                    type: array
+                    description: List of fields that changed, with before and after values.
+                    items:
+                      type: object
+                      description: A single field change recorded in an updated event.
+                      additionalProperties: false
+                      required:
+                        - field
+                        - before
+                        - after
+                      properties:
+                        field:
+                          type: string
+                          description: |
+                            Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.
+                        before:
+                          description: Value of the field before the update.
+                        after:
+                          description: Value of the field after the update.
+    IntakeInterviewCreated:
+      name: intake.interview.created
+      summary: A Interview was created. Carries the record as created.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.interview.created
+              data:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      suggestionsProcessedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                        description: When the interview last evaluated its flags and proposed or expired suggestions for them.
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
     IntakeApplicationMemberCreated:
       name: intake.application_member.created
       summary: A ApplicationMember was created. Carries the record as created.
@@ -3921,6 +5161,9 @@ components:
                               - under_review
                               - withdrawn
                               - closed
+                              - scheduled
+                              - in_progress
+                              - completed
                           programsAppliedFor:
                             type: array
                             items:
@@ -4620,6 +5863,218 @@ components:
               type:
                 type: string
                 const: intake.application.review-reminder
+    IntakeInterviewStarted:
+      name: intake.interview.started
+      summary: The interview started.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.interview.started
+    IntakeInterviewCompleted:
+      name: intake.interview.completed
+      summary: The interview finished.
+      payload:
+        allOf:
+          - allOf:
+              - allOf:
+                  - type: object
+                    required:
+                      - type
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                      description:
+                        type: string
+                        description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                  - type: object
+                    properties:
+                      subject:
+                        type: string
+                        description: |
+                          CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                      causationid:
+                        type: string
+                        description: |
+                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                      data:
+                        type: object
+                        additionalProperties: true
+                        description: Event-specific payload. Field values are value expressions resolved at emit time.
+              - type: object
+                required:
+                  - specversion
+                  - id
+                  - source
+                  - subject
+                  - time
+                  - datacontenttype
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents specification version.
+                  id:
+                    type: string
+                    format: uuid
+                    description: Unique event identifier.
+                  source:
+                    type: string
+                    description: Domain base path that produced the event (e.g., /intake, /workflow).
+                    example: /intake
+                  subject:
+                    type: string
+                    format: uuid
+                    description: Entity ID the event pertains to.
+                  time:
+                    type: string
+                    format: date-time
+                    description: When the event occurred.
+                  datacontenttype:
+                    type: string
+                    const: application/json
+                    description: Media type of the event payload.
+                  traceparent:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                  causationid:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
+                    description: |
+                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  authid:
+                    type:
+                      - string
+                      - "null"
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                  authtype:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - user
+                      - service_account
+                      - api_key
+                      - system
+                      - unauthenticated
+                      - unknown
+                      - null
+                    description: |
+                      CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                  data:
+                    type: object
+                    description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+          - type: object
+            properties:
+              type:
+                type: string
+                const: intake.interview.completed
   schemas:
     IntakeApplicationCreatedEvent:
       allOf:
@@ -4990,6 +6445,9 @@ components:
                         - under_review
                         - withdrawn
                         - closed
+                        - scheduled
+                        - in_progress
+                        - completed
                     submittedAt:
                       type:
                         - string
@@ -5292,6 +6750,9 @@ components:
                                       - under_review
                                       - withdrawn
                                       - closed
+                                      - scheduled
+                                      - in_progress
+                                      - completed
                                   programsAppliedFor:
                                     type: array
                                     items:
@@ -5860,6 +7321,496 @@ components:
                           type: string
                           format: uri-reference
                           description: Link to the related Application resource.
+    IntakeApplicationIncomeCreatedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application_income.created
+            data:
+              allOf:
+                - type: object
+                  properties:
+                    memberId:
+                      type: string
+                      format: uuid
+                      description: The member who receives it.
+                      x-relationship:
+                        type: fk
+                        resource: ApplicationMember
+                        style: links-only
+                    source:
+                      type: string
+                      enum:
+                        - earned
+                        - self_employment
+                        - unearned
+                    amount:
+                      type: number
+                      minimum: 0
+                      description: The amount received each time it's paid, in dollars.
+                    frequency:
+                      type: string
+                      enum:
+                        - weekly
+                        - biweekly
+                        - semimonthly
+                        - monthly
+                        - irregular
+                      description: How often it's paid.
+                    paidInCash:
+                      type: boolean
+                    amountVaries:
+                      type: boolean
+                      description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        member:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related ApplicationMember resource.
+                - type: object
+                  required:
+                    - id
+                    - applicationId
+                    - memberId
+                    - source
+                    - amount
+                    - frequency
+                    - createdAt
+                    - updatedAt
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                    applicationId:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                      x-relationship:
+                        resource: Application
+                    createdAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        application:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related Application resource.
+    IntakeApplicationIncomeUpdatedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application_income.updated
+            data:
+              type: object
+              description: |
+                Payload for a CRUD-emitted updated event. Contains a field-level diff
+                recording which fields changed and their before/after values.
+
+                Emitted automatically by the mock server on every PATCH request.
+                Consumers can react to specific field mutations without fetching the
+                full resource.
+              required:
+                - changes
+              properties:
+                changes:
+                  type: array
+                  description: List of fields that changed, with before and after values.
+                  items:
+                    type: object
+                    description: A single field change recorded in an updated event.
+                    additionalProperties: false
+                    required:
+                      - field
+                      - before
+                      - after
+                    properties:
+                      field:
+                        type: string
+                        description: |
+                          Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.
+                      before:
+                        description: Value of the field before the update.
+                      after:
+                        description: Value of the field after the update.
+    IntakeInterviewCreatedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.interview.created
+            data:
+              description: |
+                An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+              allOf:
+                - type: object
+                  properties:
+                    scheduledFor:
+                      type: string
+                      format: date
+                      description: The date the interview is scheduled for.
+                - type: object
+                  required:
+                    - id
+                    - applicationId
+                    - status
+                    - createdAt
+                    - updatedAt
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                    applicationId:
+                      type: string
+                      format: uuid
+                      readOnly: true
+                      x-relationship:
+                        resource: Application
+                    status:
+                      type: string
+                      readOnly: true
+                      description: Where the interview stands.
+                      enum:
+                        - scheduled
+                        - in_progress
+                        - completed
+                    startedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    completedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    suggestionsProcessedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                      description: When the interview last evaluated its flags and proposed or expired suggestions for them.
+                    createdAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      readOnly: true
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        application:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related Application resource.
     IntakeApplicationMemberCreatedEvent:
       allOf:
         - allOf:
@@ -6197,6 +8148,9 @@ components:
                             - under_review
                             - withdrawn
                             - closed
+                            - scheduled
+                            - in_progress
+                            - completed
                         programsAppliedFor:
                           type: array
                           items:
@@ -6878,3 +8832,209 @@ components:
             type:
               type: string
               const: intake.application.review-reminder
+    IntakeInterviewStartedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.interview.started
+    IntakeInterviewCompletedEvent:
+      allOf:
+        - allOf:
+            - allOf:
+                - type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+                    description:
+                      type: string
+                      description: Human-readable annotation for state machine authors. Not a CloudEvents field.
+                - type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: |
+                        CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+                    causationid:
+                      type: string
+                      description: |
+                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                    data:
+                      type: object
+                      additionalProperties: true
+                      description: Event-specific payload. Field values are value expressions resolved at emit time.
+            - type: object
+              required:
+                - specversion
+                - id
+                - source
+                - subject
+                - time
+                - datacontenttype
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents specification version.
+                id:
+                  type: string
+                  format: uuid
+                  description: Unique event identifier.
+                source:
+                  type: string
+                  description: Domain base path that produced the event (e.g., /intake, /workflow).
+                  example: /intake
+                subject:
+                  type: string
+                  format: uuid
+                  description: Entity ID the event pertains to.
+                time:
+                  type: string
+                  format: date-time
+                  description: When the event occurred.
+                datacontenttype:
+                  type: string
+                  const: application/json
+                  description: Media type of the event payload.
+                traceparent:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+                causationid:
+                  type:
+                    - string
+                    - "null"
+                  format: uuid
+                  description: |
+                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                authid:
+                  type:
+                    - string
+                    - "null"
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+                authtype:
+                  type:
+                    - string
+                    - "null"
+                  enum:
+                    - user
+                    - service_account
+                    - api_key
+                    - system
+                    - unauthenticated
+                    - unknown
+                    - null
+                  description: |
+                    CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+                data:
+                  type: object
+                  description: Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.interview.completed

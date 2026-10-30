@@ -96,6 +96,9 @@
     {
       "type": "object",
       "required": [
+        "flagged.earnedIncomeVaries",
+        "flagged.cashOrSelfEmploymentIncome",
+        "flagged.incomeDiffersFromPayStub",
         "risks.earnedIncomeVaries",
         "risks.cashOrSelfEmploymentIncome",
         "risks.incomeChangedSincePrevious",
@@ -113,6 +116,347 @@
         "inconsistencies.utilitiesIncludedButBilled"
       ],
       "properties": {
+        "flagged.earnedIncomeVaries": {
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "complete"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "placeholder"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value, derived using one or more schema defaults."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "missing"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "missing"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — there is no value yet."
+                    },
+                    "missing": {
+                      "type": "array",
+                      "description": "Input paths required to resolve this fact.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "message"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — the fact could not be computed."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "The reason evaluation failed."
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "properties": {
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "flagged.cashOrSelfEmploymentIncome": {
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "complete"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "placeholder"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value, derived using one or more schema defaults."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "missing"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "missing"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — there is no value yet."
+                    },
+                    "missing": {
+                      "type": "array",
+                      "description": "Input paths required to resolve this fact.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "message"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — the fact could not be computed."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "The reason evaluation failed."
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "properties": {
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "flagged.incomeDiffersFromPayStub": {
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "complete"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "value"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "placeholder"
+                      ]
+                    },
+                    "value": {
+                      "description": "The computed value, derived using one or more schema defaults."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "missing"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "missing"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — there is no value yet."
+                    },
+                    "missing": {
+                      "type": "array",
+                      "description": "Input paths required to resolve this fact.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "state",
+                    "message"
+                  ],
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "value": {
+                      "type": "null",
+                      "description": "Always null — the fact could not be computed."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "The reason evaluation failed."
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "properties": {
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "frequency": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
         "risks.earnedIncomeVaries": {
           "allOf": [
             {

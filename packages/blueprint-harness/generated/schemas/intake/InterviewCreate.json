@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "scheduledFor": {
+      "type": "string",
+      "format": "date",
+      "description": "The date the interview is scheduled for."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InterviewCreate"
+}

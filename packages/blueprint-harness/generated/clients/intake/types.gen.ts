@@ -265,7 +265,7 @@ export type Application = {
     /**
      * Current lifecycle status of the application.
      */
-    status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+    status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
     /**
      * Timestamp when the application was formally submitted. Null until submitted.
      */
@@ -451,7 +451,7 @@ export type Application = {
             /**
              * Current lifecycle status of the application.
              */
-            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -857,6 +857,280 @@ export type IncomeVerificationList = {
     hasNext?: boolean;
 };
 
+export type ApplicationIncomeWritable = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related ApplicationMember resource.
+         */
+        member?: string;
+    };
+};
+
+export type ApplicationIncome = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related ApplicationMember resource.
+         */
+        member?: string;
+    };
+} & {
+    readonly id: string;
+    readonly applicationId: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Application resource.
+         */
+        application?: string;
+    };
+};
+
+export type ApplicationIncomeCreate = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related ApplicationMember resource.
+         */
+        member?: string;
+    };
+};
+
+export type ApplicationIncomeUpdate = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related ApplicationMember resource.
+         */
+        member?: string;
+    };
+};
+
+export type ApplicationIncomeList = {
+    items: Array<{
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
+};
+
+export type InterviewWritable = {
+    /**
+     * The date the interview is scheduled for.
+     */
+    scheduledFor?: string;
+};
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export type Interview = {
+    /**
+     * The date the interview is scheduled for.
+     */
+    scheduledFor?: string;
+} & {
+    readonly id: string;
+    readonly applicationId: string;
+    /**
+     * Where the interview stands.
+     */
+    status: 'scheduled' | 'in_progress' | 'completed';
+    readonly startedAt?: string;
+    readonly completedAt?: string;
+    /**
+     * When the interview last evaluated its flags and proposed or expired suggestions for them.
+     */
+    readonly suggestionsProcessedAt?: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Application resource.
+         */
+        application?: string;
+    };
+};
+
+export type InterviewCreate = {
+    /**
+     * The date the interview is scheduled for.
+     */
+    scheduledFor?: string;
+};
+
+export type InterviewList = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    items: Array<{
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
+};
+
 export type ApplicationList = {
     /**
      * A benefit application record, including server-managed fields.
@@ -1037,7 +1311,7 @@ export type ApplicationList = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -1223,7 +1497,7 @@ export type ApplicationList = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -1605,7 +1879,7 @@ export type ApplicationMember = {
         /**
          * Current lifecycle status of the application.
          */
-        status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -2016,7 +2290,7 @@ export type ApplicationMemberList = {
             /**
              * Current lifecycle status of the application.
              */
-            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -2788,6 +3062,141 @@ export type IncomeVerificationListWritable = {
          * For a pay stub, how often the pay it shows is paid.
          */
         frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
+};
+
+export type ApplicationIncomeWritableWritable = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+};
+
+export type ApplicationIncomeWritable2 = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+};
+
+export type ApplicationIncomeCreateWritable = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+};
+
+export type ApplicationIncomeUpdateWritable = {
+    /**
+     * The member who receives it.
+     */
+    memberId?: string;
+    source?: 'earned' | 'self_employment' | 'unearned';
+    /**
+     * The amount received each time it's paid, in dollars.
+     */
+    amount?: number;
+    /**
+     * How often it's paid.
+     */
+    frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+    paidInCash?: boolean;
+    /**
+     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+     */
+    amountVaries?: boolean;
+};
+
+export type ApplicationIncomeListWritable = {
+    items: Array<{
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext?: boolean;
+};
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export type InterviewWritable2 = {
+    /**
+     * The date the interview is scheduled for.
+     */
+    scheduledFor?: string;
+};
+
+export type InterviewListWritable = {
+    items: Array<{
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
     }>;
     total: number;
     limit: number;
@@ -3724,7 +4133,7 @@ export type ListApplicationsResponses = {
             /**
              * Current lifecycle status of the application.
              */
-            status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Timestamp when the application was formally submitted. Null until submitted.
              */
@@ -3910,7 +4319,7 @@ export type ListApplicationsResponses = {
                     /**
                      * Current lifecycle status of the application.
                      */
-                    status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                    status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                     /**
                      * Benefit programs the household is applying for.
                      */
@@ -4316,7 +4725,7 @@ export type CreateApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -4502,7 +4911,7 @@ export type CreateApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -4846,7 +5255,7 @@ export type GetApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -5032,7 +5441,7 @@ export type GetApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -5432,7 +5841,7 @@ export type UpdateApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -5618,7 +6027,7 @@ export type UpdateApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -6072,6 +6481,801 @@ export type GetIncomeVerificationResponses = {
 
 export type GetIncomeVerificationResponse = GetIncomeVerificationResponses[keyof GetIncomeVerificationResponses];
 
+export type ListApplicationIncomesData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+    };
+    url: '/applications/{applicationId}/incomes';
+};
+
+export type ListApplicationIncomesErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type ListApplicationIncomesError = ListApplicationIncomesErrors[keyof ListApplicationIncomesErrors];
+
+export type ListApplicationIncomesResponses = {
+    /**
+     * The incomes reported on this application.
+     */
+    200: {
+        items: Array<{
+            /**
+             * The member who receives it.
+             */
+            memberId?: string;
+            source?: 'earned' | 'self_employment' | 'unearned';
+            /**
+             * The amount received each time it's paid, in dollars.
+             */
+            amount?: number;
+            /**
+             * How often it's paid.
+             */
+            frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
+            /**
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+             */
+            amountVaries?: boolean;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related ApplicationMember resource.
+                 */
+                member?: string;
+            };
+        } & {
+            readonly id: string;
+            readonly applicationId: string;
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+        hasNext?: boolean;
+    };
+};
+
+export type ListApplicationIncomesResponse = ListApplicationIncomesResponses[keyof ListApplicationIncomesResponses];
+
+export type CreateApplicationIncomeData = {
+    body: {
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        [key: string]: unknown;
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/incomes';
+};
+
+export type CreateApplicationIncomeErrors = {
+    /**
+     * Bad request — validation failed
+     */
+    400: {
+        message?: string;
+    };
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Unprocessable entity — business rule validation failed
+     */
+    422: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type CreateApplicationIncomeError = CreateApplicationIncomeErrors[keyof CreateApplicationIncomeErrors];
+
+export type CreateApplicationIncomeResponses = {
+    /**
+     * Income reported.
+     */
+    201: {
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type CreateApplicationIncomeResponse = CreateApplicationIncomeResponses[keyof CreateApplicationIncomeResponses];
+
+export type GetApplicationIncomeData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        incomeId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/incomes/{incomeId}';
+};
+
+export type GetApplicationIncomeErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type GetApplicationIncomeError = GetApplicationIncomeErrors[keyof GetApplicationIncomeErrors];
+
+export type GetApplicationIncomeResponses = {
+    /**
+     * Income retrieved.
+     */
+    200: {
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type GetApplicationIncomeResponse = GetApplicationIncomeResponses[keyof GetApplicationIncomeResponses];
+
+export type UpdateApplicationIncomeData = {
+    body: {
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        [key: string]: unknown;
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        incomeId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/incomes/{incomeId}';
+};
+
+export type UpdateApplicationIncomeErrors = {
+    /**
+     * Bad request — validation failed
+     */
+    400: {
+        message?: string;
+    };
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Unprocessable entity — business rule validation failed
+     */
+    422: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type UpdateApplicationIncomeError = UpdateApplicationIncomeErrors[keyof UpdateApplicationIncomeErrors];
+
+export type UpdateApplicationIncomeResponses = {
+    /**
+     * Income updated.
+     */
+    200: {
+        /**
+         * The member who receives it.
+         */
+        memberId?: string;
+        source?: 'earned' | 'self_employment' | 'unearned';
+        /**
+         * The amount received each time it's paid, in dollars.
+         */
+        amount?: number;
+        /**
+         * How often it's paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+        paidInCash?: boolean;
+        /**
+         * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+         */
+        amountVaries?: boolean;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related ApplicationMember resource.
+             */
+            member?: string;
+        };
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type UpdateApplicationIncomeResponse = UpdateApplicationIncomeResponses[keyof UpdateApplicationIncomeResponses];
+
+export type ListApplicationInterviewsData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+    };
+    url: '/applications/{applicationId}/interviews';
+};
+
+export type ListApplicationInterviewsErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type ListApplicationInterviewsError = ListApplicationInterviewsErrors[keyof ListApplicationInterviewsErrors];
+
+export type ListApplicationInterviewsResponses = {
+    /**
+     * The interviews scheduled for this application.
+     */
+    200: {
+        /**
+         * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+         *
+         */
+        items: Array<{
+            /**
+             * The date the interview is scheduled for.
+             */
+            scheduledFor?: string;
+        } & {
+            readonly id: string;
+            readonly applicationId: string;
+            /**
+             * Where the interview stands.
+             */
+            status: 'scheduled' | 'in_progress' | 'completed';
+            readonly startedAt?: string;
+            readonly completedAt?: string;
+            /**
+             * When the interview last evaluated its flags and proposed or expired suggestions for them.
+             */
+            readonly suggestionsProcessedAt?: string;
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+        hasNext?: boolean;
+    };
+};
+
+export type ListApplicationInterviewsResponse = ListApplicationInterviewsResponses[keyof ListApplicationInterviewsResponses];
+
+export type CreateApplicationInterviewData = {
+    body: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interviews';
+};
+
+export type CreateApplicationInterviewErrors = {
+    /**
+     * Bad request — validation failed
+     */
+    400: {
+        message?: string;
+    };
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Unprocessable entity — business rule validation failed
+     */
+    422: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type CreateApplicationInterviewError = CreateApplicationInterviewErrors[keyof CreateApplicationInterviewErrors];
+
+export type CreateApplicationInterviewResponses = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    201: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type CreateApplicationInterviewResponse = CreateApplicationInterviewResponses[keyof CreateApplicationInterviewResponses];
+
+export type GetApplicationInterviewData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        interviewId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interviews/{interviewId}';
+};
+
+export type GetApplicationInterviewErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type GetApplicationInterviewError = GetApplicationInterviewErrors[keyof GetApplicationInterviewErrors];
+
+export type GetApplicationInterviewResponses = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    200: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type GetApplicationInterviewResponse = GetApplicationInterviewResponses[keyof GetApplicationInterviewResponses];
+
 export type ListApplicationMembersData = {
     body?: never;
     path: {
@@ -6368,7 +7572,7 @@ export type ListApplicationMembersResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -6713,7 +7917,7 @@ export type CreateApplicationMemberResponses = {
             /**
              * Current lifecycle status of the application.
              */
-            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -6952,7 +8156,7 @@ export type GetApplicationMemberResponses = {
             /**
              * Current lifecycle status of the application.
              */
-            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -7284,7 +8488,7 @@ export type UpdateApplicationMemberResponses = {
             /**
              * Current lifecycle status of the application.
              */
-            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -7572,7 +8776,7 @@ export type SubmitApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -7758,7 +8962,7 @@ export type SubmitApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -8128,7 +9332,7 @@ export type OpenApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -8314,7 +9518,7 @@ export type OpenApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -8693,7 +9897,7 @@ export type CloseApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -8879,7 +10083,7 @@ export type CloseApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -9249,7 +10453,7 @@ export type WithdrawApplicationResponses = {
         /**
          * Current lifecycle status of the application.
          */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
@@ -9435,7 +10639,7 @@ export type WithdrawApplicationResponses = {
                 /**
                  * Current lifecycle status of the application.
                  */
-                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed' | 'scheduled' | 'in_progress' | 'completed';
                 /**
                  * Benefit programs the household is applying for.
                  */
@@ -9531,6 +10735,405 @@ export type WithdrawApplicationResponses = {
 };
 
 export type WithdrawApplicationResponse = WithdrawApplicationResponses[keyof WithdrawApplicationResponses];
+
+export type StartInterviewData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        interviewId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interviews/{interviewId}/start';
+};
+
+export type StartInterviewErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type StartInterviewError = StartInterviewErrors[keyof StartInterviewErrors];
+
+export type StartInterviewResponses = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    200: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type StartInterviewResponse = StartInterviewResponses[keyof StartInterviewResponses];
+
+export type ProcessSuggestionsInterviewData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        interviewId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interviews/{interviewId}/process-suggestions';
+};
+
+export type ProcessSuggestionsInterviewErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ProcessSuggestionsInterviewError = ProcessSuggestionsInterviewErrors[keyof ProcessSuggestionsInterviewErrors];
+
+export type ProcessSuggestionsInterviewResponses = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    200: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type ProcessSuggestionsInterviewResponse = ProcessSuggestionsInterviewResponses[keyof ProcessSuggestionsInterviewResponses];
+
+export type CompleteInterviewData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        interviewId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/interviews/{interviewId}/complete';
+};
+
+export type CompleteInterviewErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type CompleteInterviewError = CompleteInterviewErrors[keyof CompleteInterviewErrors];
+
+export type CompleteInterviewResponses = {
+    /**
+     * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+     *
+     */
+    200: {
+        /**
+         * The date the interview is scheduled for.
+         */
+        scheduledFor?: string;
+    } & {
+        readonly id: string;
+        readonly applicationId: string;
+        /**
+         * Where the interview stands.
+         */
+        status: 'scheduled' | 'in_progress' | 'completed';
+        readonly startedAt?: string;
+        readonly completedAt?: string;
+        /**
+         * When the interview last evaluated its flags and proposed or expired suggestions for them.
+         */
+        readonly suggestionsProcessedAt?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type CompleteInterviewResponse = CompleteInterviewResponses[keyof CompleteInterviewResponses];
 
 export type GetApplicationSummaryData = {
     body?: never;

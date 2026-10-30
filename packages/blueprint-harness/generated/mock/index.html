@@ -137,7 +137,18 @@
   .op:hover { background: #f1f4f8; color: var(--ink); }
   .op.here { background: #eef4fb; color: var(--accent); font-weight: 600; }
   .steps { counter-reset: none; }
-  .op.step { padding: .34rem .45rem; font-size: .84rem; }
+  .op.step { padding: .34rem .45rem; font-size: .84rem; display: flex; gap: .2rem; align-items: baseline; }
+  /* A long title wraps under itself, not under its number. */
+  .op.step .n { flex: none; }
+  .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* A tour in sections — one workflow each — names each where it starts. */
+  .steps .section {
+    margin: .8rem 0 .2rem .45rem; font-size: .78rem; font-weight: 700; color: var(--ink);
+    line-height: 1.35;
+  }
+  .steps .section:first-child { margin-top: .2rem; }
+  #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
+  .panel .sectionline { margin: 0 0 .2rem; font-size: .8rem; font-weight: 600; color: var(--muted); }
   .op .n {
     font-family: var(--mono); font-size: .7rem; color: var(--faint);
     display: inline-block; min-width: 1.9rem;
@@ -200,6 +211,8 @@
   .pager .step-back:hover { color: var(--ink); border-color: #cfd6de; }
   /* Pushed right when it is the only one, so it sits where it always sits. */
   .pager .next-step { margin-left: auto; }
+  /* The steps either side's titles, however long, wrap inside their buttons. */
+  .pager button { max-width: 48%; text-align: left; line-height: 1.35; }
   .op .verb {
     font-family: var(--mono); font-size: .68rem; font-weight: 700;
     display: inline-block; min-width: 3.4rem; color: var(--faint);
@@ -1217,6 +1230,9 @@ const currentScenario = () => {
     ?? all[0] ?? null;
 };
 
+/** A section's name: its workflow's summary, or its id. */
+const sectionOf = (workflow) => workflow.summary ?? workflow.workflowId;
+
 /** Every step of a scenario, in order, across its workflows. */
 const scenarioSteps = (doc) => (doc.content.workflows ?? []).flatMap((workflow) =>
   (workflow.steps ?? []).map((step) => ({ workflow, step, key: `${workflow.workflowId}/${step.stepId}` })));
@@ -1334,13 +1350,17 @@ const renderTourNav = (nav, doc) => {
   const reached = entries.findIndex((entry) => !tourResults.get(entry.key)?.passed);
   const upTo = reached === -1 ? entries.length : reached + 1;
   const list = el('ol', '', 'ops steps');
+  const sectioned = (doc.content.workflows ?? []).length > 1;
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
+    if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
+      list.append(el('li', sectionOf(entry.workflow), 'section'));
+    }
     const item = el('li');
     const button = el('button', '', 'op step');
     const run = Boolean(tourResults.get(entry.key)?.passed);
     button.append(
       el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
-      el('span', describe(entry.step).title)
+      el('span', describe(entry.step).title, 'title')
     );
     if (tourStep === index) button.classList.add('here');
     button.onclick = () => {
@@ -1484,6 +1504,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   panel.id = `tour-step-${index}`;
 
   const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
+  if ((doc.content.workflows ?? []).length > 1) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
   panel.append(el('p', sending ? `${sending.method} ${sending.url}` : step.operationId, 'path'));
@@ -1598,8 +1619,11 @@ const renderTourStage = (stage, doc) => {
     again.onclick = () => { tourWhole = false; tourStep = 0; renderGroups(); renderStage(); };
     panel.append(again);
     stage.append(panel);
+    const sectioned = (doc.content.workflows ?? []).length > 1;
     for (const [index, entry] of entries.entries()) {
-      if (tourResults.has(entry.key)) stage.append(tourStepPanel(doc, entries, index, { live: false }));
+      if (!tourResults.has(entry.key)) continue;
+      if (sectioned && entry.workflow !== entries[index - 1]?.workflow) stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+      stage.append(tourStepPanel(doc, entries, index, { live: false }));
     }
     return;
   }

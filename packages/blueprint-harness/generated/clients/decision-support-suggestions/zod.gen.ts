@@ -43,7 +43,12 @@ export const zInformingSuggestionFields = z.intersection(z.unknown(), z.object({
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    category: z.optional(z.enum([
+        'cash-or-self-employment-income',
+        'earned-income-varies',
+        'missing-income',
+        'name-mismatch'
+    ])),
     message: z.optional(z.string().min(1))
 }));
 
@@ -106,7 +111,12 @@ export const zSuggestionCreate = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     })))
 ]);
@@ -156,7 +166,12 @@ export const zInformingSuggestionCreate = z.object({
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    category: z.optional(z.enum([
+        'cash-or-self-employment-income',
+        'earned-income-varies',
+        'missing-income',
+        'name-mismatch'
+    ])),
     message: z.optional(z.string().min(1))
 })));
 
@@ -225,7 +240,12 @@ export const zSuggestion = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),
@@ -314,7 +334,12 @@ export const zInformingSuggestion = z.object({
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    category: z.optional(z.enum([
+        'cash-or-self-employment-income',
+        'earned-income-varies',
+        'missing-income',
+        'name-mismatch'
+    ])),
     message: z.optional(z.string().min(1))
 }))).and(z.object({
     id: z.uuid().readonly(),
@@ -395,7 +420,12 @@ export const zSuggestionList = z.object({
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            category: z.optional(z.enum([
+                'cash-or-self-employment-income',
+                'earned-income-varies',
+                'missing-income',
+                'name-mismatch'
+            ])),
             message: z.optional(z.string().min(1))
         }))).and(z.object({
             id: z.uuid().readonly(),
@@ -475,7 +505,12 @@ export const zSuggestionWritable = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     })))
 ]);
@@ -523,7 +558,12 @@ export const zInformingSuggestionWritable = z.object({
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    category: z.optional(z.enum([
+        'cash-or-self-employment-income',
+        'earned-income-varies',
+        'missing-income',
+        'name-mismatch'
+    ])),
     message: z.optional(z.string().min(1))
 })));
 
@@ -563,7 +603,12 @@ export const zSuggestionListWritable = z.object({
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            category: z.optional(z.enum([
+                'cash-or-self-employment-income',
+                'earned-income-varies',
+                'missing-income',
+                'name-mismatch'
+            ])),
             message: z.optional(z.string().min(1))
         })))])),
     total: z.int().gte(0),
@@ -657,7 +702,12 @@ export const zListSuggestionsResponse = z.object({
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            category: z.optional(z.enum([
+                'cash-or-self-employment-income',
+                'earned-income-varies',
+                'missing-income',
+                'name-mismatch'
+            ])),
             message: z.optional(z.string().min(1))
         }))).and(z.object({
             id: z.uuid().readonly(),
@@ -719,7 +769,12 @@ export const zCreateSuggestionData = z.object({
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            category: z.optional(z.enum([
+                'cash-or-self-employment-income',
+                'earned-income-varies',
+                'missing-income',
+                'name-mismatch'
+            ])),
             message: z.optional(z.string().min(1))
         })))
     ]),
@@ -797,7 +852,12 @@ export const zCreateSuggestionResponse = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),
@@ -893,7 +953,12 @@ export const zGetSuggestionResponse = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),
@@ -1004,7 +1069,12 @@ export const zAcceptSuggestionResponse = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),
@@ -1102,7 +1172,12 @@ export const zDismissSuggestionResponse = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),
@@ -1198,7 +1273,12 @@ export const zExpireSuggestionResponse = z.union([
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        category: z.optional(z.enum([
+            'cash-or-self-employment-income',
+            'earned-income-varies',
+            'missing-income',
+            'name-mismatch'
+        ])),
         message: z.optional(z.string().min(1))
     }))).and(z.object({
         id: z.uuid().readonly(),

@@ -76,6 +76,9 @@ export type InterviewFlagsInputs = {
 };
 
 export type InterviewFlagsResult = {
+  'flagged.earnedIncomeVaries': FactNode<unknown>;
+  'flagged.cashOrSelfEmploymentIncome': FactNode<unknown>;
+  'flagged.incomeDiffersFromPayStub': FactNode<unknown>;
   'risks.earnedIncomeVaries': FactNode<boolean>;
   'risks.cashOrSelfEmploymentIncome': FactNode<boolean>;
   'risks.incomeChangedSincePrevious': FactNode<boolean>;

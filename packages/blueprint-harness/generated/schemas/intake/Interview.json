@@ -1,0 +1,87 @@
+{
+  "description": "An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.\n",
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "scheduledFor": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the interview is scheduled for."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "id",
+        "applicationId",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "applicationId": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "status": {
+          "type": "string",
+          "readOnly": true,
+          "description": "Where the interview stands.",
+          "enum": [
+            "scheduled",
+            "in_progress",
+            "completed"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "suggestionsProcessedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When the interview last evaluated its flags and proposed or expired suggestions for them."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "application": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Application resource."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/Interview"
+}

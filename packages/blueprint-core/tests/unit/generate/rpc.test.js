@@ -106,6 +106,7 @@ test('buildOperationId — creates correct operation ID', () => {
   assert.strictEqual(buildOperationId('claim', 'Task'), 'claimTask');
   assert.strictEqual(buildOperationId('complete', 'Task'), 'completeTask');
   assert.strictEqual(buildOperationId('release', 'Task'), 'releaseTask');
+  assert.strictEqual(buildOperationId('process-suggestions', 'Interview'), 'processSuggestionsInterview');
 });
 
 // =============================================================================

@@ -412,7 +412,50 @@ rulesets:
         type: boolean
         description: The household says utilities are included in the rent, but reports a utility bill.
         expression: current.utilitiesIncludedInRent && current.expenses.exists(e, e.type == 'utilities')
+      - path: flagged.earnedIncomeVaries
+        description: The incomes behind risks.earnedIncomeVaries.
+        expression: |
+          current.incomes.filter(i, i.source == 'earned'
+            && ((has(i.amountVaries) && i.amountVaries) || i.frequency == 'irregular')).map(i, i.id)
+      - path: flagged.cashOrSelfEmploymentIncome
+        description: The incomes behind risks.cashOrSelfEmploymentIncome.
+        expression: |
+          current.incomes.filter(i, i.source == 'self_employment' || (has(i.paidInCash) && i.paidInCash)).map(i, i.id)
+      - path: flagged.incomeDiffersFromPayStub
+        description: |
+          Each income behind inconsistencies.incomeDiffersFromPayStub, with what its verified pay stub shows — the corrected figure.
+        expression: |
+          verified.filter(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
+            && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
+              && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - constants.differenceAllowed)
+                  || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + constants.differenceAllowed))))
+          .map(v, {'id': v.incomeId, 'amount': v.amount, 'frequency': v.frequency})
     outputs:
+      flagged.earnedIncomeVaries:
+        type: array
+        items:
+          type: string
+          x-relationship:
+            resource: ApplicationIncome
+      flagged.cashOrSelfEmploymentIncome:
+        type: array
+        items:
+          type: string
+          x-relationship:
+            resource: ApplicationIncome
+      flagged.incomeDiffersFromPayStub:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              x-relationship:
+                resource: ApplicationIncome
+            amount:
+              type: number
+            frequency:
+              type: string
       risks.earnedIncomeVaries:
         type: boolean
       risks.cashOrSelfEmploymentIncome:

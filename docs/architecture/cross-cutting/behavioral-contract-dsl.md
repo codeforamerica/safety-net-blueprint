@@ -223,9 +223,25 @@ each, from inside the `forEach`:
       with: {id: $id}            # read where the call stands: this item's id
 ```
 
-Only a call to an operation reports a failure. Validation refuses `onFailure`
-on a call by method and path, or on a call to a procedure, where it would never
-run.
+`bind` keeps what the call answered for the steps after it: the whole body as
+one variable, or fields of it as variables of their own. An interview reads the
+household this way before evaluating its flags:
+
+```yaml
+- call:
+    operationId: getInterviewFlagsInputs
+    parameters:
+      - {name: applicationId, in: path, value: $object.applicationId}
+  bind: $inputs
+- evaluate: interviewFlags
+  inputs:
+    current: {incomes: $inputs.incomes}    # an input built from what was read
+    verified: $inputs.verified
+```
+
+Only a call to an operation reports a failure or answers. Validation refuses
+`onFailure` or `bind` on a call by method and path, or on a call to a
+procedure, where it would never run.
 
 The events a call causes name, as their `causationid`, the action's first event
 — or, in a reaction, the event reacted to.

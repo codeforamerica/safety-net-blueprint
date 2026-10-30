@@ -151,15 +151,16 @@ function* walkCallStrings(steps) {
 }
 
 /**
- * Steps with an `onFailure:` that can never run: on a call by method and path,
- * or to a procedure. Only a call to an operation — `call: { operationId }` or
- * a `$` value holding one — reports a failure; the others are logged.
+ * Steps with an `onFailure:` that can never run, or a `bind:` that never binds:
+ * on a call by method and path, or to a procedure. Only a call to an operation
+ * — `call: { operationId }` or a `$` value holding one — reports a failure and
+ * answers with a response; the others are logged, and written after the steps.
  */
 function* walkUnreachableFailures(steps) {
   if (!Array.isArray(steps)) return;
   for (const step of steps) {
     if (!step || typeof step !== 'object') continue;
-    if (step.onFailure && step.call !== undefined) {
+    if ((step.onFailure || step.bind) && step.call !== undefined) {
       const operation = typeof step.call === 'string' ? step.call.startsWith('$') : 'operationId' in (step.call ?? {});
       if (!operation) yield step;
     }
@@ -174,16 +175,27 @@ function* walkUnreachableFailures(steps) {
   }
 }
 
-/** The error for an onFailure: that can never run, naming its call. */
+/** The errors for an onFailure: that can never run and a bind: that never binds, naming the call. */
 function unreachableFailure(step, path) {
   const named = typeof step.call === 'string'
     ? `procedure "${step.call}"`
     : ['POST', 'PATCH', 'GET', 'DELETE'].filter((m) => m in step.call).map((m) => `${m} ${step.call[m]}`)[0] ?? 'this call';
-  return {
-    rule: 'onfailure-never-runs',
-    message: `onFailure: on the call to ${named} never runs — only a call to an operation, by operationId or a $ value holding one, reports a failure. Call the operation by its operationId to handle one.`,
-    path,
-  };
+  const errors = [];
+  if (step.onFailure) {
+    errors.push({
+      rule: 'onfailure-never-runs',
+      message: `onFailure: on the call to ${named} never runs — only a call to an operation, by operationId or a $ value holding one, reports a failure. Call the operation by its operationId to handle one.`,
+      path,
+    });
+  }
+  if (step.bind) {
+    errors.push({
+      rule: 'bind-never-binds',
+      message: `bind: on the call to ${named} never binds — only a call to an operation, by operationId or a $ value holding one, answers with a response the steps after it can read. Call the operation by its operationId to bind what it answers.`,
+      path,
+    });
+  }
+  return errors;
 }
 
 function* walkSetFields(steps) {
@@ -495,7 +507,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: `${ap}.steps` });
         }
       }
-      for (const step of walkUnreachableFailures(action.steps)) errors.push(unreachableFailure(step, `${ap}.steps`));
+      for (const step of walkUnreachableFailures(action.steps)) errors.push(...unreachableFailure(step, `${ap}.steps`));
     }
 
     // A governed resource's guards are checked as an action's are.
@@ -513,7 +525,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: ep });
         }
       }
-      for (const step of walkUnreachableFailures(event.steps)) errors.push(unreachableFailure(step, ep));
+      for (const step of walkUnreachableFailures(event.steps)) errors.push(...unreachableFailure(step, ep));
       // With transition:, the event's subject is one of this machine's records,
       // looked up as $object. Without it, an event about another resource gives
       // the machine no record of its own, so there is no $object: the record
@@ -554,7 +566,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
       // A procedure of one step is that step, written on the procedure.
       for (const step of walkUnreachableFailures(proc.steps || proc.then ? procSteps : [proc])) {
-        errors.push(unreachableFailure(step, pp));
+        errors.push(...unreachableFailure(step, pp));
       }
       for (const callId of walkCallStrings(procSteps)) {
         if (!callableIds.has(callId)) {

@@ -125,6 +125,75 @@
         </tr></tbody>
           </table>
         </div>
+    </section><section id="machine-interview" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Interview</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;white-space:nowrap;">scheduled</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Scheduled, not yet started.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">in_progress</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Under way; its flags are evaluated as the household's incomes change.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">completed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Finished; its suggestions still open are expired. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-start">
+          <td><strong style="color:#2B1A78;">start</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-interviews-interviewId-start" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Starts the interview and puts its flags to the worker.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">scheduled</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets startedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.interview.started" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.interview.started</a></li><li>suggestFlags</li></ul></td>
+        </tr><tr id="action-process-suggestions">
+          <td><strong style="color:#2B1A78;">process-suggestions</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-interviews-interviewId-process-suggestions" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>suggestFlags</li></ul></td>
+        </tr><tr id="action-complete">
+          <td><strong style="color:#2B1A78;">complete</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-interviews-interviewId-complete" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Finishes the interview and expires its suggestions still open.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">in_progress</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">completed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets completedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.interview.completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.interview.completed</a></li><li>expireOpenSuggestions</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>intake.application_income.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>processInterviewSuggestions</li></ul></td>
+        </tr><tr>
+          <td><code>intake.application_income.updated</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>processInterviewSuggestions</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
     </section></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

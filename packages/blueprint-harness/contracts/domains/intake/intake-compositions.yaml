@@ -40,6 +40,12 @@ compositions:
         resource: income-verifications
         bind: applicationId
         fields: [kind, memberId, incomeId, period, amount, frequency]
+      # The incomes reported so far, as records — what an interview's state
+      # machine reads as `current.incomes` (intake-state-machine.yaml).
+      incomes:
+        resource: incomes
+        bind: applicationId
+        fields: [id, memberId, source, amount, frequency, paidInCash, amountVaries]
 
   # applicationReview — sectionView with a state resource, pared down from the
   # safety-net composition of the same name. This is the most involved

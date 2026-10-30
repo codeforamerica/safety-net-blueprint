@@ -63,6 +63,9 @@ components:
         - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
         - type: object
           required:
+            - flagged.earnedIncomeVaries
+            - flagged.cashOrSelfEmploymentIncome
+            - flagged.incomeDiffersFromPayStub
             - risks.earnedIncomeVaries
             - risks.cashOrSelfEmploymentIncome
             - risks.incomeChangedSincePrevious
@@ -79,6 +82,49 @@ components:
             - inconsistencies.earnedIncomeWithoutJob
             - inconsistencies.utilitiesIncludedButBilled
           properties:
+            flagged.earnedIncomeVaries:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: string
+                            x-relationship:
+                              resource: ApplicationIncome
+                        - type: "null"
+            flagged.cashOrSelfEmploymentIncome:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: string
+                            x-relationship:
+                              resource: ApplicationIncome
+                        - type: "null"
+            flagged.incomeDiffersFromPayStub:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                x-relationship:
+                                  resource: ApplicationIncome
+                              amount:
+                                type: number
+                              frequency:
+                                type: string
+                        - type: "null"
             risks.earnedIncomeVaries:
               allOf:
                 - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact

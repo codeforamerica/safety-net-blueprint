@@ -152,6 +152,85 @@ export const zInterviewFlagsResponse = z.record(z.string(), z.union([
         message: z.string()
     })
 ])).and(z.object({
+    'flagged.earnedIncomeVaries': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.string()),
+            z.null()
+        ]))
+    })),
+    'flagged.cashOrSelfEmploymentIncome': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.string()),
+            z.null()
+        ]))
+    })),
+    'flagged.incomeDiffersFromPayStub': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.object({
+                id: z.optional(z.string()),
+                amount: z.optional(z.number()),
+                frequency: z.optional(z.string())
+            })),
+            z.null()
+        ]))
+    })),
     'risks.earnedIncomeVaries': z.intersection(z.union([
         z.object({
             state: z.enum(['complete']),
@@ -680,6 +759,85 @@ export const zEvaluateInterviewFlagsResponse = z.record(z.string(), z.union([
         message: z.string()
     })
 ])).and(z.object({
+    'flagged.earnedIncomeVaries': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.string()),
+            z.null()
+        ]))
+    })),
+    'flagged.cashOrSelfEmploymentIncome': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.string()),
+            z.null()
+        ]))
+    })),
+    'flagged.incomeDiffersFromPayStub': z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.array(z.object({
+                id: z.optional(z.string()),
+                amount: z.optional(z.number()),
+                frequency: z.optional(z.string())
+            })),
+            z.null()
+        ]))
+    })),
     'risks.earnedIncomeVaries': z.intersection(z.union([
         z.object({
             state: z.enum(['complete']),

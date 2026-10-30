@@ -5,7 +5,9 @@
 > (`blueprint-core/base-contracts/domains/decision-support/`). Proposing and
 > reading them is built, with the proposal checked against the contracts, and
 > so are accepting, dismissing and expiring them, and refusing a proposal that
-> repeats one open or dismissed.
+> repeats one open or dismissed. The harness's interview puts its flags to the
+> worker as suggestions, end to end, walked through in
+> `blueprint-harness/contracts/scenarios/interview-suggestions.arazzo.yaml`.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -397,6 +399,12 @@ procedures:
   split.
 - **Evaluating again as the record changes** proposes nothing new for a flag
   still open, and nothing for one a person dismissed.
+- **The harness's interview** (`blueprint-harness/contracts/domains/intake/intake-state-machine.yaml`)
+  does all of this, and also expires a suggestion whose flag cleared and what's
+  left open when it completes. It reads the household from the application's
+  records with a call's `bind:`, and a flag that knows the corrected figure —
+  income that differs from its pay stub — proposes the change itself, as an
+  operation suggestion.
 
 ## Customization
 

@@ -11,4 +11,5 @@ See also: [Published events](events.md)
 | [Communication — Transcript](communication.md) | `recording`, `paused`, `closed` |
 | [Decision Support — Suggestion](decision-support.md) | `proposed`, `accepted`, `refused`, `dismissed`, `expired` |
 | [Eligibility — Determination](eligibility.md) | `pending`, `completed` |
-| [Intake — Application](intake.md) | `draft`, `submitted`, `under_review`, `withdrawn`, `closed` |
+| [Intake — Application](intake.md#application) | `draft`, `submitted`, `under_review`, `withdrawn`, `closed` |
+| [Intake — Interview](intake.md#interview) | `scheduled`, `in_progress`, `completed` |

@@ -608,9 +608,11 @@ function* walkSteps(steps, resource, context, store, pending) {
         console.warn(`evaluate: ruleset "${step.evaluate}" not found in rules index — skipping`);
         continue;
       }
+      // An input may be an object of value expressions, resolved as a call's
+      // body is — a household assembled from the records it's read from.
       const inputs = {};
       for (const [key, val] of Object.entries(step.inputs || {})) {
-        inputs[key] = resolveValue(val, context);
+        inputs[key] = resolveBodyValue(val, context);
       }
       const nodes = evaluateRules(graph, inputs);
       if (step.bind) {
@@ -760,8 +762,30 @@ export async function applyStepsInOrder(steps, resource, context, store, perform
       walker.return();
       return { ...pending, failed: { step, call, outcome } };
     }
+    bindOutcome(step, at, outcome);
   }
   return pending;
+}
+
+/**
+ * Bind what a call to an operation answered, for the steps after it: the
+ * whole response body to one name (`bind: $inputs`), or chosen fields of it
+ * to names of their own (`bind: { asOf: interviewDate }`).
+ *
+ * @param {Object} step - The call step
+ * @param {Object} context - The context the steps after it read
+ * @param {{ body?: * }} outcome - The call's successful outcome
+ */
+function bindOutcome(step, context, outcome) {
+  if (!step.bind) return;
+  if (!context.entities) context.entities = {};
+  if (typeof step.bind === 'string') {
+    context.entities[step.bind.replace(/^\$/, '')] = outcome.body ?? null;
+    return;
+  }
+  for (const [alias, field] of Object.entries(step.bind)) {
+    context.entities[alias] = resolveDotPath(outcome.body, field.replace(/^\$/, '')) ?? null;
+  }
 }
 
 /**
@@ -796,7 +820,10 @@ export function applyStepsWithCalls(steps, resource, context, store, perform) {
         ? perform(call, step)
         : Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: `call: ${step.call} names no operation call` } });
       return outcome.then((result) => {
-        if (result.ok) return advance();
+        if (result.ok) {
+          bindOutcome(step, at, result);
+          return advance();
+        }
         walker.return();
         return { ...pending, failed: { step, call, outcome: result } };
       });

@@ -536,19 +536,21 @@ $defs:
   #       with:
   #         param: value
   #
-  # CALL with bind: (string form) — bind the whole HTTP response to a variable:
+  # CALL with bind: (string form) — bind the whole response body to a variable:
   #     - call:
-  #         POST: intake/assessments
-  #         body:
-  #           applicationId: $object.id
-  #       bind: $assessment
+  #         operationId: getInterviewFlagsInputs
+  #         parameters:
+  #           - {name: applicationId, in: path, value: $object.applicationId}
+  #       bind: $inputs
   #
-  # CALL with bind: (map form) — bind selected response fields to named variables:
+  # CALL with bind: (map form) — bind fields of the response to variables:
   #     - call:
-  #         POST: intake/assessments
+  #         operationId: getInterviewFlagsInputs
+  #         parameters:
+  #           - {name: applicationId, in: path, value: $object.applicationId}
   #       bind:
-  #         eligible: $eligible
-  #         reason: $reason
+  #         asOf: asOf
+  #         verified: verified
   #
   # CALL (object form) — POST/PATCH/GET/DELETE to an API path:
   #   POST to a collection path — creates a new resource:
@@ -801,10 +803,12 @@ $defs:
         enum: [system, caller]
         default: system
         description: >
-          Who a call to an operation is made as. `system`, the default, is the
-          machine's own write. `caller` sends it through the API as the person
-          or service that triggered this step, under the operation's own
-          permissions, validation and guards — as making it by hand would be.
+          Who a call to an operation is made as. Both go through the API, under
+          the operation's validation and guards. `system`, the default, is the
+          machine's own call: it skips only role checks, and its events name
+          the system. `caller` is made as the person or service that triggered
+          this step, under the operation's own permissions — as making it by
+          hand would be.
       onFailure:
         type: object
         additionalProperties: false
@@ -828,9 +832,11 @@ $defs:
         description: Arguments passed to a named procedure (string call form only).
       bind:
         description: >
-          Bind the HTTP response for use in subsequent steps.
-          String form binds the whole response to one variable.
-          Map form binds selected response fields to named variables.
+          Bind what a call to an operation answered, for the steps after it.
+          String form binds the whole response body to one variable; map form
+          binds fields of it, by dotted path, to variables of their own. Only
+          a call to an operation answers: bind on a call by method and path,
+          or to a procedure, is a validation error.
         oneOf:
           - type: string
             description: Variable name to bind the entire HTTP response to.
@@ -859,7 +865,9 @@ $defs:
         description: >
           Map of input names to value expressions. Keys must match the
           ruleset's input SchemaMap keys; values are state machine value
-          expressions ($object.field, $alias.field, $request.field, etc.).
+          expressions ($object.field, $alias.field, $request.field, etc.),
+          or objects whose fields are, resolved as a call's body is — an
+          input assembled from the records it's read from.
         additionalProperties: true
       bind:
         description: >

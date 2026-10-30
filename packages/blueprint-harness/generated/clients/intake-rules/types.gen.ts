@@ -238,6 +238,115 @@ export type InterviewFlagsResponse = {
         message: string;
     };
 } & {
+    'flagged.earnedIncomeVaries': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: Array<string> | null;
+    };
+    'flagged.cashOrSelfEmploymentIncome': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: Array<string> | null;
+    };
+    'flagged.incomeDiffersFromPayStub': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: Array<{
+            id?: string;
+            amount?: number;
+            frequency?: string;
+        }> | null;
+    };
     'risks.earnedIncomeVaries': ({
         state: 'complete';
         /**
@@ -1048,6 +1157,115 @@ export type EvaluateInterviewFlagsResponses = {
             message: string;
         };
     } & {
+        'flagged.earnedIncomeVaries': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: Array<string> | null;
+        };
+        'flagged.cashOrSelfEmploymentIncome': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: Array<string> | null;
+        };
+        'flagged.incomeDiffersFromPayStub': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: Array<{
+                id?: string;
+                amount?: number;
+                frequency?: string;
+            }> | null;
+        };
         'risks.earnedIncomeVaries': ({
             state: 'complete';
             /**

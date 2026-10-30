@@ -1,0 +1,1173 @@
+# An interview whose flags become suggestions, and everything a suggestion
+# does on the way: proposing, refusing duplicates, accepting with an edit,
+# failing and retrying, dismissing, clearing, and expiring. Each step's first
+# line is its title in the page, and its bullets are what the page shows under
+# What to notice.
+arazzo: 1.0.1
+info:
+  title: An interview's suggestions
+  version: 1.0.0
+  x-domain: intake
+  description: |
+    A caseworker interviews Rosa about her household's income. As they talk, the system points out things worth asking about, and an AI assistant listening in suggests fixes to her record. The caseworker decides what to do with each one.
+
+    - When the interview starts, the system checks Rosa's incomes and flags the ones that often turn out wrong: wages that change week to week, tips paid in cash, self-employment income. Each flag appears as a suggestion for the caseworker.
+    - Rosa's pay stub shows a higher salary than she reported, so the system suggests correcting it, and the caseworker accepts the correction.
+    - The AI assistant suggests fixing Rosa's first name. When it suggests the same fix again, it's turned away. The caseworker accepts it with the spelling Rosa gives.
+    - A fix the record won't take is turned down, and the caseworker tries again.
+    - The caseworker dismisses a flag, saying why, and it doesn't come back.
+    - When Rosa explains an income was a gift, not self-employment, its flag goes away on its own.
+    - When the interview ends, whatever is still waiting is closed out.
+sourceDescriptions:
+  # Relative to the resolved contract set, where the framework's documents sit
+  # under base/.
+  - name: intake
+    url: ../domains/intake/intake-openapi.yaml
+    type: openapi
+  - name: suggestions
+    url: ../base/domains/decision-support/decision-support-suggestions-openapi.yaml
+    type: openapi
+  - name: registries
+    url: ../base/domains/platform/platform-registries-openapi.yaml
+    type: openapi
+  - name: events
+    url: ../base/domains/platform/platform-events-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    worker:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+    assistant:
+      name: X-Caller-Id
+      in: header
+      value: assistant-1
+    application:
+      name: applicationId
+      in: path
+      value: 11111111-1111-4111-8111-111111111111
+workflows:
+  - workflowId: household
+    summary: Rosa's household
+    steps:
+      - stepId: addRosa
+        description: |
+          Add Rosa
+
+          - A household member is a record of its own under the application, with an id a suggestion can point at.
+        operationId: $sourceDescriptions.intake.createApplicationMember
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {firstName: Rosa, lastName: Diaz, relationship: self}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: reportWages
+        description: |
+          Add her wages, which change week to week
+
+          - Incomes are records under the application too, pared down from safety-net's.
+          - `amountVaries` is what the interview's earned-income flag looks for.
+        operationId: $sourceDescriptions.intake.createApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {memberId: $steps.addRosa.outputs.id, source: earned, amount: 300, frequency: weekly, amountVaries: true}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: reportTips
+        description: |
+          Add her cash tips
+
+          - Varying and paid in cash, so two flags will find this one income.
+        operationId: $sourceDescriptions.intake.createApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {memberId: $steps.addRosa.outputs.id, source: earned, amount: 120, frequency: weekly, paidInCash: true, amountVaries: true}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: reportSideIncome
+        description: |
+          Add her self-employment income
+        operationId: $sourceDescriptions.intake.createApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {memberId: $steps.addRosa.outputs.id, source: self_employment, amount: 400, frequency: monthly}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: reportSalary
+        description: |
+          Add her monthly salary
+        operationId: $sourceDescriptions.intake.createApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {memberId: $steps.addRosa.outputs.id, source: earned, amount: 1100, frequency: monthly}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: recordPayStub
+        description: |
+          Record a pay stub showing a higher salary
+
+          - The verified figure differs from what was reported by more than the ruleset's allowed difference, so a flag will find the salary, and knows the corrected amount.
+        operationId: $sourceDescriptions.intake.createIncomeVerification
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {kind: pay_stub, memberId: $steps.addRosa.outputs.id, incomeId: $steps.reportSalary.outputs.id, period: '2026-10-15', amount: 1250, frequency: monthly}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: scheduleInterview
+        description: |
+          Schedule the interview
+
+          - An interview starts `scheduled`, the state machine's initial state.
+        operationId: $sourceDescriptions.intake.createApplicationInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload: {scheduledFor: '2026-10-30'}
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'scheduled'
+        outputs:
+          id: $response.body#/id
+
+      - stepId: changeBeforeInterview
+        description: |
+          Change her wages before the interview
+
+          - The interview reacts to an income changing only while it's in progress, so this proposes nothing.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: $steps.reportWages.outputs.id
+        requestBody:
+          payload: {amount: 310}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: nothingBeforeInterview
+        description: |
+          Nothing is flagged yet
+
+          - Suggestions carry the interview in `metadata.intake.interviewId`, which search reaches into.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.interviewId:{$steps.scheduleInterview.outputs.id}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 0
+    outputs:
+      addRosa: $steps.addRosa.outputs.id
+      reportSalary: $steps.reportSalary.outputs.id
+      reportSideIncome: $steps.reportSideIncome.outputs.id
+      reportTips: $steps.reportTips.outputs.id
+      reportWages: $steps.reportWages.outputs.id
+      scheduleInterview: $steps.scheduleInterview.outputs.id
+
+  - workflowId: interviewStarts
+    summary: The interview flags what to ask about
+    dependsOn: [household]
+    steps:
+      - stepId: startInterview
+        description: |
+          Start the interview
+
+          - The interview's state machine reads the household from the application's records, evaluates `interviewFlags`, and proposes a suggestion for each record a flag finds.
+          - It proposes through `createSuggestion`, as the system, so every check a client's proposal gets applies to it too.
+        operationId: $sourceDescriptions.intake.startInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.household.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'in_progress'
+        outputs:
+          processedAt: $response.body#/suggestionsProcessedAt
+
+      - stepId: interviewSuggestions
+        description: |
+          Five things to ask about
+
+          - Varying wages and varying tips are each flagged as varying; the tips, and the self-employment income, as cash or self-employment; the salary, as differing from its pay stub.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.interviewId:{$workflows.household.outputs.scheduleInterview}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
+
+      - stepId: wagesFlag
+        description: |
+          Her changing wages
+
+          - An informing suggestion: a category, and the record it's about — `subjectType`, `subjectId` — with nothing to perform.
+          - `metadata.intake` names the interview, the flag and the record, which is how the interview finds its own suggestions again.
+          - It expires a day after it was proposed, unless decided first.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.recordId:{$workflows.household.outputs.reportWages}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/kind == 'informing'
+          - condition: $response.body#/items/0/category == 'earned-income-varies'
+          - condition: $response.body#/items/0/subjectId == $workflows.household.outputs.reportWages
+          - condition: $response.body#/items/0/status == 'proposed'
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: tipsVaryFlag
+        description: |
+          Her tips, flagged for changing…
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.recordId:{$workflows.household.outputs.reportTips} category:earned-income-varies'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: tipsCashFlag
+        description: |
+          …and again for being paid in cash
+
+          - The same record under another category is another suggestion: what a suggestion is about includes its category.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.recordId:{$workflows.household.outputs.reportTips} category:cash-or-self-employment-income'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: sideIncomeFlag
+        description: |
+          Her self-employment income
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.recordId:{$workflows.household.outputs.reportSideIncome}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: salaryCorrection
+        description: |
+          A correction to her salary, ready to accept
+
+          - The flag knew the corrected figure, so the interview proposed the change itself: an operation suggestion whose `call` updates the salary to what the pay stub shows.
+          - The call was checked as `updateApplicationIncome` would check the request, when it was proposed.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.recordId:{$workflows.household.outputs.reportSalary}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/kind == 'operation'
+          - condition: $response.body#/items/0/call/operationId == 'updateApplicationIncome'
+          - condition: $response.body#/items/0/call/body/amount == 1250
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: createdEvent
+        description: |
+          Each suggestion is recorded as an event
+
+          - Each suggestion sent `decision-support.suggestion.created`, its id as the event's subject. There's no separate proposed event.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: $steps.wagesFlag.outputs.id
+          - name: type
+            in: query
+            value: decision-support.suggestion.created
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+
+      - stepId: categories
+        description: |
+          What each kind of flag means
+
+          - A category is an entry of the `suggestion-categories` registry, and its description is what the worker reads beside the record.
+        operationId: $sourceDescriptions.registries.listRegistryEntries
+        parameters:
+          - reference: $components.parameters.worker
+          - name: type
+            in: path
+            value: suggestion-categories
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/id == 'cash-or-self-employment-income'
+    outputs:
+      salaryCorrection: $steps.salaryCorrection.outputs.id
+      sideIncomeFlag: $steps.sideIncomeFlag.outputs.id
+      startInterviewProcessedAt: $steps.startInterview.outputs.processedAt
+      tipsCashFlag: $steps.tipsCashFlag.outputs.id
+      tipsVaryFlag: $steps.tipsVaryFlag.outputs.id
+      wagesFlag: $steps.wagesFlag.outputs.id
+
+  - workflowId: assistantSuggests
+    summary: The assistant suggests changes
+    dependsOn: [household]
+    steps:
+      - stepId: pointOutSomethingNew
+        description: |
+          The assistant notes something no flag covers
+
+          - No category, so a `message` says what it is. An uncategorized suggestion is the way to surface something new.
+          - `path` narrows it to a field of the record, as a JSON Pointer.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: informing
+            subjectType: application_member
+            subjectId: $workflows.household.outputs.addRosa
+            path: /firstName
+            message: Rosa said she goes by her middle name at work.
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: findUncategorized
+        description: |
+          Find notes like that
+
+          - `-category:*` finds suggestions with no category.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'kind:informing -category:*'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+
+      - stepId: neitherCategoryNorMessage
+        description: |
+          A note that says nothing is turned away
+
+          - Refused with `422`: an informing suggestion needs a category, a message, or both.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload: {kind: informing, subjectType: application_member, subjectId: $workflows.household.outputs.addRosa}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: pathThatIsNotAPointer
+        description: |
+          A field named the wrong way is turned away
+
+          - Refused with `422`: `path` is a JSON Pointer, `/firstName`, not a field name.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload: {kind: informing, subjectType: application_member, subjectId: $workflows.household.outputs.addRosa, path: firstName, message: Check the spelling.}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: unknownOperation
+        description: |
+          A change to something that doesn't exist is turned away
+
+          - Refused with `422`: a call is checked against the operations the contracts declare.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call: {operationId: updateApplicantMember, body: {firstName: Rosalinda}}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: bodyTheOperationRefuses
+        description: |
+          A value the record won't take is turned away
+
+          - Refused with `422` naming the field: the body is checked against `updateApplicationMember`'s request schema.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {relationship: cousin}
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == 'call.body.relationship'
+
+      - stepId: undeclaredParameter
+        description: |
+          An extra setting is turned away
+
+          - Refused with `422`.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+                - {name: verbose, in: query, value: 'true'}
+              body: {firstName: Rosalinda}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: missingPathParameter
+        description: |
+          A change that doesn't say which member is turned away
+
+          - Refused with `422`: `memberId` is a path parameter, so the call can't be made without it.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+              body: {firstName: Rosalinda}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: proposeChange
+        description: |
+          The assistant suggests her name is Rosalinda
+
+          - Rosa said her name is Rosalinda. The call is checked as `updateApplicationMember` would check the request.
+          - `fingerprint` is a keyed hash of the call, not its values, so it can't be read back.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {firstName: Rosalinda}
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'proposed'
+        outputs:
+          id: $response.body#/id
+
+      - stepId: proposeItAgain
+        description: |
+          Suggesting it again is turned away
+
+          - Refused with `409` naming the open suggestion: a model re-reading the conversation keeps finding the same change.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {firstName: Rosalinda}
+        successCriteria:
+          - condition: $statusCode == 409
+          - condition: $response.body#/details/0/id == $steps.proposeChange.outputs.id
+
+      - stepId: proposeItInCapitals
+        description: |
+          Even in capitals with spaces
+
+          - Still `409`: values are compared trimmed and without case.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {firstName: ' ROSALINDA '}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: proposeAnotherName
+        description: |
+          A different spelling is a new suggestion
+
+          - A different argument is a different change, so it's a new suggestion.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {firstName: Rosa Maria}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+    outputs:
+      pointOutSomethingNew: $steps.pointOutSomethingNew.outputs.id
+      proposeAnotherName: $steps.proposeAnotherName.outputs.id
+      proposeChange: $steps.proposeChange.outputs.id
+
+  - workflowId: caseworkerDecides
+    summary: The caseworker decides
+    dependsOn: [household, interviewStarts, assistantSuggests]
+    steps:
+      - stepId: acceptAsAnotherOperation
+        description: |
+          Accepting it as a different kind of change is turned away
+
+          - Refused with `409`: a corrected call must name the suggestion's own operation. A different change is a different suggestion.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeChange
+        requestBody:
+          payload:
+            call:
+              operationId: updateApplicationIncome
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: incomeId, in: path, value: $workflows.household.outputs.reportWages}
+              body: {amount: 1}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: acceptWithAnEdit
+        description: |
+          Accept the name, spelled the way Rosa does
+
+          - Rosa spells it Rosalind. The worker sends the corrected call, and accepting makes it instead of the proposed one.
+          - The call is made as the worker, under `updateApplicationMember`'s own checks: a worker who couldn't make the change by hand can't accept it.
+          - `performed` records the call made; `call` still shows what was proposed.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeChange
+        requestBody:
+          payload:
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {firstName: Rosalind}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+          - condition: $response.body#/performed/body/firstName == 'Rosalind'
+          - condition: $response.body#/call/body/firstName == 'Rosalinda'
+
+      - stepId: memberChanged
+        description: |
+          Her record now says Rosalind
+        operationId: $sourceDescriptions.intake.getApplicationMember
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: memberId
+            in: path
+            value: $workflows.household.outputs.addRosa
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/firstName == 'Rosalind'
+
+      - stepId: acceptedEvent
+        description: |
+          The record shows who accepted it
+
+          - `decision-support.suggestion.accepted` names the worker in `authid`. The suggestion records no one; its events do.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: $workflows.assistantSuggests.outputs.proposeChange
+          - name: type
+            in: query
+            value: decision-support.suggestion.accepted
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/authid == 'worker-1'
+        outputs:
+          id: $response.body#/items/0/id
+
+      - stepId: whatAcceptingCaused
+        description: |
+          And what accepting changed
+
+          - The member's update names the accepted event as its `causationid`, so one finds the other.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: causationid
+            in: query
+            value: $steps.acceptedEvent.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/type == 'intake.application_member.updated'
+
+      - stepId: acceptItAgain
+        description: |
+          Accepting it twice is turned away
+
+          - Refused with `409`: it's already accepted.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeChange
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: acceptTheCorrection
+        description: |
+          Accept the salary correction
+
+          - The change the rules worked out, made as the worker.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.salaryCorrection
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+
+      - stepId: salaryCorrected
+        description: |
+          Her salary now matches the pay stub
+        operationId: $sourceDescriptions.intake.getApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: $workflows.household.outputs.reportSalary
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/amount == 1250
+
+      - stepId: correctionProcessed
+        description: |
+          The system checks again
+
+          - Accepting the correction changed an income, and an income changing while the interview is in progress makes it evaluate its flags again. `suggestionsProcessedAt` says when it last did.
+          - The salary now matches its pay stub, so that flag no longer finds it. Its suggestion is already accepted, so there's nothing to expire.
+        operationId: $sourceDescriptions.intake.getApplicationInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.household.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/suggestionsProcessedAt != $workflows.interviewStarts.outputs.startInterviewProcessedAt
+        # The interview reacts to the change after it's answered, as a real
+        # one would, so this checks until the reaction has run.
+        onFailure:
+          - {name: waitForTheInterview, type: retry, retryAfter: 0.05, retryLimit: 20}
+        outputs:
+          processedAt: $response.body#/suggestionsProcessedAt
+
+      - stepId: acceptWithABadEdit
+        description: |
+          Accept the other name with a value the record won't take
+
+          - `422`, the operation's own refusal. The suggestion is `refused`, in `details`.
+          - `decision-support.suggestion.refused` carries the call and the error, so the history of attempts is in the events.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeAnotherName
+        requestBody:
+          payload:
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {relationship: cousin}
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/status == 'refused'
+
+      - stepId: refusedEvent
+        description: |
+          The refusal is recorded, with what was tried
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: $workflows.assistantSuggests.outputs.proposeAnotherName
+          - name: type
+            in: query
+            value: decision-support.suggestion.refused
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+          - condition: $response.body#/items/0/data/call/body/relationship == 'cousin'
+
+      - stepId: acceptWithTheSameBadEdit
+        description: |
+          Try the same value again
+
+          - Refused again, and a second `refused` event. There's no limit on retries; a refused suggestion stays open until it's decided or expires.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeAnotherName
+        requestBody:
+          payload:
+            call:
+              operationId: updateApplicationMember
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: memberId, in: path, value: $workflows.household.outputs.addRosa}
+              body: {relationship: cousin}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: twoRefusals
+        description: |
+          Both refusals are on record
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: $workflows.assistantSuggests.outputs.proposeAnotherName
+          - name: type
+            in: query
+            value: decision-support.suggestion.refused
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 2
+
+      - stepId: acceptAsProposed
+        description: |
+          Accept it as suggested
+
+          - A refused suggestion can be accepted again. With no call sent, accepting makes the proposed one.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeAnotherName
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+
+      - stepId: dismissWithoutAReason
+        description: |
+          Dismissing without a reason is turned away
+
+          - Refused with `422`: dismissing needs a reason.
+        operationId: $sourceDescriptions.suggestions.dismissSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.wagesFlag
+        requestBody:
+          payload: {}
+        successCriteria:
+          - condition: $statusCode == 422
+
+      - stepId: dismissTheWagesFlag
+        description: |
+          Dismiss the changing-wages flag, saying why
+
+          - Rosa's hours are steady now. The reason is kept on the suggestion.
+        operationId: $sourceDescriptions.suggestions.dismissSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.wagesFlag
+        requestBody:
+          payload: {reason: Her hours are steady now.}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'dismissed'
+          - condition: $response.body#/reason == 'Her hours are steady now.'
+
+      - stepId: dismissItAgain
+        description: |
+          Dismissing it twice is turned away
+
+          - Refused with `409`: it's already dismissed.
+        operationId: $sourceDescriptions.suggestions.dismissSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.wagesFlag
+        requestBody:
+          payload: {reason: Still steady.}
+        successCriteria:
+          - condition: $statusCode == 409
+    outputs:
+      correctionProcessedProcessedAt: $steps.correctionProcessed.outputs.processedAt
+
+  - workflowId: answersChange
+    summary: Rosa's answers change things
+    dependsOn: [household, interviewStarts, assistantSuggests, caseworkerDecides]
+    steps:
+      - stepId: changeWagesAgain
+        description: |
+          Change her wages again
+
+          - While the interview is in progress, an income changing makes it evaluate its flags again.
+          - The wages still vary, but their flag was dismissed: proposing it again is refused with `409`, which the interview ignores. A dismissal sticks.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: $workflows.household.outputs.reportWages
+        requestBody:
+          payload: {amount: 320}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: wagesProcessed
+        description: |
+          The system checks again
+
+          - Waiting for it before checking what it proposed.
+        operationId: $sourceDescriptions.intake.getApplicationInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.household.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/suggestionsProcessedAt != $workflows.caseworkerDecides.outputs.correctionProcessedProcessedAt
+        # The interview reacts to the change after it's answered, as a real
+        # one would, so this checks until the reaction has run.
+        onFailure:
+          - {name: waitForTheInterview, type: retry, retryAfter: 0.05, retryLimit: 20}
+        outputs:
+          processedAt: $response.body#/suggestionsProcessedAt
+
+      - stepId: nothingNew
+        description: |
+          Nothing new is flagged, and the dismissed flag stays dismissed
+
+          - Still the five, each flagged once: flags still raised propose nothing new, and the dismissed one isn't raised again.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.interviewId:{$workflows.household.outputs.scheduleInterview}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
+
+      - stepId: correctTheSideIncome
+        description: |
+          Her side income was a gift
+
+          - It was a gift, not self-employment. Changing what it is clears its flag.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: $workflows.household.outputs.reportSideIncome
+        requestBody:
+          payload: {source: unearned}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: sideIncomeProcessed
+        description: |
+          The system checks again
+
+          - Waiting for it before checking what it expired.
+        operationId: $sourceDescriptions.intake.getApplicationInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.household.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/suggestionsProcessedAt != $steps.wagesProcessed.outputs.processedAt
+        # The interview reacts to the change after it's answered, as a real
+        # one would, so this checks until the reaction has run.
+        onFailure:
+          - {name: waitForTheInterview, type: retry, retryAfter: 0.05, retryLimit: 20}
+        outputs:
+          processedAt: $response.body#/suggestionsProcessedAt
+
+      - stepId: clearedFlagExpired
+        description: |
+          Its flag closes on its own
+
+          - The interview evaluated its flags again, and expired the suggestion whose flag no longer finds its record.
+        operationId: $sourceDescriptions.suggestions.getSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.sideIncomeFlag
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'expired'
+
+      - stepId: acceptAFlagWithACall
+        description: |
+          Accepting a flag with a change attached is turned away
+
+          - Refused with `409`: an informing suggestion has nothing to perform, so a call has no place in accepting it.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.tipsVaryFlag
+        requestBody:
+          payload:
+            call:
+              operationId: updateApplicationIncome
+              parameters:
+                - {name: applicationId, in: path, value: 11111111-1111-4111-8111-111111111111}
+                - {name: incomeId, in: path, value: $workflows.household.outputs.reportTips}
+              body: {amount: 130}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: acceptAFlag
+        description: |
+          Accept the tips flag: the caseworker asked about it
+
+          - The worker asked about it. Accepting an informing suggestion performs nothing; it records that it was dealt with.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.tipsVaryFlag
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+
+      - stepId: whatsStillOpen
+        description: |
+          Only one thing is still waiting
+
+          - Search narrows to the interview and to what's waiting: only the cash-tips flag is left.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.interviewId:{$workflows.household.outputs.scheduleInterview} status:proposed'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+          - condition: $response.body#/items/0/id == $workflows.interviewStarts.outputs.tipsCashFlag
+
+      - stepId: expireByHand
+        description: |
+          Close the assistant's note by hand
+
+          - Anything can expire a suggestion that no longer applies, by the `expire` action.
+        operationId: $sourceDescriptions.suggestions.expireSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.pointOutSomethingNew
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'expired'
+
+      - stepId: expireItAgain
+        description: |
+          Closing it twice is turned away
+
+          - Refused with `409`: it's no longer open.
+        operationId: $sourceDescriptions.suggestions.expireSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.pointOutSomethingNew
+        successCriteria:
+          - condition: $statusCode == 409
+
+  - workflowId: interviewEnds
+    summary: The interview ends
+    dependsOn: [household, interviewStarts, assistantSuggests, answersChange]
+    steps:
+      - stepId: completeInterview
+        description: |
+          Complete the interview
+
+          - Completing expires the interview's suggestions still open. Whatever gave suggestions their context closes them.
+        operationId: $sourceDescriptions.intake.completeInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.household.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'completed'
+
+      - stepId: leftoverExpired
+        description: |
+          What was still waiting is closed
+        operationId: $sourceDescriptions.suggestions.getSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.tipsCashFlag
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'expired'
+
+      - stepId: changeAfterwards
+        description: |
+          Change her tips afterward
+
+          - The interview is over, so nothing is evaluated or proposed.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: $workflows.household.outputs.reportTips
+        requestBody:
+          payload: {amount: 140}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: stillFive
+        description: |
+          Nothing new is flagged
+
+          - Nothing new since the interview completed.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: 'metadata.intake.interviewId:{$workflows.household.outputs.scheduleInterview}'
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
