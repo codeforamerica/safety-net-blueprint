@@ -23,6 +23,7 @@ import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
 import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
 import { operationsOf } from './operation-calls.js';
+import { startSlaClocks } from './sla-engine.js';
 import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
 
 /**
@@ -31,7 +32,7 @@ import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
  * @param {Array}  options.stateMachines - From `extract(docs, 'state-machines')`
  * @param {Array}  [options.slaTypes]    - From `extract(docs, 'sla-types')`, for an action a call runs
  * @param {Object} options.store
- * @returns {{ resolve: Function, apply: Function, perform: Function, announceCreated: Function, serve: Function, slaTypesFor: Function }}
+ * @returns {{ resolve: Function, apply: Function, perform: Function, settleCreated: Function, startClocksAt: Function, serve: Function, slaTypesFor: Function }}
  */
 export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store }) {
   // Every operation by operationId, including those a state machine adds, for
@@ -156,13 +157,14 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     });
 
     if (resolved.kind === 'create') {
-      const record = store.create(collection, { ...body, ...resolved.params });
+      const stored = store.create(collection, { ...body, ...resolved.params });
       try {
-        checkRecord(resolved, record);
+        checkRecord(resolved, stored);
       } catch (error) {
-        store.deleteResource(collection, record.id);
+        store.deleteResource(collection, stored.id);
         throw error;
       }
+      const record = startClocks(resolved, stored, now);
       event('created', record.id, { ...record });
       return record;
     }
@@ -246,6 +248,46 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   }
 
   /**
+   * Start the SLA clocks of a record a step created, as a create through the
+   * API does: when its resource has a state machine and its domain declares
+   * SLA types.
+   *
+   * @param {Object} resolved - What the create's path means (resolve)
+   * @param {Object} record - As stored
+   * @param {string} [now]
+   * @returns {Object} The record, with its slaInfo when clocks started
+   */
+  function startClocks(resolved, record, now) {
+    if (!machineFor(resolved.api, resolved.resource)) return record;
+    const slaInfo = startSlaClocks(record, slaTypesFor(resolved.api.domain), now ?? new Date().toISOString());
+    if (!slaInfo) return record;
+    return store.update(collectionOf(resolved.resource), record.id, { slaInfo }) ?? { ...record, slaInfo };
+  }
+
+  /**
+   * Start the clocks of, and send the event a create through the API would
+   * for, a record a step wrote directly, by the path it wrote to. A path no API
+   * declares has no resource: neither happens.
+   *
+   * @param {string} path - The step's path, e.g. "decision-support/suggestions"
+   * @param {Object} record - As stored
+   * @param {Object} options - As for announceCreated
+   * @returns {Object|null} The record as it now is, or null when the path names
+   *   no resource an API serves, and so nothing was announced
+   */
+  function settleCreated(path, record, options = {}) {
+    const started = startClocksAt(path, record, options.now);
+    return announceCreated(path, started, options) ? started : null;
+  }
+
+  /** startClocks, for a record a step created by the path it wrote to. */
+  function startClocksAt(path, record, now) {
+    let resolved;
+    try { resolved = resolve('POST', path); } catch { return record; }
+    return resolved.kind === 'create' ? startClocks(resolved, record, now) : record;
+  }
+
+  /**
    * Send the event a create through the API would for a record a step wrote
    * directly: named for the resource the API serves at that path. A path no
    * API declares has no resource to name, so it sends none.
@@ -257,11 +299,12 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * @param {string|null} [options.traceparent]
    * @param {string|null} [options.causationid]
    * @param {string} [options.now]
+   * @returns {boolean} Whether an event was sent
    */
   function announceCreated(path, record, { caller, traceparent = null, causationid = null, now } = {}) {
     let resolved;
-    try { resolved = resolve('POST', path); } catch { return; }
-    if (resolved.kind !== 'create' || !resolved.resource.eventName) return;
+    try { resolved = resolve('POST', path); } catch { return false; }
+    if (resolved.kind !== 'create' || !resolved.resource.eventName) return false;
     emitEvent({
       store,
       domain: resolved.api.domain,
@@ -276,6 +319,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
       causationid,
       now,
     });
+    return true;
   }
 
   /** Give perform the mock's fetch, once its routes are registered. */
@@ -284,7 +328,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /** A domain's SLA types, for running one of its actions. */
   const slaTypesFor = (domain) => slaTypes.filter((s) => s.domain === domain).flatMap((s) => s.slaTypes ?? []);
 
-  return { resolve, apply, perform, announceCreated, serve, slaTypesFor };
+  return { resolve, apply, perform, settleCreated, startClocksAt, serve, slaTypesFor };
 }
 
 /** An outcome that failed, in the shared Error shape. */

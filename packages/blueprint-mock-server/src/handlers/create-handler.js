@@ -5,6 +5,7 @@
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { eventDomainOf } from '../collection-utils.js';
+import { startSlaClocks } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
@@ -137,6 +138,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
+
+      // Its SLA clocks start now, before its created event carries it.
+      const slaInfo = startSlaClocks(resource, slaTypes, now);
+      if (slaInfo) {
+        resource.slaInfo = slaInfo;
+        store.update(endpoint.collectionName, resource.id, { slaInfo });
+      }
       const traceparent = traceparentOf(request);
       // Named for the domain as declared and the resource the create acts on:
       // `intake.application_member.created`. A path that is no resource's

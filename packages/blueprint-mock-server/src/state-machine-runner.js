@@ -220,12 +220,12 @@ export async function executeTransition({
   }
   const result = store.update(resourceName, resourceId, diff);
 
-  // A record a step creates directly is announced as a create through the API
-  // would be, caused by the action.
+  // A record a step creates directly has its SLA clocks started and is
+  // announced as a create through the API would be, caused by the action.
   for (const { entity, domain, stubUrl, data } of pendingCreates) {
     try {
       const record = store.create(entity, data);
-      stepCalls?.announceCreated(`${domain}${stubUrl ?? ''}`, record, {
+      stepCalls?.settleCreated(`${domain}${stubUrl ?? ''}`, record, {
         caller: { id: callerId, roles: callerRoles }, traceparent, causationid: actionEventId, now: timestamp,
       });
     } catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
@@ -326,10 +326,19 @@ function refusedBy(outcome) {
  * @param {string|null} options.causationid - The event the call's own events name as their cause
  * @param {Object} options.store
  * @param {Object|null} options.stepCalls
- * @returns {(call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>}
+ * @returns {((call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>) & { settleCreated: (path: string, record: Object) => Object|null }}
  */
 export function performerFor(options) {
-  return (call, step) => performCall(call, step, options);
+  const perform = (call, step) => performCall(call, step, options);
+  // A record a procedure's step creates directly is settled the same way — its
+  // SLA clocks started and its created event sent — as whoever this performs for.
+  perform.settleCreated = (path, record) => options.stepCalls?.settleCreated(path, record, {
+    caller: { id: options.callerId, roles: options.callerRoles },
+    traceparent: options.traceparent,
+    causationid: options.causationid,
+    now: options.timestamp,
+  }) ?? null;
+  return perform;
 }
 
 function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls }) {

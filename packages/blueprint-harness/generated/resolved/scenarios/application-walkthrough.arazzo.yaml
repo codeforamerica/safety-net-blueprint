@@ -50,6 +50,7 @@ workflows:
           - `id`, `confirmationNumber`, `status`, `submittedAt`, `openedAt` are marked `readOnly`, so they are not on the shape you sent at all. The server filled them in because the contract says they exist.
           - `programCount` is declared as a derived field, with the expression `this.programsAppliedFor.size()`. Nothing stores it: the mock evaluates that expression every time the record is read.
           - `channel` is an enum in the contract — `online`, `phone`, `in_person`, `mail`. A value outside that list is refused by the schema, and no validation was written for this endpoint to do it.
+          - `slaInfo` already has a running clock: the SLA contract says `snap_standard` assigns itself to every application for SNAP, runs 30 days, warns at 80% of it, and stops while `status` is `withdrawn`. The clock is a declaration, not a cron job somebody remembered to write.
           - `201` and `400`, `422`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. None of them are canned.
         operationId: $sourceDescriptions.intake.createApplication
         parameters:
@@ -61,6 +62,8 @@ workflows:
             channel: online
         successCriteria:
           - condition: $statusCode == 201
+          - condition: $response.body#/slaInfo/0/slaTypeCode == 'snap_standard'
+          - condition: $response.body#/slaInfo/0/status == 'active'
         outputs:
           id: $response.body#/id
       - stepId: uploadDocument
@@ -167,7 +170,6 @@ workflows:
 
           - The contract declares this move as `draft → submitted`. From any other state the mock refuses it — not from a check somebody wrote for this endpoint, but by reading that line.
           - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `scheduling.timer.requested`. The stand-in you registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
-          - `slaTypeCode` and `slaInfo` are filled from an SLA contract: `snap_standard` runs 30 days, warns at 80% of it, and stops while `status` is `withdrawn`. The clock is a declaration, not a cron job somebody remembered to write.
           - `submittedAt` is annotated with `snap-processing-clock`, which the shared policy registry resolves to 7 CFR § 273.2(g). SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
           - `200` and `400`, `404`, `409`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. A `409` is declared here because the contract anticipates this call being made out of turn.
         operationId: $sourceDescriptions.intake.submitApplication

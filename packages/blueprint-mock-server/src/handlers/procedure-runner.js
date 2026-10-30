@@ -248,7 +248,7 @@ function resolveWithArgs(withArgs, context) {
 /**
  * Create the records a procedure's steps left to create, and make its appends.
  */
-function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, store) {
+function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, store, perform = null) {
   for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
     if (stubUrl) {
       const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
@@ -260,6 +260,9 @@ function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, sto
     }
     try {
       const created = store.create(entity, createData);
+      // Where a procedure runs for an action or a reaction, the record is
+      // settled as one a step there creates: clocks started, created event sent.
+      if (perform?.settleCreated && perform.settleCreated(`${domain}${stubUrl ?? ''}`, created)) continue;
       if (domain && eventObject) {
         emitEvent({
           store,
@@ -324,7 +327,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
     const before = { ...resource };
 
     const finish = (applied, at) => {
-      applyPendingWrites(procedureId, applied, store);
+      applyPendingWrites(procedureId, applied, store, perform);
       const operations = [...applied.pendingOperations];
       const events = [...(applied.pendingEvents || [])];
       if (applied.pendingProcedures.length === 0) return { operations, events };

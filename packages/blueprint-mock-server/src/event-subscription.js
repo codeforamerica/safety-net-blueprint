@@ -361,7 +361,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           // Handle collection creates
           for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
             try {
-              const created = store.create(entity, data);
+              const stored = store.create(entity, data);
+              const created = currentStepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
               // Named for the resource the API serves at that path, where the
               // route can be found; otherwise for the path's last segment.
               let object = eventObject || entity.replace(/s$/, '');

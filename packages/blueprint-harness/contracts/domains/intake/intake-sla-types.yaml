@@ -8,6 +8,11 @@ slaTypes:
       amount: 30
       unit: days
     warningThresholdPercent: 80
+    # Every application for SNAP gets this clock when it's created.
+    autoAssignWhen:
+      in:
+        - snap
+        - var: programsAppliedFor
     pauseWhen:
       in:
         - var: status

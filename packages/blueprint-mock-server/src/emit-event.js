@@ -9,6 +9,7 @@
  */
 
 import { eventBus } from './event-bus.js';
+import { withoutEngineFields } from './sla-engine.js';
 
 /**
  * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
@@ -27,6 +28,8 @@ export function emitEventEnvelope(envelope, store) {
     specversion: '1.0',
     datacontenttype: 'application/json',
     ...envelope,
+    // The record an event carries, as a client would read it.
+    ...(envelope.data !== undefined ? { data: withoutEngineFields(envelope.data) } : {}),
     id: envelope.id || crypto.randomUUID(),
     time: envelope.time || new Date().toISOString(),
   });
@@ -121,7 +124,8 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     traceparent,
     causationid,
     ...authContext(callerId, callerRoles),
-    data,
+    // The record an event carries, as a client would read it.
+    data: withoutEngineFields(data),
   });
 
   saveEvent(store, envelope);
