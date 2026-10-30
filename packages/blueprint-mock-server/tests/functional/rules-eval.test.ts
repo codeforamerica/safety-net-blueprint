@@ -16,6 +16,15 @@ import assert from 'node:assert/strict';
 const BASE = 'http://localhost:1080';
 const ENDPOINT = `${BASE}/test/assess-snap-eligibility`;
 
+type Fact = { fact: string; state: string; value?: unknown; missing?: string[] };
+
+// The result is EvaluationResult: an array of output facts, each named by `fact`.
+async function factsOf(res: Response) {
+  const body = await res.json() as Fact[];
+  assert.ok(Array.isArray(body), 'result must be an array');
+  return Object.fromEntries(body.map((f) => [f.fact, f]));
+}
+
 async function post(body: unknown) {
   return fetch(ENDPOINT, {
     method: 'POST',
@@ -33,7 +42,7 @@ describe('Functional — rules evaluation endpoint', () => {
 
   it('returns complete result when all inputs are provided', async () => {
     const res = await post({ household: { monthlyIncome: 800, size: 3 } });
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
     assert.equal(body.meetsIncomeTest.state, 'complete');
   });
@@ -41,7 +50,7 @@ describe('Functional — rules evaluation endpoint', () => {
   it('meetsIncomeTest is true when income is below threshold', async () => {
     // size=3, threshold = 3*500 = 1500; income=800 < 1500 → true
     const res = await post({ household: { monthlyIncome: 800, size: 3 } });
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.equal(body.meetsIncomeTest.state, 'complete');
     assert.equal(body.meetsIncomeTest.value, true);
   });
@@ -49,14 +58,14 @@ describe('Functional — rules evaluation endpoint', () => {
   it('meetsIncomeTest is false when income exceeds threshold', async () => {
     // size=2, threshold = 2*500 = 1000; income=1200 > 1000 → false
     const res = await post({ household: { monthlyIncome: 1200, size: 2 } });
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.equal(body.meetsIncomeTest.state, 'complete');
     assert.equal(body.meetsIncomeTest.value, false);
   });
 
   it('returns missing facts when inputs are absent', async () => {
     const res = await post({});
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
     assert.equal(body.meetsIncomeTest.state, 'missing');
   });
@@ -64,15 +73,17 @@ describe('Functional — rules evaluation endpoint', () => {
   it('returns partial result when only some inputs are provided', async () => {
     // Only size provided — monthlyIncome missing, so meetsIncomeTest is missing
     const res = await post({ household: { size: 3 } });
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
     assert.equal(body.meetsIncomeTest.state, 'missing');
+    assert.ok(body.meetsIncomeTest.missing?.some((p) => p.includes('monthlyIncome')), 'missing must name monthlyIncome');
+    assert.ok(!('value' in body.meetsIncomeTest), 'a missing fact carries no value');
   });
 
   it('accepts empty body and returns all facts as missing', async () => {
     const res = await post({});
     assert.equal(res.status, 200);
-    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    const body = await factsOf(res);
     assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
     assert.equal(body.meetsIncomeTest.state, 'missing');
   });
