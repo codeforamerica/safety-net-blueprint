@@ -75,4 +75,9 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error('Error:', error.message);
+  process.exit(1);
+}

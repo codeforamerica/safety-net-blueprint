@@ -188,14 +188,11 @@ function discoverOverlayFiles(overlaysDir) {
       if (entry.isDirectory()) {
         walk(fullPath);
       } else if (entry.name.endsWith('.yaml')) {
-        try {
-          const content = readFileSync(fullPath, 'utf8');
-          const parsed = yaml.load(content, { schema: yaml.CORE_SCHEMA });
-          if (parsed && parsed.overlay === '1.0.0') {
-            overlayFiles.push(fullPath);
-          }
-        } catch {
-          // Skip files that can't be parsed
+        // An overlay that does not parse is an error, not a file to skip:
+        // skipping it dropped its changes without a word.
+        const parsed = load(fullPath).content;
+        if (parsed && parsed.overlay === '1.0.0') {
+          overlayFiles.push(fullPath);
         }
       }
     }
@@ -618,7 +615,10 @@ export {
 // Run main when executed directly
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
 if (isDirectRun) {
-  main();
+  main().catch((error) => {
+    console.error('Error:', error.message);
+    process.exit(1);
+  });
 }
 
 /**
