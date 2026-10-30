@@ -319,6 +319,19 @@ generators read it like any other API. A rules file is not merged into its
 domain's OpenAPI document, so a domain can have any number of documents, and a
 rules file needs none.
 
+The response is the ruleset's outputs, keyed by output name, each with its
+state and what that state carries: `value` when complete or a placeholder,
+`missing` when inputs are absent, `message` on an error. A result is read by
+name — `#/eligible/value` — and the generated response schema types each
+output's `value` as the ruleset declares it:
+
+```json
+{
+  "eligible":      { "state": "complete", "value": true },
+  "benefitAmount": { "state": "missing", "value": null, "missing": ["$.household.income"] }
+}
+```
+
 Path parameters are not permitted. Nothing binds a path segment to ruleset
 inputs, so a parameter would be accepted and silently ignored — the path would
 promise resource hydration the endpoint does not perform. Identifiers go in the

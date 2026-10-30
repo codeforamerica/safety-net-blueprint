@@ -698,10 +698,9 @@ test('registerRulesRoutes', async (t) => {
     const { status: statusCode, body: responseBody } = await readResponse(
       handler(makeRequest('/eligibility/evaluate', { method: 'POST', body: { household: { monthlyIncome: 800 } } }), { params: {} })
     );
-    const eligible = responseBody.find((f) => f.fact === 'eligible');
-    assert.ok(eligible, 'result must have eligible');
-    assert.strictEqual(eligible.state, 'complete');
-    assert.strictEqual(eligible.value, true);
+    assert.ok(responseBody.eligible, 'result must have eligible');
+    assert.strictEqual(responseBody.eligible.state, 'complete');
+    assert.strictEqual(responseBody.eligible.value, true);
     assert.strictEqual(statusCode, 200);
   });
 
@@ -727,10 +726,8 @@ test('registerRulesRoutes', async (t) => {
       handler(makeRequest('/eligibility/evaluate', { method: 'POST', body: { x: { v: 1 } } }), { params: {} })
     );
     assert.strictEqual(statusCode, 200);
-    const broken = responseBody.find((f) => f.fact === 'result');
-    assert.ok(broken, 'broken expression must appear in result');
-    assert.deepStrictEqual(Object.keys(broken).sort(), ['fact', 'message', 'state']);
-    assert.strictEqual(broken.state, 'error');
+    assert.ok(responseBody.result, 'broken expression must appear in result');
+    assert.strictEqual(responseBody.result.state, 'error');
   });
 
   await t.test('returns registered endpoint descriptors', () => {

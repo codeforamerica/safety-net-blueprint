@@ -201,50 +201,569 @@ export type InterviewFlagsRequest = {
 };
 
 /**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
+ * Evaluation result for interviewFlags.
  */
-export type InterviewFlagsResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
+export type InterviewFlagsResponse = {
+    [key: string]: {
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    };
+} & {
+    'risks.earnedIncomeVaries': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.cashOrSelfEmploymentIncome': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.incomeChangedSincePrevious': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.householdChangedSincePrevious': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.shelterCostsCarriedOver': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.elderlyOrDisabledWithoutMedicalCosts': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.childrenAndEarnersWithoutDependentCare': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'risks.multipleProgramsApplied': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.incomeBelowExpenses': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.wagesDifferFromWageRecords': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.incomeDiffersFromPayStub': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.householdSizeDiffersFromMembers': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.jobWithoutEarnedIncome': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.earnedIncomeWithoutJob': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+    'inconsistencies.utilitiesIncludedButBilled': ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+};
 
 export type EvaluateInterviewFlagsData = {
     /**
@@ -492,50 +1011,569 @@ export type EvaluateInterviewFlagsError = EvaluateInterviewFlagsErrors[keyof Eva
 
 export type EvaluateInterviewFlagsResponses = {
     /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
+     * Evaluation result for interviewFlags.
      */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
+    200: {
+        [key: string]: {
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        };
+    } & {
+        'risks.earnedIncomeVaries': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.cashOrSelfEmploymentIncome': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.incomeChangedSincePrevious': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.householdChangedSincePrevious': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.shelterCostsCarriedOver': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.elderlyOrDisabledWithoutMedicalCosts': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.childrenAndEarnersWithoutDependentCare': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'risks.multipleProgramsApplied': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.incomeBelowExpenses': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.wagesDifferFromWageRecords': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.incomeDiffersFromPayStub': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.householdSizeDiffersFromMembers': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.jobWithoutEarnedIncome': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.earnedIncomeWithoutJob': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+        'inconsistencies.utilitiesIncludedButBilled': ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+    };
 };
 
 export type EvaluateInterviewFlagsResponse = EvaluateInterviewFlagsResponses[keyof EvaluateInterviewFlagsResponses];

@@ -53,20 +53,16 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - type: array
+                  - type: object
                     description: |
-                      Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-                    items:
+                      The ruleset's output facts, keyed by output name, so a result is read by name — `#/eligible/value`. Only output facts are included; intermediate facts are not returned. Each ruleset's response schema names its outputs and the type of each one's value.
+                    additionalProperties:
                       oneOf:
                         - type: object
                           required:
-                            - fact
                             - state
                             - value
                           properties:
-                            fact:
-                              type: string
-                              description: The fact name.
                             state:
                               type: string
                               enum:
@@ -75,13 +71,9 @@ paths:
                               description: The computed value.
                         - type: object
                           required:
-                            - fact
                             - state
                             - value
                           properties:
-                            fact:
-                              type: string
-                              description: The fact name.
                             state:
                               type: string
                               enum:
@@ -90,17 +82,16 @@ paths:
                               description: The computed value, derived using one or more schema defaults.
                         - type: object
                           required:
-                            - fact
                             - state
                             - missing
                           properties:
-                            fact:
-                              type: string
-                              description: The fact name.
                             state:
                               type: string
                               enum:
                                 - missing
+                            value:
+                              type: "null"
+                              description: Always null — there is no value yet.
                             missing:
                               type: array
                               description: Input paths required to resolve this fact.
@@ -108,22 +99,89 @@ paths:
                                 type: string
                         - type: object
                           required:
-                            - fact
                             - state
                             - message
                           properties:
-                            fact:
-                              type: string
-                              description: The fact name.
                             state:
                               type: string
                               enum:
                                 - error
+                            value:
+                              type: "null"
+                              description: Always null — the fact could not be computed.
                             message:
                               type: string
                               description: The reason evaluation failed.
                       discriminator:
                         propertyName: state
+                  - type: object
+                    required:
+                      - isExpeditedEligible
+                    properties:
+                      isExpeditedEligible:
+                        allOf:
+                          - oneOf:
+                              - type: object
+                                required:
+                                  - state
+                                  - value
+                                properties:
+                                  state:
+                                    type: string
+                                    enum:
+                                      - complete
+                                  value:
+                                    description: The computed value.
+                              - type: object
+                                required:
+                                  - state
+                                  - value
+                                properties:
+                                  state:
+                                    type: string
+                                    enum:
+                                      - placeholder
+                                  value:
+                                    description: The computed value, derived using one or more schema defaults.
+                              - type: object
+                                required:
+                                  - state
+                                  - missing
+                                properties:
+                                  state:
+                                    type: string
+                                    enum:
+                                      - missing
+                                  value:
+                                    type: "null"
+                                    description: Always null — there is no value yet.
+                                  missing:
+                                    type: array
+                                    description: Input paths required to resolve this fact.
+                                    items:
+                                      type: string
+                              - type: object
+                                required:
+                                  - state
+                                  - message
+                                properties:
+                                  state:
+                                    type: string
+                                    enum:
+                                      - error
+                                  value:
+                                    type: "null"
+                                    description: Always null — the fact could not be computed.
+                                  message:
+                                    type: string
+                                    description: The reason evaluation failed.
+                            discriminator:
+                              propertyName: state
+                          - properties:
+                              value:
+                                anyOf:
+                                  - type: boolean
+                                  - type: "null"
                 description: Evaluation result for expeditedSnap.
         "400":
           description: The request is malformed or contains invalid parameters.
@@ -212,20 +270,16 @@ components:
               description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
     ExpeditedSnapResponse:
       allOf:
-        - type: array
+        - type: object
           description: |
-            Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-          items:
+            The ruleset's output facts, keyed by output name, so a result is read by name — `#/eligible/value`. Only output facts are included; intermediate facts are not returned. Each ruleset's response schema names its outputs and the type of each one's value.
+          additionalProperties:
             oneOf:
               - type: object
                 required:
-                  - fact
                   - state
                   - value
                 properties:
-                  fact:
-                    type: string
-                    description: The fact name.
                   state:
                     type: string
                     enum:
@@ -234,13 +288,9 @@ components:
                     description: The computed value.
               - type: object
                 required:
-                  - fact
                   - state
                   - value
                 properties:
-                  fact:
-                    type: string
-                    description: The fact name.
                   state:
                     type: string
                     enum:
@@ -249,17 +299,16 @@ components:
                     description: The computed value, derived using one or more schema defaults.
               - type: object
                 required:
-                  - fact
                   - state
                   - missing
                 properties:
-                  fact:
-                    type: string
-                    description: The fact name.
                   state:
                     type: string
                     enum:
                       - missing
+                  value:
+                    type: "null"
+                    description: Always null — there is no value yet.
                   missing:
                     type: array
                     description: Input paths required to resolve this fact.
@@ -267,20 +316,87 @@ components:
                       type: string
               - type: object
                 required:
-                  - fact
                   - state
                   - message
                 properties:
-                  fact:
-                    type: string
-                    description: The fact name.
                   state:
                     type: string
                     enum:
                       - error
+                  value:
+                    type: "null"
+                    description: Always null — the fact could not be computed.
                   message:
                     type: string
                     description: The reason evaluation failed.
             discriminator:
               propertyName: state
+        - type: object
+          required:
+            - isExpeditedEligible
+          properties:
+            isExpeditedEligible:
+              allOf:
+                - oneOf:
+                    - type: object
+                      required:
+                        - state
+                        - value
+                      properties:
+                        state:
+                          type: string
+                          enum:
+                            - complete
+                        value:
+                          description: The computed value.
+                    - type: object
+                      required:
+                        - state
+                        - value
+                      properties:
+                        state:
+                          type: string
+                          enum:
+                            - placeholder
+                        value:
+                          description: The computed value, derived using one or more schema defaults.
+                    - type: object
+                      required:
+                        - state
+                        - missing
+                      properties:
+                        state:
+                          type: string
+                          enum:
+                            - missing
+                        value:
+                          type: "null"
+                          description: Always null — there is no value yet.
+                        missing:
+                          type: array
+                          description: Input paths required to resolve this fact.
+                          items:
+                            type: string
+                    - type: object
+                      required:
+                        - state
+                        - message
+                      properties:
+                        state:
+                          type: string
+                          enum:
+                            - error
+                        value:
+                          type: "null"
+                          description: Always null — the fact could not be computed.
+                        message:
+                          type: string
+                          description: The reason evaluation failed.
+                  discriminator:
+                    propertyName: state
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
       description: Evaluation result for expeditedSnap.

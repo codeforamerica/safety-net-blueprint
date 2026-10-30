@@ -1153,14 +1153,12 @@ export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], grap
 
       addRoute(table, 'POST', fullPath, async (request) => {
         const nodes = evaluate(graph, await jsonBody(request));
-        // EvaluationResult in rules-evaluation.yaml: the outputs, in order,
-        // each with the fields its state carries.
-        const result = Object.entries(nodes)
-          .filter(([, node]) => node.type === 'output')
-          .map(([fact, { state, value, missing, message }]) =>
-            state === 'missing' ? { fact, state, missing }
-              : state === 'error' ? { fact, state, message }
-                : { fact, state, value });
+        const result = {};
+        for (const [name, node] of Object.entries(nodes)) {
+          if (node.type !== 'output') continue;
+          const { type: _type, ...rest } = node;
+          result[name] = rest;
+        }
         return Response.json(result);
       }, { domain });
 

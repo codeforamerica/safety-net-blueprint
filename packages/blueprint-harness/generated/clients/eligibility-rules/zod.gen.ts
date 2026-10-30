@@ -19,31 +19,54 @@ export const zExpeditedSnapRequest = z.object({
 });
 
 /**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
+ * Evaluation result for expeditedSnap.
  */
-export const zExpeditedSnapResponse = z.array(z.union([
+export const zExpeditedSnapResponse = z.record(z.string(), z.union([
     z.object({
-        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['missing']),
+        value: z.optional(z.null()),
         missing: z.array(z.string())
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['error']),
+        value: z.optional(z.null()),
         message: z.string()
     })
-]));
+])).and(z.object({
+    isExpeditedEligible: z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.boolean(),
+            z.null()
+        ]))
+    }))
+}));
 
 export const zEvaluateExpeditedSnapData = z.object({
     body: z.object({
@@ -63,28 +86,51 @@ export const zEvaluateExpeditedSnapData = z.object({
 });
 
 /**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
+ * Evaluation result for expeditedSnap.
  */
-export const zEvaluateExpeditedSnapResponse = z.array(z.union([
+export const zEvaluateExpeditedSnapResponse = z.record(z.string(), z.union([
     z.object({
-        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['missing']),
+        value: z.optional(z.null()),
         missing: z.array(z.string())
     }),
     z.object({
-        fact: z.string(),
         state: z.enum(['error']),
+        value: z.optional(z.null()),
         message: z.string()
     })
-]));
+])).and(z.object({
+    isExpeditedEligible: z.intersection(z.union([
+        z.object({
+            state: z.enum(['complete']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['placeholder']),
+            value: z.unknown()
+        }),
+        z.object({
+            state: z.enum(['missing']),
+            value: z.optional(z.null()),
+            missing: z.array(z.string())
+        }),
+        z.object({
+            state: z.enum(['error']),
+            value: z.optional(z.null()),
+            message: z.string()
+        })
+    ]), z.object({
+        value: z.optional(z.union([
+            z.boolean(),
+            z.null()
+        ]))
+    }))
+}));
