@@ -13,7 +13,7 @@ import { load } from '../../src/load.js';
 import { baseContractsDir } from '../../src/paths.js';
 import { toDoc } from '../../src/doc.js';
 import { validate } from '../../src/validate.js';
-import { generate } from '../../src/generate.js';
+import { eventsAsyncapis } from '../../src/generate.js';
 import { readConfigs } from '../../src/contract-readers.js';
 
 const framework = discover(baseContractsDir).map((file) => load(file));
@@ -124,7 +124,7 @@ describe('the declaration is not content', () => {
   test('a generated events document carries its API\'s capability', () => {
     const transcripts = framework.filter((doc) => !doc.capability || doc.capability === 'transcripts')
       .map((doc) => toDoc({ ...doc, relativePath: `base/${doc.relativePath}` }));
-    const catalog = generate(transcripts, 'events-asyncapi')
+    const catalog = eventsAsyncapis(transcripts)
       .find((doc) => doc.content.info['x-domain'] === 'communication');
     assert.equal(catalog.content.info['x-capability'], 'transcripts');
     assert.equal(catalog.capability, 'transcripts');

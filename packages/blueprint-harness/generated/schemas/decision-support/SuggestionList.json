@@ -149,7 +149,7 @@
                   "fingerprint": {
                     "type": "string",
                     "readOnly": true,
-                    "description": "What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it."
+                    "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n"
                   },
                   "reason": {
                     "type": "string",
@@ -368,9 +368,19 @@
                 "required": [
                   "kind",
                   "subjectType",
-                  "subjectId",
-                  "category",
-                  "message"
+                  "subjectId"
+                ],
+                "anyOf": [
+                  {
+                    "required": [
+                      "category"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "message"
+                    ]
+                  }
                 ],
                 "properties": {
                   "kind": {
@@ -392,7 +402,7 @@
                   },
                   "category": {
                     "type": "string",
-                    "description": "What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.",
+                    "description": "What kind of thing it points out — an entry of the\n`suggestion-categories` registry, which a contract set declares.\nIts description is what a person reads when there is no message.\nAbsent, it is uncategorized: something no category covers yet,\nfound with `q=kind:informing -category:*`.\n",
                     "enum": [
                       "missing-income",
                       "name-mismatch"
@@ -401,7 +411,7 @@
                   "message": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "What it points out, for a person to read."
+                    "description": "What it points out, in words of its own — a model's, about this conversation. Required when there is no category."
                   }
                 }
               },
@@ -435,7 +445,7 @@
                   "fingerprint": {
                     "type": "string",
                     "readOnly": true,
-                    "description": "What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it."
+                    "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n"
                   },
                   "reason": {
                     "type": "string",

@@ -35,7 +35,7 @@ That only works if "we haven't asked yet" is distinguishable from "we asked, and
 | absent | not yet asked | `missing`, naming the path |
 | `null` | asked; none | resolves — an empty collection, `placeholder` |
 | `[]` | asked; none | resolves — `complete` |
-| a field one list item doesn't have | not yet asked, for that item | `missing`, naming the item path (`$.household.members[].age`) — unless the answer is settled without it: `exists` with another item true, `all` with another item false, or a predicate decided by its other operands |
+| a field one list item doesn't have | not yet asked, for that item | `missing`, naming the item at its position (`$.household.members[1].age`) — unless the answer is settled without it: `exists` with another item true, `all` with another item false, or a predicate decided by its other operands |
 
 The distinction is deliberate, and it is the one an engine is most likely to collapse. Reading an uncollected list as empty makes `exists(m, m.age >= 18)` answer `false` for a household whose members were never asked about — a confident wrong answer, and one that leaves a progressive interview with nothing to ask for. Absent is a question; null is an answer. The same holds inside a list: a member added before their age is known leaves "is anyone an adult" unanswered, not "no", until another member settles it.
 
@@ -138,6 +138,8 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 | 4 | [Reference implementation, not a mandated engine](#decision-4-reference-implementation-not-a-mandated-engine) | Blueprint provides `blueprint-rules-engine` as a reference; states can replace it |
 | 5 | [Three invocation modes, one evaluation contract](#decision-5-three-invocation-modes-one-evaluation-contract) | State machine step, standalone endpoint, and browser client all use the same contract |
 | 6 | [New evaluator rather than adopting FactGraph directly](#decision-6-new-evaluator-rather-than-adopting-factgraph-directly) | Blueprint builds on FactGraph's model but uses CEL and YAML rather than FactGraph's XML format |
+| 7 | [CEL library for blueprint-rules-engine](#decision-7-cel-library-for-blueprint-rules-engine) | `@bufbuild/cel`, for its official conformance corpus and browser support |
+| 8 | [How the graph format grows](#decision-8-how-the-graph-format-grows) | A graph declares its format edition as `major.minor`; the format grows by adding, and an engine refuses an edition it doesn't know |
 
 ---
 
@@ -283,3 +285,34 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 **Decision:** `@bufbuild/cel` (B). The conformance test corpus is the deciding factor — expressions in rules contracts can be validated against the same suite Google uses for `cel-go`, which matters for auditability in a benefits context. Browser compatibility is confirmed (pure-JS RE2 port). The bundle size (~68 KB gzipped) is acceptable and well-justified given that the alternative reference engine (FactGraph) is 12x larger. If static type checking at authoring time becomes a requirement before Buf implements it, `@marcbachmann/cel-js` is the fallback.
 
 **CEL type system note:** CEL is strictly typed — `int` and `double` are distinct types with no implicit coercion. Comparisons between them work (`double >= int` has a defined overload), but arithmetic does not (`double * int` is a type error). Since JavaScript has no integer type, all numeric inputs arrive as CEL `double`. Expressions that mix numeric inputs with integer literals in arithmetic must use explicit casts or float literals: `double(household.size) * 500.0`, not `household.size * 500`. This is a CEL spec requirement, not a library limitation — `@marcbachmann/cel-js` behaves identically.
+
+---
+
+### Decision 8: How the graph format grows
+
+**Status:** Decided: B
+
+**What's being decided:** The compiled graph is the interface other engines implement ([Decision 4](#decision-4-reference-implementation-not-a-mandated-engine)), and it will keep gaining what rules need — per-item facts first, more of FactGraph's capabilities after. Each addition must not break a graph or an engine that already works, and an engine given a graph it can't fully evaluate must say so instead of answering wrongly. What is being chosen is how a graph says what it needs.
+
+**Considerations:**
+- An engine that ignores what it doesn't recognize answers wrongly without saying so: a per-item fact it skips leaves every fact reading it unresolved, and a field whose meaning it doesn't know is evaluated as if absent.
+- A graph that declares the newest edition whatever it uses would make every older engine refuse every graph after each addition, including graphs that use nothing new.
+- An added CEL function already declares itself: the expression names it, and an engine without it refuses the graph ([Decision 4](#decision-4-reference-implementation-not-a-mandated-engine)). Fields need the same guarantee, and have no expression to carry it.
+
+**Options:**
+- **(A)** No version: engines ignore fields they don't know
+- **(B)** ✓ Each graph declares `formatVersion` as `major.minor`, set by the compiler from what the graph uses
+- **(C)** A full `major.minor.patch` version, as for packages
+
+**Decision:** The compiler writes the lowest edition that holds what the graph uses: `1.0` for the format before per-item facts, `1.1` for a graph with them. A graph with no `formatVersion` is `1.0`. An engine runs every edition of its major up to the one it knows and refuses a later minor or another major, naming both editions. A patch number is left out because a format has no fix that changes nothing an engine sees. The graph schema in `blueprint-core` documents each edition.
+
+The format grows by three rules:
+
+1. **New behavior comes as a CEL function** where it can, under [Decision 4](#decision-4-reference-implementation-not-a-mandated-engine): the expression declares the dependency.
+2. **Only optional fields are added, and nothing already in the format changes meaning.** A graph that uses an added field raises the minor edition. Changing what an existing field means would be a new major edition.
+3. **Metadata goes in annotations**, not the graph. Questions, citations and display text change nothing an engine computes.
+
+| Edition | Adds |
+|---|---|
+| 1.0 | The format as first defined |
+| 1.1 | Per-item facts: `as` on a list fact, and facts keyed `<list>[].<name>` |

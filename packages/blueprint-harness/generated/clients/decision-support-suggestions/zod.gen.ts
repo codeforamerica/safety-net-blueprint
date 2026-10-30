@@ -38,14 +38,14 @@ export const zOperationSuggestionFields = z.object({
     })
 });
 
-export const zInformingSuggestionFields = z.object({
+export const zInformingSuggestionFields = z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.enum(['missing-income', 'name-mismatch']),
-    message: z.string().min(1)
-});
+    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    message: z.optional(z.string().min(1))
+}));
 
 export const zSuggestionRead = z.object({
     id: z.uuid().readonly(),
@@ -126,14 +126,14 @@ export const zSuggestionCreate = z.union([
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.object({
+    }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.enum(['missing-income', 'name-mismatch']),
-        message: z.string().min(1)
-    }))
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    })))
 ]);
 
 /**
@@ -176,14 +176,14 @@ export const zInformingSuggestionCreate = z.object({
     confidence: z.optional(z.number().gte(0).lte(1)),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
-}).and(z.object({
+}).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.enum(['missing-income', 'name-mismatch']),
-    message: z.string().min(1)
-}));
+    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    message: z.optional(z.string().min(1))
+})));
 
 export const zSuggestion = z.union([
     z.object({
@@ -266,14 +266,14 @@ export const zSuggestion = z.union([
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.object({
+    }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.enum(['missing-income', 'name-mismatch']),
-        message: z.string().min(1)
-    })).and(z.object({
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
         id: z.uuid().readonly(),
         status: z.enum([
             'proposed',
@@ -376,14 +376,14 @@ export const zInformingSuggestion = z.object({
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
-}).and(z.object({
+}).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.enum(['missing-income', 'name-mismatch']),
-    message: z.string().min(1)
-})).and(z.object({
+    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    message: z.optional(z.string().min(1))
+}))).and(z.object({
     id: z.uuid().readonly(),
     status: z.enum([
         'proposed',
@@ -478,14 +478,14 @@ export const zSuggestionList = z.object({
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.object({
+        }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.enum(['missing-income', 'name-mismatch']),
-            message: z.string().min(1)
-        })).and(z.object({
+            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            message: z.optional(z.string().min(1))
+        }))).and(z.object({
             id: z.uuid().readonly(),
             status: z.enum([
                 'proposed',
@@ -537,14 +537,14 @@ export const zSuggestionWritable = z.union([
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.object({
+    }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.enum(['missing-income', 'name-mismatch']),
-        message: z.string().min(1)
-    }))
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    })))
 ]);
 
 /**
@@ -585,14 +585,14 @@ export const zInformingSuggestionWritable = z.object({
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
-}).and(z.object({
+}).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
     subjectType: z.string(),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
-    category: z.enum(['missing-income', 'name-mismatch']),
-    message: z.string().min(1)
-}));
+    category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+    message: z.optional(z.string().min(1))
+})));
 
 export const zSuggestionListWritable = z.object({
     items: z.array(z.union([z.object({
@@ -625,14 +625,14 @@ export const zSuggestionListWritable = z.object({
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.object({
+        }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.enum(['missing-income', 'name-mismatch']),
-            message: z.string().min(1)
-        }))])),
+            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            message: z.optional(z.string().min(1))
+        })))])),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -740,14 +740,14 @@ export const zListSuggestionsResponse = z.object({
             confidence: z.optional(z.number().gte(0).lte(1)),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.object({
+        }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.enum(['missing-income', 'name-mismatch']),
-            message: z.string().min(1)
-        })).and(z.object({
+            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            message: z.optional(z.string().min(1))
+        }))).and(z.object({
             id: z.uuid().readonly(),
             status: z.enum([
                 'proposed',
@@ -802,14 +802,14 @@ export const zCreateSuggestionData = z.object({
             confidence: z.optional(z.number().gte(0).lte(1)),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.object({
+        }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
             subjectType: z.string(),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
-            category: z.enum(['missing-income', 'name-mismatch']),
-            message: z.string().min(1)
-        }))
+            category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+            message: z.optional(z.string().min(1))
+        })))
     ]),
     path: z.optional(z.never()),
     query: z.optional(z.never())
@@ -901,14 +901,14 @@ export const zCreateSuggestionResponse = z.union([
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.object({
+    }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.enum(['missing-income', 'name-mismatch']),
-        message: z.string().min(1)
-    })).and(z.object({
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
         id: z.uuid().readonly(),
         status: z.enum([
             'proposed',
@@ -1018,14 +1018,14 @@ export const zGetSuggestionResponse = z.union([
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.object({
+    }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
-        category: z.enum(['missing-income', 'name-mismatch']),
-        message: z.string().min(1)
-    })).and(z.object({
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
         id: z.uuid().readonly(),
         status: z.enum([
             'proposed',

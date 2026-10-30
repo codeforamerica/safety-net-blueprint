@@ -192,6 +192,21 @@ Filter expressions support string, numeric, and boolean values:
 - `[?(@.order == 1)]` — numeric match
 - `[?(@.enabled == true)]` — boolean match
 
+### Quoted names and indexes
+
+A key with a dot or brackets in it, such as a grouped fact or a per-item fact in a rules file, is written as a quoted name:
+
+```yaml
+- target: $.rulesets.interviewFlags.outputs['risks.earnedIncomeVaries']
+  remove: true
+- target: $.rulesets.review.outputs['reviewMonths[].qualifies']
+  remove: true
+```
+
+An item can also be picked by its position, counting from the end when negative: `$.machines[0]`, `$.steps[-1]`. Prefer a filter when an item has an id, since a position changes when the list does.
+
+Targets are a subset of JSONPath: dotted names, quoted names, indexes and `==` filters. Anything else, such as a wildcard (`[*]`), a slice (`[0:2]`) or a descendant selector (`..`), is an error naming the target, so an overlay never silently matches nothing.
+
 ### State machine targets
 
 State machine files use a top-level `machines:` array. Use a filter expression to target a specific machine by its `object` name, then drill into its `actions`, `emits`, or `on`. Guards and procedures are top-level lists shared by every machine in the file:

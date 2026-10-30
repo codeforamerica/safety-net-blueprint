@@ -52,7 +52,7 @@ step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/generated
 pass "Cleared generated artifacts"
 
-step "Generating committed artifacts (contracts, clients, browser bundle, explorer)"
+step "Generating committed artifacts (contracts, clients, browser bundle, explorer, harness)"
 if bash scripts/generate-artifacts.sh 2>&1; then
   pass "Artifacts generated"
 else
@@ -61,7 +61,7 @@ fi
 bail_if_failed
 
 step "Checking committed artifacts are up to date"
-ARTIFACT_PATHS=(packages/safety-net-explorer/)
+ARTIFACT_PATHS=(packages/safety-net-explorer/ packages/blueprint-harness/generated/)
 if git diff HEAD --exit-code "${ARTIFACT_PATHS[@]}" > /dev/null 2>&1; then
   pass "Committed artifacts are up to date"
 else

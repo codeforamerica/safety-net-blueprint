@@ -325,14 +325,14 @@ describe('generate', () => {
   });
 
   test('refuses a document that does not know where it sits', () => {
-    // An overlay addresses its target by relative path, so a document loaded
-    // outside a set cannot be projected.
+    // A generated artifact is positioned beside the document it comes from,
+    // so a document loaded outside a set cannot be generated from.
     const dir = contractsIn({
-      'intake-compositions.yaml': { $schema: 'compositions-schema.yaml', domain: 'intake', compositions: { x: {} } },
+      'intake-rules.yaml': { $schema: 'rules-schema.yaml', domain: 'intake', rulesets: {} },
     });
     try {
-      const orphan = load(join(dir, 'intake-compositions.yaml'));
-      assert.throws(() => generate([orphan], 'overlay'), /position within the contract set/);
+      const orphan = load(join(dir, 'intake-rules.yaml'));
+      assert.throws(() => generate([orphan], 'graph'), /position within the contract set/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -740,6 +740,42 @@ events:
       assert.ok(rulesTypes.includes('export type SnapProbesResult ='), 'should export result type');
     });
 
+    it('quotes an output named with a dot or a [], so the types are valid TypeScript', () => {
+      // A grouped fact (risks.cashIncome) and a per-item fact
+      // (reviewMonths[].qualifies) are not identifiers; written bare, each
+      // was a syntax error in the generated file.
+      const graph = [
+        'domain: eligibility',
+        'ruleset: review',
+        'outputs: [plain, risks.cashIncome, "reviewMonths[].qualifies", "reviewMonths[].reviewWeeks[].worked"]',
+        'facts:',
+        '  plain: {expression: "true", type: boolean}',
+        '  risks.cashIncome: {expression: "true", type: boolean}',
+        '  "reviewMonths[].qualifies": {expression: "true"}',
+        '  "reviewMonths[].reviewWeeks[].worked": {expression: "true", type: boolean}',
+        '',
+      ].join('\n');
+      const { specsDir, outputDir } = makeDir(
+        { 'eligibility-review-graph.yaml': graph },
+        { 'eligibility/index.ts': "export { listApplications } from './sdk.gen';\n" }
+      );
+
+      generateRules(specsDir, outputDir);
+
+      const rulesTypes = readFileSync(join(outputDir, 'eligibility', 'rules-types.gen.ts'), 'utf8');
+      assert.ok(rulesTypes.includes('  plain: FactNode<boolean>;'), 'an identifier stays bare');
+      assert.ok(rulesTypes.includes("  'risks.cashIncome': FactNode<boolean>;"), 'a grouped fact is quoted');
+      assert.ok(rulesTypes.includes("  'reviewMonths[].qualifies': FactNode<unknown>;"), 'a per-item fact is quoted');
+      assert.ok(
+        rulesTypes.includes("  'reviewMonths[].reviewWeeks[].worked': FactNode<Array<Array<boolean | null> | null>>;"),
+        'a typed per-item fact is one value per item, a list per outer item',
+      );
+
+      const rules = readFileSync(join(outputDir, 'eligibility', 'rules.ts'), 'utf8');
+      assert.ok(rules.includes("      'risks.cashIncome': nodes['risks.cashIncome']"));
+      assert.ok(rules.includes("      'reviewMonths[].qualifies': nodes['reviewMonths[].qualifies']"));
+    });
+
     it('patches domain barrel with Rules and type re-exports', () => {
       const { specsDir, outputDir } = makeDir(
         { 'eligibility-graph.yaml': 'domain: eligibility\nruleset: snapProbes\nnodes: {}\n' },

@@ -86,7 +86,7 @@ export type OperationSuggestionFields = {
     };
 };
 
-export type InformingSuggestionFields = {
+export type InformingSuggestionFields = unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -101,13 +101,18 @@ export type InformingSuggestionFields = {
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 };
 
 export type SuggestionRead = {
@@ -124,7 +129,11 @@ export type SuggestionRead = {
      */
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
-     * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+     * What identifies it, for refusing the same one proposed again: an
+     * operation suggestion's whole call; an informing one's subject,
+     * path and category — or, uncategorized, its message. A keyed hash,
+     * so nothing can be read back from it.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -296,7 +305,7 @@ export type SuggestionCreate = ({
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -311,13 +320,18 @@ export type SuggestionCreate = ({
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 });
 
 /**
@@ -421,7 +435,7 @@ export type InformingSuggestionCreate = {
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -436,13 +450,18 @@ export type InformingSuggestionCreate = {
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 };
 
 export type Suggestion = ({
@@ -512,7 +531,11 @@ export type Suggestion = ({
      */
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
-     * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+     * What identifies it, for refusing the same one proposed again: an
+     * operation suggestion's whole call; an informing one's subject,
+     * path and category — or, uncategorized, its message. A keyed hash,
+     * so nothing can be read back from it.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -629,7 +652,7 @@ export type Suggestion = ({
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -644,13 +667,18 @@ export type Suggestion = ({
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 } & {
     /**
      * Unique identifier (server-generated).
@@ -665,7 +693,11 @@ export type Suggestion = ({
      */
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
-     * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+     * What identifies it, for refusing the same one proposed again: an
+     * operation suggestion's whole call; an informing one's subject,
+     * path and category — or, uncategorized, its message. A keyed hash,
+     * so nothing can be read back from it.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -752,7 +784,11 @@ export type OperationSuggestion = {
      */
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
-     * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+     * What identifies it, for refusing the same one proposed again: an
+     * operation suggestion's whole call; an informing one's subject,
+     * path and category — or, uncategorized, its message. A keyed hash,
+     * so nothing can be read back from it.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -874,7 +910,7 @@ export type InformingSuggestion = {
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -889,13 +925,18 @@ export type InformingSuggestion = {
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 } & {
     /**
      * Unique identifier (server-generated).
@@ -910,7 +951,11 @@ export type InformingSuggestion = {
      */
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
-     * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+     * What identifies it, for refusing the same one proposed again: an
+     * operation suggestion's whole call; an informing one's subject,
+     * path and category — or, uncategorized, its message. A keyed hash,
+     * so nothing can be read back from it.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -995,7 +1040,11 @@ export type SuggestionList = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -1112,7 +1161,7 @@ export type SuggestionList = {
          * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
          */
         expiresAt?: string;
-    } & {
+    } & unknown & {
         kind: 'informing';
         /**
          * What kind of record it is about, e.g. `application_member`.
@@ -1127,13 +1176,18 @@ export type SuggestionList = {
          */
         path?: string;
         /**
-         * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
          */
-        category: 'missing-income' | 'name-mismatch';
+        category?: 'missing-income' | 'name-mismatch';
         /**
-         * What it points out, for a person to read.
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
-        message: string;
+        message?: string;
     } & {
         /**
          * Unique identifier (server-generated).
@@ -1148,7 +1202,11 @@ export type SuggestionList = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -1257,7 +1315,7 @@ export type SuggestionWritable = ({
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -1272,13 +1330,18 @@ export type SuggestionWritable = ({
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 });
 
 /**
@@ -1364,7 +1427,7 @@ export type InformingSuggestionWritable = {
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
     expiresAt?: string;
-} & {
+} & unknown & {
     kind: 'informing';
     /**
      * What kind of record it is about, e.g. `application_member`.
@@ -1379,13 +1442,18 @@ export type InformingSuggestionWritable = {
      */
     path?: string;
     /**
-     * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
      */
-    category: 'missing-income' | 'name-mismatch';
+    category?: 'missing-income' | 'name-mismatch';
     /**
-     * What it points out, for a person to read.
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
      */
-    message: string;
+    message?: string;
 };
 
 export type SuggestionListWritable = {
@@ -1464,7 +1532,7 @@ export type SuggestionListWritable = {
          * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
          */
         expiresAt?: string;
-    } & {
+    } & unknown & {
         kind: 'informing';
         /**
          * What kind of record it is about, e.g. `application_member`.
@@ -1479,13 +1547,18 @@ export type SuggestionListWritable = {
          */
         path?: string;
         /**
-         * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
          */
-        category: 'missing-income' | 'name-mismatch';
+        category?: 'missing-income' | 'name-mismatch';
         /**
-         * What it points out, for a person to read.
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
-        message: string;
+        message?: string;
     })>;
     /**
      * Total number of suggestions.
@@ -1755,7 +1828,11 @@ export type ListSuggestionsResponses = {
              */
             status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
             /**
-             * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+             * What identifies it, for refusing the same one proposed again: an
+             * operation suggestion's whole call; an informing one's subject,
+             * path and category — or, uncategorized, its message. A keyed hash,
+             * so nothing can be read back from it.
+             *
              */
             readonly fingerprint?: string;
             /**
@@ -1881,7 +1958,7 @@ export type ListSuggestionsResponses = {
              * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
              */
             expiresAt?: string;
-        } & {
+        } & unknown & {
             kind: 'informing';
             /**
              * What kind of record it is about, e.g. `application_member`.
@@ -1896,13 +1973,18 @@ export type ListSuggestionsResponses = {
              */
             path?: string;
             /**
-             * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+             * What kind of thing it points out — an entry of the
+             * `suggestion-categories` registry, which a contract set declares.
+             * Its description is what a person reads when there is no message.
+             * Absent, it is uncategorized: something no category covers yet,
+             * found with `q=kind:informing -category:*`.
+             *
              */
-            category: 'missing-income' | 'name-mismatch';
+            category?: 'missing-income' | 'name-mismatch';
             /**
-             * What it points out, for a person to read.
+             * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
              */
-            message: string;
+            message?: string;
         } & {
             /**
              * Unique identifier (server-generated).
@@ -1917,7 +1999,11 @@ export type ListSuggestionsResponses = {
              */
             status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
             /**
-             * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+             * What identifies it, for refusing the same one proposed again: an
+             * operation suggestion's whole call; an informing one's subject,
+             * path and category — or, uncategorized, its message. A keyed hash,
+             * so nothing can be read back from it.
+             *
              */
             readonly fingerprint?: string;
             /**
@@ -2048,7 +2134,7 @@ export type CreateSuggestionData = {
          * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
          */
         expiresAt?: string;
-    } & {
+    } & unknown & {
         kind: 'informing';
         /**
          * What kind of record it is about, e.g. `application_member`.
@@ -2063,13 +2149,18 @@ export type CreateSuggestionData = {
          */
         path?: string;
         /**
-         * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
          */
-        category: 'missing-income' | 'name-mismatch';
+        category?: 'missing-income' | 'name-mismatch';
         /**
-         * What it points out, for a person to read.
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
-        message: string;
+        message?: string;
     });
     path?: never;
     query?: never;
@@ -2218,7 +2309,11 @@ export type CreateSuggestionResponses = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2344,7 +2439,7 @@ export type CreateSuggestionResponses = {
          * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
          */
         expiresAt?: string;
-    } & {
+    } & unknown & {
         kind: 'informing';
         /**
          * What kind of record it is about, e.g. `application_member`.
@@ -2359,13 +2454,18 @@ export type CreateSuggestionResponses = {
          */
         path?: string;
         /**
-         * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
          */
-        category: 'missing-income' | 'name-mismatch';
+        category?: 'missing-income' | 'name-mismatch';
         /**
-         * What it points out, for a person to read.
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
-        message: string;
+        message?: string;
     } & {
         /**
          * Unique identifier (server-generated).
@@ -2380,7 +2480,11 @@ export type CreateSuggestionResponses = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2535,7 +2639,11 @@ export type GetSuggestionResponses = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2661,7 +2769,7 @@ export type GetSuggestionResponses = {
          * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
          */
         expiresAt?: string;
-    } & {
+    } & unknown & {
         kind: 'informing';
         /**
          * What kind of record it is about, e.g. `application_member`.
@@ -2676,13 +2784,18 @@ export type GetSuggestionResponses = {
          */
         path?: string;
         /**
-         * What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
          */
-        category: 'missing-income' | 'name-mismatch';
+        category?: 'missing-income' | 'name-mismatch';
         /**
-         * What it points out, for a person to read.
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
          */
-        message: string;
+        message?: string;
     } & {
         /**
          * Unique identifier (server-generated).
@@ -2697,7 +2810,11 @@ export type GetSuggestionResponses = {
          */
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
-         * What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
          */
         readonly fingerprint?: string;
         /**

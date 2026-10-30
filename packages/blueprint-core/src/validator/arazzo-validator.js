@@ -23,19 +23,20 @@ function idsIn(paths, out) {
  * Every operation id the set will have once resolved.
  *
  * @param {import('../types.js').Doc[]} docs
- * @param {Function} generate - core's generate, passed in to avoid an import cycle
+ * @param {{ generatedOverlays: Function, rulesApis: Function }} generators - core's,
+ *   passed in to avoid an import cycle
  * @returns {Set<string>|null} Null when the set cannot be generated, so ids are not checked
  */
-export function operationIdsOf(docs, generate) {
+export function operationIdsOf(docs, { generatedOverlays, rulesApis }) {
   const ids = new Set();
   for (const doc of docs.filter((d) => d.type === 'openapi')) idsIn(doc.content?.paths, ids);
   try {
-    for (const overlay of generate(docs, 'overlay')) {
+    for (const overlay of generatedOverlays(docs)) {
       for (const action of overlay.actions ?? []) {
         if (action.target === '$.paths') idsIn(action.update, ids);
       }
     }
-    for (const api of generate(docs, 'rules-api')) idsIn(api.content?.paths, ids);
+    for (const api of rulesApis(docs)) idsIn(api.content?.paths, ids);
   } catch {
     return null; // The set does not generate; that is reported where it fails.
   }

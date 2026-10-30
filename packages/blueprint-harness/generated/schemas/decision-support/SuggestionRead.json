@@ -28,7 +28,7 @@
     "fingerprint": {
       "type": "string",
       "readOnly": true,
-      "description": "What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it."
+      "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n"
     },
     "reason": {
       "type": "string",

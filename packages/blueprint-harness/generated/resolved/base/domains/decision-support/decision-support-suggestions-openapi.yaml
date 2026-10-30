@@ -176,8 +176,11 @@ components:
         - kind
         - subjectType
         - subjectId
-        - category
-        - message
+      anyOf:
+        - required:
+            - category
+        - required:
+            - message
       properties:
         kind:
           const: informing
@@ -198,14 +201,19 @@ components:
           example: /income
         category:
           type: string
-          description: What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.
+          description: |
+            What kind of thing it points out — an entry of the
+            `suggestion-categories` registry, which a contract set declares.
+            Its description is what a person reads when there is no message.
+            Absent, it is uncategorized: something no category covers yet,
+            found with `q=kind:informing -category:*`.
           enum:
             - missing-income
             - name-mismatch
         message:
           type: string
           minLength: 1
-          description: What it points out, for a person to read.
+          description: What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
     SuggestionRead:
       type: object
       required:
@@ -236,7 +244,11 @@ components:
         fingerprint:
           type: string
           readOnly: true
-          description: What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it.
+          description: |
+            What identifies it, for refusing the same one proposed again: an
+            operation suggestion's whole call; an informing one's subject,
+            path and category — or, uncategorized, its message. A keyed hash,
+            so nothing can be read back from it.
         reason:
           type: string
           readOnly: true

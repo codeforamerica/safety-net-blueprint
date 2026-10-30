@@ -85,6 +85,20 @@ properties:
     type: string
     description: Must reference the graph schema URI.
 
+  formatVersion:
+    type: string
+    description: >
+      The edition of this format the graph is written in, as major.minor.
+      A minor edition only adds: a field or a CEL function that an engine
+      predating it would not know, which the graph declares by raising the
+      minor. A major edition changes what something already in the format
+      means. An engine refuses a graph from a later minor or another major
+      than it knows, rather than evaluate it wrongly. Absent means 1.0.
+
+      1.0 — the format before per-item facts.
+      1.1 — per-item facts: `as` on a list fact, and facts at `<list>[].<name>`.
+    pattern: "^[0-9]+\\.[0-9]+$"
+
   domain:
     type: string
     description: Domain namespace this graph belongs to (e.g., intake, eligibility).
@@ -156,12 +170,13 @@ properties:
       Map of fact paths to derived node definitions. Facts are computed from
       inputs or other facts via CEL expressions. Keys are the paths the rules
       contract declares: camelCase identifiers (e.g. 'eligible'), which a dot
-      may group (e.g. 'risks.earnedIncomeVaries').
+      may group (e.g. 'risks.earnedIncomeVaries'). A key with `[].` is a
+      fact on each item of a list fact (e.g. 'reviewMonths[].qualifies').
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/Node"
     propertyNames:
-      pattern: "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*$"
+      pattern: "^[a-zA-Z][a-zA-Z0-9]*((\\.|\\[\\]\\.)[a-zA-Z][a-zA-Z0-9]*)*$"
 
   dependencies:
     type: object
@@ -176,7 +191,7 @@ properties:
       type: array
       items:
         type: string
-        pattern: "^(\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*|[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*)$"
+        pattern: "^(\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*|[a-zA-Z][a-zA-Z0-9]*((\\.|\\[\\]\\.)[a-zA-Z][a-zA-Z0-9]*)*)$"
       minItems: 1
 
 $defs:
@@ -223,6 +238,13 @@ $defs:
           array.
         items:
           type: string
+      as:
+        type: string
+        description: >
+          On a list fact: the name its per-item facts' expressions read each
+          item by. Facts keyed `<this fact>[].<name>` are computed once for
+          each item.
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
       default:
         description: >
           Default value for input nodes. Used for policy parameters that

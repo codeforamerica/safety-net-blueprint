@@ -101,6 +101,15 @@ function examplesFor(examplesDoc, graph, path) {
   return examples;
 }
 
+/** Evaluate, reporting a graph the engine refuses, such as one in a later format, as an error. */
+function run(graph, inputs) {
+  try {
+    return evaluate(graph, inputs);
+  } catch (err) {
+    fail(err.message);
+  }
+}
+
 /** Each fact that came back as an error, with where it came from. */
 function errorsIn(runs) {
   return runs.flatMap(({ label, nodes }) => Object.entries(nodes)
@@ -134,7 +143,7 @@ function main() {
     const examples = examplesFor(examplesDoc, graph, options.examples);
     runs = examples.map((example, i) => ({
       label: `${graph.ruleset} example ${i + 1}${example.description ? ` (${example.description})` : ''}`,
-      nodes: evaluate(graph, example.inputs ?? {}),
+      nodes: run(graph, example.inputs ?? {}),
     }));
     result = runs.map(({ nodes }) => nodes);
   } else {
@@ -146,7 +155,7 @@ function main() {
         fail(`--input is not valid JSON: ${err.message}`);
       }
     }
-    result = evaluate(graph, inputs);
+    result = run(graph, inputs);
     runs = [{ label: graph.ruleset ?? basename(options.spec), nodes: result }];
   }
 

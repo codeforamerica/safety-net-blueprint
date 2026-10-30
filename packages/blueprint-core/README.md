@@ -21,7 +21,7 @@ import { discover, load, generate, extract, resolve, validate } from '@codeforam
 const docs = discover(contractsDir).map(load);
 
 const resolved = resolve(docs, {
-  overlays: [...stateOverlays, ...generate(docs, 'overlay')],
+  overlays: stateOverlays,
   envTarget: 'production',
   envVariables: { SUPPORT_EMAIL: 'help@example.gov' },
 });
@@ -57,7 +57,7 @@ Passes run in order, each taking the whole set and returning it.
 | **Environment filtering** | Removes contract elements not tagged for the target deployment environment |
 | **Placeholder substitution** | Replaces `${VAR}` strings in contracts with values from an env file |
 
-RPC action paths and composition endpoints are not passes — they are overlays produced by `generate(docs, 'overlay')` and applied like any other.
+Right after the state's overlays, `resolve` adds what the contracts generate: the API document beside each rules file, the events AsyncAPI beside each OpenAPI document, and the endpoints compositions, rulesets and state machine actions imply. Built from the contracts as the state has them, they follow whatever its overlays changed. Pass only the state's overlays.
 
 ### A contract set as one file
 

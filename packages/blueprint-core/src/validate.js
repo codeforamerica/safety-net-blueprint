@@ -41,7 +41,7 @@ import { governedResource } from './attachment.js';
 import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
-import { generate } from './generate.js';
+import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
 import { unlistedCapabilityNames, withCapability } from './capabilities.js';
 
 /**
@@ -93,7 +93,7 @@ export function validate(docs) {
   const context = {
     docs,
     // Computed once, and only when the set has scenarios to check.
-    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, generate) : null,
+    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -139,7 +139,7 @@ export function validate(docs) {
   // listed says so: the unknown operation or domain is not a typo, it is a
   // capability left out. Worked out only when there is something to explain.
   if (results.some((r) => !r.ok)) {
-    const unlisted = unlistedCapabilityNames(docs, generate);
+    const unlisted = unlistedCapabilityNames(docs, { generatedOverlays, rulesApis });
     for (const finding of results.flatMap((r) => r.errors)) {
       finding.message = withCapability(finding.message, unlisted);
     }
@@ -675,7 +675,7 @@ function eventIndex(docs) {
   const generated = new Map();
   let catalogs = [];
   try {
-    catalogs = generate(docs.filter((d) => d.relativePath !== null), 'events-asyncapi');
+    catalogs = eventsAsyncapis(docs.filter((d) => d.relativePath !== null));
   } catch {
     // The set does not generate; that is reported where it fails.
   }

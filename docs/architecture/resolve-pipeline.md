@@ -26,10 +26,11 @@ base spec directory (--spec)         overlay directory (--overlay)
             rewrite https://blueprint.codeforamerica.org/base/ URIs to relative paths)
                     │
                     ▼
-           3. OpenAPI generation
-           (RPC + composition resources)
-           from *-state-machine.yaml
-           and *-compositions.yaml
+           3. Generation
+           (RPC + composition endpoints, rules APIs,
+            events AsyncAPI, rules graphs)
+           from the overlaid *-state-machine.yaml,
+           *-compositions.yaml and *-rules.yaml
                     │
                     ▼
          4. Relationship resolution
@@ -166,7 +167,9 @@ After overlays have been applied, `resolve.js` generates OpenAPI paths and schem
 
 **Events AsyncAPI** — beside each OpenAPI document, `<name>-events-asyncapi.yaml`: every event its resources send — created, updated and deleted, and each attached state machine's `emits:` — with the shape of each event's data. A hand-written AsyncAPI document holds only events not yet backed by a resource.
 
-Because generation runs after overlays, any overlay modifications to `*-state-machine.yaml` or `*-compositions.yaml` files are reflected in the generated output.
+**Rules graphs** — beside each rules file, one compiled graph per ruleset (`intake-interviewFlags-graph.yaml`), which the rules engine evaluates.
+
+Generation runs after overlays, so a state's changes to state machines, compositions and rulesets are reflected in everything generated from them: a moved endpoint, a described event, a changed constant. An overlay targets the authored documents, never a generated one. Only the framework applies the endpoints generation implies, inside `resolve`, so a caller passes only the state's overlays.
 
 ### 5. Relationship Resolution
 
