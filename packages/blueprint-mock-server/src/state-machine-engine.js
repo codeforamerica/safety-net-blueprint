@@ -634,8 +634,9 @@ function* walkSteps(steps, resource, context, store, pending) {
       }
       // call: can be a string (procedure name) or an object (HTTP operation, formerly invoke:)
       if (typeof step.call === 'string') {
-        // String form: call a named procedure — handled by the runner, not here
-        pendingProcedures.push({ procedureId: step.call, with: step.with });
+        // String form: call a named procedure — handled by the runner, not here.
+        // Its with: is read where the call stands, inside a forEach its item.
+        pendingProcedures.push({ procedureId: step.call, with: step.with, at: context });
       } else if (step.call && typeof step.call === 'object') {
         // Object form: HTTP operation (formerly invoke:)
         applyCallObjectStep(step.call, context, pendingCreates, pendingOperations, pendingAppends);
@@ -761,6 +762,61 @@ export async function applyStepsInOrder(steps, resource, context, store, perform
     }
   }
   return pending;
+}
+
+/**
+ * Apply steps in order, performing each call to an operation as it is reached
+ * — for a procedure or an event's reaction, which, unlike an action, mostly
+ * make no such call. With none, the steps are applied at once and their
+ * result returned as it is; at the first call, the rest follows the call's
+ * outcome and a promise is returned. A call that fails stops the walk, as in
+ * applyStepsInOrder; without `perform`, a call is skipped with a warning, as
+ * in applySteps.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @param {Function|null} perform - As for applyStepsInOrder
+ * @returns {Object|Promise<Object>} As applyStepsInOrder resolves to
+ */
+export function applyStepsWithCalls(steps, resource, context, store, perform) {
+  const pending = emptyPending();
+  const walker = walkSteps(steps, resource, context, store, pending);
+  const advance = () => {
+    for (let next = walker.next(); !next.done; next = walker.next()) {
+      const { step, context: at } = next.value;
+      if (!perform) {
+        const named = typeof step.call === 'string' ? step.call : step.call.operationId;
+        console.warn(`call: ${named} calls an operation, which nothing here can make — skipping`);
+        continue;
+      }
+      const call = operationCallOf(step.call, at);
+      const outcome = call
+        ? perform(call, step)
+        : Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: `call: ${step.call} names no operation call` } });
+      return outcome.then((result) => {
+        if (result.ok) return advance();
+        walker.return();
+        return { ...pending, failed: { step, call, outcome: result } };
+      });
+    }
+    return pending;
+  };
+  return advance();
+}
+
+/**
+ * Go on with a value now, or once it settles when it is a promise — so what
+ * makes no call stays synchronous.
+ *
+ * @template T, U
+ * @param {T|Promise<T>} value
+ * @param {(value: T) => U} next
+ * @returns {U|Promise<U>}
+ */
+export function whenReady(value, next) {
+  return value && typeof value.then === 'function' ? value.then(next) : next(value);
 }
 
 /**

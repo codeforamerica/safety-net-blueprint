@@ -156,9 +156,16 @@ Procedures are invoked by name (string form). HTTP operations use the object for
 
 When a procedure declares `parameters:`, callers pass values via `with:`. Inside the procedure, parameters are referenced as `$params.name`.
 
+An HTTP call by method and path is the machine's own direct write. It skips the
+API's checks — the create or update schema, the checks on a call a record
+carries, the operation's guards, refusing a duplicate — and is checked only
+against the resource's full schema. A call to an operation, by its
+`operationId` (below), is the validated path.
+
 ### Calling an operation
 
-An action can also call an operation by its `operationId`, in the `OperationCall`
+An action, a procedure, or a machine's reaction to an event can also call an
+operation by its `operationId`, in the `OperationCall`
 shape (`base/schemas/operations.yaml`) an Arazzo step names one with, or take a
 call held in data — a suggestion's, say — with a value expression:
 
@@ -181,11 +188,17 @@ call held in data — a suggestion's, say — with a value expression:
 
 A call to an operation is made where it stands: a step after it runs after it.
 
-`runAs` says who the call is made as. `system`, the default, is the machine's
-own write, as an HTTP call by method and path is. `caller` sends it through the
-API as whoever triggered the action, under the operation's own permissions,
-validation and guards, as making it by hand would be. Salesforce Flow's run
-context and ServiceNow's Run As make the same choice explicit.
+`runAs` says who the call is made as. Either way, the call goes through the API,
+so the operation's validation, the checks on a call a record carries, its
+guards' conditions and refusing a duplicate all apply. `system`, the default,
+makes it as the system: it skips only role matching — who a guard's `actors`
+allow — and its events name the system as who acted (`authid: system`,
+`authtype: system`), their `causationid` linking them to the event of what
+caused the call. `caller` makes it as whoever triggered the action — in a
+reaction to an event, the system — under their roles, as making it by hand
+would be. Salesforce Flow's run context and ServiceNow's Run As make the same
+choice explicit. Only the mock's own call is the system: a client sending
+`X-Caller-Roles: system` is a caller with a role named `system`.
 
 `onFailure` says what happens when the call fails: its `then:` steps run instead
 of the action's, which are discarded, the failure readable as `$failure`
@@ -194,8 +207,28 @@ rather than its transition's. The action answers with the call's failure, the
 record as it now is in `details`. With no `onFailure`, a failed call fails the
 action, and nothing is saved.
 
-A call to an operation is made only in an action. The events the call causes
-name the action's first event as their `causationid`.
+In a reaction to an event, `onFailure` works the same way: `to` replaces the
+reaction's transition, and with no `onFailure` nothing the reaction did is
+saved. In a procedure, it ends the procedure: what its steps did is undone and
+`then:` runs instead; a procedure has no transition, so `to` doesn't apply. A
+failure no `onFailure` handles fails the action that called the procedure. A
+failure ends only the procedure it happens in, so a call that may fail for one
+item of many — a suggestion already proposed — goes in a procedure called for
+each, from inside the `forEach`:
+
+```yaml
+- forEach: {in: $flagged, as: id}
+  do:
+    - call: proposeSuggestion
+      with: {id: $id}            # read where the call stands: this item's id
+```
+
+Only a call to an operation reports a failure. Validation refuses `onFailure`
+on a call by method and path, or on a call to a procedure, where it would never
+run.
+
+The events a call causes name, as their `causationid`, the action's first event
+— or, in a reaction, the event reacted to.
 
 ### Context
 

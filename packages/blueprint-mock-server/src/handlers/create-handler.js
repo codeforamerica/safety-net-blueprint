@@ -10,11 +10,12 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf, playsAnyOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 import { callsIn, callProblems } from '../operation-calls.js';
+import { makesSuggestions, fingerprintOf, repeated } from '../suggestion-fingerprints.js';
 
 
 /**
@@ -92,8 +93,26 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         return Response.json(createErrorResponse(wrongCalls, 422), { status: 422 });
       }
 
+      // A suggestion repeating one still open, or dismissed, is refused.
+      let fingerprint;
+      if (makesSuggestions(apiMetadata, endpoint)) {
+        fingerprint = await fingerprintOf(requestBody);
+        const existing = repeated(store, endpoint.collectionName, fingerprint);
+        if (existing) {
+          return Response.json({
+            code: 'CONFLICT',
+            message: `This repeats suggestion ${existing.id}, which is ${existing.status}.`,
+            details: [{ id: existing.id, status: existing.status }],
+          }, { status: 409 });
+        }
+      }
+
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
-      const mergedBody = enrichmentData ? { ...requestBody, ...enrichmentData } : requestBody;
+      const mergedBody = {
+        ...requestBody,
+        ...(enrichmentData ?? {}),
+        ...(fingerprint ? { fingerprint } : {}),
+      };
 
       // Optional non-nullable fields not provided in the request body are intentionally
       // omitted from the stored record (absent ≠ null per OpenAPI 3.1).
@@ -136,7 +155,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
         // Enforce onCreate actors if defined
         if (onCreate.actors && onCreate.actors.length > 0) {
-          if (!callerRoles.some(r => onCreate.actors.includes(r))) {
+          if (!playsAnyOf(callerRoles, onCreate.actors)) {
             return Response.json({
               code: 'FORBIDDEN',
               message: `Creating this resource requires one of the following roles: ${onCreate.actors.join(', ')}`

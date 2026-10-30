@@ -10,6 +10,7 @@ import { executeProcedures, resolveContextLayers } from './handlers/procedure-ru
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
+import { playsAnyOf } from './auth-context.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -42,7 +43,7 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   );
 
   const allActors = guardItems.flatMap(g => g.actors || []);
-  const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
+  const callerHasAnyRole = playsAnyOf(callerRoles, allActors);
   if (!callerHasAnyRole) {
     const uniqueActors = [...new Set(allActors)];
     return { status: 403, error: `Only ${listed(uniqueActors, 'or')} can ${label}.` };
@@ -55,7 +56,7 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   const failed = [];
   const clausePassed = guardItems.some(g => {
     const clauseActors = g.actors || [];
-    if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
+    if (!playsAnyOf(callerRoles, clauseActors)) return false;
     const clauseConditions = g.conditions || [];
     if (clauseConditions.length === 0) return true;
     const result = evaluateGuards(clauseConditions, guardsMap, resource, context);
@@ -164,7 +165,7 @@ export async function executeTransition({
   // The id of the first event this action sends, chosen now so a call it
   // makes can name it as the cause of the call's own events.
   const actionEventId = crypto.randomUUID();
-  const perform = (call, step) => performCall(call, step, {
+  const perform = performerFor({
     callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
   });
 
@@ -206,9 +207,12 @@ export async function executeTransition({
   }
 
   const inlineRules = buildInlineRules(stateMachine, machine);
-  const { pendingEvents: ruleEvents } = executeProcedures(
-    pendingProcedures, updated, inlineRules, context, store
+  const procedures = await executeProcedures(
+    pendingProcedures, updated, inlineRules, context, store, perform
   );
+  // A procedure's call that failed with nothing to handle it fails the action.
+  if (procedures.failed) return refusedBy(procedures.failed.outcome);
+  const ruleEvents = procedures.pendingEvents;
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
@@ -305,10 +309,23 @@ function refusedBy(outcome) {
 }
 
 /**
- * Make a call to an operation, as the step says to run it.
+ * What makes a step's calls to operations, as the step says to run each one:
+ * for an action, a procedure it calls, or an event's reaction.
  *
- * @returns {Promise<{ ok: boolean, status: number, body: * }>}
+ * @param {Object} options
+ * @param {string|null} options.callerId
+ * @param {string[]} options.callerRoles
+ * @param {string} options.timestamp
+ * @param {string|null} options.traceparent
+ * @param {string|null} options.causationid - The event the call's own events name as their cause
+ * @param {Object} options.store
+ * @param {Object|null} options.stepCalls
+ * @returns {(call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>}
  */
+export function performerFor(options) {
+  return (call, step) => performCall(call, step, options);
+}
+
 function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls }) {
   if (!stepCalls) {
     return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });

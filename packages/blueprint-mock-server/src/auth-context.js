@@ -67,8 +67,64 @@ export function extractAuthContext(req) {
  * @returns {string[]}
  */
 export function extractCallerRoles(req) {
+  if (systemRequests.has(req)) return systemRoles();
   const header = headerOf(req, 'x-caller-roles');
   return header ? header.split(',').map(r => r.trim()).filter(Boolean) : [];
+}
+
+// Requests the mock sends itself as the system — an operation call a state
+// machine makes with `runAs: system` — and the roles read from them. Kept
+// beside the request rather than in a header, so no client can claim it: a
+// client sending `X-Caller-Roles: system` is a caller with a role named system.
+const systemRequests = new WeakSet();
+const systemRoleLists = new WeakSet();
+
+/** The roles of the system: `['system']`, marked as the system's. */
+function systemRoles() {
+  const roles = ['system'];
+  systemRoleLists.add(roles);
+  return roles;
+}
+
+/** The system as a caller: a machine reacting to an event acts as it. */
+export function theSystem() {
+  return { id: 'system', roles: systemRoles() };
+}
+
+/**
+ * Mark a request the mock sends itself as made by the system.
+ *
+ * @param {Request} req
+ * @returns {Request} The same request
+ */
+export function asSystem(req) {
+  systemRequests.add(req);
+  return req;
+}
+
+/**
+ * Whether roles are a list of the actors allowed: the system's always are,
+ * since a system call skips role matching — its guards' conditions, and every
+ * other check, still apply. No actors means anyone.
+ *
+ * @param {string[]} roles - As extractCallerRoles gave them
+ * @param {string[]} actors
+ * @returns {boolean}
+ */
+export function playsAnyOf(roles, actors) {
+  if (!actors || actors.length === 0) return true;
+  if (systemRoleLists.has(roles)) return true;
+  return (roles ?? []).some((r) => actors.includes(r));
+}
+
+/**
+ * Whether roles are the system's, read from a request marked by asSystem.
+ *
+ * @param {string[]} roles
+ * @returns {boolean}
+ */
+export function areSystemRoles(roles) {
+  return systemRoleLists.has(roles);
 }
 
 /**

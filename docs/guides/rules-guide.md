@@ -337,30 +337,22 @@ inputs, so a parameter would be accepted and silently ignored — the path would
 promise resource hydration the endpoint does not perform. Identifiers go in the
 body with everything else.
 
-## Rulesets that create suggestions
+## Rulesets that flag records
 
-> **Status: designed, not built.** The ruleset half works today; the state
-> machine half needs `onFailure:` on a call, which is not built yet.
-
-A ruleset can find things a person should look into — a member with no medical
-costs listed, income below expenses — and a state machine can put each one in
-front of a person as a [suggestion](../architecture/domains/decision-support.md).
-The ruleset finds; the state machine decides when to look and what to suggest.
-The ruleset knows nothing about suggestions, so a screen, a report or another
-service can use the same findings.
-
-**Each finding returns the records it is about**, not true or false: the ids of
-the records it found, empty when it found none. Use `filter` where a yes-or-no
-fact would use `exists`. A finding about the whole application returns the
+A ruleset can **flag records** a person should look into — a member with no
+medical costs listed, a household whose income is below its expenses. Each
+flag is an output that returns the ids of the records it flags, empty when it
+flags none, rather than true or false. Use `filter` where a yes-or-no fact
+would use `exists`. A flag about the whole application returns the
 application's id, taken as an input. The output says what its ids are with
 `x-relationship`, as any id field does, and validation checks the resource
 exists.
 
 ```yaml
 rulesets:
-  householdFindings:
+  householdFlags:
     endpoint:
-      path: /applications/evaluate-household-findings
+      path: /applications/evaluate-household-flags
     inputs:
       applicationId: { type: string }
       current: { $ref: '…#/$defs/Household' }
@@ -382,8 +374,29 @@ rulesets:
         expression: "current.monthlyIncome < current.monthlyExpenses ? [applicationId] : []"
 ```
 
-**Each finding has a category**, an entry of a `suggestion-categories`
-registry, whose description is what the person reads:
+A flag may also carry what the ruleset worked out for each record it flags —
+a member's monthly income, calculated from their pay stubs, say — as a list
+of objects rather than of ids:
+
+```yaml
+    outputs:
+      monthlyIncomeToCorrect:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string, x-relationship: { resource: ApplicationMember } }
+            monthlyIncome: { type: number }
+```
+
+A state machine can turn each into a suggestion to change that record to that
+value.
+
+The ruleset only flags. It knows nothing about who looks at the records or how,
+so a screen, a report or another service can use the same flags.
+
+**Each flag has a category** in a `suggestion-categories` registry, whose
+description is what a person reads when the flag is put in front of them:
 
 ```yaml
 type: suggestion-categories
@@ -394,47 +407,12 @@ entries:
     description: Reported income is less than expenses. Ask how the household covers the difference.
 ```
 
-**The state machine of the record that gives the suggestions their context**
-evaluates the ruleset, binds each finding by name, and creates a suggestion for
-each id, one line per finding:
+Keep category ids stable: a suggestion a person dismissed is matched by its
+category, so renaming one brings back everything dismissed under the old name.
+A flag can be renamed freely.
 
-```yaml
-procedures:
-  - id: suggestFindings
-    then:
-      - evaluate: householdFindings
-        inputs: { applicationId: $object.applicationId, current: $household }
-        bind:
-          elderly: elderlyWithoutMedicalCosts
-          shortfall: incomeBelowExpenses
-      - call: createSuggestions
-        with: { category: elderly-without-medical-costs, subjectType: application_member, ids: $elderly }
-      - call: createSuggestions
-        with: { category: income-below-expenses, subjectType: application, ids: $shortfall }
-
-  - id: createSuggestions
-    parameters: [category, subjectType, ids]
-    then:
-      - forEach: { in: $params.ids, as: id }
-        do:
-          - call:
-              POST: decision-support/suggestions
-              body:
-                kind: informing
-                category: $params.category
-                subjectType: $params.subjectType
-                subjectId: $id
-            onFailure: []    # already open or dismissed: nothing to do
-```
-
-Bind findings by name, as above, rather than binding the whole result: a
-grouped fact's name has a dot in it, which a `$result.name` lookup would split.
-
-Evaluating again as the record changes creates nothing new for a finding still
-open, and nothing for one a person dismissed. Keep category ids stable: a
-dismissed suggestion is matched by its category, so renaming one brings back
-everything dismissed under the old name. A finding can be renamed freely; only
-its line in the state machine changes.
+How a state machine evaluates the ruleset and turns each flagged record into a
+suggestion is in [Decision Support](../architecture/domains/decision-support.md#from-flags-to-suggestions).
 
 ## Examples
 

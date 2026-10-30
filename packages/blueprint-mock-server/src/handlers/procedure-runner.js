@@ -5,7 +5,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
-import { applySteps, resolveValue } from '../state-machine-engine.js';
+import { applySteps, applyStepsWithCalls, resolveValue, whenReady } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
@@ -246,15 +246,68 @@ function resolveWithArgs(withArgs, context) {
 }
 
 /**
+ * Create the records a procedure's steps left to create, and make its appends.
+ */
+function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, store) {
+  for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
+    if (stubUrl) {
+      const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
+      const httpStub = matchAndPopHttp('POST', fullPath);
+      if (httpStub) {
+        console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
+        continue;
+      }
+    }
+    try {
+      const created = store.create(entity, createData);
+      if (domain && eventObject) {
+        emitEvent({
+          store,
+          domain,
+          object: eventObject,
+          action: 'created',
+          resourceId: created.id,
+          source: `/${domain}`,
+          data: { ...created },
+          callerId: 'system',
+        });
+      }
+    } catch (e) {
+      console.error(`Procedure "${procedureId}": create "${entity}" failed: ${e.message}`);
+    }
+  }
+
+  for (const append of pendingAppends) {
+    applyPendingAppend(append, store);
+  }
+}
+
+/** Put a record back as it was, for a procedure whose call failed. */
+function restore(resource, before) {
+  for (const key of Object.keys(resource)) if (!(key in before)) delete resource[key];
+  Object.assign(resource, before);
+}
+
+/**
  * Execute a named inline procedure from a state machine's procedures/rules block.
+ *
+ * A call to an operation in its steps is made where it stands, through
+ * `perform`. One that fails ends the procedure as an action's does: what its
+ * steps did is undone and its `onFailure:` runs instead — a procedure has no
+ * transition, so `to:` is ignored there — and with none, the failure is
+ * returned for whatever called the procedure. A failure ends only the
+ * procedure it happens in, so a call that may fail for one item of many
+ * belongs in a procedure called for each.
  *
  * @param {string} procedureId - The procedure id to find
  * @param {Array} inlineProcedures - Combined procedures from the state machine
  * @param {Object} resource - Resource to mutate in place
  * @param {Object} context - State machine context
- * @returns {{ operations: Array, events: Array }}
+ * @param {Object} store
+ * @param {Function|null} [perform] - Makes a call to an operation (performerFor)
+ * @returns {{ operations: Array, events: Array, failed?: Object }|Promise<{ operations: Array, events: Array, failed?: Object }>}
  */
-function executeProcedure(procedureId, inlineProcedures, resource, context, store) {
+function executeProcedure(procedureId, inlineProcedures, resource, context, store, perform = null) {
   const proc = (inlineProcedures || []).find(r => r.id === procedureId);
   if (!proc) {
     console.warn(`Procedure "${procedureId}" not found in state machine`);
@@ -265,60 +318,51 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
   if (entities === null) return { operations: [], events: [] };
 
   const stepContext = { ...context, entities: { ...(context.entities || {}), ...entities } };
-  const allPendingOperations = [];
 
   if (proc.steps !== undefined || hasProcedureStepKey(proc)) {
     const steps = proc.steps != null ? proc.steps : [proc];
-    const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-      applySteps(steps, resource, stepContext, store);
+    const before = { ...resource };
 
-    const allPendingEvents = [...(pendingEvents || [])];
-
-    for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
-      if (stubUrl) {
-        const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
-        const httpStub = matchAndPopHttp('POST', fullPath);
-        if (httpStub) {
-          console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
-          continue;
-        }
-      }
-      try {
-        const created = store.create(entity, createData);
-        if (domain && eventObject) {
-          emitEvent({
-            store,
-            domain,
-            object: eventObject,
-            action: 'created',
-            resourceId: created.id,
-            source: `/${domain}`,
-            data: { ...created },
-            callerId: 'system',
-          });
-        }
-      } catch (e) {
-        console.error(`Procedure "${procedureId}": create "${entity}" failed: ${e.message}`);
-      }
-    }
-
-    for (const append of pendingAppends) {
-      applyPendingAppend(append, store);
-    }
-
-    allPendingOperations.push(...pendingOperations);
-
-    if (pendingProcedures.length > 0) {
-      const { pendingOperations: nestedOps, pendingEvents: nestedEvents } = executeProcedures(
-        pendingProcedures, resource, inlineProcedures, stepContext
+    const finish = (applied, at) => {
+      applyPendingWrites(procedureId, applied, store);
+      const operations = [...applied.pendingOperations];
+      const events = [...(applied.pendingEvents || [])];
+      if (applied.pendingProcedures.length === 0) return { operations, events };
+      return whenReady(
+        executeProcedures(applied.pendingProcedures, resource, inlineProcedures, at, store, perform),
+        (nested) => ({
+          operations: [...operations, ...(nested.pendingOperations || [])],
+          events: [...events, ...(nested.pendingEvents || [])],
+          ...(nested.failed ? { failed: nested.failed } : {}),
+        }),
       );
-      allPendingOperations.push(...(nestedOps || []));
-      allPendingEvents.push(...(nestedEvents || []));
-    }
+    };
 
-    return { operations: allPendingOperations, events: allPendingEvents };
+    return whenReady(applyStepsWithCalls(steps, resource, stepContext, store, perform), (applied) => {
+      if (!applied.failed) return finish(applied, stepContext);
+      const { step, outcome } = applied.failed;
+      restore(resource, before);
+      if (!step.onFailure) return { operations: [], events: [], failed: applied.failed };
+      if (step.onFailure.to) {
+        console.warn(`Procedure "${procedureId}": onFailure.to applies only to a transition — ignored`);
+      }
+      const failureContext = {
+        ...stepContext,
+        object: { ...before },
+        entities: { ...stepContext.entities, failure: { status: outcome.status, error: outcome.body } },
+      };
+      return whenReady(
+        applyStepsWithCalls(step.onFailure.then ?? [], resource, failureContext, store, perform),
+        (handled) => {
+          if (!handled.failed) return finish(handled, failureContext);
+          restore(resource, before);
+          return { operations: [], events: [], failed: handled.failed };
+        },
+      );
+    });
   }
 
+  const allPendingOperations = [];
   // conditions array format (JSON Logic) — for procedures defined with conditions:
   const data = { '$object': { ...resource } };
   for (const [alias, entity] of Object.entries(entities)) {
@@ -378,7 +422,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
 
       if (pendingProcedures.length > 0) {
         const { pendingOperations: nestedOps, pendingEvents: nestedEvents } = executeProcedures(
-          pendingProcedures, resource, inlineProcedures, stepContext
+          pendingProcedures, resource, inlineProcedures, stepContext, store
         );
         allPendingOperations.push(...(nestedOps || []));
         allPendingEvents.push(...(nestedEvents || []));
@@ -392,20 +436,25 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
 }
 
 /**
- * Execute pending procedures against a resource.
+ * Execute pending procedures against a resource, in order.
+ *
+ * Synchronous unless a procedure makes a call to an operation; then the rest
+ * follow its outcome and a promise is returned. A failure no procedure
+ * handled stops the rest and is returned as `failed`.
  *
  * @param {Array<{ procedureId?: string, with?: Object }>} pendingProcedures
  * @param {Object} resource - Resource to mutate
  * @param {Array} [inlineProcedures] - Inline procedures from the state machine
  * @param {Object} [context] - State machine context
- * @returns {{ pendingOperations: Array, pendingEvents: Array }}
+ * @param {Object} [store]
+ * @param {Function|null} [perform] - Makes a call to an operation (performerFor)
+ * @returns {{ pendingOperations: Array, pendingEvents: Array, failed?: Object }|Promise<{ pendingOperations: Array, pendingEvents: Array, failed?: Object }>}
  */
-export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null, store) {
+export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null, store, perform = null) {
   const allPendingOperations = [];
   const allPendingEvents = [];
-  if (!pendingProcedures || pendingProcedures.length === 0) {
-    return { pendingOperations: allPendingOperations, pendingEvents: allPendingEvents };
-  }
+  const done = () => ({ pendingOperations: allPendingOperations, pendingEvents: allPendingEvents });
+  if (!pendingProcedures || pendingProcedures.length === 0) return done();
 
   const stepContext = context ?? {
     caller: { id: 'system', roles: [] },
@@ -414,19 +463,33 @@ export function executeProcedures(pendingProcedures, resource, inlineProcedures 
     now: new Date().toISOString()
   };
 
-  for (const item of pendingProcedures) {
-    const { procedureId } = item;
-    if (!procedureId) continue;
+  const run = (index) => {
+    for (let i = index; i < pendingProcedures.length; i++) {
+      const item = pendingProcedures[i];
+      const { procedureId } = item;
+      if (!procedureId) continue;
 
-    let callContext = stepContext;
-    if (item.with && Object.keys(item.with).length > 0) {
-      const resolvedParams = resolveWithArgs(item.with, stepContext);
-      callContext = { ...stepContext, params: { ...(stepContext.params || {}), ...resolvedParams } };
+      let callContext = stepContext;
+      if (item.with && Object.keys(item.with).length > 0) {
+        const resolvedParams = resolveWithArgs(item.with, item.at ?? stepContext);
+        callContext = { ...stepContext, params: { ...(stepContext.params || {}), ...resolvedParams } };
+      }
+      const result = executeProcedure(procedureId, inlineProcedures, resource, callContext, store, perform);
+      const collect = ({ operations: ops, events: evts, failed }) => {
+        allPendingOperations.push(...(ops || []));
+        allPendingEvents.push(...(evts || []));
+        return failed;
+      };
+      if (result && typeof result.then === 'function') {
+        return result.then((settled) => {
+          const failed = collect(settled);
+          return failed ? { ...done(), failed } : run(i + 1);
+        });
+      }
+      const failed = collect(result);
+      if (failed) return { ...done(), failed };
     }
-    const { operations: ops, events: evts } = executeProcedure(procedureId, inlineProcedures, resource, callContext, store);
-    allPendingOperations.push(...(ops || []));
-    allPendingEvents.push(...(evts || []));
-  }
-
-  return { pendingOperations: allPendingOperations, pendingEvents: allPendingEvents };
+    return done();
+  };
+  return run(0);
 }

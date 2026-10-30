@@ -23,7 +23,7 @@ import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
 import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
 import { operationsOf } from './operation-calls.js';
-import { causedBy } from './auth-context.js';
+import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
 
 /**
  * @param {Object} options
@@ -189,10 +189,14 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /**
    * Make a call to an operation by its operationId.
    *
-   * `runAs: caller` sends it through the mock's own routes as a request from
-   * the caller, so the operation's permissions, validation and guards apply
-   * as they would to the caller making it by hand. `runAs: system`, the
-   * default, is the machine's own write, as a call by method and path is.
+   * The call is sent through the mock's own routes, so the operation's
+   * validation, the checks on a call a record carries, its guards' conditions
+   * and refusing a duplicate apply as they would to a request. `runAs: caller`
+   * makes it as whoever triggered the step, under their roles. `runAs:
+   * system`, the default, makes it as the system: role matching is skipped,
+   * and its events name the system as who acted, `causationid` linking them
+   * to the event that caused the call. The request is marked as the system's
+   * beside it (asSystem), never by a header a client could send.
    *
    * @param {{ operationId: string, parameters?: Array<{ name: string, in: string, value: * }>, body?: * }} call
    * @param {Object} options
@@ -200,51 +204,45 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * @param {{ id: string|null, roles: string[] }} options.caller
    * @param {string|null} [options.traceparent]
    * @param {string|null} [options.causationid] - The event the call's own events name as their cause
-   * @param {string} [options.now]
-   * @param {Function} [options.runAction] - As for apply
    * @returns {Promise<{ ok: boolean, status: number, body: * }>}
    */
-  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null, now, runAction } = {}) {
+  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null } = {}) {
     const operation = operations.get(call.operationId);
     if (!operation) {
       return failure(422, 'VALIDATION_ERROR', `No operation in the contract set has the operationId "${call.operationId}".`);
     }
+    if (!fetchHere) return failure(500, 'INTERNAL_ERROR', 'The mock has no routes to send a call through yet.');
+
     const given = call.parameters ?? [];
     let path = operation.path;
     for (const p of given.filter((p) => p.in === 'path')) {
       path = path.replace(`{${p.name}}`, encodeURIComponent(String(p.value)));
     }
-
-    if (runAs === 'caller') {
-      if (!fetchHere) return failure(500, 'INTERNAL_ERROR', 'The mock has no routes to send a call through yet.');
-      const query = new URLSearchParams(given.filter((p) => p.in === 'query').map((p) => [p.name, String(p.value)]));
-      const headers = { 'content-type': 'application/json' };
-      for (const p of given.filter((p) => p.in === 'header')) headers[p.name] = String(p.value);
+    const query = new URLSearchParams(given.filter((p) => p.in === 'query').map((p) => [p.name, String(p.value)]));
+    const headers = { 'content-type': 'application/json' };
+    for (const p of given.filter((p) => p.in === 'header')) headers[p.name] = String(p.value);
+    // A caller who is the system — a call made as the caller from an action
+    // the system ran — is the system here too.
+    const system = runAs !== 'caller' || areSystemRoles(caller?.roles);
+    if (system) {
+      headers['x-caller-id'] = 'system';
+    } else {
       if (caller?.id) headers['x-caller-id'] = caller.id;
       if (caller?.roles?.length) headers['x-caller-roles'] = caller.roles.join(',');
-      if (traceparent) headers.traceparent = traceparent;
-      const request = causedBy(new Request(`http://mock.internal${path}${query.size ? `?${query}` : ''}`, {
-        method: operation.method,
-        headers,
-        body: call.body === undefined ? undefined : JSON.stringify(call.body),
-      }), causationid);
-      const response = await fetchHere(request);
-      const text = await response.text();
-      let body = text;
-      try { body = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-      return { ok: response.ok, status: response.status, body };
     }
+    if (traceparent) headers.traceparent = traceparent;
+    const request = causedBy(new Request(`http://mock.internal${path}${query.size ? `?${query}` : ''}`, {
+      method: operation.method,
+      headers,
+      body: call.body === undefined ? undefined : JSON.stringify(call.body),
+    }), causationid);
+    if (system) asSystem(request);
 
-    try {
-      const result = await apply({ method: operation.method, path: path.replace(/^\//, ''), body: call.body ?? {} },
-        { caller, traceparent, causationid, now, runAction });
-      if (result && result.success === false) {
-        return failure(result.status ?? 409, result.code ?? 'CONFLICT', result.error, result.details);
-      }
-      return { ok: true, status: 200, body: result?.result ?? result ?? null };
-    } catch (error) {
-      return failure(422, 'VALIDATION_ERROR', error.message);
-    }
+    const response = await fetchHere(request);
+    const text = await response.text();
+    let body = text;
+    try { body = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+    return { ok: response.ok, status: response.status, body };
   }
 
   /** Give perform the mock's fetch, once its routes are registered. */

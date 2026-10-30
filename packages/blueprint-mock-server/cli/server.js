@@ -67,6 +67,9 @@ Environment:
   MOCK_SERVER_HOST    Host to bind to (default: localhost)
   MOCK_SERVER_PORT    Port to listen on (default: 1080)
   MOCK_STORE          sqlite | memory (takes precedence over --store)
+  MOCK_FINGERPRINT_SECRET
+                      Key for suggestion fingerprints, so a stored suggestion
+                      still matches after a restart (default: generated at start)
 
 Examples:
   npm run mock:start

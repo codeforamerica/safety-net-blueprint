@@ -794,7 +794,7 @@ so nothing can be read back from it.
       </span>
     </summary>
     <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Propose a suggestion. It begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code>. An operation suggestion is refused when its operation does not exist, or its call's arguments do not match the operation; an informing one, when its category does not exist.</p></div></div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Propose a suggestion. It begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code>. An operation suggestion is refused when its operation does not exist, or its call's arguments do not match the operation; an informing one, when its category does not exist. One whose fingerprint matches a suggestion still open (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">refused</code>) or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">dismissed</code> is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code>, naming that suggestion in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code>.</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -1539,6 +1539,48 @@ so nothing can be read back from it.
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">409</span>
+        <span style="font-size:11px;color:#555;">A conflict occurred with the current state of the resource.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Conflict</span>
         </summary>
         <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">

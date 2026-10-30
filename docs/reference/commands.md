@@ -142,6 +142,7 @@ npm run mock:start
 |----------|-------------|---------|
 | `MOCK_SERVER_HOST` | Host to bind | `localhost` |
 | `MOCK_SERVER_PORT` | Port to use | `1080` |
+| `MOCK_FINGERPRINT_SECRET` | Key for suggestion fingerprints, so they match across restarts | generated at start |
 
 ```bash
 MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
@@ -248,6 +249,7 @@ See [Rules Contracts](../architecture/rules-contracts.md) for the evaluation mod
 |----------|-------------|---------|
 | `MOCK_SERVER_HOST` | Mock server bind host | `localhost` |
 | `MOCK_SERVER_PORT` | Mock server port | `1080` |
+| `MOCK_FINGERPRINT_SECRET` | Key for suggestion fingerprints | generated at start |
 | `SKIP_VALIDATION` | Skip validation during generation | `false` |
 
 ## Chaining Commands

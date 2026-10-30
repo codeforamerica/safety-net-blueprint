@@ -4,8 +4,8 @@
 > capability, in a `decision-support` domain
 > (`blueprint-core/base-contracts/domains/decision-support/`). Proposing and
 > reading them is built, with the proposal checked against the contracts, and
-> so are accepting, dismissing and expiring them; refusing duplicates is
-> designed, not built.
+> so are accepting, dismissing and expiring them, and refusing a proposal that
+> repeats one open or dismissed.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -339,9 +339,64 @@ to know about every such context.
   nothing else closes expires at its expiry time, a day after it was proposed
   unless it says otherwise.
 
-**Decision:** A ruleset's findings are the records each one is about, and the
-state machine says which category each finding is suggested in. See
-[Rulesets that create suggestions](../../guides/rules-guide.md#rulesets-that-create-suggestions).
+**Decision:** A ruleset flags records — each flag returns the ids of the records
+it flags — and the state machine says which category each flag is suggested in.
+See [From flags to suggestions](#from-flags-to-suggestions), and, for writing
+the ruleset, [Rulesets that flag records](../../guides/rules-guide.md#rulesets-that-flag-records).
+
+## From flags to suggestions
+
+The state machine of the record that gives the suggestions their context — an
+interview, say — evaluates the ruleset, binds each flag by name, and proposes a
+suggestion for each flagged record, one line per flag:
+
+```yaml
+procedures:
+  - id: suggestFlags
+    steps:
+      - evaluate: householdFlags
+        inputs: { applicationId: $object.applicationId, current: $household }
+        bind:
+          elderly: elderlyWithoutMedicalCosts
+          shortfall: incomeBelowExpenses
+      - call: createSuggestions
+        with: { category: elderly-without-medical-costs, subjectType: application_member, ids: $elderly }
+      - call: createSuggestions
+        with: { category: income-below-expenses, subjectType: application, ids: $shortfall }
+
+  - id: createSuggestions
+    parameters: [category, subjectType, ids]
+    steps:
+      - forEach: { in: $params.ids, as: id }
+        do:
+          - call: proposeSuggestion
+            with: { category: $params.category, subjectType: $params.subjectType, id: $id }
+
+  - id: proposeSuggestion
+    parameters: [category, subjectType, id]
+    steps:
+      - call:
+          operationId: createSuggestion
+          body:
+            kind: informing
+            category: $params.category
+            subjectType: $params.subjectType
+            subjectId: $params.id
+        onFailure: { then: [] }     # already open, or dismissed: nothing to do
+```
+
+- **It proposes through the operation**, so the API's checks apply as they
+  would to a person proposing it: one already open, or dismissed, is refused
+  with `409`, which `onFailure` ignores. It proposes as the system, the
+  default, so it isn't held to the roles of whoever started the interview.
+- **Each suggestion is proposed in a procedure of its own**, because a failed
+  call ends the procedure it is in: one already open stops only its own
+  proposal, not the rest of the list.
+- **Bind each flag by name**, as above, rather than binding the whole result: a
+  flag in a group has a dot in its name, which a `$result.name` lookup would
+  split.
+- **Evaluating again as the record changes** proposes nothing new for a flag
+  still open, and nothing for one a person dismissed.
 
 ## Customization
 
@@ -386,9 +441,9 @@ arrives after the suggestion was decided does nothing.
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Suggestions a person accepts or dismisses | CDS Hooks cards and their suggestions | partial — proposed and read, checked against the contracts; deciding is planned |
-| Recording acceptance and override with a reason | CDS Hooks feedback | planned |
-| Not repeating a suggestion open or dismissed | — | planned |
+| Suggestions a person accepts or dismisses | CDS Hooks cards and their suggestions | built |
+| Recording acceptance and override with a reason | CDS Hooks feedback | built — each decision's event, and a dismissal's reason |
+| Not repeating a suggestion open or dismissed | — | built |
 
 ## References
 

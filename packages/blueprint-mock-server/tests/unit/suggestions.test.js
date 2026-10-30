@@ -267,3 +267,68 @@ test('accepting, and expiring by hand, cancel the timer too', async () => {
   assert.strictEqual((await send('POST', `/decision-support/suggestions/${expired.id}/expire`)).status, 200);
   assert.strictEqual((await cancelledFor(expired.id)).length, 1);
 });
+
+// Duplicates: a proposal repeating one still open, or dismissed, is refused,
+// naming it. An operation suggestion is its whole call; an informing one its
+// subject, path and category — or, uncategorized, its message.
+
+test('proposing the same change again while it is open is refused, naming the open one', async () => {
+  const { body: first } = await propose(memberUpdate());
+  const { status, body } = await propose(memberUpdate());
+  assert.strictEqual(status, 409, JSON.stringify(body));
+  assert.deepStrictEqual(body.details, [{ id: first.id, status: 'proposed' }]);
+  assert.match(body.message, new RegExp(first.id));
+});
+
+test('the same call differing only in case, spacing or the order of its parameters is the same', async () => {
+  const { body: first } = await propose(memberUpdate());
+  const call = memberUpdate({ body: { firstName: '  ROSA ' } });
+  call.parameters.reverse();
+  const { status, body } = await propose(call);
+  assert.strictEqual(status, 409, JSON.stringify(body));
+  assert.strictEqual(body.details[0].id, first.id);
+});
+
+test('changing an argument is a different suggestion', async () => {
+  await propose(memberUpdate());
+  const { status, body } = await propose(memberUpdate({ body: { firstName: 'Rosalind' } }));
+  assert.strictEqual(status, 201, JSON.stringify(body));
+});
+
+test('the fingerprint is a keyed hash, not the values it identifies', async () => {
+  const { body } = await propose(memberUpdate());
+  assert.match(body.fingerprint, /^[0-9a-f]{64}$/);
+  assert.ok(!/rosa|updateapplicationmember/i.test(body.fingerprint));
+  const { body: other } = await inform();
+  assert.notStrictEqual(other.fingerprint, body.fingerprint);
+});
+
+test('an informing suggestion reworded is the same; uncategorized, a new message is a new one', async () => {
+  await inform();
+  const reworded = await inform({ message: 'Her first name may be misspelled.' });
+  assert.strictEqual(reworded.status, 409, JSON.stringify(reworded.body));
+  const otherField = await inform({ path: '/lastName' });
+  assert.strictEqual(otherField.status, 201, JSON.stringify(otherField.body));
+
+  await inform({ category: undefined, message: 'Ask about the second job.' });
+  const same = await inform({ category: undefined, message: 'ask about  the second job. ' });
+  assert.strictEqual(same.status, 409, JSON.stringify(same.body));
+  const different = await inform({ category: undefined, message: 'Ask about child support.' });
+  assert.strictEqual(different.status, 201, JSON.stringify(different.body));
+});
+
+test('one dismissed stays refused; one accepted or expired can be suggested again', async () => {
+  const { body: dismissed } = await inform();
+  await decide(dismissed.id, 'dismiss', { reason: 'She confirmed the spelling on file.' });
+  const again = await inform();
+  assert.strictEqual(again.status, 409);
+  assert.deepStrictEqual(again.body.details, [{ id: dismissed.id, status: 'dismissed' }]);
+
+  const { body: accepted } = await inform({ category: 'missing-income' });
+  await decide(accepted.id, 'accept');
+  assert.strictEqual((await inform({ category: 'missing-income' })).status, 201);
+
+  const { body: expired } = await inform({ path: '/lastName' });
+  await decide(expired.id, 'expire');
+  assert.strictEqual((await inform({ path: '/lastName' })).status, 201);
+});

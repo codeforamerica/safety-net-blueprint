@@ -912,7 +912,7 @@ test('applySteps — nested forEach iterates inner collection for each outer ite
 
 test('applySteps — call: string queues procedure in pendingProcedures', () => {
   const { pendingProcedures } = applySteps([{ call: 'assign-queue' }], {}, {}, store);
-  assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue', with: undefined }]);
+  assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue', with: undefined, at: {} }]);
 });
 
 test('applySteps — call: string with with: passes parameters', () => {
@@ -924,6 +924,7 @@ test('applySteps — call: string with with: passes parameters', () => {
   assert.strictEqual(pendingProcedures.length, 1);
   assert.strictEqual(pendingProcedures[0].procedureId, 'notify-caseworker');
   assert.deepStrictEqual(pendingProcedures[0].with, { applicationId: '$object.id', channel: 'email' });
+  assert.strictEqual(pendingProcedures[0].at, context, 'read where the call stands');
 });
 
 // =============================================================================

@@ -1976,6 +1976,25 @@ export type CreateSuggestionErrors = {
         }>;
     };
     /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The request was well-formed but contained semantic errors.
      */
     422: {

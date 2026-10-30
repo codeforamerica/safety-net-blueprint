@@ -150,6 +150,42 @@ function* walkCallStrings(steps) {
   }
 }
 
+/**
+ * Steps with an `onFailure:` that can never run: on a call by method and path,
+ * or to a procedure. Only a call to an operation — `call: { operationId }` or
+ * a `$` value holding one — reports a failure; the others are logged.
+ */
+function* walkUnreachableFailures(steps) {
+  if (!Array.isArray(steps)) return;
+  for (const step of steps) {
+    if (!step || typeof step !== 'object') continue;
+    if (step.onFailure && step.call !== undefined) {
+      const operation = typeof step.call === 'string' ? step.call.startsWith('$') : 'operationId' in (step.call ?? {});
+      if (!operation) yield step;
+    }
+    yield* walkUnreachableFailures(step.then);
+    yield* walkUnreachableFailures(step.else);
+    yield* walkUnreachableFailures(step.do);
+    yield* walkUnreachableFailures(step.onFailure?.then);
+    if (step.when && typeof step.when === 'object') {
+      for (const substeps of Object.values(step.when)) yield* walkUnreachableFailures(substeps);
+    }
+    if (step.forEach?.do) yield* walkUnreachableFailures(step.forEach.do);
+  }
+}
+
+/** The error for an onFailure: that can never run, naming its call. */
+function unreachableFailure(step, path) {
+  const named = typeof step.call === 'string'
+    ? `procedure "${step.call}"`
+    : ['POST', 'PATCH', 'GET', 'DELETE'].filter((m) => m in step.call).map((m) => `${m} ${step.call[m]}`)[0] ?? 'this call';
+  return {
+    rule: 'onfailure-never-runs',
+    message: `onFailure: on the call to ${named} never runs — only a call to an operation, by operationId or a $ value holding one, reports a failure. Call the operation by its operationId to handle one.`,
+    path,
+  };
+}
+
 function* walkSetFields(steps) {
   if (!Array.isArray(steps)) return;
   for (const step of steps) {
@@ -459,6 +495,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: `${ap}.steps` });
         }
       }
+      for (const step of walkUnreachableFailures(action.steps)) errors.push(unreachableFailure(step, `${ap}.steps`));
     }
 
     // A governed resource's guards are checked as an action's are.
@@ -476,6 +513,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: ep });
         }
       }
+      for (const step of walkUnreachableFailures(event.steps)) errors.push(unreachableFailure(step, ep));
       // With transition:, the event's subject is one of this machine's records,
       // looked up as $object. Without it, an event about another resource gives
       // the machine no record of its own, so there is no $object: the record
@@ -514,6 +552,10 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       }
 
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
+      // A procedure of one step is that step, written on the procedure.
+      for (const step of walkUnreachableFailures(proc.steps || proc.then ? procSteps : [proc])) {
+        errors.push(unreachableFailure(step, pp));
+      }
       for (const callId of walkCallStrings(procSteps)) {
         if (!callableIds.has(callId)) {
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: pp });

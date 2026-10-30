@@ -41,7 +41,9 @@ export const listSuggestions = <ThrowOnError extends boolean = false>(options?: 
  * Propose a suggestion. It begins in `proposed`. An operation suggestion
  * is refused when its operation does not exist, or its call's arguments
  * do not match the operation; an informing one, when its category does
- * not exist.
+ * not exist. One whose fingerprint matches a suggestion still open
+ * (`proposed` or `refused`) or `dismissed` is refused with `409`, naming
+ * that suggestion in `details`.
  *
  */
 export const createSuggestion = <ThrowOnError extends boolean = false>(options: Options<CreateSuggestionData, ThrowOnError>) => (options.client ?? client).post<CreateSuggestionResponses, CreateSuggestionErrors, ThrowOnError>({

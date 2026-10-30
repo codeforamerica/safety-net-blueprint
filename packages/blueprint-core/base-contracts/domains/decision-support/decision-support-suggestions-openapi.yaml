@@ -72,7 +72,9 @@ paths:
         Propose a suggestion. It begins in `proposed`. An operation suggestion
         is refused when its operation does not exist, or its call's arguments
         do not match the operation; an informing one, when its category does
-        not exist.
+        not exist. One whose fingerprint matches a suggestion still open
+        (`proposed` or `refused`) or `dismissed` is refused with `409`, naming
+        that suggestion in `details`.
       operationId: createSuggestion
       tags:
         - Suggestions
@@ -97,6 +99,8 @@ paths:
                 $ref: "#/components/schemas/Suggestion"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":

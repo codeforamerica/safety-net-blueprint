@@ -1168,3 +1168,46 @@ describe('scenario: object rename — overlay renames Application schema → Int
     assert.equal(errors.filter(e => e.rule === 'unknown-object').length, 0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// onFailure: only on a call that reports a failure
+// ---------------------------------------------------------------------------
+
+describe('onFailure on a call that cannot report a failure', () => {
+  const handled = { then: [] };
+
+  test('a call to an operation, by operationId or a $ value, may have onFailure', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [
+        { call: { operationId: 'createSuggestion', body: {} }, onFailure: handled },
+        { call: '$request.call', onFailure: handled },
+      ] }],
+    }));
+    assert.ok(!hasRule(errors, 'onfailure-never-runs'), JSON.stringify(errors));
+  });
+
+  test('onFailure on a call by method and path is refused, naming the call', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      on: [{ type: 'intake.application.created', steps: [
+        { forEach: { in: '$this.data.ids', as: 'id' }, do: [
+          { call: { POST: 'decision-support/suggestions', body: {} }, onFailure: handled },
+        ] },
+      ] }],
+    }));
+    const error = errors.find((e) => e.rule === 'onfailure-never-runs');
+    assert.ok(error, JSON.stringify(errors));
+    assert.match(error.message, /POST decision-support\/suggestions/);
+    assert.equal(error.path, 'machines[Application].on[intake.application.created]');
+  });
+
+  test('onFailure on a call to a procedure is refused, in an action or a procedure', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [{ call: 'notify', onFailure: handled }] }],
+      procedures: [
+        { id: 'notify', emit: 'submitted' },
+        { id: 'wrapper', call: 'notify', onFailure: handled },
+      ],
+    }));
+    assert.equal(errors.filter((e) => e.rule === 'onfailure-never-runs').length, 2, JSON.stringify(errors));
+  });
+});
