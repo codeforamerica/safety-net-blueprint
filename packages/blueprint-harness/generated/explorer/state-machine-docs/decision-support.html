@@ -78,7 +78,30 @@
       </tr></tbody>
         </table>
       </div>
-      
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-accept">
+          <td><strong style="color:#2B1A78;">accept</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-accept" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">accepted</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>object.kind is "operation" and has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li>"$request.call"</li><li><code>sets performed</code></li></ul></li><li>If <code>object.kind is "operation" and !has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li>"$object.call"</li></ul></li><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.accepted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.accepted</a></li></ul></td>
+        </tr><tr id="action-dismiss">
+          <td><strong style="color:#2B1A78;">dismiss</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-dismiss" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say no, with a reason.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">dismissed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets reason</code></li><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.dismissed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.dismissed</a></li></ul></td>
+        </tr><tr id="action-expire">
+          <td><strong style="color:#2B1A78;">expire</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-expire" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Close a suggestion that no longer applies, before anyone decided.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">expired</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.expired" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.expired</a></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
       
     </section></div>
   <script>

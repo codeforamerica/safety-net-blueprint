@@ -37,8 +37,8 @@ listing the `suggestions` capability ([Decision 1](#decision-1-a-framework-domai
 4. Accepting a proposed change makes the change, as that person, under the same
    rules as making it by hand. They can correct it first.
 5. If the change cannot be made — the person may not make it, or the record no
-   longer allows it — the attempt is recorded and they can try again until the
-   suggestion expires.
+   longer allows it — the failure is recorded in an event and they can try
+   again until the suggestion expires.
 6. A suggestion that no longer applies is closed by whatever created it: a
    conversation ending closes the suggestions made during it. One nobody
    decides expires after a day.
@@ -70,7 +70,6 @@ One thing put in front of a person, and their decision on it.
   listed together.
 - **What was performed** — the call as it was accepted, when the person changed
   it first.
-- **Attempts** — each accept that failed: what was tried and why it failed.
 - **Fingerprint** — what identifies it, for refusing the same one again. See
   [Decision 7](#decision-7-the-same-suggestion-is-not-proposed-twice).
 - **Dismissal reason**, and when it **expires**.
@@ -103,18 +102,25 @@ becomes a category by a change to the registry.
 | Dismissed | A person said no, with a reason. Terminal. | none |
 | Expired | It no longer applies. Terminal. | none |
 
-Accepting a proposed suggestion that fails moves it to refused, with the attempt
-recorded; accepting again tries again, until it expires. A refused suggestion
+Accepting a proposed suggestion that fails moves it to refused, and the
+`refused` event carries the call and the error; accepting again tries again,
+until it expires. A suggestion's history, failures included, is its events:
+`GET /platform/events?subject={id}`. A refused suggestion
 can still be dismissed. For an informing suggestion, accepting means the person
 took it up.
+
+A person can correct a proposed change before accepting it by sending the call
+with the accept: it must name the same operation, and accepting makes that call
+instead, keeping it as what was performed. A call naming another operation, or
+any call sent to accept an informing suggestion, is refused with `409`.
 
 ## Domain events
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `decision-support.suggestion.proposed` | Something needs a person's decision | Proposing | The decider's screen |
+| `decision-support.suggestion.created` | Something needs a person's decision; proposing is creating it | Proposing | The decider's screen |
 | `decision-support.suggestion.accepted` | A person said yes; for a proposed change, it was made, and the change's own events name this one as their cause | Accepting | Audit; whatever proposed it |
-| `decision-support.suggestion.refused` | A person said yes and the change could not be made | A failed accept | The decider's screen; anything that can route it to someone who may make it |
+| `decision-support.suggestion.refused` | A person said yes and the change could not be made; carries the call and the error | A failed accept | The decider's screen; anything that can route it to someone who may make it |
 | `decision-support.suggestion.dismissed` | A person said no | Dismissing | Audit; whatever proposed it, to learn from |
 | `decision-support.suggestion.expired` | It no longer applies | Expiring, or its timer | The decider's screen; workflow, for a refused one nobody retried |
 
@@ -246,9 +252,11 @@ the change cannot be made decides whether a yes is ever lost.
 - **(B)** The suggestion is refused, with the attempt recorded, and a person
   can retry. After the attempts or time allowed, it fails, and anyone can
   subscribe to that. The limits are declared once and changed by overlay.
-- **(C) ✓** The suggestion is refused, with the attempt recorded, and a person
-  can retry until it expires. Expiry already ends a suggestion nobody acts on,
-  so a separate retry timeout and a limit on attempts add nothing yet.
+- **(C) ✓** The suggestion is refused, its `refused` event carrying the call
+  and the error, and a person can retry until it expires. The suggestion keeps
+  no list of attempts: its events are its history, read with
+  `GET /platform/events?subject={id}`. Expiry already ends a suggestion nobody
+  acts on, so a separate retry timeout and a limit on attempts add nothing yet.
 
 ### Decision 6: Evidence refers, it does not quote
 

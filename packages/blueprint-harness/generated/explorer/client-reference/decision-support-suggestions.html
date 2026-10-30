@@ -97,7 +97,7 @@
       <div id="sidebar-nav">
         <div class="nav-section">
       <div class="nav-section-label">Methods</div>
-      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">3</span></a>
+      <a href="#group-suggestions" class="nav-link">Suggestions <span class="nav-count">3</span></a><a href="#group-accept" class="nav-link">Accept <span class="nav-count">1</span></a><a href="#group-dismiss" class="nav-link">Dismiss <span class="nav-count">1</span></a><a href="#group-expire" class="nav-link">Expire <span class="nav-count">1</span></a>
     </div>
     <div class="nav-section">
         <div class="nav-section-label">Constants</div>
@@ -105,14 +105,14 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-SuggestionCommon" class="nav-link">SuggestionCommon</a><a href="#type-OperationSuggestionFields" class="nav-link">OperationSuggestionFields</a><a href="#type-SuggestionRead" class="nav-link">SuggestionRead</a><a href="#type-SuggestionEvidence" class="nav-link">SuggestionEvidence</a><a href="#type-SuggestionAttempt" class="nav-link">SuggestionAttempt</a><a href="#type-OperationSuggestionCreate" class="nav-link">OperationSuggestionCreate</a><a href="#type-InformingSuggestionCreate" class="nav-link">InformingSuggestionCreate</a><a href="#type-OperationSuggestion" class="nav-link">OperationSuggestion</a><a href="#type-InformingSuggestion" class="nav-link">InformingSuggestion</a><a href="#type-SuggestionList" class="nav-link">SuggestionList</a><a href="#type-OperationSuggestionWritable" class="nav-link">OperationSuggestionWritable</a><a href="#type-InformingSuggestionWritable" class="nav-link">InformingSuggestionWritable</a><a href="#type-SuggestionListWritable" class="nav-link">SuggestionListWritable</a>
+        <a href="#type-SuggestionCommon" class="nav-link">SuggestionCommon</a><a href="#type-OperationSuggestionFields" class="nav-link">OperationSuggestionFields</a><a href="#type-SuggestionRead" class="nav-link">SuggestionRead</a><a href="#type-SuggestionEvidence" class="nav-link">SuggestionEvidence</a><a href="#type-OperationSuggestionCreate" class="nav-link">OperationSuggestionCreate</a><a href="#type-InformingSuggestionCreate" class="nav-link">InformingSuggestionCreate</a><a href="#type-OperationSuggestion" class="nav-link">OperationSuggestion</a><a href="#type-InformingSuggestion" class="nav-link">InformingSuggestion</a><a href="#type-SuggestionList" class="nav-link">SuggestionList</a><a href="#type-AcceptRequest" class="nav-link">AcceptRequest</a><a href="#type-DismissRequest" class="nav-link">DismissRequest</a><a href="#type-OperationSuggestionWritable" class="nav-link">OperationSuggestionWritable</a><a href="#type-InformingSuggestionWritable" class="nav-link">InformingSuggestionWritable</a><a href="#type-SuggestionListWritable" class="nav-link">SuggestionListWritable</a>
       </div>
       </div>
     </nav>
     <main id="content">
-      <section id="section-methods" style="margin-bottom:2.5rem;">
-      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (3)</h2>
-      <div id="ep-listSuggestions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+      <section id="group-suggestions" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Suggestions (3)</h2>
+        <div id="ep-listSuggestions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
@@ -201,7 +201,103 @@
     </div>
   </details>
 </div>
-    </section><section id="section-constants" style="margin-bottom:2.5rem;">
+      </section><section id="group-accept" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Accept (1)</h2>
+        <div id="ep-acceptSuggestion" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">acceptSuggestion<span style="color:#aaa;font-weight:400;">(suggestionId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Accept suggestion</span>
+      
+      <a href="#ep-acceptSuggestion" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">decision-support-suggestions.acceptSuggestion({
+  path: { suggestionId: string },
+  body: { ... },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">suggestionId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="group-dismiss" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Dismiss (1)</h2>
+        <div id="ep-dismissSuggestion" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">dismissSuggestion<span style="color:#aaa;font-weight:400;">(suggestionId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Dismiss suggestion</span>
+      
+      <a href="#ep-dismissSuggestion" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">decision-support-suggestions.dismissSuggestion({
+  path: { suggestionId: string },
+  body: { ... },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">suggestionId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="group-expire" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Expire (1)</h2>
+        <div id="ep-expireSuggestion" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">expireSuggestion<span style="color:#aaa;font-weight:400;">(suggestionId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Expire suggestion</span>
+      
+      <a href="#ep-expireSuggestion" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">decision-support-suggestions.expireSuggestion({
+  path: { suggestionId: string },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">suggestionId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (1)</h2>
         <div id="const-SuggestionKind" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
@@ -215,7 +311,7 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (13)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (14)</h2>
         <div id="type-SuggestionCommon" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -269,20 +365,6 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionEvidence</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceType</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-SuggestionAttempt" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">SuggestionAttempt</code>
-      <span style="font-size:11px;color:#aaa;">2 fields</span>
-      <a href="#type-SuggestionAttempt" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionAttempt</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">call</span><span style="color:#888;">:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">error</span><span style="color:#888;">:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -353,6 +435,34 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionList</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[union]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-AcceptRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">AcceptRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-AcceptRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">AcceptRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">call</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DismissRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DismissRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DismissRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DismissRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

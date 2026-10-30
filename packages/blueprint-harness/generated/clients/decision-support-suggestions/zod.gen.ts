@@ -67,31 +67,6 @@ export const zSuggestionEvidence = z.object({
     sourceId: z.uuid()
 });
 
-/**
- * An accept that failed.
- */
-export const zSuggestionAttempt = z.object({
-    call: z.object({
-        operationId: z.string(),
-        parameters: z.optional(z.array(z.object({
-            name: z.string(),
-            in: z.enum([
-                'path',
-                'query',
-                'header',
-                'cookie'
-            ]),
-            value: z.unknown()
-        }))),
-        body: z.optional(z.unknown())
-    }),
-    error: z.object({
-        code: z.string(),
-        message: z.string(),
-        details: z.optional(z.array(z.record(z.string(), z.unknown())))
-    })
-});
-
 export const zSuggestionCreate = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
@@ -236,28 +211,7 @@ export const zSuggestion = z.union([
                 value: z.unknown()
             }))),
             body: z.optional(z.unknown())
-        }).readonly()),
-        attempts: z.optional(z.array(z.object({
-            call: z.object({
-                operationId: z.string(),
-                parameters: z.optional(z.array(z.object({
-                    name: z.string(),
-                    in: z.enum([
-                        'path',
-                        'query',
-                        'header',
-                        'cookie'
-                    ]),
-                    value: z.unknown()
-                }))),
-                body: z.optional(z.unknown())
-            }),
-            error: z.object({
-                code: z.string(),
-                message: z.string(),
-                details: z.optional(z.array(z.record(z.string(), z.unknown())))
-            })
-        })).readonly())
+        }).readonly())
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
@@ -342,28 +296,7 @@ export const zOperationSuggestion = z.object({
             value: z.unknown()
         }))),
         body: z.optional(z.unknown())
-    }).readonly()),
-    attempts: z.optional(z.array(z.object({
-        call: z.object({
-            operationId: z.string(),
-            parameters: z.optional(z.array(z.object({
-                name: z.string(),
-                in: z.enum([
-                    'path',
-                    'query',
-                    'header',
-                    'cookie'
-                ]),
-                value: z.unknown()
-            }))),
-            body: z.optional(z.unknown())
-        }),
-        error: z.object({
-            code: z.string(),
-            message: z.string(),
-            details: z.optional(z.array(z.record(z.string(), z.unknown())))
-        })
-    })).readonly())
+    }).readonly())
 }));
 
 /**
@@ -449,28 +382,7 @@ export const zSuggestionList = z.object({
                     value: z.unknown()
                 }))),
                 body: z.optional(z.unknown())
-            }).readonly()),
-            attempts: z.optional(z.array(z.object({
-                call: z.object({
-                    operationId: z.string(),
-                    parameters: z.optional(z.array(z.object({
-                        name: z.string(),
-                        in: z.enum([
-                            'path',
-                            'query',
-                            'header',
-                            'cookie'
-                        ]),
-                        value: z.unknown()
-                    }))),
-                    body: z.optional(z.unknown())
-                }),
-                error: z.object({
-                    code: z.string(),
-                    message: z.string(),
-                    details: z.optional(z.array(z.record(z.string(), z.unknown())))
-                })
-            })).readonly())
+            }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
                 sourceType: z.string(),
@@ -503,6 +415,27 @@ export const zSuggestionList = z.object({
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
     hasNext: z.optional(z.boolean())
+});
+
+export const zAcceptRequest = z.object({
+    call: z.optional(z.object({
+        operationId: z.string(),
+        parameters: z.optional(z.array(z.object({
+            name: z.string(),
+            in: z.enum([
+                'path',
+                'query',
+                'header',
+                'cookie'
+            ]),
+            value: z.unknown()
+        }))),
+        body: z.optional(z.unknown())
+    }))
+});
+
+export const zDismissRequest = z.object({
+    reason: z.string().min(1)
 });
 
 export const zSuggestionWritable = z.union([
@@ -710,28 +643,7 @@ export const zListSuggestionsResponse = z.object({
                     value: z.unknown()
                 }))),
                 body: z.optional(z.unknown())
-            }).readonly()),
-            attempts: z.optional(z.array(z.object({
-                call: z.object({
-                    operationId: z.string(),
-                    parameters: z.optional(z.array(z.object({
-                        name: z.string(),
-                        in: z.enum([
-                            'path',
-                            'query',
-                            'header',
-                            'cookie'
-                        ]),
-                        value: z.unknown()
-                    }))),
-                    body: z.optional(z.unknown())
-                }),
-                error: z.object({
-                    code: z.string(),
-                    message: z.string(),
-                    details: z.optional(z.array(z.record(z.string(), z.unknown())))
-                })
-            })).readonly())
+            }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
                 sourceType: z.string(),
@@ -870,28 +782,7 @@ export const zCreateSuggestionResponse = z.union([
                 value: z.unknown()
             }))),
             body: z.optional(z.unknown())
-        }).readonly()),
-        attempts: z.optional(z.array(z.object({
-            call: z.object({
-                operationId: z.string(),
-                parameters: z.optional(z.array(z.object({
-                    name: z.string(),
-                    in: z.enum([
-                        'path',
-                        'query',
-                        'header',
-                        'cookie'
-                    ]),
-                    value: z.unknown()
-                }))),
-                body: z.optional(z.unknown())
-            }),
-            error: z.object({
-                code: z.string(),
-                message: z.string(),
-                details: z.optional(z.array(z.record(z.string(), z.unknown())))
-            })
-        })).readonly())
+        }).readonly())
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
@@ -987,28 +878,312 @@ export const zGetSuggestionResponse = z.union([
                 value: z.unknown()
             }))),
             body: z.optional(z.unknown())
-        }).readonly()),
-        attempts: z.optional(z.array(z.object({
-            call: z.object({
-                operationId: z.string(),
-                parameters: z.optional(z.array(z.object({
-                    name: z.string(),
-                    in: z.enum([
-                        'path',
-                        'query',
-                        'header',
-                        'cookie'
-                    ]),
-                    value: z.unknown()
-                }))),
-                body: z.optional(z.unknown())
-            }),
-            error: z.object({
-                code: z.string(),
-                message: z.string(),
-                details: z.optional(z.array(z.record(z.string(), z.unknown())))
-            })
-        })).readonly())
+        }).readonly())
+    })),
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.intersection(z.unknown(), z.object({
+        kind: z.literal('informing'),
+        subjectType: z.string(),
+        subjectId: z.uuid(),
+        path: z.optional(z.string()),
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))
+]);
+
+export const zAcceptSuggestionData = z.object({
+    body: z.object({
+        call: z.optional(z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        }))
+    }),
+    path: z.object({
+        suggestionId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Transition applied successfully.
+ */
+export const zAcceptSuggestionResponse = z.union([
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.object({
+        kind: z.literal('operation'),
+        call: z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        })
+    })).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })).and(z.object({
+        performed: z.optional(z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        }).readonly())
+    })),
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.intersection(z.unknown(), z.object({
+        kind: z.literal('informing'),
+        subjectType: z.string(),
+        subjectId: z.uuid(),
+        path: z.optional(z.string()),
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))
+]);
+
+export const zDismissSuggestionData = z.object({
+    body: z.object({
+        reason: z.string().min(1)
+    }),
+    path: z.object({
+        suggestionId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Transition applied successfully.
+ */
+export const zDismissSuggestionResponse = z.union([
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.object({
+        kind: z.literal('operation'),
+        call: z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        })
+    })).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })).and(z.object({
+        performed: z.optional(z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        }).readonly())
+    })),
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.intersection(z.unknown(), z.object({
+        kind: z.literal('informing'),
+        subjectType: z.string(),
+        subjectId: z.uuid(),
+        path: z.optional(z.string()),
+        category: z.optional(z.enum(['missing-income', 'name-mismatch'])),
+        message: z.optional(z.string().min(1))
+    }))).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))
+]);
+
+export const zExpireSuggestionData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        suggestionId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Transition applied successfully.
+ */
+export const zExpireSuggestionResponse = z.union([
+    z.object({
+        evidence: z.optional(z.array(z.object({
+            sourceType: z.string(),
+            sourceId: z.uuid()
+        }))),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        expiresAt: z.optional(z.iso.datetime({ offset: true }))
+    }).and(z.object({
+        kind: z.literal('operation'),
+        call: z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        })
+    })).and(z.object({
+        id: z.uuid().readonly(),
+        status: z.enum([
+            'proposed',
+            'accepted',
+            'refused',
+            'dismissed',
+            'expired'
+        ]),
+        fingerprint: z.optional(z.string().readonly()),
+        reason: z.optional(z.string().readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })).and(z.object({
+        performed: z.optional(z.object({
+            operationId: z.string(),
+            parameters: z.optional(z.array(z.object({
+                name: z.string(),
+                in: z.enum([
+                    'path',
+                    'query',
+                    'header',
+                    'cookie'
+                ]),
+                value: z.unknown()
+            }))),
+            body: z.optional(z.unknown())
+        }).readonly())
     })),
     z.object({
         evidence: z.optional(z.array(z.object({

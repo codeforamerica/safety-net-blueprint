@@ -10,6 +10,10 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `communication.transcript.paused` | [Communication/Transcript](communication.md) | *(none)* |
 | `communication.transcript.resumed` | [Communication/Transcript](communication.md) | *(none)* |
 | `communication.transcript_entry.created` | *(unknown)* | [Communication/Transcript](communication.md) |
+| `decision-support.suggestion.accepted` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
+| `decision-support.suggestion.dismissed` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
+| `decision-support.suggestion.expired` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
+| `decision-support.suggestion.refused` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
 | `eligibility.determination.complete` | [Eligibility/Determination](eligibility.md) | *(none)* |
 | `intake.application.closed` | [Intake/Application](intake.md) | *(none)* |
 | `intake.application.submitted` | [Intake/Application](intake.md) | [Eligibility/Determination](eligibility.md) |

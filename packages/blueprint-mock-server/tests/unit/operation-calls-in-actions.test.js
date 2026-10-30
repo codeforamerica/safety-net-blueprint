@@ -2,9 +2,9 @@
  * An action calling an operation: made in order, as the caller with
  * `runAs: caller`, and handled with `onFailure:` when it fails.
  *
- * Run against the harness's contracts, with the Suggestion machine given a
- * trial action that calls the operation a suggestion holds — the shape
- * accepting will take.
+ * Run against the harness's contracts: first the Suggestion machine's own
+ * accept, then the machine given a trial action that calls the operation a
+ * suggestion holds, to try the DSL's variations.
  */
 
 import { test, beforeEach } from 'node:test';
@@ -18,8 +18,9 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const harness = resolve(packageRoot, '../blueprint-harness/generated/resolved');
 const APPLICATION = '11111111-1111-4111-8111-111111111111';
 
-/** The harness, with the Suggestion machine's actions replaced by `actions`. */
+/** The harness, with the Suggestion machine's actions replaced by `actions` when given. */
 function contractsWith(actions) {
+  if (!actions) return generate(discover(harness).map(load), 'artifact');
   const docs = discover(harness).map(load).map((doc) => {
     if (doc.type !== 'state-machine' || doc.content?.domain !== 'decision-support') return doc;
     const [machine] = doc.content.machines;
@@ -83,6 +84,93 @@ async function propose(body) {
 const events = async (type) => (await send('GET', `/platform/events?q=${encodeURIComponent(`type:${type}`)}&limit=100`)).body.items;
 
 beforeEach(() => { mock = null; });
+
+test('accepting makes the call as the person accepting, and the call\'s events name the acceptance as their cause', async () => {
+  await boot();
+  const suggestion = await propose({ firstName: 'Rosalind' });
+
+  const { status, body } = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, {});
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.status, 'accepted');
+  assert.equal(body.performed, undefined, 'performed is only for a call the person changed');
+
+  const { body: after } = await send('GET', `/intake/applications/${APPLICATION}/members/${member.id}`);
+  assert.equal(after.firstName, 'Rosalind');
+  const [accepted] = await events('decision-support.suggestion.accepted');
+  const updated = (await events('intake.application_member.updated')).find((e) => e.subject === member.id);
+  assert.equal(updated.authid, 'worker-1');
+  assert.equal(updated.causationid, accepted.id);
+});
+
+test('a person can correct the call before accepting, and the call made is kept as performed', async () => {
+  await boot();
+  const suggestion = await propose({ firstName: 'Rosalind' });
+  const corrected = { ...suggestion.call, body: { firstName: 'Rosalinda' } };
+
+  const { status, body } = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: corrected });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.status, 'accepted');
+  assert.deepEqual(body.performed, corrected);
+  assert.deepEqual(body.call, suggestion.call, 'the suggestion still says what was proposed');
+  const { body: after } = await send('GET', `/intake/applications/${APPLICATION}/members/${member.id}`);
+  assert.equal(after.firstName, 'Rosalinda');
+});
+
+test('a corrected call naming another operation is refused', async () => {
+  await boot();
+  const suggestion = await propose({ firstName: 'Rosalind' });
+  const other = { ...suggestion.call, operationId: 'deleteApplicationMember', body: undefined };
+
+  const { status, body } = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: other });
+  assert.equal(status, 409, JSON.stringify(body));
+  assert.match(body.message, /names the suggestion's own operation/);
+  const { body: after } = await send('GET', `/decision-support/suggestions/${suggestion.id}`);
+  assert.equal(after.status, 'proposed');
+});
+
+test('a correction the operation refuses leaves the suggestion refused, and accepting again with a good one succeeds', async () => {
+  await boot();
+  const suggestion = await propose({ firstName: 'Rosalind' });
+  const bad = { ...suggestion.call, body: { firstName: 5 } };
+
+  const first = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: bad });
+  assert.equal(first.status, 422, JSON.stringify(first.body));
+  assert.equal(first.body.details[0].status, 'refused');
+  const [refused] = await events('decision-support.suggestion.refused');
+  assert.deepEqual(refused.data.call, bad, 'the refused event carries the call that was tried');
+
+  const good = { ...suggestion.call, body: { firstName: 'Rosa' } };
+  const again = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: good });
+  assert.equal(again.status, 200, JSON.stringify(again.body));
+  assert.equal(again.body.status, 'accepted');
+  assert.deepEqual(again.body.performed, good);
+});
+
+test('an accept that fails leaves the suggestion refused, its refused event carrying the call and the error, and it can be accepted again', async () => {
+  await boot();
+  const suggestion = await proposeThenDelete();
+
+  const first = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, {});
+  assert.equal(first.status, 404, JSON.stringify(first.body));
+  const [record] = first.body.details;
+  assert.equal(record.id, suggestion.id);
+  assert.equal(record.status, 'refused');
+  assert.equal(record.attempts, undefined, 'the suggestion keeps no list of attempts');
+
+  const [refused] = await events('decision-support.suggestion.refused');
+  assert.equal(refused.subject, suggestion.id);
+  assert.deepEqual(refused.data.call, suggestion.call);
+  assert.equal(refused.data.error.message, first.body.message);
+
+  const again = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, {});
+  assert.equal(again.status, 404);
+  assert.equal(again.body.details[0].status, 'refused');
+  assert.equal((await events('decision-support.suggestion.refused')).length, 2, 'each failure is its own event');
+  assert.equal((await events('decision-support.suggestion.accepted')).length, 0);
+
+  const dismissed = await send('POST', `/decision-support/suggestions/${suggestion.id}/dismiss`, { reason: 'Rosa left the household.' });
+  assert.equal(dismissed.body.status, 'dismissed', 'a refused suggestion can still be dismissed');
+});
 
 test('the call is made as the caller, and its events name the action\'s as their cause', async () => {
   await boot([tryIt(handled)]);

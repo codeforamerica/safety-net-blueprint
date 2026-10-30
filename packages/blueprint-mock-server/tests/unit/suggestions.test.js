@@ -1,10 +1,11 @@
 /**
- * Proposing a suggestion, run against the harness's contracts, which list the
+ * Proposing and deciding a suggestion, run against the harness's contracts, which list the
  * `suggestions` capability.
  *
  * An operation suggestion carries a call, and the call is checked the way the
  * operation it names would check the request it stands for. An informing one
- * names a category the set declares.
+ * names a category the set declares. Accepting an operation suggestion is in
+ * operation-calls-in-actions.test.js.
  */
 
 import { test, beforeEach } from 'node:test';
@@ -151,4 +152,49 @@ test('a path that is not a JSON Pointer is refused', async () => {
   const response = await inform({ path: 'firstName' });
   assert.strictEqual(response.status, 422);
   assert.ok(fields(response).includes('path'), JSON.stringify(response.body));
+});
+
+const decide = (id, action, body = {}) => send('POST', `/decision-support/suggestions/${id}/${action}`, body);
+const events = async (type) => (await send('GET', `/platform/events?q=${encodeURIComponent(`type:${type}`)}`)).body.items;
+
+test('accepting an informing suggestion means the person took it up', async () => {
+  const { body: suggestion } = await inform();
+  const { status, body } = await decide(suggestion.id, 'accept');
+  assert.strictEqual(status, 200, JSON.stringify(body));
+  assert.strictEqual(body.status, 'accepted');
+  assert.strictEqual((await events('decision-support.suggestion.accepted')).length, 1);
+});
+
+test('a call sent when accepting an informing suggestion is refused', async () => {
+  const { body: suggestion } = await inform();
+  const { status, body } = await decide(suggestion.id, 'accept', { call: memberUpdate() });
+  assert.strictEqual(status, 409, JSON.stringify(body));
+  assert.match(body.message, /only for an operation suggestion/);
+});
+
+test('dismissing takes a reason, and keeps it', async () => {
+  const { body: suggestion } = await inform();
+  const without = await decide(suggestion.id, 'dismiss');
+  assert.strictEqual(without.status, 422);
+  const { status, body } = await decide(suggestion.id, 'dismiss', { reason: 'She confirmed the spelling on file.' });
+  assert.strictEqual(status, 200, JSON.stringify(body));
+  assert.strictEqual(body.status, 'dismissed');
+  assert.strictEqual(body.reason, 'She confirmed the spelling on file.');
+  assert.strictEqual((await events('decision-support.suggestion.dismissed')).length, 1);
+});
+
+test('the proposal\'s event is the suggestion\'s created event', async () => {
+  const { body: suggestion } = await inform();
+  const [created] = await events('decision-support.suggestion.created');
+  assert.strictEqual(created.subject, suggestion.id);
+});
+
+test('expiring closes an open suggestion, and a closed one cannot be decided', async () => {
+  const { body: suggestion } = await inform();
+  const { status, body } = await decide(suggestion.id, 'expire');
+  assert.strictEqual(status, 200, JSON.stringify(body));
+  assert.strictEqual(body.status, 'expired');
+  assert.strictEqual((await events('decision-support.suggestion.expired')).length, 1);
+  assert.strictEqual((await decide(suggestion.id, 'accept')).status, 409);
+  assert.strictEqual((await decide(suggestion.id, 'dismiss', { reason: 'Too late.' })).status, 409);
 });

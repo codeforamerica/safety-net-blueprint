@@ -2038,6 +2038,93 @@
               }
             }
           ]
+        },
+        {
+          "name": "Accept Suggestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions/{{suggestionId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions",
+                "{{suggestionId}}",
+                "accept"
+              ],
+              "variables": [
+                "suggestionId"
+              ]
+            },
+            "description": "Trigger the accept transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expire Suggestion (409 Conflict)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions/{{suggestionId}}/expire",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions",
+                "{{suggestionId}}",
+                "expire"
+              ],
+              "variables": [
+                "suggestionId"
+              ]
+            },
+            "description": "Trigger the expire transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "description": "Suggestions"
@@ -5772,6 +5859,11 @@
     {
       "key": "transcriptId",
       "value": "7a1e0c2d-0000-4000-8000-000000000001",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
       "type": "string"
     },
     {

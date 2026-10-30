@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateSuggestionData, CreateSuggestionErrors, CreateSuggestionResponses, GetSuggestionData, GetSuggestionErrors, GetSuggestionResponses, ListSuggestionsData, ListSuggestionsErrors, ListSuggestionsResponses } from './types.gen';
-import { zCreateSuggestionData, zCreateSuggestionResponse, zGetSuggestionData, zGetSuggestionResponse, zListSuggestionsData, zListSuggestionsResponse } from './zod.gen';
+import type { AcceptSuggestionData, AcceptSuggestionErrors, AcceptSuggestionResponses, CreateSuggestionData, CreateSuggestionErrors, CreateSuggestionResponses, DismissSuggestionData, DismissSuggestionErrors, DismissSuggestionResponses, ExpireSuggestionData, ExpireSuggestionErrors, ExpireSuggestionResponses, GetSuggestionData, GetSuggestionErrors, GetSuggestionResponses, ListSuggestionsData, ListSuggestionsErrors, ListSuggestionsResponses } from './types.gen';
+import { zAcceptSuggestionData, zAcceptSuggestionResponse, zCreateSuggestionData, zCreateSuggestionResponse, zDismissSuggestionData, zDismissSuggestionResponse, zExpireSuggestionData, zExpireSuggestionResponse, zGetSuggestionData, zGetSuggestionResponse, zListSuggestionsData, zListSuggestionsResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -66,5 +66,52 @@ export const getSuggestion = <ThrowOnError extends boolean = false>(options: Opt
     responseType: 'json',
     responseValidator: async (data) => await zGetSuggestionResponse.parseAsync(data),
     url: '/suggestions/{suggestionId}',
+    ...options
+});
+
+/**
+ * Accept suggestion
+ *
+ * Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
+ */
+export const acceptSuggestion = <ThrowOnError extends boolean = false>(options: Options<AcceptSuggestionData, ThrowOnError>) => (options.client ?? client).post<AcceptSuggestionResponses, AcceptSuggestionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zAcceptSuggestionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zAcceptSuggestionResponse.parseAsync(data),
+    url: '/suggestions/{suggestionId}/accept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Dismiss suggestion
+ *
+ * Say no, with a reason.
+ */
+export const dismissSuggestion = <ThrowOnError extends boolean = false>(options: Options<DismissSuggestionData, ThrowOnError>) => (options.client ?? client).post<DismissSuggestionResponses, DismissSuggestionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zDismissSuggestionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zDismissSuggestionResponse.parseAsync(data),
+    url: '/suggestions/{suggestionId}/dismiss',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Expire suggestion
+ *
+ * Close a suggestion that no longer applies, before anyone decided.
+ */
+export const expireSuggestion = <ThrowOnError extends boolean = false>(options: Options<ExpireSuggestionData, ThrowOnError>) => (options.client ?? client).post<ExpireSuggestionResponses, ExpireSuggestionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zExpireSuggestionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zExpireSuggestionResponse.parseAsync(data),
+    url: '/suggestions/{suggestionId}/expire',
     ...options
 });

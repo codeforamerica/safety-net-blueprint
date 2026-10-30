@@ -279,17 +279,6 @@ components:
           x-relationship:
             resource: Polymorphic
 
-    SuggestionAttempt:
-      type: object
-      description: An accept that failed.
-      additionalProperties: false
-      required: [call, error]
-      properties:
-        call:
-          $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
-        error:
-          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
-
     SuggestionCreate:
       oneOf:
         - $ref: "#/components/schemas/OperationSuggestionCreate"
@@ -337,12 +326,6 @@ components:
               readOnly: true
               description: The call as it was accepted, only when the person changed it first.
               $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
-            attempts:
-              type: array
-              readOnly: true
-              description: Each accept that failed.
-              items:
-                $ref: "#/components/schemas/SuggestionAttempt"
 
     InformingSuggestion:
       description: Something pointed out, including server-managed fields.

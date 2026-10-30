@@ -11,6 +11,26 @@ channels:
     messages:
       DecisionSupportSuggestionCreated:
         $ref: "#/components/messages/DecisionSupportSuggestionCreated"
+  decision-support.suggestion.accepted:
+    address: decision-support.suggestion.accepted
+    messages:
+      DecisionSupportSuggestionAccepted:
+        $ref: "#/components/messages/DecisionSupportSuggestionAccepted"
+  decision-support.suggestion.refused:
+    address: decision-support.suggestion.refused
+    messages:
+      DecisionSupportSuggestionRefused:
+        $ref: "#/components/messages/DecisionSupportSuggestionRefused"
+  decision-support.suggestion.dismissed:
+    address: decision-support.suggestion.dismissed
+    messages:
+      DecisionSupportSuggestionDismissed:
+        $ref: "#/components/messages/DecisionSupportSuggestionDismissed"
+  decision-support.suggestion.expired:
+    address: decision-support.suggestion.expired
+    messages:
+      DecisionSupportSuggestionExpired:
+        $ref: "#/components/messages/DecisionSupportSuggestionExpired"
 components:
   messages:
     DecisionSupportSuggestionCreated:
@@ -18,6 +38,26 @@ components:
       summary: A Suggestion was created. Carries the record as created.
       payload:
         $ref: "#/components/schemas/DecisionSupportSuggestionCreatedEvent"
+    DecisionSupportSuggestionAccepted:
+      name: decision-support.suggestion.accepted
+      summary: A person said yes; for an operation suggestion, the call was made, and its own events name this one as their cause.
+      payload:
+        $ref: "#/components/schemas/DecisionSupportSuggestionAcceptedEvent"
+    DecisionSupportSuggestionRefused:
+      name: decision-support.suggestion.refused
+      summary: A person said yes, and the call could not be made. Carries the call and the error.
+      payload:
+        $ref: "#/components/schemas/DecisionSupportSuggestionRefusedEvent"
+    DecisionSupportSuggestionDismissed:
+      name: decision-support.suggestion.dismissed
+      summary: A person said no, with a reason.
+      payload:
+        $ref: "#/components/schemas/DecisionSupportSuggestionDismissedEvent"
+    DecisionSupportSuggestionExpired:
+      name: decision-support.suggestion.expired
+      summary: It stopped applying before anyone decided.
+      payload:
+        $ref: "#/components/schemas/DecisionSupportSuggestionExpiredEvent"
   schemas:
     DecisionSupportSuggestionCreatedEvent:
       allOf:
@@ -29,3 +69,35 @@ components:
               const: decision-support.suggestion.created
             data:
               $ref: ./decision-support-suggestions-openapi.yaml#/components/schemas/Suggestion
+    DecisionSupportSuggestionAcceptedEvent:
+      allOf:
+        - $ref: ../../schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: decision-support.suggestion.accepted
+    DecisionSupportSuggestionRefusedEvent:
+      allOf:
+        - $ref: ../../schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: decision-support.suggestion.refused
+    DecisionSupportSuggestionDismissedEvent:
+      allOf:
+        - $ref: ../../schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: decision-support.suggestion.dismissed
+    DecisionSupportSuggestionExpiredEvent:
+      allOf:
+        - $ref: ../../schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: decision-support.suggestion.expired

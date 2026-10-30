@@ -1,7 +1,8 @@
 # The lifecycle of a suggestion. A suggestion starts in `proposed`; a person
 # accepts or dismisses it, and one nobody decides expires. Accepting an
 # operation suggestion makes its call, and a call that fails leaves it
-# `refused`, to be accepted again until it expires. See
+# `refused`, to be accepted again until it expires. Proposing is creating it,
+# so its `created` event is the proposal's. See
 # docs/architecture/domains/decision-support.md.
 $schema: state-machine-schema.yaml
 version: "1.0"
@@ -26,3 +27,100 @@ machines:
         slaClock: stopped
         description: It stopped applying before anyone decided. Terminal.
     initialState: proposed
+    emits:
+      - id: accepted
+        description: A person said yes; for an operation suggestion, the call was made, and its own events name this one as their cause.
+      - id: refused
+        description: A person said yes, and the call could not be made. Carries the call and the error.
+      - id: dismissed
+        description: A person said no, with a reason.
+      - id: expired
+        description: It stopped applying before anyone decided.
+    guards:
+      - id: callOnlyForAnOperation
+        description: a corrected call is sent only for an operation suggestion
+        condition: '!has(request.call) || object.kind == "operation"'
+      - id: sameOperation
+        description: a corrected call names the suggestion's own operation
+        condition: '!has(request.call) || object.kind != "operation" || request.call.operationId == object.call.operationId'
+    # No actor guards: who may decide is the set's to say, by overlay.
+    actions:
+      # Accepting an operation suggestion makes its call as the person
+      # accepting, under the operation's own permissions and checks — or the
+      # call they send, when they correct it first, which is then kept as
+      # `performed`. A call that fails leaves the suggestion refused, and its
+      # refused event carries the call and the error; accepting again tries
+      # again. Accepting an informing suggestion means the person took it up.
+      - id: accept
+        description: Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
+        transition:
+          from: [proposed, refused]
+          to: accepted
+        schema:
+          request:
+            $ref: "#/$defs/AcceptRequest"
+        guards:
+          - conditions: [callOnlyForAnOperation, sameOperation]
+        steps:
+          - if: object.kind == "operation" && has(request.call)
+            then:
+              - call: $request.call
+                runAs: caller
+                onFailure:
+                  to: refused
+                  then:
+                    - emit:
+                        event: refused
+                        data: {call: $request.call, error: $failure.error}
+              - set:
+                  field: performed
+                  value: $request.call
+          - if: object.kind == "operation" && !has(request.call)
+            then:
+              - call: $object.call
+                runAs: caller
+                onFailure:
+                  to: refused
+                  then:
+                    - emit:
+                        event: refused
+                        data: {call: $object.call, error: $failure.error}
+          - emit: accepted
+      - id: dismiss
+        description: Say no, with a reason.
+        transition:
+          from: [proposed, refused]
+          to: dismissed
+        schema:
+          request:
+            $ref: "#/$defs/DismissRequest"
+        steps:
+          - set:
+              field: reason
+              value: $request.reason
+          - emit: dismissed
+      - id: expire
+        description: Close a suggestion that no longer applies, before anyone decided.
+        transition:
+          from: [proposed, refused]
+          to: expired
+        steps:
+          - emit: expired
+
+$defs:
+  AcceptRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      call:
+        $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
+        description: The call corrected before accepting, for an operation suggestion. It must name the same operation.
+  DismissRequest:
+    type: object
+    additionalProperties: false
+    required: [reason]
+    properties:
+      reason:
+        type: string
+        minLength: 1
+        description: Why the person said no.

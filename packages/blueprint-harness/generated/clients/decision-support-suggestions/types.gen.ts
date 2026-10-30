@@ -161,57 +161,6 @@ export type SuggestionEvidence = {
     sourceId: string;
 };
 
-/**
- * An accept that failed.
- */
-export type SuggestionAttempt = {
-    /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-     *
-     */
-    call: {
-        /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
-         */
-        operationId: string;
-        /**
-         * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-         *
-         */
-        parameters?: Array<{
-            /**
-             * The parameter's name, as the operation declares it.
-             */
-            name: string;
-            in: 'path' | 'query' | 'header' | 'cookie';
-            /**
-             * The parameter's value.
-             */
-            value: unknown;
-        }>;
-        /**
-         * The request body, in the operation's request schema.
-         */
-        body?: unknown;
-    };
-    error: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
 export type SuggestionCreate = ({
     /**
      * Where it came from.
@@ -580,56 +529,6 @@ export type Suggestion = ({
          */
         body?: unknown;
     };
-    /**
-     * Each accept that failed.
-     */
-    readonly attempts?: Array<{
-        /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-         *
-         */
-        call: {
-            /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
-             */
-            operationId: string;
-            /**
-             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-             *
-             */
-            parameters?: Array<{
-                /**
-                 * The parameter's name, as the operation declares it.
-                 */
-                name: string;
-                in: 'path' | 'query' | 'header' | 'cookie';
-                /**
-                 * The parameter's value.
-                 */
-                value: unknown;
-            }>;
-            /**
-             * The request body, in the operation's request schema.
-             */
-            body?: unknown;
-        };
-        error: {
-            /**
-             * Machine-readable error code.
-             */
-            code: string;
-            /**
-             * Human-readable error description.
-             */
-            message: string;
-            /**
-             * Additional error details.
-             */
-            details?: Array<{
-                [key: string]: unknown;
-            }>;
-        };
-    }>;
 }) | ({
     /**
      * Where it came from.
@@ -833,56 +732,6 @@ export type OperationSuggestion = {
          */
         body?: unknown;
     };
-    /**
-     * Each accept that failed.
-     */
-    readonly attempts?: Array<{
-        /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-         *
-         */
-        call: {
-            /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
-             */
-            operationId: string;
-            /**
-             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-             *
-             */
-            parameters?: Array<{
-                /**
-                 * The parameter's name, as the operation declares it.
-                 */
-                name: string;
-                in: 'path' | 'query' | 'header' | 'cookie';
-                /**
-                 * The parameter's value.
-                 */
-                value: unknown;
-            }>;
-            /**
-             * The request body, in the operation's request schema.
-             */
-            body?: unknown;
-        };
-        error: {
-            /**
-             * Machine-readable error code.
-             */
-            code: string;
-            /**
-             * Human-readable error description.
-             */
-            message: string;
-            /**
-             * Additional error details.
-             */
-            details?: Array<{
-                [key: string]: unknown;
-            }>;
-        };
-    }>;
 };
 
 /**
@@ -1089,56 +938,6 @@ export type SuggestionList = {
              */
             body?: unknown;
         };
-        /**
-         * Each accept that failed.
-         */
-        readonly attempts?: Array<{
-            /**
-             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-             *
-             */
-            call: {
-                /**
-                 * The operation's operationId, e.g. `updateApplicationMember`.
-                 */
-                operationId: string;
-                /**
-                 * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-                 *
-                 */
-                parameters?: Array<{
-                    /**
-                     * The parameter's name, as the operation declares it.
-                     */
-                    name: string;
-                    in: 'path' | 'query' | 'header' | 'cookie';
-                    /**
-                     * The parameter's value.
-                     */
-                    value: unknown;
-                }>;
-                /**
-                 * The request body, in the operation's request schema.
-                 */
-                body?: unknown;
-            };
-            error: {
-                /**
-                 * Machine-readable error code.
-                 */
-                code: string;
-                /**
-                 * Human-readable error description.
-                 */
-                message: string;
-                /**
-                 * Additional error details.
-                 */
-                details?: Array<{
-                    [key: string]: unknown;
-                }>;
-            };
-        }>;
     }) | ({
         /**
          * Where it came from.
@@ -1238,6 +1037,45 @@ export type SuggestionList = {
      * Whether more suggestions are available beyond this page.
      */
     hasNext?: boolean;
+};
+
+export type AcceptRequest = {
+    /**
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     *
+     */
+    call?: {
+        /**
+         * The operation's operationId, e.g. `updateApplicationMember`.
+         */
+        operationId: string;
+        /**
+         * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+         *
+         */
+        parameters?: Array<{
+            /**
+             * The parameter's name, as the operation declares it.
+             */
+            name: string;
+            in: 'path' | 'query' | 'header' | 'cookie';
+            /**
+             * The parameter's value.
+             */
+            value: unknown;
+        }>;
+        /**
+         * The request body, in the operation's request schema.
+         */
+        body?: unknown;
+    };
+};
+
+export type DismissRequest = {
+    /**
+     * Why the person said no.
+     */
+    reason: string;
 };
 
 export type SuggestionWritable = ({
@@ -1877,56 +1715,6 @@ export type ListSuggestionsResponses = {
                  */
                 body?: unknown;
             };
-            /**
-             * Each accept that failed.
-             */
-            readonly attempts?: Array<{
-                /**
-                 * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-                 *
-                 */
-                call: {
-                    /**
-                     * The operation's operationId, e.g. `updateApplicationMember`.
-                     */
-                    operationId: string;
-                    /**
-                     * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-                     *
-                     */
-                    parameters?: Array<{
-                        /**
-                         * The parameter's name, as the operation declares it.
-                         */
-                        name: string;
-                        in: 'path' | 'query' | 'header' | 'cookie';
-                        /**
-                         * The parameter's value.
-                         */
-                        value: unknown;
-                    }>;
-                    /**
-                     * The request body, in the operation's request schema.
-                     */
-                    body?: unknown;
-                };
-                error: {
-                    /**
-                     * Machine-readable error code.
-                     */
-                    code: string;
-                    /**
-                     * Human-readable error description.
-                     */
-                    message: string;
-                    /**
-                     * Additional error details.
-                     */
-                    details?: Array<{
-                        [key: string]: unknown;
-                    }>;
-                };
-            }>;
         }) | ({
             /**
              * Where it came from.
@@ -2358,56 +2146,6 @@ export type CreateSuggestionResponses = {
              */
             body?: unknown;
         };
-        /**
-         * Each accept that failed.
-         */
-        readonly attempts?: Array<{
-            /**
-             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-             *
-             */
-            call: {
-                /**
-                 * The operation's operationId, e.g. `updateApplicationMember`.
-                 */
-                operationId: string;
-                /**
-                 * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-                 *
-                 */
-                parameters?: Array<{
-                    /**
-                     * The parameter's name, as the operation declares it.
-                     */
-                    name: string;
-                    in: 'path' | 'query' | 'header' | 'cookie';
-                    /**
-                     * The parameter's value.
-                     */
-                    value: unknown;
-                }>;
-                /**
-                 * The request body, in the operation's request schema.
-                 */
-                body?: unknown;
-            };
-            error: {
-                /**
-                 * Machine-readable error code.
-                 */
-                code: string;
-                /**
-                 * Human-readable error description.
-                 */
-                message: string;
-                /**
-                 * Additional error details.
-                 */
-                details?: Array<{
-                    [key: string]: unknown;
-                }>;
-            };
-        }>;
     }) | ({
         /**
          * Where it came from.
@@ -2688,56 +2426,6 @@ export type GetSuggestionResponses = {
              */
             body?: unknown;
         };
-        /**
-         * Each accept that failed.
-         */
-        readonly attempts?: Array<{
-            /**
-             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
-             *
-             */
-            call: {
-                /**
-                 * The operation's operationId, e.g. `updateApplicationMember`.
-                 */
-                operationId: string;
-                /**
-                 * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
-                 *
-                 */
-                parameters?: Array<{
-                    /**
-                     * The parameter's name, as the operation declares it.
-                     */
-                    name: string;
-                    in: 'path' | 'query' | 'header' | 'cookie';
-                    /**
-                     * The parameter's value.
-                     */
-                    value: unknown;
-                }>;
-                /**
-                 * The request body, in the operation's request schema.
-                 */
-                body?: unknown;
-            };
-            error: {
-                /**
-                 * Machine-readable error code.
-                 */
-                code: string;
-                /**
-                 * Human-readable error description.
-                 */
-                message: string;
-                /**
-                 * Additional error details.
-                 */
-                details?: Array<{
-                    [key: string]: unknown;
-                }>;
-            };
-        }>;
     }) | ({
         /**
          * Where it came from.
@@ -2833,3 +2521,992 @@ export type GetSuggestionResponses = {
 };
 
 export type GetSuggestionResponse = GetSuggestionResponses[keyof GetSuggestionResponses];
+
+export type AcceptSuggestionData = {
+    body: {
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        call?: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    };
+    path: {
+        /**
+         * Unique identifier of the suggestion.
+         */
+        suggestionId: string;
+    };
+    query?: never;
+    url: '/suggestions/{suggestionId}/accept';
+};
+
+export type AcceptSuggestionErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type AcceptSuggestionError = AcceptSuggestionErrors[keyof AcceptSuggestionErrors];
+
+export type AcceptSuggestionResponses = {
+    /**
+     * Transition applied successfully.
+     */
+    200: ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & {
+        kind: 'operation';
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        call: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    } & {
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        readonly performed?: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    }) | ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & unknown & {
+        kind: 'informing';
+        /**
+         * What kind of record it is about, e.g. `application_member`.
+         */
+        subjectType: string;
+        /**
+         * The record it is about. `subjectType` says what kind.
+         */
+        subjectId: string;
+        /**
+         * The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+         */
+        path?: string;
+        /**
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
+         */
+        category?: 'missing-income' | 'name-mismatch';
+        /**
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+         */
+        message?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    });
+};
+
+export type AcceptSuggestionResponse = AcceptSuggestionResponses[keyof AcceptSuggestionResponses];
+
+export type DismissSuggestionData = {
+    body: {
+        /**
+         * Why the person said no.
+         */
+        reason: string;
+    };
+    path: {
+        /**
+         * Unique identifier of the suggestion.
+         */
+        suggestionId: string;
+    };
+    query?: never;
+    url: '/suggestions/{suggestionId}/dismiss';
+};
+
+export type DismissSuggestionErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type DismissSuggestionError = DismissSuggestionErrors[keyof DismissSuggestionErrors];
+
+export type DismissSuggestionResponses = {
+    /**
+     * Transition applied successfully.
+     */
+    200: ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & {
+        kind: 'operation';
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        call: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    } & {
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        readonly performed?: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    }) | ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & unknown & {
+        kind: 'informing';
+        /**
+         * What kind of record it is about, e.g. `application_member`.
+         */
+        subjectType: string;
+        /**
+         * The record it is about. `subjectType` says what kind.
+         */
+        subjectId: string;
+        /**
+         * The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+         */
+        path?: string;
+        /**
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
+         */
+        category?: 'missing-income' | 'name-mismatch';
+        /**
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+         */
+        message?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    });
+};
+
+export type DismissSuggestionResponse = DismissSuggestionResponses[keyof DismissSuggestionResponses];
+
+export type ExpireSuggestionData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the suggestion.
+         */
+        suggestionId: string;
+    };
+    query?: never;
+    url: '/suggestions/{suggestionId}/expire';
+};
+
+export type ExpireSuggestionErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ExpireSuggestionError = ExpireSuggestionErrors[keyof ExpireSuggestionErrors];
+
+export type ExpireSuggestionResponses = {
+    /**
+     * Transition applied successfully.
+     */
+    200: ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & {
+        kind: 'operation';
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        call: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    } & {
+        /**
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         *
+         */
+        readonly performed?: {
+            /**
+             * The operation's operationId, e.g. `updateApplicationMember`.
+             */
+            operationId: string;
+            /**
+             * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+             *
+             */
+            parameters?: Array<{
+                /**
+                 * The parameter's name, as the operation declares it.
+                 */
+                name: string;
+                in: 'path' | 'query' | 'header' | 'cookie';
+                /**
+                 * The parameter's value.
+                 */
+                value: unknown;
+            }>;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            body?: unknown;
+        };
+    }) | ({
+        /**
+         * Where it came from.
+         */
+        evidence?: Array<{
+            /**
+             * What kind of record it cites, e.g. `transcript_entry`.
+             */
+            sourceType: string;
+            /**
+             * The record it cites. `sourceType` says what kind.
+             */
+            sourceId: string;
+        }>;
+        /**
+         * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+         */
+        confidence?: number;
+        /**
+         * Context from other domains, by the cross-domain pass-through
+         * convention — `intake.interviewId`, say — so everything proposed
+         * during something can be listed together.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        /**
+         * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+         */
+        expiresAt?: string;
+    } & unknown & {
+        kind: 'informing';
+        /**
+         * What kind of record it is about, e.g. `application_member`.
+         */
+        subjectType: string;
+        /**
+         * The record it is about. `subjectType` says what kind.
+         */
+        subjectId: string;
+        /**
+         * The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+         */
+        path?: string;
+        /**
+         * What kind of thing it points out — an entry of the
+         * `suggestion-categories` registry, which a contract set declares.
+         * Its description is what a person reads when there is no message.
+         * Absent, it is uncategorized: something no category covers yet,
+         * found with `q=kind:informing -category:*`.
+         *
+         */
+        category?: 'missing-income' | 'name-mismatch';
+        /**
+         * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+         */
+        message?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * `proposed` while it waits for a decision; `accepted` once a person
+         * said yes and, for an operation, the call was made; `refused` when
+         * a person said yes and the call failed; `dismissed` when a person
+         * said no; `expired` once it stopped applying.
+         *
+         */
+        status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
+        /**
+         * What identifies it, for refusing the same one proposed again: an
+         * operation suggestion's whole call; an informing one's subject,
+         * path and category — or, uncategorized, its message. A keyed hash,
+         * so nothing can be read back from it.
+         *
+         */
+        readonly fingerprint?: string;
+        /**
+         * Why it was dismissed.
+         */
+        readonly reason?: string;
+        /**
+         * When it was proposed.
+         */
+        readonly createdAt: string;
+        /**
+         * When it last changed.
+         */
+        readonly updatedAt: string;
+    });
+};
+
+export type ExpireSuggestionResponse = ExpireSuggestionResponses[keyof ExpireSuggestionResponses];
