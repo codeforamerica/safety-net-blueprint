@@ -187,6 +187,8 @@ export async function executeTransition({
     updated = fresh();
     const failureContext = {
       ...context,
+      // As the record was before the steps that failed, not as they left it.
+      object: { ...resource },
       entities: { ...(context.entities ?? {}), failure: { status: outcome.status, error: outcome.body } },
     };
     applied = await applyStepsInOrder(step.onFailure.then ?? [], updated, failureContext, store, perform);

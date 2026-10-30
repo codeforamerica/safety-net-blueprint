@@ -3,8 +3,9 @@
 > **Status: partly built.** Suggestions are the framework's `suggestions`
 > capability, in a `decision-support` domain
 > (`blueprint-core/base-contracts/domains/decision-support/`). Proposing and
-> reading them is built, with the proposal checked against the contracts;
-> accepting, dismissing, expiry and refusing duplicates are designed, not built.
+> reading them is built, with the proposal checked against the contracts, and
+> so are accepting, dismissing and expiring them; refusing duplicates is
+> designed, not built.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -366,8 +367,12 @@ A domain or state adds categories with a registry file of its own.
 
 ### When a suggestion expires
 
-A day after it was proposed, unless it says otherwise; the default is in the
-state machine and changed by overlay.
+At its `expiresAt`: a day after it was proposed, unless it says otherwise. The
+state machine sets the default (`$now+1d`), so an overlay changes it by
+replacing that value. Creating a suggestion asks the scheduler for a timer at
+its `expiresAt`, and accepting, dismissing or expiring it cancels the timer; a
+refused suggestion is still open, so its timer keeps running. A timer that
+arrives after the suggestion was decided does nothing.
 
 ## Out of scope
 

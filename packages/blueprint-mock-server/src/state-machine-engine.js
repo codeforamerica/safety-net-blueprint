@@ -590,7 +590,11 @@ function* walkSteps(steps, resource, context, store, pending) {
         yield* walkSteps(forEachSteps || [], resource, itemContext, store, pending);
       }
     } else if (step.set) {
-      resource[step.set.field] = resolveValue(step.set.value, context);
+      // Later steps read $object as this step left it — a timer set for the
+      // expiresAt just defaulted, say.
+      const value = resolveValue(step.set.value, context);
+      resource[step.set.field] = value;
+      if (context.object && context.object !== resource) context.object[step.set.field] = value;
     } else if (step.emit) {
       // An emit declaring no data carries none, rather than an empty object.
       const data = step.emit.data ? {} : undefined;

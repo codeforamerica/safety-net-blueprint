@@ -277,6 +277,20 @@ Two built-in shared procedures encapsulate the timer boilerplate:
 
 `fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Scheduling Service](scheduling-service.md) for the full event contract.
 
+To store a deadline on the object, set it to a time from now: `$now`, then `+` or `-`, a whole number, and `d` (days), `h` (hours), `m` (minutes) or `w` (weeks). A suggestion's default expiry is set this way and read back by its timer, so an overlay changes the default by replacing one value:
+
+```yaml
+- if: '!has(object.expiresAt)'
+  then:
+    - set: {field: expiresAt, value: $now+1d}
+- emit:
+    type: scheduling.timer.requested
+    data:
+      timerId: "decision-support.suggestion_expiry.{$object.id}"
+      fireAt: $object.expiresAt
+      callback: {event: decision-support.suggestion_expiry, data: {}}
+```
+
 ### Receiving the callback
 
 Each timer type is a named domain event. The machine subscribes to it directly, the same way it subscribes to any other event:

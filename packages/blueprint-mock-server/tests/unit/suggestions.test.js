@@ -12,6 +12,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/browser.js';
+import { eventBus } from '../../src/event-bus.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 const APPLICATION = '6a0c3e2b-1f4d-4b8a-9c7e-5d2f1a0b3c84';
@@ -197,4 +198,72 @@ test('expiring closes an open suggestion, and a closed one cannot be decided', a
   assert.strictEqual((await events('decision-support.suggestion.expired')).length, 1);
   assert.strictEqual((await decide(suggestion.id, 'accept')).status, 409);
   assert.strictEqual((await decide(suggestion.id, 'dismiss', { reason: 'Too late.' })).status, 409);
+});
+
+// Expiry: a suggestion asks the scheduler for a timer at its expiresAt — a day
+// out unless it says when — and deciding it cancels the timer. Scheduling
+// events go to the bus, for a scheduler or a stub, not to /platform/events.
+const scheduling = [];
+eventBus.on('domain-event', (event) => { if (event.type.startsWith('scheduling.')) scheduling.push(event); });
+const eventsOf = async (type) => (await send('GET', `/platform/events?type=${type}`)).body.items;
+const timerFor = async (id) => scheduling
+  .find((e) => e.type === 'scheduling.timer.requested' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
+const cancelledFor = async (id) => scheduling
+  .filter((e) => e.type === 'scheduling.timer.cancelled' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
+
+test('a suggestion with no expiresAt expires a day out, and asks for a timer then', async () => {
+  const before = Date.now();
+  const { body: created } = await inform();
+  const { body: suggestion } = await send('GET', `/decision-support/suggestions/${created.id}`);
+  const day = 24 * 60 * 60 * 1000;
+  const expiresAt = Date.parse(suggestion.expiresAt);
+  assert.ok(expiresAt >= before + day && expiresAt <= Date.now() + day, suggestion.expiresAt);
+  const timer = await timerFor(created.id);
+  assert.ok(timer, 'a timer is requested');
+  assert.strictEqual(timer.data.fireAt, suggestion.expiresAt);
+  assert.strictEqual(timer.data.callback.event, 'decision-support.suggestion_expiry');
+});
+
+test('a suggestion that says when it expires keeps that, and its timer fires then', async () => {
+  const { body: created } = await inform({ expiresAt: '2030-01-01T00:00:00.000Z' });
+  const { body: suggestion } = await send('GET', `/decision-support/suggestions/${created.id}`);
+  assert.strictEqual(suggestion.expiresAt, '2030-01-01T00:00:00.000Z');
+  assert.strictEqual((await timerFor(created.id)).data.fireAt, '2030-01-01T00:00:00.000Z');
+});
+
+test('the timer firing expires a suggestion nobody decided', async () => {
+  await send('DELETE', '/mock/stubs/events');
+  await send('POST', '/mock/stubs/events', {
+    on: 'scheduling.timer.requested', match: { 'data.callback.event': 'decision-support.suggestion_expiry' },
+  });
+  try {
+    const { body: created } = await inform();
+    const { body: after } = await send('GET', `/decision-support/suggestions/${created.id}`);
+    assert.strictEqual(after.status, 'expired');
+    assert.ok((await eventsOf('decision-support.suggestion.expired')).some((e) => e.subject === created.id));
+  } finally {
+    await send('DELETE', '/mock/stubs/events');
+  }
+});
+
+test('deciding a suggestion cancels its timer, and a late timer leaves it as decided', async () => {
+  const { body: created } = await inform();
+  assert.strictEqual((await send('POST', `/decision-support/suggestions/${created.id}/dismiss`, { reason: 'already fixed' })).status, 200);
+  assert.strictEqual((await cancelledFor(created.id)).length, 1);
+  const late = await send('POST', '/platform/events', {
+    specversion: '1.0', id: crypto.randomUUID(), source: '/scheduling', type: 'decision-support.suggestion_expiry',
+    subject: created.id, time: new Date().toISOString(), data: { timerId: `decision-support.suggestion_expiry.${created.id}` },
+  });
+  assert.ok(late.status < 300, JSON.stringify(late.body));
+  const { body: after } = await send('GET', `/decision-support/suggestions/${created.id}`);
+  assert.strictEqual(after.status, 'dismissed');
+});
+
+test('accepting, and expiring by hand, cancel the timer too', async () => {
+  const { body: accepted } = await inform();
+  assert.strictEqual((await send('POST', `/decision-support/suggestions/${accepted.id}/accept`, {})).status, 200);
+  assert.strictEqual((await cancelledFor(accepted.id)).length, 1);
+  const { body: expired } = await inform({ category: 'missing-income' });
+  assert.strictEqual((await send('POST', `/decision-support/suggestions/${expired.id}/expire`)).status, 200);
+  assert.strictEqual((await cancelledFor(expired.id)).length, 1);
 });

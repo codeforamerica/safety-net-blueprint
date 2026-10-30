@@ -21,6 +21,9 @@ machines:
         slaClock: stopped
         description: It stopped applying before anyone decided. Terminal.
     initialState: proposed
+    timers:
+      - id: suggestion_expiry
+        description: Expires a suggestion nobody decided by its expiresAt.
     emits:
       - id: accepted
         description: A person said yes; for an operation suggestion, the call was made, and its own events name this one as their cause.
@@ -82,6 +85,7 @@ machines:
                           call: $object.call
                           error: $failure.error
                         type: decision-support.suggestion.refused
+          - call: cancelExpiry
           - emit:
               event: accepted
               type: decision-support.suggestion.accepted
@@ -99,6 +103,7 @@ machines:
           - set:
               field: reason
               value: $request.reason
+          - call: cancelExpiry
           - emit:
               event: dismissed
               type: decision-support.suggestion.dismissed
@@ -110,9 +115,44 @@ machines:
             - refused
           to: expired
         steps:
+          - call: cancelExpiry
           - emit:
               event: expired
               type: decision-support.suggestion.expired
+    "on":
+      - type: decision-support.suggestion.created
+        description: Default expiresAt to a day out when not given, and ask for the timer that expires it then.
+        transition: {}
+        steps:
+          - if: "!has(object.expiresAt)"
+            then:
+              - set:
+                  field: expiresAt
+                  value: $now+1d
+          - emit:
+              type: scheduling.timer.requested
+              data:
+                timerId: decision-support.suggestion_expiry.{$object.id}
+                fireAt: $object.expiresAt
+                callback:
+                  event: decision-support.suggestion_expiry
+                  data: {}
+      - type: decision-support.suggestion_expiry
+        description: Expire a suggestion nobody decided by its expiresAt.
+        transition:
+          from:
+            - proposed
+            - refused
+        steps:
+          - call:
+              POST: decision-support/suggestions/$object.id/expire
+    procedures:
+      - id: cancelExpiry
+        description: Cancel the expiry timer of a suggestion that was decided or expired by hand.
+        emit:
+          type: scheduling.timer.cancelled
+          data:
+            timerId: decision-support.suggestion_expiry.{$object.id}
 $defs:
   AcceptRequest:
     type: object

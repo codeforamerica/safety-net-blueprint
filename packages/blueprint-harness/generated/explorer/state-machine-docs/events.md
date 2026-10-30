@@ -11,9 +11,11 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `communication.transcript.resumed` | [Communication/Transcript](communication.md) | *(none)* |
 | `communication.transcript_entry.created` | *(unknown)* | [Communication/Transcript](communication.md) |
 | `decision-support.suggestion.accepted` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
+| `decision-support.suggestion.created` | *(unknown)* | [Decision Support/Suggestion](decision-support.md) |
 | `decision-support.suggestion.dismissed` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
 | `decision-support.suggestion.expired` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
 | `decision-support.suggestion.refused` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
+| `decision-support.suggestion_expiry` | *(unknown)* | [Decision Support/Suggestion](decision-support.md) |
 | `eligibility.determination.complete` | [Eligibility/Determination](eligibility.md) | *(none)* |
 | `intake.application.closed` | [Intake/Application](intake.md) | *(none)* |
 | `intake.application.submitted` | [Intake/Application](intake.md) | [Eligibility/Determination](eligibility.md) |
@@ -27,4 +29,6 @@ These events are subscribed to but have no emitter in the current state machines
 - `communication.idle_check` — subscribed by [Communication/Transcript](communication.md)
 - `communication.transcript.created` — subscribed by [Communication/Transcript](communication.md)
 - `communication.transcript_entry.created` — subscribed by [Communication/Transcript](communication.md)
+- `decision-support.suggestion.created` — subscribed by [Decision Support/Suggestion](decision-support.md)
+- `decision-support.suggestion_expiry` — subscribed by [Decision Support/Suggestion](decision-support.md)
 - `intake.review_reminder` — subscribed by [Intake/Application](intake.md)

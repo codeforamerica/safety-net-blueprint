@@ -487,6 +487,8 @@ $defs:
   # event payload, and any context-bound entity without hardcoding data.
   #
   #   $now              Current timestamp (ISO 8601)
+  #   $now+1d           A time from now: + or -, a whole number, and d (days),
+  #                     h (hours), m (minutes) or w (weeks) — $now-30m, $now+2w
   #   $caller.field     Field on the authenticated caller
   #   $object.field     Field on the governed object
   #   $request.field    Field from the operation request body
