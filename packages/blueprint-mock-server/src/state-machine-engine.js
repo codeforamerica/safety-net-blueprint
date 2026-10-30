@@ -471,6 +471,9 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
  * Path template slots use {alias.field} syntax (OpenAPI path template style).
  * Value expressions use $alias.field syntax (OpenAPI 3.1 Runtime Expression style).
  *
+ * Walked by applySteps, and by applyStepsInOrder for an action, which
+ * performs each call to an operation as the walk reaches it.
+ *
  * @param {Array} steps - Step items from a then: list
  * @param {Object} resource - The resource to modify (mutated in place)
  * @param {Object} context - Context with caller, object, request, this, entities, and now info
@@ -482,14 +485,9 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
  *   pendingEvents: Array<{ action: string, data: Object }>
  * }}
  */
-export function applySteps(steps, resource, context, store) {
-  const pendingCreates = [];
-  const pendingOperations = [];
-  const pendingAppends = [];
-  const pendingProcedures = [];
-  const pendingEvents = [];
-
-  if (!steps) return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
+function* walkSteps(steps, resource, context, store, pending) {
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = pending;
+  if (!steps) return;
 
   for (const step of steps) {
     // if: step — CEL conditional branch
@@ -505,12 +503,7 @@ export function applySteps(steps, resource, context, store) {
       };
       const conditionMet = evaluateCEL(step.if, celData);
       const branchSteps = conditionMet ? (step.then || []) : (step.else || []);
-      const nested = applySteps(branchSteps, resource, context, store);
-      pendingCreates.push(...nested.pendingCreates);
-      pendingOperations.push(...nested.pendingOperations);
-      pendingAppends.push(...nested.pendingAppends);
-      pendingProcedures.push(...nested.pendingProcedures);
-      pendingEvents.push(...nested.pendingEvents);
+      yield* walkSteps(branchSteps, resource, context, store, pending);
       continue;
     }
 
@@ -525,12 +518,7 @@ export function applySteps(steps, resource, context, store) {
       const branches = step.when || {};
       const matchedSteps = branches[matchValue];
       if (matchedSteps) {
-        const nested = applySteps(matchedSteps, resource, context, store);
-        pendingCreates.push(...nested.pendingCreates);
-        pendingOperations.push(...nested.pendingOperations);
-        pendingAppends.push(...nested.pendingAppends);
-        pendingProcedures.push(...nested.pendingProcedures);
-        pendingEvents.push(...nested.pendingEvents);
+        yield* walkSteps(matchedSteps, resource, context, store, pending);
       }
       continue;
     }
@@ -548,12 +536,7 @@ export function applySteps(steps, resource, context, store) {
             // Expose category/item as $params.category equivalent
             params: { ...(context.params || {}), ...(itemAlias ? { [itemAlias]: item } : {}) },
           };
-          const nested = applySteps(step.do || [], resource, itemContext, store);
-          pendingCreates.push(...nested.pendingCreates);
-          pendingOperations.push(...nested.pendingOperations);
-          pendingAppends.push(...nested.pendingAppends);
-          pendingProcedures.push(...nested.pendingProcedures);
-          pendingEvents.push(...nested.pendingEvents);
+          yield* walkSteps(step.do || [], resource, itemContext, store, pending);
         }
         continue;
       }
@@ -604,12 +587,7 @@ export function applySteps(steps, resource, context, store) {
           ...context,
           entities: { ...(context.entities ?? {}), [itemAlias]: item },
         };
-        const nested = applySteps(forEachSteps || [], resource, itemContext, store);
-        pendingCreates.push(...nested.pendingCreates);
-        pendingOperations.push(...nested.pendingOperations);
-        pendingAppends.push(...nested.pendingAppends);
-        pendingProcedures.push(...nested.pendingProcedures);
-        pendingEvents.push(...nested.pendingEvents);
+        yield* walkSteps(forEachSteps || [], resource, itemContext, store, pending);
       }
     } else if (step.set) {
       resource[step.set.field] = resolveValue(step.set.value, context);
@@ -643,6 +621,13 @@ export function applySteps(steps, resource, context, store) {
         }
       }
     } else if (step.call !== undefined) {
+      // A call to an operation by its operationId, or to one held in data
+      // (`$request.call`), is performed where it stands: the walk waits for
+      // its outcome, so a step after it runs after it.
+      if (isOperationCall(step.call)) {
+        yield { step, context };
+        continue;
+      }
       // call: can be a string (procedure name) or an object (HTTP operation, formerly invoke:)
       if (typeof step.call === 'string') {
         // String form: call a named procedure — handled by the runner, not here
@@ -675,7 +660,103 @@ export function applySteps(steps, resource, context, store) {
     }
   }
 
-  return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
+}
+
+function emptyPending() {
+  return { pendingCreates: [], pendingOperations: [], pendingAppends: [], pendingProcedures: [], pendingEvents: [] };
+}
+
+/**
+ * Whether a call names an operation — `{ operationId, parameters, body }` —
+ * or takes one from data, `$request.call`, rather than naming a procedure or a
+ * method and path.
+ *
+ * @param {*} call - A step's `call:`
+ * @returns {boolean}
+ */
+export function isOperationCall(call) {
+  if (typeof call === 'string') return call.startsWith('$');
+  return Boolean(call && typeof call === 'object' && 'operationId' in call);
+}
+
+/**
+ * The operation call a step makes, its value expressions resolved.
+ *
+ * @param {string|Object} call - A step's `call:`
+ * @param {Object} context
+ * @returns {{ operationId: string, parameters?: Array, body?: * }|null}
+ */
+export function operationCallOf(call, context) {
+  if (typeof call === 'string') {
+    const value = resolveValue(call, context);
+    return value && typeof value === 'object' && value.operationId ? value : null;
+  }
+  const resolved = { operationId: call.operationId };
+  if (call.parameters) {
+    resolved.parameters = call.parameters.map((p) => ({ ...p, value: resolveValue(p.value, context) }));
+  }
+  if (call.body !== undefined) resolved.body = resolveBody(call.body, context);
+  return resolved;
+}
+
+/**
+ * Apply a list of steps, collecting what they leave to be done.
+ *
+ * A call to an operation is performed only in an action (applyStepsInOrder),
+ * where its outcome can decide the action's; anywhere else it is skipped,
+ * with a warning naming it.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @returns {{
+ *   pendingCreates: Array<{ entity: string, data: Object }>,
+ *   pendingOperations: Array<{ path: string, rawPath: string, body: Object }>,
+ *   pendingAppends: Array<{ path: string, body: Object }>,
+ *   pendingProcedures: Array<{ procedureId?: string }>,
+ *   pendingEvents: Array<{ action: string, data: Object }>
+ * }}
+ */
+export function applySteps(steps, resource, context, store) {
+  const pending = emptyPending();
+  for (const { step } of walkSteps(steps, resource, context, store, pending)) {
+    const named = typeof step.call === 'string' ? step.call : step.call.operationId;
+    console.warn(`call: ${named} calls an operation, which only a state machine action can do — skipping`);
+  }
+  return pending;
+}
+
+/**
+ * Apply an action's steps in order, performing each call to an operation as
+ * it is reached.
+ *
+ * A call that fails stops the walk. What the steps did up to then is
+ * returned under `failed`, with the step and the outcome, for the action to
+ * discard: `onFailure:` runs instead of them, and with none the action fails.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @param {(call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>} perform
+ * @returns {Promise<ReturnType<typeof applySteps> & { failed?: { step: Object, call: Object, outcome: Object } }>}
+ */
+export async function applyStepsInOrder(steps, resource, context, store, perform) {
+  const pending = emptyPending();
+  const walker = walkSteps(steps, resource, context, store, pending);
+  for (let next = walker.next(); !next.done; next = walker.next()) {
+    const { step, context: at } = next.value;
+    const call = operationCallOf(step.call, at);
+    const outcome = call
+      ? await perform(call, step)
+      : { ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: `call: ${step.call} names no operation call` } };
+    if (!outcome.ok) {
+      walker.return();
+      return { ...pending, failed: { step, call, outcome } };
+    }
+  }
+  return pending;
 }
 
 /**

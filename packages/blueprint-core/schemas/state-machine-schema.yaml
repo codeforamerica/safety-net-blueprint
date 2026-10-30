@@ -742,14 +742,29 @@ $defs:
 
   CallStep:
     type: object
-    description: Call a named procedure (string) or make an HTTP API call (object with POST/PATCH/GET/DELETE key).
+    description: >
+      Call a named procedure (string), make an HTTP API call (object with a
+      POST/PATCH/GET/DELETE key), or call an operation by its operationId
+      (object with operationId, or a value expression holding one, such as
+      $request.call). A call to an operation is made where it stands: a step
+      after it runs after it.
     required: [call]
     additionalProperties: false
     properties:
       call:
         oneOf:
           - type: string
+            pattern: "^[^$]"
             description: Named procedure id.
+          - type: string
+            pattern: "^\\$"
+            description: >
+              A value expression holding a call to an operation, in the
+              OperationCall shape — `$request.call`.
+          - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
+            description: >
+              A call to an operation by its operationId, as an Arazzo step
+              names one. Parameter values and the body are value expressions.
           - type: object
             description: >
               HTTP call — one key is the method (POST, PATCH, GET, DELETE) and
@@ -779,6 +794,32 @@ $defs:
                 description: The request body. Field values are value expressions resolved when the step runs.
               description:
                 type: string
+      runAs:
+        type: string
+        enum: [system, caller]
+        default: system
+        description: >
+          Who a call to an operation is made as. `system`, the default, is the
+          machine's own write. `caller` sends it through the API as the person
+          or service that triggered this step, under the operation's own
+          permissions, validation and guards — as making it by hand would be.
+      onFailure:
+        type: object
+        additionalProperties: false
+        description: >
+          What happens when a call to an operation fails: these steps run
+          instead of the action's steps, which are discarded, and the action
+          ends in `to`. The failure is $failure — `status`, and `error` in the
+          shared Error shape. The action answers with the call's failure, the
+          record as it now is in details. Without onFailure, a failed call
+          fails the action and nothing is saved.
+        properties:
+          to:
+            type: string
+            description: The state the action ends in instead of its transition's `to`.
+          then:
+            type: array
+            items: {$ref: "#/$defs/StepItem"}
       with:
         type: object
         additionalProperties: true

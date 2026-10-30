@@ -20,23 +20,26 @@ const OPERATION_CALL = /(^|\/)schemas\/operations\.yaml#\/\$defs\/OperationCall$
 const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
 
 /**
- * Every operation in the set, by operationId: its parameters and request
- * schema, and the document they were declared in.
+ * Every operation in the set, by operationId: where it is — its method and
+ * full path — its parameters and request schema, and the document they were
+ * declared in.
  *
  * @param {object[]} apiSpecs - From apiSpecsFromDocs
- * @returns {Map<string, { parameters: object[], requestSchema: object|null, requestSchemaRef: string|null, bodyRequired: boolean, relativePath: string }>}
+ * @returns {Map<string, { method: string, path: string, parameters: object[], requestSchema: object|null, requestSchemaRef: string|null, bodyRequired: boolean, relativePath: string }>}
  */
 export function operationsOf(apiSpecs) {
   const index = new Map();
   for (const api of apiSpecs ?? []) {
     const follow = api.resolve?.schema ?? ((x) => x);
-    for (const item of Object.values(api.doc?.content?.paths ?? {})) {
+    for (const [path, item] of Object.entries(api.doc?.content?.paths ?? {})) {
       for (const method of METHODS) {
         const operation = item?.[method];
         const id = operation?.operationId;
         if (!id || index.has(id)) continue;
         const raw = operation.requestBody?.content?.['application/json']?.schema;
         index.set(id, {
+          method: method.toUpperCase(),
+          path: `${api.serverBasePath ?? ''}${path}`,
           parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])].map(follow),
           requestSchema: raw ? follow(raw) : null,
           requestSchemaRef: typeof raw?.$ref === 'string' ? raw.$ref : null,

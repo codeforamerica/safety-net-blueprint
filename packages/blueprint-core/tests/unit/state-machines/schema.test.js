@@ -31,6 +31,8 @@ function makeValidator() {
   const commonEnumsPath = join(contractsRoot, 'base-contracts/schemas/enums.yaml');
   const commonEnums = yaml.load(readFileSync(commonEnumsPath, 'utf8'));
   ajv.addSchema(commonEnums, 'base-contracts/schemas/enums.yaml');
+  const operationsPath = join(contractsRoot, 'base-contracts/schemas/operations.yaml');
+  ajv.addSchema(yaml.load(readFileSync(operationsPath, 'utf8')), 'base-contracts/schemas/operations.yaml');
   return ajv.compile(schema);
 }
 
@@ -317,6 +319,43 @@ test('state-machine-schema action types', async (t) => {
   // the step and let the transition succeed (#463).
   const callStep = (call) => withActions([{ id: 'route', transition: { from: 'active' }, steps: [{ call }] }]);
   const callErrors = (errors) => errors.filter((e) => e.instancePath.endsWith('/call') || e.instancePath.includes('/call/'));
+
+  // A call to an operation, by its operationId or held in data, made as the
+  // caller, with what to do when it fails.
+  const step = (fields) => withActions([{ id: 'accept', transition: { from: 'active', to: 'draft' }, steps: [fields] }]);
+
+  await t.test('call step naming an operation by operationId, run as the caller, with onFailure', () => {
+    const { valid, errors } = validate(step({
+      call: {
+        operationId: 'updateWidget',
+        parameters: [{ name: 'widgetId', in: 'path', value: '$object.widgetId' }],
+        body: { color: '$request.color' },
+      },
+      runAs: 'caller',
+      onFailure: { to: 'active', then: [{ set: { field: 'lastError', value: '$failure.error' } }] },
+    }));
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('call step taking its call from data', () => {
+    const { valid, errors } = validate(step({ call: '$request.call', runAs: 'caller' }));
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('runAs is system or caller', () => {
+    const { valid } = validate(step({ call: '$request.call', runAs: 'admin' }));
+    assert.ok(!valid, 'must not validate');
+  });
+
+  await t.test('onFailure takes only to and then', () => {
+    const { valid } = validate(step({ call: '$request.call', onFailure: { retry: 3 } }));
+    assert.ok(!valid, 'must not validate');
+  });
+
+  await t.test('a call naming an operation takes the OperationCall shape', () => {
+    const { valid } = validate(step({ call: { operationId: 'updateWidget', params: [] } }));
+    assert.ok(!valid, 'must not validate');
+  });
 
   await t.test('call step with path: and method: instead of a method key is refused', () => {
     const { valid, errors } = validate(callStep({ path: 'eligibility/determinations', method: 'POST' }));

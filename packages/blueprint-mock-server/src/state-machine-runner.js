@@ -4,7 +4,7 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applyStepsInOrder } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
@@ -93,9 +93,15 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
- * @returns {{ success: boolean, result?: Object, status?: number, error?: string }}
+ * Steps run in order; a call to an operation is made as it is reached. When
+ * one fails, its `onFailure:` runs instead of the action's steps and names the
+ * state the action ends in, and the action answers with the call's failure
+ * and the record in `details`. With no `onFailure:`, the action fails and
+ * nothing is saved.
+ *
+ * @returns {Promise<{ success: boolean, result?: Object, status?: number, code?: string, error?: string, details?: Object[] }>}
  */
-export function executeTransition({
+export async function executeTransition({
   resourceName,
   resourceId,
   trigger,
@@ -155,14 +161,42 @@ export function executeTransition({
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
   if (refused) return { success: false, ...refused };
 
-  const updated = { ...resource };
-  if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
+  // The id of the first event this action sends, chosen now so a call it
+  // makes can name it as the cause of the call's own events.
+  const actionEventId = crypto.randomUUID();
+  const perform = (call, step) => performCall(call, step, {
+    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
+  });
 
-  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-    applySteps(steps, updated, context, store);
+  const fresh = () => {
+    const copy = { ...resource };
+    if (resource.slaInfo) copy.slaInfo = resource.slaInfo.map(e => ({ ...e }));
+    return copy;
+  };
+  let updated = fresh();
+  let applied = await applyStepsInOrder(steps, updated, context, store, perform);
+  let target = transitionTo;
+  let failure = null;
 
-  if (transitionTo != null && transitionTo !== '') {
-    updated.status = transitionTo;
+  // A call that failed: its onFailure: runs instead of the action's steps, and
+  // says where the action ends; with none, the action fails and nothing is saved.
+  if (applied.failed) {
+    const { step, outcome } = applied.failed;
+    if (!step.onFailure) return refusedBy(outcome);
+    failure = outcome;
+    updated = fresh();
+    const failureContext = {
+      ...context,
+      entities: { ...(context.entities ?? {}), failure: { status: outcome.status, error: outcome.body } },
+    };
+    applied = await applyStepsInOrder(step.onFailure.then ?? [], updated, failureContext, store, perform);
+    if (applied.failed) return refusedBy(applied.failed.outcome);
+    target = step.onFailure.to ?? transitionTo;
+  }
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
+
+  if (target != null && target !== '') {
+    updated.status = target;
   }
 
   if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
@@ -194,7 +228,7 @@ export function executeTransition({
     ];
     for (const call of calls) {
       try {
-        stepCalls.apply(call, {
+        await stepCalls.apply(call, {
           caller: { id: callerId, roles: callerRoles },
           traceparent,
           causationid,
@@ -224,9 +258,10 @@ export function executeTransition({
 
   const domain = stateMachine.domain;
   const allEvents = [...pendingEvents, ...(ruleEvents || [])];
-  for (const event of allEvents) {
+  for (const [i, event] of allEvents.entries()) {
     try {
       emitEventEnvelope({
+        ...(i === 0 ? { id: actionEventId } : {}),
         type: event.type,
         source: `/${domain}`,
         subject: event.subject ?? resource.id,
@@ -241,5 +276,62 @@ export function executeTransition({
     }
   }
 
+  // The call failed and onFailure: handled it: the action ends where it said,
+  // and answers with the call's failure, the record as it now is in details.
+  if (failure) {
+    return {
+      success: false,
+      status: failure.status,
+      code: failure.body?.code,
+      error: failure.body?.message ?? `The call failed with ${failure.status}`,
+      details: [result],
+    };
+  }
+
   return { success: true, result };
+}
+
+/** An action refused because a call it made failed with nothing to handle it. */
+function refusedBy(outcome) {
+  return {
+    success: false,
+    status: outcome.status,
+    code: outcome.body?.code,
+    error: outcome.body?.message ?? `The call failed with ${outcome.status}`,
+    details: outcome.body?.details,
+  };
+}
+
+/**
+ * Make a call to an operation, as the step says to run it.
+ *
+ * @returns {Promise<{ ok: boolean, status: number, body: * }>}
+ */
+function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls }) {
+  if (!stepCalls) {
+    return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
+  }
+  return stepCalls.perform(call, {
+    runAs: step.runAs ?? 'system',
+    caller: { id: callerId, roles: callerRoles },
+    traceparent,
+    causationid,
+    now: timestamp,
+    runAction: ({ entry, collection, id, action, body }) => executeTransition({
+      resourceName: collection,
+      resourceId: id,
+      trigger: action,
+      callerId,
+      callerRoles,
+      now: timestamp,
+      stateMachine: entry.stateMachine,
+      machine: entry.machine,
+      slaTypes: stepCalls.slaTypesFor(entry.domain),
+      requestBody: body,
+      traceparent,
+      causationid,
+      store,
+      stepCalls,
+    }),
+  });
 }

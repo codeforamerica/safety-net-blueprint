@@ -137,10 +137,12 @@ function* walkCallStrings(steps) {
   if (!Array.isArray(steps)) return;
   for (const step of steps) {
     if (!step || typeof step !== 'object') continue;
-    if (typeof step.call === 'string') yield step.call;
+    // A string starting with $ holds a call to an operation, not a procedure's name.
+    if (typeof step.call === 'string' && !step.call.startsWith('$')) yield step.call;
     yield* walkCallStrings(step.then);
     yield* walkCallStrings(step.else);
     yield* walkCallStrings(step.do);
+    yield* walkCallStrings(step.onFailure?.then);
     if (step.when && typeof step.when === 'object') {
       for (const substeps of Object.values(step.when)) yield* walkCallStrings(substeps);
     }
@@ -156,6 +158,7 @@ function* walkSetFields(steps) {
     yield* walkSetFields(step.then);
     yield* walkSetFields(step.else);
     yield* walkSetFields(step.do);
+    yield* walkSetFields(step.onFailure?.then);
     if (step.when && typeof step.when === 'object') {
       for (const substeps of Object.values(step.when)) yield* walkSetFields(substeps);
     }

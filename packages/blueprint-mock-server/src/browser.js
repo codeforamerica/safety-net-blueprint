@@ -128,5 +128,8 @@ export async function createMockServer({
   const forwarded = applyForwarding(routes, forwarding);
   for (const key of forwarded) console.log(`  FORWARD ${key}`);
 
-  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints, forwarded };
+  const fetch = createDispatcher(routes, { basePath });
+  // An action calling an operation as its caller sends the call through here.
+  stepCalls.serve(createDispatcher(routes));
+  return { fetch, routes, store, endpoints, forwarded };
 }

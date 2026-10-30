@@ -58,6 +58,7 @@ export function expandEmits(machine, domain) {
     if (next.then) next.then = steps(next.then);
     if (next.else) next.else = steps(next.else);
     if (next.do) next.do = steps(next.do);
+    if (next.onFailure?.then) next.onFailure = { ...next.onFailure, then: steps(next.onFailure.then) };
     if (next.when) next.when = Object.fromEntries(Object.entries(next.when).map(([k, v]) => [k, steps(v)]));
     return next;
   };

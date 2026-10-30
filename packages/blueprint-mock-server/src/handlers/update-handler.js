@@ -8,7 +8,7 @@ import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
+import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
@@ -231,6 +231,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           callerId: callerHeader(request, 'x-caller-id'),
           callerRoles: extractCallerRoles(request),
           traceparent: traceparentOf(request),
+          causationid: causationOf(request),
           now: updated.updatedAt,
         });
       } catch (eventError) {

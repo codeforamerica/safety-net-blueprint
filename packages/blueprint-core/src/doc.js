@@ -271,13 +271,18 @@ function normalizeStep(step) {
   }
 
   if ('call' in step) {
-    const isProcedure = typeof step.call === 'string';
+    // A string names a procedure, unless it starts with $: then it holds a
+    // call to an operation, as `$request.call` does.
+    const isProcedure = typeof step.call === 'string' && !step.call.startsWith('$');
     return {
       kind: 'call',
       procedure: isProcedure ? step.call : null,
       request: isProcedure ? null : step.call,
+      ...(step.runAs ? { runAs: step.runAs } : {}),
       description: step.description,
-      children: [],
+      children: step.onFailure
+        ? [{ kind: 'onFailure', ...(step.onFailure.to ? { to: step.onFailure.to } : {}), children: normalizeSteps(step.onFailure.then) }]
+        : [],
     };
   }
 

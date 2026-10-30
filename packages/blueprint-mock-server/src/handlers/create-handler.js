@@ -10,7 +10,7 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
@@ -216,6 +216,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
           callerId,
           callerRoles,
           traceparent,
+          causationid: causationOf(request),
           now,
         });
       } catch (eventError) {

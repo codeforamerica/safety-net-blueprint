@@ -156,6 +156,47 @@ Procedures are invoked by name (string form). HTTP operations use the object for
 
 When a procedure declares `parameters:`, callers pass values via `with:`. Inside the procedure, parameters are referenced as `$params.name`.
 
+### Calling an operation
+
+An action can also call an operation by its `operationId`, in the `OperationCall`
+shape (`base/schemas/operations.yaml`) an Arazzo step names one with, or take a
+call held in data — a suggestion's, say — with a value expression:
+
+```yaml
+- call:
+    operationId: updateApplicationMember
+    parameters:
+      - {name: applicationId, in: path, value: $object.applicationId}
+      - {name: memberId, in: path, value: $member.id}
+    body: {firstName: $request.firstName}
+  runAs: caller
+  onFailure:
+    to: refused
+    then:
+      - set: {field: reason, value: $failure.error.message}
+
+- call: $request.call       # a call held in data
+  runAs: caller
+```
+
+A call to an operation is made where it stands: a step after it runs after it.
+
+`runAs` says who the call is made as. `system`, the default, is the machine's
+own write, as an HTTP call by method and path is. `caller` sends it through the
+API as whoever triggered the action, under the operation's own permissions,
+validation and guards, as making it by hand would be. Salesforce Flow's run
+context and ServiceNow's Run As make the same choice explicit.
+
+`onFailure` says what happens when the call fails: its `then:` steps run instead
+of the action's, which are discarded, the failure readable as `$failure`
+(`status`, and `error` in the shared Error shape), and the action ends in `to`
+rather than its transition's. The action answers with the call's failure, the
+record as it now is in `details`. With no `onFailure`, a failed call fails the
+action, and nothing is saved.
+
+A call to an operation is made only in an action. The events the call causes
+name the action's first event as their `causationid`.
+
 ### Context
 
 `context:` declares named data bindings — each binding fetches a related record and makes it available as `$name` or `$name.field` in steps. Context can be declared at any scope where it makes sense:

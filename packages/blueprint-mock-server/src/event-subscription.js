@@ -81,6 +81,8 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
   }
 
   try {
+    // Runs at once, as before, unless a step calls an operation; a failure
+    // after that is reported here rather than left unhandled.
     executeTransition({
       store,
       resourceName: collection,
@@ -95,7 +97,7 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
       traceparent,
       causationid,
       now,
-    });
+    }).catch((e) => console.error(`executePendingOperation: "${operation}" on ${collection}/${resourceId} failed: ${e.message}`));
   } catch (e) {
     console.error(`executePendingOperation: "${operation}" on ${collection}/${resourceId} failed: ${e.message}`);
   }
@@ -155,7 +157,7 @@ let currentStepCalls = null;
 function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store }) {
   const actor = { id: caller?.id || 'system', roles: caller?.roles || ['system'] };
   try {
-    currentStepCalls.apply(call, {
+    const done = currentStepCalls.apply(call, {
       caller: actor,
       traceparent,
       causationid,
@@ -177,6 +179,10 @@ function applyThroughRoutes(call, { now, caller, traceparent = null, causationid
         stepCalls: currentStepCalls,
       }),
     });
+    // An action it runs returns a promise; report its failure here.
+    if (done && typeof done.then === 'function') {
+      done.catch((e) => console.error(`onEvent call ${call.method} ${call.path} failed: ${e.message}`));
+    }
   } catch (e) {
     console.error(`onEvent call ${call.method} ${call.path} failed: ${e.message}`);
   }

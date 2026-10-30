@@ -81,6 +81,34 @@ export function callerHeader(req, name) {
   return headerOf(req, name) ?? null;
 }
 
+// The event that caused a request the mock sends itself — an action calling an
+// operation as the caller — so the operation's events name it as their cause.
+// Kept beside the request rather than in a header, so no client can set it.
+const causes = new WeakMap();
+
+/**
+ * Mark a request the mock sends itself as caused by an event.
+ *
+ * @param {Request} req
+ * @param {string|null} causationid - The causing event's id
+ * @returns {Request} The same request
+ */
+export function causedBy(req, causationid) {
+  if (causationid) causes.set(req, causationid);
+  return req;
+}
+
+/**
+ * The event that caused a request, when the mock sent it itself; null for a
+ * client's.
+ *
+ * @param {Request} req
+ * @returns {string|null}
+ */
+export function causationOf(req) {
+  return causes.get(req) ?? null;
+}
+
 // The trace each request started, so every event one request causes shares it.
 const startedTraces = new WeakMap();
 
