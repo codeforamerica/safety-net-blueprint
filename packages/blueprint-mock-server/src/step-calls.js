@@ -31,7 +31,7 @@ import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
  * @param {Array}  options.stateMachines - From `extract(docs, 'state-machines')`
  * @param {Array}  [options.slaTypes]    - From `extract(docs, 'sla-types')`, for an action a call runs
  * @param {Object} options.store
- * @returns {{ resolve: Function, apply: Function, perform: Function, serve: Function, slaTypesFor: Function }}
+ * @returns {{ resolve: Function, apply: Function, perform: Function, announceCreated: Function, serve: Function, slaTypesFor: Function }}
  */
 export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store }) {
   // Every operation by operationId, including those a state machine adds, for
@@ -245,13 +245,46 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     return { ok: response.ok, status: response.status, body };
   }
 
+  /**
+   * Send the event a create through the API would for a record a step wrote
+   * directly: named for the resource the API serves at that path. A path no
+   * API declares has no resource to name, so it sends none.
+   *
+   * @param {string} path - The step's path, e.g. "decision-support/suggestions"
+   * @param {Object} record - As stored
+   * @param {Object} options
+   * @param {{ id: string|null, roles: string[] }} options.caller
+   * @param {string|null} [options.traceparent]
+   * @param {string|null} [options.causationid]
+   * @param {string} [options.now]
+   */
+  function announceCreated(path, record, { caller, traceparent = null, causationid = null, now } = {}) {
+    let resolved;
+    try { resolved = resolve('POST', path); } catch { return; }
+    if (resolved.kind !== 'create' || !resolved.resource.eventName) return;
+    emitEvent({
+      store,
+      domain: resolved.api.domain,
+      object: resolved.resource.eventName,
+      action: 'created',
+      resourceId: record.id,
+      source: `/${resolved.api.base.join('/')}`,
+      data: { ...record },
+      callerId: caller?.id ?? null,
+      callerRoles: caller?.roles ?? [],
+      traceparent,
+      causationid,
+      now,
+    });
+  }
+
   /** Give perform the mock's fetch, once its routes are registered. */
   const serve = (fetch) => { fetchHere = fetch; };
 
   /** A domain's SLA types, for running one of its actions. */
   const slaTypesFor = (domain) => slaTypes.filter((s) => s.domain === domain).flatMap((s) => s.slaTypes ?? []);
 
-  return { resolve, apply, perform, serve, slaTypesFor };
+  return { resolve, apply, perform, announceCreated, serve, slaTypesFor };
 }
 
 /** An outcome that failed, in the shared Error shape. */

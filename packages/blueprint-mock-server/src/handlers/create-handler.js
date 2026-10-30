@@ -4,13 +4,10 @@
 
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
-import { applyEffects, applySteps } from '../state-machine-engine.js';
-import { initializeSlaInfo } from '../sla-engine.js';
-import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
+import { eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf, causationOf, playsAnyOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
@@ -147,81 +144,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const domain = eventDomainOf(apiMetadata);
       const object = endpoint.resource?.eventName ?? null;
 
-      const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
-
-      // Execute onCreate steps/effects if this resource has a state machine
-      if (onCreate) {
-        const callerRoles = extractCallerRoles(request);
-
-        // Enforce onCreate actors if defined
-        if (onCreate.actors && onCreate.actors.length > 0) {
-          if (!playsAnyOf(callerRoles, onCreate.actors)) {
-            return Response.json({
-              code: 'FORBIDDEN',
-              message: `Creating this resource requires one of the following roles: ${onCreate.actors.join(', ')}`
-            }, { status: 403 });
-          }
-        }
-
-        // Snapshot before any steps/effects mutate resource (for DB diff later)
-        const original = JSON.parse(JSON.stringify(resource));
-
-        const baseContext = {
-          caller: { id: callerId, roles: callerRoles },
-          object: { ...resource },
-          request: requestBody,
-          now
-        };
-
-        const entities = resolveContextLayers(
-          [stateMachine?.context, machine?.context, onCreate?.context],
-          resource,
-          baseContext,
-          store
-        );
-        if (entities === null) {
-          console.error('onCreate: required context binding failed — skipping trigger');
-          return Response.json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] }, { status: 500 });
-        }
-        const context = { ...baseContext, entities };
-
-        const { pendingCreates, pendingProcedures } = onCreate.steps?.length > 0
-          ? applySteps(onCreate.steps, resource, context, store)
-          : applyEffects(onCreate.effects || [], resource, context);
-
-        const inlineRules = buildInlineRules(stateMachine, machine);
-        executeProcedures(pendingProcedures, resource, inlineRules, context, store);
-
-        // Execute pending creates
-        for (const { entity, data } of pendingCreates) {
-          try {
-            store.create(entity, data);
-          } catch (createError) {
-            console.error(`Failed to store.create ${entity}:`, createError.message);
-          }
-        }
-
-        // Initialize SLA info if SLA types are configured
-        if (slaTypes.length > 0) {
-          initializeSlaInfo(resource, slaTypes, now);
-        }
-
-        // Persist rule-driven and SLA mutations back to DB
-        const diff = {};
-        for (const [key, value] of Object.entries(resource)) {
-          if (original[key] !== value && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
-            diff[key] = value;
-          }
-        }
-
-        if (Object.keys(diff).length > 0) {
-          store.update(endpoint.collectionName, resource.id, diff);
-          // Refresh resource with updated timestamps
-          Object.assign(resource, diff);
-        }
-      }
-
-      // Auto-emit created event with full resource snapshot (after effects applied)
+      // The created event, with the record as stored
       const callerRoles = extractCallerRoles(request);
       if (object) try {
         emitEvent({

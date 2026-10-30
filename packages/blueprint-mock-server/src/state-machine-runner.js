@@ -220,9 +220,15 @@ export async function executeTransition({
   }
   const result = store.update(resourceName, resourceId, diff);
 
-  for (const { entity, data } of pendingCreates) {
-    try { store.create(entity, data); }
-    catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
+  // A record a step creates directly is announced as a create through the API
+  // would be, caused by the action.
+  for (const { entity, domain, stubUrl, data } of pendingCreates) {
+    try {
+      const record = store.create(entity, data);
+      stepCalls?.announceCreated(`${domain}${stubUrl ?? ''}`, record, {
+        caller: { id: callerId, roles: callerRoles }, traceparent, causationid: actionEventId, now: timestamp,
+      });
+    } catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
   }
 
   // Calls that name a record — a nested create, an update, another action —

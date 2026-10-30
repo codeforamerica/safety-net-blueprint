@@ -47,8 +47,8 @@ rpc_endpoints:
 # =============================================================================
 # Behavioral Contract Steps
 # =============================================================================
-# Steps appear in state machine operations (then:), rule conditions (then:), and
-# event trigger handlers (triggers.onEvent[].then:, triggers.onCreate.then:, etc.).
+# Steps appear in state machine actions (steps:), procedures (steps:), and a
+# machine's reactions to events (on[].steps:).
 #
 # Step types:
 #

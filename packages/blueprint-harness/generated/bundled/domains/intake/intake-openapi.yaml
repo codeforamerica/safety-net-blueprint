@@ -794,7 +794,15 @@ paths:
                                               - withdrawn
                                               - closed
                                           programsAppliedFor:
-                                            type: string
+                                            type: array
+                                            items:
+                                              type: string
+                                              enum:
+                                                - snap
+                                                - medicaid
+                                                - chip
+                                                - tanf
+                                            description: Benefit programs the household is applying for.
                                           programCount:
                                             type: integer
                                             readOnly: true
@@ -1667,7 +1675,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -2425,7 +2441,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -3274,7 +3298,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -4446,7 +4478,15 @@ paths:
                                     - withdrawn
                                     - closed
                                 programsAppliedFor:
-                                  type: string
+                                  type: array
+                                  items:
+                                    type: string
+                                    enum:
+                                      - snap
+                                      - medicaid
+                                      - chip
+                                      - tanf
+                                  description: Benefit programs the household is applying for.
                                 programCount:
                                   type: integer
                                   readOnly: true
@@ -4937,7 +4977,15 @@ paths:
                               - withdrawn
                               - closed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -5251,7 +5299,15 @@ paths:
                               - withdrawn
                               - closed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -5723,7 +5779,15 @@ paths:
                               - withdrawn
                               - closed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -6388,7 +6452,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -7216,7 +7288,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -8062,7 +8142,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -8890,7 +8978,15 @@ paths:
                                         - withdrawn
                                         - closed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -11606,7 +11702,15 @@ components:
                               - withdrawn
                               - closed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -12770,7 +12874,15 @@ components:
                                     - withdrawn
                                     - closed
                                 programsAppliedFor:
-                                  type: string
+                                  type: array
+                                  items:
+                                    type: string
+                                    enum:
+                                      - snap
+                                      - medicaid
+                                      - chip
+                                      - tanf
+                                  description: Benefit programs the household is applying for.
                                 programCount:
                                   type: integer
                                   readOnly: true
@@ -13350,7 +13462,15 @@ components:
                     - withdrawn
                     - closed
                 programsAppliedFor:
-                  type: string
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - snap
+                      - medicaid
+                      - chip
+                      - tanf
+                  description: Benefit programs the household is applying for.
                 programCount:
                   type: integer
                   readOnly: true
@@ -13994,7 +14114,15 @@ components:
                           - withdrawn
                           - closed
                       programsAppliedFor:
-                        type: string
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - snap
+                            - medicaid
+                            - chip
+                            - tanf
+                        description: Benefit programs the household is applying for.
                       programCount:
                         type: integer
                         readOnly: true

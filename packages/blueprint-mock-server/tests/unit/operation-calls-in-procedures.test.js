@@ -158,7 +158,7 @@ test('a reaction\'s call that fails runs its onFailure, with $failure', async ()
   assert.equal((await events('decision-support.suggestion.tried')).length, 0);
 });
 
-test('a record a step creates directly, whose resource has a state machine, starts in its initial state', async () => {
+test('a record a step creates directly starts in its initial state, and is announced as an API create would be', async () => {
   await boot({
     actions: [{
       id: 'spread',
@@ -168,13 +168,22 @@ test('a record a step creates directly, whose resource has a state machine, star
           POST: 'decision-support/suggestions',
           body: { kind: 'informing', subjectType: 'application_member', subjectId: MEMBER, category: 'missing-income' },
         },
-      }],
+      }, { emit: 'tried' }],
     }],
   });
   const { body: first } = await inform('name-mismatch');
   assert.equal((await send('POST', `/decision-support/suggestions/${first.id}/spread`, {})).status, 200);
   const added = (await suggestions()).find((s) => s.category === 'missing-income');
   assert.equal(added.status, 'proposed');
+
+  const created = (await events('decision-support.suggestion.created')).find((e) => e.subject === added.id);
+  assert.ok(created, 'a created event');
+  assert.equal(created.source, '/decision-support');
+  assert.equal(created.authid, 'worker-1');
+  const [tried] = await events('decision-support.suggestion.tried');
+  assert.equal(created.causationid, tried.id);
+  // The machine's reaction to its own created event ran: the expiry default.
+  assert.ok(added.expiresAt, 'expiresAt set by the reaction to created');
 });
 
 // runAs: system — the default — goes through the API as the system: every check
@@ -248,4 +257,23 @@ test('a system call repeating a suggestion still open gets the 409', async () =>
   const { status, body } = await send('POST', `/decision-support/suggestions/${one.id}/spread`, {});
   assert.equal(status, 409, JSON.stringify(body));
   assert.equal(body.details[0].id, one.id);
+});
+
+test('a record a step updates directly is announced as an API update would be', async () => {
+  const APPLICATION = '11111111-1111-4111-8111-111111111111';
+  await boot({
+    actions: [{
+      id: 'spread',
+      transition: { from: 'proposed', to: 'proposed' },
+      steps: [{ call: { PATCH: `intake/applications/${APPLICATION}/members/$request.memberId`, body: { firstName: 'Rosa' } } }],
+    }],
+  });
+  const { body: member } = await send('POST', `/intake/applications/${APPLICATION}/members`, { firstName: 'Rose', lastName: 'Diaz', relationship: 'self' });
+  const { body: first } = await inform('name-mismatch');
+  assert.equal((await send('POST', `/decision-support/suggestions/${first.id}/spread`, { memberId: member.id })).status, 200);
+  const { body: after } = await send('GET', `/intake/applications/${APPLICATION}/members/${member.id}`);
+  assert.equal(after.firstName, 'Rosa');
+  const updated = (await events('intake.application_member.updated')).find((e) => e.subject === member.id);
+  assert.ok(updated, 'an updated event');
+  assert.equal(updated.authid, 'worker-1');
 });

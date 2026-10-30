@@ -646,6 +646,44 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(warnings.length, 0);
   });
 
+  await t.test('resolveRelationships expand - a subset field declared in a referenced part keeps its type', () => {
+    // A resource whose fields are split as `allOf: [$ref Writable, {server fields}]`.
+    const spec = {
+      components: {
+        schemas: {
+          Member: {
+            type: 'object',
+            properties: {
+              applicationId: {
+                type: 'string',
+                format: 'uuid',
+                'x-relationship': { resource: 'Application', style: 'expand', fields: ['id', 'programs'] },
+              },
+            },
+          },
+          ApplicationWritable: {
+            type: 'object',
+            properties: { programs: { type: 'array', items: { type: 'string', enum: ['snap', 'medicaid'] } } },
+          },
+          Application: {
+            allOf: [
+              { $ref: '#/components/schemas/ApplicationWritable' },
+              { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+            ],
+          },
+        },
+      },
+    };
+
+    const schemaIndex = buildSchemaIndex(new Map([['intake.yaml', spec]]));
+    const { result, warnings } = resolveRelationships(spec, 'links-only', schemaIndex);
+
+    const expanded = result.components.schemas.Member.properties.application.properties;
+    assert.deepStrictEqual(expanded.programs, { type: 'array', items: { type: 'string', enum: ['snap', 'medicaid'] } });
+    assert.deepStrictEqual(expanded.id, { type: 'string', format: 'uuid' });
+    assert.deepStrictEqual(warnings, []);
+  });
+
   await t.test('resolveRelationships expand - full $ref when no fields specified', () => {
     const spec = {
       components: {

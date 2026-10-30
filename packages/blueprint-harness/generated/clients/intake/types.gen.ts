@@ -452,7 +452,10 @@ export type Application = {
              * Current lifecycle status of the application.
              */
             status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * How many programs this application covers, from programsAppliedFor.
              */
@@ -1221,7 +1224,10 @@ export type ApplicationList = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -1600,7 +1606,10 @@ export type ApplicationMember = {
          * Current lifecycle status of the application.
          */
         status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-        programsAppliedFor?: string;
+        /**
+         * Benefit programs the household is applying for.
+         */
+        programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * How many programs this application covers, from programsAppliedFor.
          */
@@ -2008,7 +2017,10 @@ export type ApplicationMemberList = {
              * Current lifecycle status of the application.
              */
             status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * How many programs this application covers, from programsAppliedFor.
              */
@@ -2546,7 +2558,10 @@ export type ApplicationWritable2 = {
          * Expanded Application (subset).
          */
         application: {
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         };
     }>;
     proofOfIncomeDocument?: {
@@ -2985,7 +3000,10 @@ export type ApplicationListWritable = {
              * Expanded Application (subset).
              */
             application: {
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             };
         }>;
         proofOfIncomeDocument?: {
@@ -3157,7 +3175,10 @@ export type ApplicationMemberWritable2 = {
      * Expanded Application (subset).
      */
     application: {
-        programsAppliedFor?: string;
+        /**
+         * Benefit programs the household is applying for.
+         */
+        programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     };
 };
 
@@ -3291,7 +3312,10 @@ export type ApplicationMemberListWritable = {
          * Expanded Application (subset).
          */
         application: {
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         };
     }>;
     /**
@@ -3887,7 +3911,10 @@ export type ListApplicationsResponses = {
                      * Current lifecycle status of the application.
                      */
                     status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                    programsAppliedFor?: string;
+                    /**
+                     * Benefit programs the household is applying for.
+                     */
+                    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                     /**
                      * How many programs this application covers, from programsAppliedFor.
                      */
@@ -4476,7 +4503,10 @@ export type CreateApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -5003,7 +5033,10 @@ export type GetApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -5586,7 +5619,10 @@ export type UpdateApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -6333,7 +6369,10 @@ export type ListApplicationMembersResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -6675,7 +6714,10 @@ export type CreateApplicationMemberResponses = {
              * Current lifecycle status of the application.
              */
             status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * How many programs this application covers, from programsAppliedFor.
              */
@@ -6911,7 +6953,10 @@ export type GetApplicationMemberResponses = {
              * Current lifecycle status of the application.
              */
             status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * How many programs this application covers, from programsAppliedFor.
              */
@@ -7240,7 +7285,10 @@ export type UpdateApplicationMemberResponses = {
              * Current lifecycle status of the application.
              */
             status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-            programsAppliedFor?: string;
+            /**
+             * Benefit programs the household is applying for.
+             */
+            programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * How many programs this application covers, from programsAppliedFor.
              */
@@ -7711,7 +7759,10 @@ export type SubmitApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -8264,7 +8315,10 @@ export type OpenApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -8826,7 +8880,10 @@ export type CloseApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */
@@ -9379,7 +9436,10 @@ export type WithdrawApplicationResponses = {
                  * Current lifecycle status of the application.
                  */
                 status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
-                programsAppliedFor?: string;
+                /**
+                 * Benefit programs the household is applying for.
+                 */
+                programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
                 /**
                  * How many programs this application covers, from programsAppliedFor.
                  */

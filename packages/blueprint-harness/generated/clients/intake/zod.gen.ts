@@ -243,7 +243,12 @@ export const zApplication = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -645,7 +650,12 @@ export const zApplicationList = z.object({
                     'withdrawn',
                     'closed'
                 ])),
-                programsAppliedFor: z.optional(z.string()),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
                 programCount: z.optional(z.int().readonly())
             })
         })))),
@@ -847,7 +857,12 @@ export const zApplicationMember = z.object({
             'withdrawn',
             'closed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -1068,7 +1083,12 @@ export const zApplicationMemberList = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     }))),
@@ -1377,7 +1397,12 @@ export const zApplicationWritable2 = z.object({
         ]))
     }).and(z.object({
         application: z.object({
-            programsAppliedFor: z.optional(z.string())
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ])))
         })
     })))),
     proofOfIncomeDocument: z.optional(z.object({
@@ -1599,7 +1624,12 @@ export const zApplicationListWritable = z.object({
             ]))
         }).and(z.object({
             application: z.object({
-                programsAppliedFor: z.optional(z.string())
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ])))
             })
         })))),
         proofOfIncomeDocument: z.optional(z.object({
@@ -1690,7 +1720,12 @@ export const zApplicationMemberWritable2 = z.object({
     ]))
 }).and(z.object({
     application: z.object({
-        programsAppliedFor: z.optional(z.string())
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])))
     })
 }));
 
@@ -1763,7 +1798,12 @@ export const zApplicationMemberListWritable = z.object({
         ]))
     }).and(z.object({
         application: z.object({
-            programsAppliedFor: z.optional(z.string())
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ])))
         })
     }))),
     total: z.int().gte(0),
@@ -2040,7 +2080,12 @@ export const zListApplicationsResponse = z.object({
                     'withdrawn',
                     'closed'
                 ])),
-                programsAppliedFor: z.optional(z.string()),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
                 programCount: z.optional(z.int().readonly())
             })
         })))),
@@ -2337,7 +2382,12 @@ export const zCreateApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -2608,7 +2658,12 @@ export const zGetApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -2902,7 +2957,12 @@ export const zUpdateApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -3167,7 +3227,12 @@ export const zListApplicationMembersResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     }))),
@@ -3333,7 +3398,12 @@ export const zCreateApplicationMemberResponse = z.object({
             'withdrawn',
             'closed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3443,7 +3513,12 @@ export const zGetApplicationMemberResponse = z.object({
             'withdrawn',
             'closed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3605,7 +3680,12 @@ export const zUpdateApplicationMemberResponse = z.object({
             'withdrawn',
             'closed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3821,7 +3901,12 @@ export const zSubmitApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4079,7 +4164,12 @@ export const zOpenApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4340,7 +4430,12 @@ export const zCloseApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4598,7 +4693,12 @@ export const zWithdrawApplicationResponse = z.object({
                 'withdrawn',
                 'closed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),

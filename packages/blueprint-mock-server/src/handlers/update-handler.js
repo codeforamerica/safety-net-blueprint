@@ -4,9 +4,7 @@
 
 import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { applyEffects, applySteps } from '../state-machine-engine.js';
-import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
+import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
@@ -59,7 +57,7 @@ export function buildChanges(before, after) {
  * Create store.update handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
- * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
+ * @param {Object|null} stateMachine - State machine contract
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store } = {}) {
@@ -155,65 +153,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Update in database (database manager handles deep merge and updatedAt timestamp)
       const updated = store.update(endpoint.collectionName, resourceId, requestBody);
 
-      // Fire onUpdate steps/effects if any watched fields changed.
-      // Must run before emitting so rule-driven mutations (e.g. priority re-scored
-      // because isExpedited changed) are included in the event's changes array.
-      const onUpdate = machine?.triggers?.onUpdate ?? stateMachine?.onUpdate;
-      const hasOnUpdate = onUpdate?.steps?.length > 0 || onUpdate?.effects?.length > 0;
-
-      if (hasOnUpdate) {
-        const watchedFields = onUpdate?.fields;
-        const patchedFields = Object.keys(requestBody);
-        const shouldFire = !watchedFields || watchedFields.length === 0
-          || patchedFields.some(f => watchedFields.includes(f));
-
-        if (shouldFire) {
-          const callerRoles = extractCallerRoles(request);
-          const baseContext = {
-            caller: {
-              id: callerHeader(request, 'x-caller-id'),
-              roles: callerRoles
-            },
-            object: { ...existing },
-            request: requestBody,
-            now: new Date().toISOString(),
-          };
-
-          const entities = resolveContextLayers(
-            [stateMachine?.context, machine?.context, onUpdate?.context],
-            updated,
-            baseContext,
-            store
-          );
-          if (entities === null) {
-            console.error('onUpdate: required context binding failed — skipping trigger');
-          }
-          const context = entities !== null ? { ...baseContext, entities } : baseContext;
-
-          let pendingProcedures;
-          if (onUpdate?.steps?.length > 0) {
-            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context, store));
-          } else {
-            ({ pendingProcedures } = applyEffects(onUpdate.effects, updated, context));
-          }
-          const inlineRules = buildInlineRules(stateMachine, machine);
-          executeProcedures(pendingProcedures, updated, inlineRules, context, store);
-
-          // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
-          const onUpdateDiff = {};
-          for (const [key, value] of Object.entries(updated)) {
-            if (existingSnapshot[key] !== value && !Object.prototype.hasOwnProperty.call(requestBody, key)
-                && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
-              onUpdateDiff[key] = value;
-            }
-          }
-          if (Object.keys(onUpdateDiff).length > 0) {
-            store.update(endpoint.collectionName, resourceId, onUpdateDiff);
-          }
-        }
-      }
-
-      // Build changes diff after all mutations have settled (PATCH fields + any rule-driven mutations)
+      // The fields this update changed, for its event
       const changes = buildChanges(existingSnapshot, updated);
 
       // Emit updated event with complete field-level diff
