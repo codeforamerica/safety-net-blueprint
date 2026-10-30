@@ -39,6 +39,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
   };
 }
 import { idempotencyOf, withIdempotency } from './idempotency.js';
+import { operationsOf } from './operation-calls.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
@@ -649,6 +650,9 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   // collection only that server held isn't checked here.
   clearReadRoutes();
 
+  // Every operation in the set, for checking a call a write carries.
+  deps = { ...deps, operations: operationsOf(apiSpecs) };
+
   const allEndpoints = [];
 
   // Register custom metrics routes FIRST so they take priority over standard CRUD handlers
@@ -1059,7 +1063,7 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
-    const entries = sm.machine.actions.map(op => ({
+    const entries = (sm.machine.actions ?? []).map(op => ({
       id: op.id,
       from: op.transition?.from,
       to: op.transition?.to

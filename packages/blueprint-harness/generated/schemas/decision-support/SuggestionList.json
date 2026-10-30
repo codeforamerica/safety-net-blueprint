@@ -1,0 +1,487 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "description": "A proposed change, including server-managed fields.",
+            "unevaluatedProperties": false,
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "evidence": {
+                    "type": "array",
+                    "description": "Where it came from.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "sourceType",
+                        "sourceId"
+                      ],
+                      "properties": {
+                        "sourceType": {
+                          "type": "string",
+                          "description": "What kind of record it cites, e.g. `transcript_entry`."
+                        },
+                        "sourceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The record it cites. `sourceType` says what kind."
+                        }
+                      }
+                    }
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it."
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Context from other domains, by the cross-domain pass-through\nconvention — `intake.interviewId`, say — so everything proposed\nduring something can be listed together.\n"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When it stops applying, if nothing decides it first. One day after it was proposed, when not given."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "call"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "operation"
+                  },
+                  "call": {
+                    "type": "object",
+                    "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+                    "additionalProperties": false,
+                    "required": [
+                      "operationId"
+                    ],
+                    "properties": {
+                      "operationId": {
+                        "type": "string",
+                        "description": "The operation's operationId, e.g. `updateApplicationMember`."
+                      },
+                      "parameters": {
+                        "type": "array",
+                        "description": "The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.\n",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "name",
+                            "in",
+                            "value"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "The parameter's name, as the operation declares it."
+                            },
+                            "in": {
+                              "type": "string",
+                              "enum": [
+                                "path",
+                                "query",
+                                "header",
+                                "cookie"
+                              ]
+                            },
+                            "value": {
+                              "description": "The parameter's value."
+                            }
+                          }
+                        }
+                      },
+                      "body": {
+                        "description": "The request body, in the operation's request schema."
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "status",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "readOnly": true,
+                    "description": "Unique identifier (server-generated)."
+                  },
+                  "status": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "`proposed` while it waits for a decision; `accepted` once a person\nsaid yes and, for an operation, the call was made; `refused` when\na person said yes and the call failed; `dismissed` when a person\nsaid no; `expired` once it stopped applying.\n",
+                    "enum": [
+                      "proposed",
+                      "accepted",
+                      "refused",
+                      "dismissed",
+                      "expired"
+                    ]
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "Why it was dismissed."
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true,
+                    "description": "When it was proposed."
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true,
+                    "description": "When it last changed."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "performed": {
+                    "type": "object",
+                    "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+                    "additionalProperties": false,
+                    "required": [
+                      "operationId"
+                    ],
+                    "properties": {
+                      "operationId": {
+                        "type": "string",
+                        "description": "The operation's operationId, e.g. `updateApplicationMember`."
+                      },
+                      "parameters": {
+                        "type": "array",
+                        "description": "The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.\n",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "name",
+                            "in",
+                            "value"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "The parameter's name, as the operation declares it."
+                            },
+                            "in": {
+                              "type": "string",
+                              "enum": [
+                                "path",
+                                "query",
+                                "header",
+                                "cookie"
+                              ]
+                            },
+                            "value": {
+                              "description": "The parameter's value."
+                            }
+                          }
+                        }
+                      },
+                      "body": {
+                        "description": "The request body, in the operation's request schema."
+                      }
+                    },
+                    "readOnly": true
+                  },
+                  "attempts": {
+                    "type": "array",
+                    "readOnly": true,
+                    "description": "Each accept that failed.",
+                    "items": {
+                      "type": "object",
+                      "description": "An accept that failed.",
+                      "additionalProperties": false,
+                      "required": [
+                        "call",
+                        "error"
+                      ],
+                      "properties": {
+                        "call": {
+                          "type": "object",
+                          "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+                          "additionalProperties": false,
+                          "required": [
+                            "operationId"
+                          ],
+                          "properties": {
+                            "operationId": {
+                              "type": "string",
+                              "description": "The operation's operationId, e.g. `updateApplicationMember`."
+                            },
+                            "parameters": {
+                              "type": "array",
+                              "description": "The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.\n",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "name",
+                                  "in",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "description": "The parameter's name, as the operation declares it."
+                                  },
+                                  "in": {
+                                    "type": "string",
+                                    "enum": [
+                                      "path",
+                                      "query",
+                                      "header",
+                                      "cookie"
+                                    ]
+                                  },
+                                  "value": {
+                                    "description": "The parameter's value."
+                                  }
+                                }
+                              }
+                            },
+                            "body": {
+                              "description": "The request body, in the operation's request schema."
+                            }
+                          }
+                        },
+                        "error": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "code",
+                            "message"
+                          ],
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "description": "Machine-readable error code."
+                            },
+                            "message": {
+                              "type": "string",
+                              "description": "Human-readable error description."
+                            },
+                            "details": {
+                              "type": "array",
+                              "description": "Additional error details.",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "description": "Something pointed out, including server-managed fields.",
+            "unevaluatedProperties": false,
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "evidence": {
+                    "type": "array",
+                    "description": "Where it came from.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "sourceType",
+                        "sourceId"
+                      ],
+                      "properties": {
+                        "sourceType": {
+                          "type": "string",
+                          "description": "What kind of record it cites, e.g. `transcript_entry`."
+                        },
+                        "sourceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The record it cites. `sourceType` says what kind."
+                        }
+                      }
+                    }
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it."
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Context from other domains, by the cross-domain pass-through\nconvention — `intake.interviewId`, say — so everything proposed\nduring something can be listed together.\n"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When it stops applying, if nothing decides it first. One day after it was proposed, when not given."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "subjectType",
+                  "subjectId",
+                  "category",
+                  "message"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "informing"
+                  },
+                  "subjectType": {
+                    "type": "string",
+                    "description": "What kind of record it is about, e.g. `application_member`."
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The record it is about. `subjectType` says what kind."
+                  },
+                  "path": {
+                    "type": "string",
+                    "format": "json-pointer",
+                    "description": "The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record."
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.",
+                    "enum": [
+                      "missing-income",
+                      "name-mismatch"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "What it points out, for a person to read."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "status",
+                  "createdAt",
+                  "updatedAt"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "readOnly": true,
+                    "description": "Unique identifier (server-generated)."
+                  },
+                  "status": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "`proposed` while it waits for a decision; `accepted` once a person\nsaid yes and, for an operation, the call was made; `refused` when\na person said yes and the call failed; `dismissed` when a person\nsaid no; `expired` once it stopped applying.\n",
+                    "enum": [
+                      "proposed",
+                      "accepted",
+                      "refused",
+                      "dismissed",
+                      "expired"
+                    ]
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "What identifies it, for refusing the same one proposed again. A keyed hash, so nothing can be read back from it."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "Why it was dismissed."
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true,
+                    "description": "When it was proposed."
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "readOnly": true,
+                    "description": "When it last changed."
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of suggestions."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of suggestions requested."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of suggestions skipped before this page."
+    },
+    "hasNext": {
+      "type": "boolean",
+      "description": "Whether more suggestions are available beyond this page."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/SuggestionList"
+}

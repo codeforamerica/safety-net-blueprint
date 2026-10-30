@@ -1,0 +1,28 @@
+# The lifecycle of a suggestion. A suggestion starts in `proposed`; a person
+# accepts or dismisses it, and one nobody decides expires. Accepting an
+# operation suggestion makes its call, and a call that fails leaves it
+# `refused`, to be accepted again until it expires. See
+# docs/architecture/domains/decision-support.md.
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: decision-support
+capability: suggestions
+machines:
+  - object: Suggestion
+    states:
+      - id: proposed
+        slaClock: stopped
+        description: Waiting for a person to decide.
+      - id: accepted
+        slaClock: stopped
+        description: A person said yes, and for an operation suggestion, the call was made. Terminal.
+      - id: refused
+        slaClock: stopped
+        description: A person said yes, and the call could not be made. It can be accepted again until it expires.
+      - id: dismissed
+        slaClock: stopped
+        description: A person said no, with a reason. Terminal.
+      - id: expired
+        slaClock: stopped
+        description: It stopped applying before anyone decided. Terminal.
+    initialState: proposed

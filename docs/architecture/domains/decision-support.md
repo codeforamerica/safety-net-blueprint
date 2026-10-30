@@ -1,8 +1,10 @@
 # Decision Support Domain
 
-> **Status: designed, not built.** Suggestions will be the framework's
-> `suggestions` capability, in a `decision-support` domain
-> (`blueprint-core/base-contracts/domains/decision-support/`).
+> **Status: partly built.** Suggestions are the framework's `suggestions`
+> capability, in a `decision-support` domain
+> (`blueprint-core/base-contracts/domains/decision-support/`). Proposing and
+> reading them is built, with the proposal checked against the contracts;
+> accepting, dismissing, expiry and refusing duplicates are designed, not built.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -25,19 +27,21 @@ listing the `suggestions` capability ([Decision 1](#decision-1-a-framework-domai
 
 1. Something proposes a change or points something out — an assistant listening
    to a conversation, a rule noticing missing information, a colleague. It says
-   what it is about, where it came from, and who proposed it.
-2. The proposal is checked as it arrives: what it is about and the sources it
-   cites exist, and a proposed change is one the contracts allow, in the shape
-   they require. A change already turned down for that record is refused.
+   what it is about and where it came from.
+2. The proposal is checked as it arrives: a proposed change is one the
+   contracts allow, in the shape they require, and anything else is in a
+   category the set declares. One already open, or already turned down, is
+   refused.
 3. The person deciding sees it beside its evidence — the lines of the
-   conversation, the page of the document — and decides.
+   conversation, the document — and decides.
 4. Accepting a proposed change makes the change, as that person, under the same
    rules as making it by hand. They can correct it first.
 5. If the change cannot be made — the person may not make it, or the record no
-   longer allows it — the attempt is recorded and they can try again, until
-   the attempts allowed run out.
+   longer allows it — the attempt is recorded and they can try again until the
+   suggestion expires.
 6. A suggestion that no longer applies is closed by whatever created it: a
-   conversation ending closes the suggestions made during it.
+   conversation ending closes the suggestions made during it. One nobody
+   decides expires after a day.
 
 ## Entity model
 
@@ -46,36 +50,48 @@ listing the `suggestions` capability ([Decision 1](#decision-1-a-framework-domai
 One thing put in front of a person, and their decision on it.
 
 - **Kind** — it either proposes a change, naming the operation that makes it and
-  its arguments, or informs, with a category and the details that category
-  defines. A proposed change needs no category: the operation says what it is.
-  See [Decision 2](#decision-2-two-kinds-a-proposed-operation-or-information).
-- **Subject** — the record it is about.
-- **Who proposed it** — in the same terms events use to say who caused them, so
-  a rule, a service and a person are told apart the same way everywhere.
+  its arguments, or informs. A proposed change needs no category, and no
+  subject: the operation says what it is, and its arguments which record it
+  changes. See [Decision 2](#decision-2-two-kinds-a-proposed-operation-or-information).
+- **Subject** — for an informing suggestion, the record it is about, and
+  optionally the field within it.
+- **Category and message** — for an informing suggestion, what kind of thing it
+  points out, and what it says in words of its own: a category, a message, or
+  both. A rule's suggestion has only a category, whose description is what a
+  person reads; a model's usually adds a message about the conversation. One
+  with no category is something no category covers yet.
 - **Confidence** — how sure a model was, from a model only. For display and
   review; nothing in the lifecycle reads it.
-- **Evidence** — references to where it came from: lines of a transcript, a page
-  of a document, a fact a ruleset derived, a data match. See
+- **Evidence** — references to where it came from: lines of a transcript, a
+  document, a data match. See
   [Decision 6](#decision-6-evidence-refers-it-does-not-quote).
 - **Context** — what it was proposed during, such as a conversation, by the
   cross-domain pass-through convention, so everything proposed during it can be
   listed together.
-- **What was performed** — the arguments as they were accepted, when they
-  differ from what was proposed.
-- **Attempts** — each accept that failed: when, by whom, what was tried and why
-  it failed.
-- **Fingerprint** — what identifies the change, for refusing it once dismissed.
-  See [Decision 7](#decision-7-a-dismissed-change-is-not-proposed-again).
-- **Dismissal reason**, what it **superseded** or was superseded by, and an
-  optional **expiry**.
+- **What was performed** — the call as it was accepted, when the person changed
+  it first.
+- **Attempts** — each accept that failed: what was tried and why it failed.
+- **Fingerprint** — what identifies it, for refusing the same one again. See
+  [Decision 7](#decision-7-the-same-suggestion-is-not-proposed-twice).
+- **Dismissal reason**, and when it **expires**.
+
+Nothing on a suggestion says who proposed or decided it, or when: each state's
+event says who caused it and when.
 
 ### Category
 
-A kind of informing suggestion, declared by the domain it belongs to — in the
-safety net contracts, eligibility declares "missing determination input" and
-intake "risk" and "inconsistency" — with the shape of its details and the fields that identify
-the same one. Categories are registry entries, so any domain or state adds its
-own with a file.
+A kind of thing an informing suggestion points out, declared by the domain it
+belongs to — "a name that doesn't match", "income not on the record". Categories
+are registry entries, an id and a description, so any domain or state adds its
+own with a file. The framework declares none. A narrow category makes a
+dismissal specific: dismissing one suggestion refuses the same category about
+the same field of the same record, however it is worded.
+
+A model can find something no category covers. It proposes it with a message
+and no category, rather than in the wrong one; it cannot add a category, since
+categories are defined only in the contracts. Uncategorized suggestions are
+listed with `q=kind:informing -category:*`, and one that keeps appearing
+becomes a category by a change to the registry.
 
 ## Suggestion lifecycle
 
@@ -83,16 +99,14 @@ own with a file.
 |---|---|---|
 | Proposed | Waiting for a person to decide. | none |
 | Accepted | A person said yes, and for a proposed change, it was made. Terminal. | none |
-| Refused | A person said yes, and the change could not be made. Waiting for a retry. | the retry timeout |
-| Failed | The change could not be made within the attempts or time allowed. Terminal. | none |
+| Refused | A person said yes, and the change could not be made. Waiting for a retry. | none |
 | Dismissed | A person said no, with a reason. Terminal. | none |
 | Expired | It no longer applies. Terminal. | none |
-| Superseded | A newer suggestion replaced it. Terminal. | none |
 
 Accepting a proposed suggestion that fails moves it to refused, with the attempt
-recorded; accepting again tries again. After the most attempts allowed, or no
-retry before the timeout, it fails. A refused suggestion can still be dismissed.
-For an informing suggestion, accepting means the person took it up.
+recorded; accepting again tries again, until it expires. A refused suggestion
+can still be dismissed. For an informing suggestion, accepting means the person
+took it up.
 
 ## Domain events
 
@@ -101,20 +115,19 @@ For an informing suggestion, accepting means the person took it up.
 | `decision-support.suggestion.proposed` | Something needs a person's decision | Proposing | The decider's screen |
 | `decision-support.suggestion.accepted` | A person said yes; for a proposed change, it was made, and the change's own events name this one as their cause | Accepting | Audit; whatever proposed it |
 | `decision-support.suggestion.refused` | A person said yes and the change could not be made | A failed accept | The decider's screen; anything that can route it to someone who may make it |
-| `decision-support.suggestion.failed` | It cannot be done | The last attempt failing, or the timeout | Workflow, to make a follow-up task |
 | `decision-support.suggestion.dismissed` | A person said no | Dismissing | Audit; whatever proposed it, to learn from |
-| `decision-support.suggestion.expired` | It no longer applies | Expiring | The decider's screen |
-| `decision-support.suggestion.superseded` | A newer one replaced it | Proposing its replacement | The decider's screen |
+| `decision-support.suggestion.expired` | It no longer applies | Expiring, or its timer | The decider's screen; workflow, for a refused one nobody retried |
 
 ## Contract artifacts
 
-To be built in `blueprint-core/base-contracts/domains/decision-support/`.
+In `blueprint-core/base-contracts/domains/decision-support/`.
 
 | Artifact | File |
 |---|---|
 | API — suggestions | `decision-support-suggestions-openapi.yaml` |
 | Lifecycle | `decision-support-suggestions-state-machine.yaml` |
 | Events | Generated by resolve beside the API, from the API and the state machine |
+| A call to an operation | `OperationCall`, in `blueprint-core/base-contracts/schemas/operations.yaml` |
 | Categories | A `suggestion-categories` registry, in each owning domain's registry files |
 
 ## Key design decisions
@@ -125,10 +138,10 @@ To be built in `blueprint-core/base-contracts/domains/decision-support/`.
 | 2 | [Two kinds: a proposed operation, or information](#decision-2-two-kinds-a-proposed-operation-or-information) | A change names its operation; anything else has a category |
 | 3 | [One suggestion is one change](#decision-3-one-suggestion-is-one-change) | A patch of five changes is five suggestions |
 | 4 | [Accepting performs the change as the person who accepts](#decision-4-accepting-performs-the-change-as-the-person-who-accepts) | The same permissions and rules as making it by hand |
-| 5 | [A failed accept is recorded and can be retried](#decision-5-a-failed-accept-is-recorded-and-can-be-retried) | Refused, then failed after the limits |
+| 5 | [A failed accept is recorded and can be retried](#decision-5-a-failed-accept-is-recorded-and-can-be-retried) | Refused, and retried by a person until it expires |
 | 6 | [Evidence refers, it does not quote](#decision-6-evidence-refers-it-does-not-quote) | Nothing sensitive copied out of its source |
-| 7 | [A dismissed change is not proposed again](#decision-7-a-dismissed-change-is-not-proposed-again) | Sameness is declared, not guessed |
-| 8 | [Whoever created a suggestion closes it](#decision-8-whoever-created-a-suggestion-closes-it) | A conversation ending expires what was proposed during it |
+| 7 | [The same suggestion is not proposed twice](#decision-7-the-same-suggestion-is-not-proposed-twice) | The whole call, or the subject and category |
+| 8 | [Whatever gives suggestions their context creates and closes them](#decision-8-whatever-gives-suggestions-their-context-creates-and-closes-them) | Its state machine evaluates the rules, creates the suggestions, and expires them; anything left expires after a day |
 
 ### Decision 1: A framework domain a set opts into
 
@@ -172,8 +185,9 @@ it does.
 - **(A)** A patch to any record, applied on accept. It would bypass each
   operation's own rules.
 - **(B) ✓** A proposed change names its operation and arguments, checked against
-  the contracts when proposed. Everything else names a category its domain
-  declares, with details in that category's shape.
+  the contracts when proposed, in the shape an Arazzo step names a call.
+  Everything else names a category its domain declares, says what it points
+  out in a message, or both.
 
 ### Decision 3: One suggestion is one change
 
@@ -214,7 +228,7 @@ accepting it could not.
 
 ### Decision 5: A failed accept is recorded and can be retried
 
-**Status:** Decided: B
+**Status:** Decided: C
 
 **What's being decided:** Between a suggestion being proposed and accepted, the
 record can change, or the person may lack the permission, so what happens when
@@ -223,15 +237,18 @@ the change cannot be made decides whether a yes is ever lost.
 **Considerations:**
 - Someone said yes; losing that silently loses work.
 - Step Functions, Serverless Workflow and Arazzo all let a step fail to an
-  alternative, with retry limits declared in the workflow.
-- Data exchange's retries need the same thing.
+  alternative, with retry limits declared in the workflow; data exchange's
+  automatic retries will need those limits. A person retrying does not.
 
 **Options:**
 - **(A)** The accept fails and the suggestion stays proposed. Nothing records
   the attempt.
-- **(B) ✓** The suggestion is refused, with the attempt recorded, and a person
+- **(B)** The suggestion is refused, with the attempt recorded, and a person
   can retry. After the attempts or time allowed, it fails, and anyone can
   subscribe to that. The limits are declared once and changed by overlay.
+- **(C) ✓** The suggestion is refused, with the attempt recorded, and a person
+  can retry until it expires. Expiry already ends a suggestion nobody acts on,
+  so a separate retry timeout and a limit on attempts add nothing yet.
 
 ### Decision 6: Evidence refers, it does not quote
 
@@ -247,45 +264,75 @@ sensitive text ends up.
 
 **Options:**
 - **(A)** Quote the source in the suggestion.
-- **(B) ✓** Refer to it — which lines, which page, which fact — so the source's
+- **(B) ✓** Refer to it — which lines, which document — so the source's
   own rules apply when it is shown. A transcript cited as evidence has to be
   kept at least as long as the suggestion.
 
-### Decision 7: A dismissed change is not proposed again
+### Decision 7: The same suggestion is not proposed twice
 
-**Status:** Decided: B
+**Status:** Decided: C
 
 **What's being decided:** A service that re-reads a whole conversation keeps
 finding the same changes, so how sameness is judged decides whether a person
-sees one already turned down.
+sees one twice, or one already turned down.
 
 **Considerations:**
-- What makes two changes the same depends on the change: adding a person to a
-  record is the same change by name and birth date, not by every field.
+- A proposed change differing in anything at all — even a note — is a
+  different change, and a person may accept it after dismissing the first.
+- A model rewords the same point from one reading to the next, so a message is
+  not what identifies an informing suggestion.
 - Personal values should not be readable from whatever is kept to compare.
 
 **Options:**
-- **(A)** Compare the whole proposal. A trivial difference gets it through.
-- **(B) ✓** Each operation and category declares which fields identify it, and
-  overlays can change them. The comparison is a keyed hash of those values,
-  normalized, so they cannot be read back from it.
+- **(A)** Compare everything, the message included. A reworded point gets
+  through.
+- **(B)** Each operation and category declares which fields identify it. It
+  needs a new extension on every operation a suggestion can name, and a schema
+  in each category's registry entry.
+- **(C) ✓** A proposed change is identified by its whole call; an informing
+  suggestion by its subject, the field within it, and its category — or, with
+  no category, its message. A
+  proposal matching one still open, or one dismissed, is refused. The
+  comparison is a keyed hash of those values, normalized, so they cannot be
+  read back from it.
 
-### Decision 8: Whoever created a suggestion closes it
+### Decision 8: Whatever gives suggestions their context creates and closes them
 
-**Status:** Decided: B
+**Status:** Decided: C
 
-**What's being decided:** Suggestions made during a conversation stop applying
-when it ends, so who decides that decides whether the domain has to know about
-conversations, or about anything else that creates suggestions.
+**What's being decided:** Rules can find things to suggest — income below
+expenses, a member with no medical costs — but a suggestion only makes sense
+in some context: during a conversation, while a record is under review. What
+evaluates the rules and creates the suggestions decides whether the domain has
+to know about every such context.
 
 **Considerations:**
-- Only the process that made a suggestion knows when it stops applying.
+- Only the process a suggestion belongs to knows when it applies: when to
+  evaluate, when to evaluate again as the record changes, and when it stops
+  applying.
+- HL7 CDS Hooks has a service, called at a point in a workflow, return
+  suggestions.
+- A ruleset that finds things should be usable without suggestions — by a
+  screen, a report, another service.
 - Some suggestions have nothing else that would close them.
 
 **Options:**
-- **(A)** Decision support expires suggestions by rules of its own.
-- **(B) ✓** Whatever created a suggestion expires it — a conversation ending
-  expires what was proposed during it — and one nothing else would close can carry an expiry time.
+- **(A)** Decision support evaluates rules and expires suggestions by rules of
+  its own. It would have to know every context, and a new mechanism to say
+  which rules run when.
+- **(B)** A service outside the contracts, triggered by events, evaluates the
+  rules and creates the suggestions. Nothing in the contracts says what is
+  suggested, and the mock has nothing to run it.
+- **(C) ✓** The record that gives suggestions their context does it, from its
+  own state machine: it evaluates the rules when its context begins and again
+  as their inputs change, creates a suggestion for each finding, expires one
+  whose finding has cleared, and expires the rest when its context ends. One
+  nothing else closes expires at its expiry time, a day after it was proposed
+  unless it says otherwise.
+
+**Decision:** A ruleset's findings are the records each one is about, and the
+state machine says which category each finding is suggested in. See
+[Rulesets that create suggestions](../../guides/rules-guide.md#rulesets-that-create-suggestions).
 
 ## Customization
 
@@ -309,15 +356,10 @@ who may.
 
 A domain or state adds categories with a registry file of its own.
 
-### Retry limits
+### When a suggestion expires
 
-The attempts allowed and the retry timeout are declared once and changed by
-overlay.
-
-### What identifies a change
-
-The fields that identify an operation's change or a category's are declared
-with it, and changed by overlay.
+A day after it was proposed, unless it says otherwise; the default is in the
+state machine and changed by overlay.
 
 ## Out of scope
 
@@ -331,9 +373,9 @@ with it, and changed by overlay.
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Suggestions a person accepts or dismisses | CDS Hooks cards and their suggestions | planned |
+| Suggestions a person accepts or dismisses | CDS Hooks cards and their suggestions | partial — proposed and read, checked against the contracts; deciding is planned |
 | Recording acceptance and override with a reason | CDS Hooks feedback | planned |
-| Not repeating a dismissed suggestion | — | planned |
+| Not repeating a suggestion open or dismissed | — | planned |
 
 ## References
 

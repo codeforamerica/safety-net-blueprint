@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "required": [
+    "kind",
+    "call"
+  ],
+  "properties": {
+    "kind": {
+      "const": "operation"
+    },
+    "call": {
+      "type": "object",
+      "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+      "additionalProperties": false,
+      "required": [
+        "operationId"
+      ],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "description": "The operation's operationId, e.g. `updateApplicationMember`."
+        },
+        "parameters": {
+          "type": "array",
+          "description": "The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.\n",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "in",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The parameter's name, as the operation declares it."
+              },
+              "in": {
+                "type": "string",
+                "enum": [
+                  "path",
+                  "query",
+                  "header",
+                  "cookie"
+                ]
+              },
+              "value": {
+                "description": "The parameter's value."
+              }
+            }
+          }
+        },
+        "body": {
+          "description": "The request body, in the operation's request schema."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/OperationSuggestionFields"
+}

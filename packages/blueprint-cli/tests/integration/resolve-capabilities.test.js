@@ -79,12 +79,26 @@ describe('x-capabilities', () => {
     }
   });
 
+  test('a set listing suggestions gets the decision-support files, and not transcripts', () => {
+    const dir = contractSet(['suggestions']);
+    try {
+      const { out, status, stderr } = resolveSet(dir);
+      assert.equal(status, 0, stderr);
+      for (const file of ['openapi', 'state-machine', 'events-asyncapi']) {
+        assert.ok(existsSync(join(out, `base/domains/decision-support/decision-support-suggestions-${file}.yaml`)), file);
+      }
+      assert.ok(!existsSync(join(out, 'base/domains/communication')), 'transcripts were not asked for');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test('a domain name is not a capability: listing communication is refused, with the capabilities there are', () => {
     const dir = contractSet(['communication']);
     try {
       const { status, stderr } = resolveSet(dir);
       assert.notEqual(status, 0);
-      assert.match(stderr, /x-capabilities names "communication", which the framework does not provide\. Available: transcripts\./);
+      assert.match(stderr, /x-capabilities names "communication", which the framework does not provide\. Available: suggestions, transcripts\./);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -1,0 +1,9 @@
+$schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
+version: 1.0.0
+domain: intake
+type: suggestion-categories
+entries:
+  name-mismatch:
+    description: A name said in the conversation differs from the one on the record.
+  missing-income:
+    description: Income was mentioned that the record does not have.

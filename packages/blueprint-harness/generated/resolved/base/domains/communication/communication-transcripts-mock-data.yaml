@@ -1,4 +1,5 @@
 domain: communication
+capability: transcripts
 TranscriptExample1:
   id: 7a1e0c2d-0000-4000-8000-000000000001
   subjectType: interview

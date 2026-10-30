@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "enum": [
+    "operation",
+    "informing"
+  ],
+  "description": "`operation`: proposes a change, and accepting makes the call.\n`informing`: points something out about a record, and accepting means\na person took it up.\n",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/SuggestionKind"
+}

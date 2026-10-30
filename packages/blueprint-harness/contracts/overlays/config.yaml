@@ -8,3 +8,4 @@ info:
 config:
   x-capabilities:
     - transcripts
+    - suggestions

@@ -4,6 +4,7 @@ export * as eligibilityRules from './eligibility-rules/index.js';
 export * as intake from './intake/index.js';
 export * as intakeRules from './intake-rules/index.js';
 export * as communicationTranscripts from './communication-transcripts/index.js';
+export * as decisionSupportSuggestions from './decision-support-suggestions/index.js';
 export * as platformEvents from './platform-events/index.js';
 export * as platformRegistries from './platform-registries/index.js';
 export { q, search } from './search-helpers.js';

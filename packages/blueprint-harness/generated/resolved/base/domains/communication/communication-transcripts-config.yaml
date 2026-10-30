@@ -1,6 +1,7 @@
-$schema: communication-config-schema.yaml
+$schema: communication-transcripts-config-schema.yaml
 version: "1.0"
 domain: communication
+capability: transcripts
 profiles:
   resource: TranscriptionProfile
   entries:

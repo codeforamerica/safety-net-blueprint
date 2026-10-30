@@ -14,6 +14,7 @@ import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
+import { callsIn, callProblems } from '../operation-calls.js';
 
 
 /**
@@ -24,7 +25,7 @@ import { missingReferences, parentsOf } from '../references.js';
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, operations } = {}, options = {}) {
   // The resource created, in the API's model, for the records it's made under.
   const model = apiMetadata.doc?.model?.();
   const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
@@ -81,6 +82,14 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       });
       if (missing.length > 0) {
         return Response.json(createErrorResponse(missing, 422), { status: 422 });
+      }
+
+      // A call it carries — a suggestion's proposed change — must be one the
+      // operation it names would accept.
+      const wrongCalls = callsIn(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema)
+        .flatMap((found) => callProblems(found, operations ?? new Map()));
+      if (wrongCalls.length > 0) {
+        return Response.json(createErrorResponse(wrongCalls, 422), { status: 422 });
       }
 
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)

@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "required": [
+    "kind",
+    "subjectType",
+    "subjectId",
+    "category",
+    "message"
+  ],
+  "properties": {
+    "kind": {
+      "const": "informing"
+    },
+    "subjectType": {
+      "type": "string",
+      "description": "What kind of record it is about, e.g. `application_member`."
+    },
+    "subjectId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The record it is about. `subjectType` says what kind."
+    },
+    "path": {
+      "type": "string",
+      "format": "json-pointer",
+      "description": "The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record."
+    },
+    "category": {
+      "type": "string",
+      "description": "What kind of thing it points out — an entry of the `suggestion-categories` registry, which a contract set declares.",
+      "enum": [
+        "missing-income",
+        "name-mismatch"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What it points out, for a person to read."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InformingSuggestionFields"
+}
