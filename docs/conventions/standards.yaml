@@ -1,0 +1,120 @@
+# API Design Conventions — Standards
+# Part of the blueprint conventions. See conventions/ for the full set.
+#
+# The standards the blueprint is built on, and the prior art it borrows from
+# where no standard fits. Check here before adding a mechanism: a key, a field,
+# an extension, a header, a syntax, a step.
+
+version: "1.0"
+
+# In order: use a standard the blueprint has adopted, as the standard defines
+# it. Where none fits, borrow from established prior art and name it in the
+# design. Invent only when neither fits, and say so in the design, with why.
+# A new standard is adopted by adding it here; a new source is borrowed from by
+# adding it here when the blueprint first takes something from it.
+order_of_preference:
+  - adopted standard
+  - borrowed prior art
+  - invention, stated as one
+
+adopted:
+  - name: OpenAPI
+    version: "3.1.0"
+    url: https://spec.openapis.org/oas/v3.1.0
+    for: Every API contract. Use its own constructs (deprecated, readOnly, links, securitySchemes) before an x- extension.
+
+  - name: JSON Schema
+    version: "2020-12"
+    url: https://json-schema.org/draft/2020-12
+    for: >
+      Every schema, inside OpenAPI and AsyncAPI documents and in the
+      blueprint's own contract-file schemas — including its formats: a date or
+      time is `date-time` (RFC 3339), a length of time is `duration` (ISO 8601,
+      e.g. P30D, PT72H). The duration format has no sign; a duration that can
+      be negative — a timer's fireOffset, -PT48H for 48 hours before — is
+      written with a minus sign, as iCalendar's alarm triggers are (RFC 5545),
+      and declared with a pattern instead of the format.
+
+  - name: AsyncAPI
+    version: "3.0.0"
+    url: https://www.asyncapi.com/docs/reference/specification/v3.0.0
+    for: Each domain's events — channels and messages.
+
+  - name: CloudEvents
+    version: "1.0"
+    url: https://github.com/cloudevents/spec
+    for: The envelope of every event.
+    extensions:
+      - name: Distributed Tracing
+        attributes: [traceparent]
+        note: A W3C Trace Context value (https://www.w3.org/TR/trace-context/), carried from a request to the events it causes.
+      - name: Correlation
+        attributes: [causationid]
+      - name: Auth Context
+        attributes: [authid, authtype]
+      - name: Partitioning
+        attributes: [partitionkey]
+    note: >
+      The full list of extensions is at
+      https://github.com/cloudevents/spec/tree/main/cloudevents/extensions —
+      check it before adding an envelope attribute.
+
+  - name: Arazzo
+    version: "1.0.1"
+    url: https://spec.openapis.org/arazzo/v1.0.1.html
+    for: Scenarios — sequences of API calls with their expected results. A call described anywhere else takes Arazzo's shape for the parts it shares.
+
+  - name: OpenAPI Overlay
+    version: "1.0.0"
+    url: https://spec.openapis.org/overlay/v1.0.0.html
+    for: How a state changes the base contracts. Its targets are JSONPath (RFC 9535, https://www.rfc-editor.org/rfc/rfc9535).
+
+  - name: JSON Pointer
+    version: RFC 6901
+    url: https://www.rfc-editor.org/rfc/rfc6901
+    for: A field that points at one place in one document — a suggestion's path. (It's also the part after `#` in a $ref or an Arazzo body reference.)
+
+  - name: CEL
+    url: https://github.com/google/cel-spec
+    for: >
+      Expressions — guards, conditions, rules, filters, derived fields. SLA
+      types, metrics and some where clauses still use JSON Logic
+      (https://jsonlogic.com), which is being replaced; don't use it in
+      anything new.
+
+  - name: HTTP
+    url: https://www.rfc-editor.org/rfc/rfc9110
+    for: >
+      Methods, status codes, conditional requests and Retry-After, as RFC 9110
+      defines them; a retried POST made safe with the Idempotency-Key header
+      (https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/,
+      an IETF draft).
+
+# Prior art the blueprint borrows from where no adopted standard fits. These
+# aren't commitments: take a name or a shape from them, and say which.
+borrowed:
+  - name: CNCF Serverless Workflow
+    url: https://github.com/serverlessworkflow/specification
+    for: >
+      The steps inside a state machine's actions, reactions and procedures —
+      call, emit, set, for, switch, try/catch. Not adopted: it has no record
+      lifecycle or authorization, and is a CNCF sandbox project.
+
+  - name: Amazon States Language
+    url: https://states-language.net/spec.html
+    for: >
+      Handling a failed call where it stands — a `catch` on the call, as its
+      Catch sits on a Task, with no try around it.
+
+  - name: XState and SCXML
+    url: https://stately.ai/docs
+    for: State machine vocabulary — states, transitions, guards, on, emit.
+
+  - name: JSONPath
+    url: https://www.rfc-editor.org/rfc/rfc9535
+    for: >
+      The field paths that name a field in the data model — annotation keys,
+      data dictionary keys, a ruleset's inputs: `application.members[].ssn`.
+      A simplification, not RFC 9535: no leading `$`, and `[]` for every item
+      of a list, so `a.b[].c` is `$.a.b[*].c`. It names a field in a schema
+      rather than querying a document.

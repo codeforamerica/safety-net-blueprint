@@ -114,11 +114,11 @@ versioning:
     notice_period_months: 6
     headers:
       - name: Deprecation
-        value: "true"
-        description: Indicates endpoint is deprecated
+        value: "@<Unix timestamp>"
+        description: When the endpoint was or will be deprecated, as an RFC 9745 date (e.g. @1767225600)
       - name: Sunset
-        value: "<ISO 8601 date>"
-        description: Date when endpoint will be removed
+        value: "<HTTP date>"
+        description: When the endpoint will be removed, as an RFC 8594 HTTP date (e.g. Wed, 30 Jun 2027 00:00:00 GMT)
       - name: Link
         value: "<url>; rel=\"successor-version\""
         description: Link to replacement endpoint/documentation
