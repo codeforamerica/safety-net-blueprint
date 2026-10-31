@@ -1066,10 +1066,6 @@ export type Interview = {
     status: 'scheduled' | 'in_progress' | 'completed';
     readonly startedAt?: string;
     readonly completedAt?: string;
-    /**
-     * When the interview last evaluated its flags and proposed or expired suggestions for them.
-     */
-    readonly suggestionsProcessedAt?: string;
     readonly createdAt: string;
     readonly updatedAt: string;
     /**
@@ -1109,10 +1105,6 @@ export type InterviewList = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -7097,10 +7089,6 @@ export type ListApplicationInterviewsResponses = {
             status: 'scheduled' | 'in_progress' | 'completed';
             readonly startedAt?: string;
             readonly completedAt?: string;
-            /**
-             * When the interview last evaluated its flags and proposed or expired suggestions for them.
-             */
-            readonly suggestionsProcessedAt?: string;
             readonly createdAt: string;
             readonly updatedAt: string;
             /**
@@ -7187,10 +7175,6 @@ export type CreateApplicationInterviewResponses = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -7256,10 +7240,6 @@ export type GetApplicationInterviewResponses = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -10849,10 +10829,6 @@ export type StartInterviewResponses = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -10982,10 +10958,6 @@ export type ProcessSuggestionsInterviewResponses = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -11115,10 +11087,6 @@ export type CompleteInterviewResponses = {
         status: 'scheduled' | 'in_progress' | 'completed';
         readonly startedAt?: string;
         readonly completedAt?: string;
-        /**
-         * When the interview last evaluated its flags and proposed or expired suggestions for them.
-         */
-        readonly suggestionsProcessedAt?: string;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**

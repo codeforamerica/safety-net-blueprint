@@ -324,15 +324,15 @@ test('state-machine-schema action types', async (t) => {
   // caller, with what to do when it fails.
   const step = (fields) => withActions([{ id: 'accept', transition: { from: 'active', to: 'draft' }, steps: [fields] }]);
 
-  await t.test('call step naming an operation by operationId, run as the caller, with onFailure', () => {
+  await t.test('call step naming an operation by operationId, run as the caller, with catch', () => {
     const { valid, errors } = validate(step({
       call: {
         operationId: 'updateWidget',
         parameters: [{ name: 'widgetId', in: 'path', value: '$object.widgetId' }],
-        body: { color: '$request.color' },
+        requestBody: { payload: { color: '$request.color' } },
       },
       runAs: 'caller',
-      onFailure: { to: 'active', then: [{ set: { field: 'lastError', value: '$failure.error' } }] },
+      catch: { as: 'refusal', to: 'active', do: [{ set: { field: 'lastError', value: '$refusal.message' } }] },
     }));
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
@@ -347,8 +347,8 @@ test('state-machine-schema action types', async (t) => {
     assert.ok(!valid, 'must not validate');
   });
 
-  await t.test('onFailure takes only to and then', () => {
-    const { valid } = validate(step({ call: '$request.call', onFailure: { retry: 3 } }));
+  await t.test('catch takes only as, do and to', () => {
+    const { valid } = validate(step({ call: '$request.call', catch: { retry: 3 } }));
     assert.ok(!valid, 'must not validate');
   });
 

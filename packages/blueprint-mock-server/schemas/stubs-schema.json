@@ -21,7 +21,7 @@
           "examples": [{ "data.serviceType": "fdsh_ssa" }]
         },
         "response": {
-          "description": "The event to emit when this stub matches. Omit for scheduling.timer.requested, which emits the callback the timer request carries.",
+          "description": "The event to emit when this stub matches. Omit for platform.timer.requested, which emits the callback the timer request carries.",
           "type": "object",
           "required": ["type"],
           "additionalProperties": false,

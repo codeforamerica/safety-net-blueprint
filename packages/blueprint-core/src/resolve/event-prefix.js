@@ -80,7 +80,7 @@ function prefixStateMachine(content, prefix) {
     if (next.then) next.then = prefixSteps(next.then);
     if (next.else) next.else = prefixSteps(next.else);
     if (next.do) next.do = prefixSteps(next.do);
-    if (next.onFailure?.then) next.onFailure = { ...next.onFailure, then: prefixSteps(next.onFailure.then) };
+    if (next.catch?.do) next.catch = { ...next.catch, do: prefixSteps(next.catch.do) };
     if (next.when) {
       next.when = Object.fromEntries(
         Object.entries(next.when).map(([value, branch]) => [value, prefixSteps(branch)])

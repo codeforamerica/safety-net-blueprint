@@ -2,7 +2,7 @@ $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://blueprint.codeforamerica.org/base/schemas/operations.yaml
 title: CommonOperations
 description: |
-  An operation named by its operationId, with its arguments — what a suggestion proposes and accepting it performs. Written as Arazzo and OpenAPI write a call: parameters by name and location, and the request body.
+  An operation named by its operationId, with its arguments — what a suggestion proposes and accepting it performs. Written as an Arazzo step writes a call: parameters by name and location, and the request body as `requestBody` with its `payload`.
 $defs:
   OperationCall:
     type: object
@@ -40,5 +40,17 @@ $defs:
                 - cookie
             value:
               description: The parameter's value.
-      body:
+      requestBody:
+        $ref: "#/$defs/RequestBody"
+  RequestBody:
+    type: object
+    description: |
+      The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+    additionalProperties: false
+    properties:
+      contentType:
+        type: string
+        description: One of the media types the operation's requestBody lists. Defaults to application/json.
+        example: application/json
+      payload:
         description: The request body, in the operation's request schema.

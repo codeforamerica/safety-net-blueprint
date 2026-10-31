@@ -1,6 +1,6 @@
 /**
  * An action calling an operation: made in order, as the caller with
- * `runAs: caller`, and handled with `onFailure:` when it fails.
+ * `runAs: caller`, and handled with `catch:` when it fails.
  *
  * Run against the harness's contracts: first the Suggestion machine's own
  * accept, then the machine given a trial action that calls the operation a
@@ -32,19 +32,19 @@ function contractsWith(actions) {
   return generate(docs, 'artifact');
 }
 
-const tryIt = (onFailure) => ({
+const tryIt = (caught) => ({
   id: 'try',
   transition: { from: 'proposed', to: 'accepted' },
   steps: [
     { set: { field: 'reason', value: 'before the call' } },
-    { call: '$object.call', runAs: 'caller', ...(onFailure ? { onFailure } : {}) },
+    { call: '$object.call', runAs: 'caller', ...(caught ? { catch: caught } : {}) },
     { emit: 'tried' },
   ],
 });
 const handled = {
   to: 'refused',
-  then: [
-    { set: { field: 'reason', value: '$failure.error.message' } },
+  do: [
+    { set: { field: 'reason', value: '$error.message' } },
     { emit: 'failed_try' },
   ],
 };
@@ -76,7 +76,7 @@ async function propose(body) {
         { name: 'applicationId', in: 'path', value: APPLICATION },
         { name: 'memberId', in: 'path', value: member.id },
       ],
-      body,
+      requestBody: { payload: body },
     },
   }, 'assistant-1');
   return suggestion;
@@ -105,7 +105,7 @@ test('accepting makes the call as the person accepting, and the call\'s events n
 test('a person can correct the call before accepting, and the call made is kept as performed', async () => {
   await boot();
   const suggestion = await propose({ firstName: 'Rosalind' });
-  const corrected = { ...suggestion.call, body: { firstName: 'Rosalinda' } };
+  const corrected = { ...suggestion.call, requestBody: { payload: { firstName: 'Rosalinda' } } };
 
   const { status, body } = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: corrected });
   assert.equal(status, 200, JSON.stringify(body));
@@ -119,7 +119,7 @@ test('a person can correct the call before accepting, and the call made is kept 
 test('a corrected call naming another operation is refused', async () => {
   await boot();
   const suggestion = await propose({ firstName: 'Rosalind' });
-  const other = { ...suggestion.call, operationId: 'deleteApplicationMember', body: undefined };
+  const other = { ...suggestion.call, operationId: 'deleteApplicationMember', requestBody: undefined };
 
   const { status, body } = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: other });
   assert.equal(status, 409, JSON.stringify(body));
@@ -131,7 +131,7 @@ test('a corrected call naming another operation is refused', async () => {
 test('a correction the operation refuses leaves the suggestion refused, and accepting again with a good one succeeds', async () => {
   await boot();
   const suggestion = await propose({ firstName: 'Rosalind' });
-  const bad = { ...suggestion.call, body: { firstName: 5 } };
+  const bad = { ...suggestion.call, requestBody: { payload: { firstName: 5 } } };
 
   const first = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: bad });
   assert.equal(first.status, 422, JSON.stringify(first.body));
@@ -139,7 +139,7 @@ test('a correction the operation refuses leaves the suggestion refused, and acce
   const [refused] = await events('decision-support.suggestion.refused');
   assert.deepEqual(refused.data.call, bad, 'the refused event carries the call that was tried');
 
-  const good = { ...suggestion.call, body: { firstName: 'Rosa' } };
+  const good = { ...suggestion.call, requestBody: { payload: { firstName: 'Rosa' } } };
   const again = await send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, { call: good });
   assert.equal(again.status, 200, JSON.stringify(again.body));
   assert.equal(again.body.status, 'accepted');
@@ -197,7 +197,7 @@ async function proposeThenDelete() {
   return suggestion;
 }
 
-test('a call that fails runs onFailure instead of the action\'s steps, and the action answers with the failure', async () => {
+test('a call that fails runs catch instead of the action\'s steps, and the action answers with the failure', async () => {
   await boot([tryIt(handled)]);
   const suggestion = await proposeThenDelete();
 
@@ -205,15 +205,15 @@ test('a call that fails runs onFailure instead of the action\'s steps, and the a
   assert.equal(status, 404, JSON.stringify(body));
   const [record] = body.details;
   assert.equal(record.id, suggestion.id);
-  assert.equal(record.status, 'refused', 'ends where onFailure says');
+  assert.equal(record.status, 'refused', 'ends where catch says');
   assert.notEqual(record.reason, 'before the call', 'the action\'s own steps are discarded');
-  assert.equal(record.reason, body.message, 'onFailure reads the failure');
+  assert.equal(record.reason, body.message, 'catch reads the failure');
 
   assert.equal((await events('decision-support.suggestion.tried')).length, 0);
   assert.equal((await events('decision-support.suggestion.failed_try')).length, 1);
 });
 
-test('a call that fails with no onFailure fails the action, and nothing is saved', async () => {
+test('a call that fails with no catch fails the action, and nothing is saved', async () => {
   await boot([tryIt(null)]);
   const suggestion = await proposeThenDelete();
 

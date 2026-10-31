@@ -377,12 +377,12 @@ workflows:
         description: |
           Stand in for the scheduler
 
-          - `requestIdleCheck` emits `scheduling.timer.requested`, asking the scheduler to send an `idle_check` once the profile's `idleTimeout` has passed.
+          - `requestIdleCheck` emits `platform.timer.requested`, asking the scheduler to send an `idle_check` once the profile's `idleTimeout` has passed.
           - Nobody waits 30 minutes in a test. This stub, on the mock's own route, answers the next idle check request at once, as if the time had passed.
         operationId: $sourceDescriptions.mock.registerEventStub
         requestBody:
           payload:
-            "on": scheduling.timer.requested
+            "on": platform.timer.requested
             match:
               data.callback.event: communication.idle_check
         successCriteria:

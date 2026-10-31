@@ -24,6 +24,10 @@ export const zEvent = z.object({
         z.uuid(),
         z.null()
     ])),
+    partitionkey: z.optional(z.union([
+        z.string().min(1),
+        z.null()
+    ])),
     authid: z.optional(z.union([
         z.string(),
         z.null()
@@ -68,6 +72,10 @@ export const zEventList = z.object({
         ])),
         causationid: z.optional(z.union([
             z.uuid(),
+            z.null()
+        ])),
+        partitionkey: z.optional(z.union([
+            z.string().min(1),
             z.null()
         ])),
         authid: z.optional(z.union([
@@ -135,6 +143,10 @@ export const zListEventsResponse = z.object({
             z.uuid(),
             z.null()
         ])),
+        partitionkey: z.optional(z.union([
+            z.string().min(1),
+            z.null()
+        ])),
         authid: z.optional(z.union([
             z.string(),
             z.null()
@@ -172,6 +184,10 @@ export const zPublishEventData = z.object({
         ])),
         causationid: z.optional(z.union([
             z.uuid(),
+            z.null()
+        ])),
+        partitionkey: z.optional(z.union([
+            z.string().min(1),
             z.null()
         ])),
         authid: z.optional(z.union([
@@ -215,6 +231,10 @@ export const zPublishEventResponse = z.object({
     ])),
     causationid: z.optional(z.union([
         z.uuid(),
+        z.null()
+    ])),
+    partitionkey: z.optional(z.union([
+        z.string().min(1),
         z.null()
     ])),
     authid: z.optional(z.union([
@@ -274,6 +294,10 @@ export const zGetEventResponse = z.object({
     ])),
     causationid: z.optional(z.union([
         z.uuid(),
+        z.null()
+    ])),
+    partitionkey: z.optional(z.union([
+        z.string().min(1),
         z.null()
     ])),
     authid: z.optional(z.union([

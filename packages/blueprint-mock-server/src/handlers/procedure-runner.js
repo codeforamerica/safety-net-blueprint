@@ -5,7 +5,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
-import { applySteps, applyStepsWithCalls, resolveValue, whenReady } from '../state-machine-engine.js';
+import { applySteps, applyStepsWithCalls, resolveValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
@@ -296,7 +296,7 @@ function restore(resource, before) {
  *
  * A call to an operation in its steps is made where it stands, through
  * `perform`. One that fails ends the procedure as an action's does: what its
- * steps did is undone and its `onFailure:` runs instead — a procedure has no
+ * steps did is undone and its `catch:` runs instead — a procedure has no
  * transition, so `to:` is ignored there — and with none, the failure is
  * returned for whatever called the procedure. A failure ends only the
  * procedure it happens in, so a call that may fail for one item of many
@@ -345,17 +345,17 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
       if (!applied.failed) return finish(applied, stepContext);
       const { step, outcome } = applied.failed;
       restore(resource, before);
-      if (!step.onFailure) return { operations: [], events: [], failed: applied.failed };
-      if (step.onFailure.to) {
-        console.warn(`Procedure "${procedureId}": onFailure.to applies only to a transition — ignored`);
+      if (!step.catch) return { operations: [], events: [], failed: applied.failed };
+      if (step.catch.to) {
+        console.warn(`Procedure "${procedureId}": catch.to applies only to a transition — ignored`);
       }
       const failureContext = {
         ...stepContext,
         object: { ...before },
-        entities: { ...stepContext.entities, failure: { status: outcome.status, error: outcome.body } },
+        entities: caughtEntities(step, outcome, stepContext.entities),
       };
       return whenReady(
-        applyStepsWithCalls(step.onFailure.then ?? [], resource, failureContext, store, perform),
+        applyStepsWithCalls(step.catch.do ?? [], resource, failureContext, store, perform),
         (handled) => {
           if (!handled.failed) return finish(handled, failureContext);
           restore(resource, before);

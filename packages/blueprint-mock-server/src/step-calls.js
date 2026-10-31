@@ -200,7 +200,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * to the event that caused the call. The request is marked as the system's
    * beside it (asSystem), never by a header a client could send.
    *
-   * @param {{ operationId: string, parameters?: Array<{ name: string, in: string, value: * }>, body?: * }} call
+   * @param {{ operationId: string, parameters?: Array<{ name: string, in: string, value: * }>, requestBody?: { contentType?: string, payload?: * } }} call
    * @param {Object} options
    * @param {'system'|'caller'} [options.runAs]
    * @param {{ id: string|null, roles: string[] }} options.caller
@@ -221,7 +221,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
       path = path.replace(`{${p.name}}`, encodeURIComponent(String(p.value)));
     }
     const query = new URLSearchParams(given.filter((p) => p.in === 'query').map((p) => [p.name, String(p.value)]));
-    const headers = { 'content-type': 'application/json' };
+    const headers = { 'content-type': call.requestBody?.contentType ?? 'application/json' };
     for (const p of given.filter((p) => p.in === 'header')) headers[p.name] = String(p.value);
     // A caller who is the system — a call made as the caller from an action
     // the system ran — is the system here too.
@@ -236,7 +236,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     const request = causedBy(new Request(`http://mock.internal${path}${query.size ? `?${query}` : ''}`, {
       method: operation.method,
       headers,
-      body: call.body === undefined ? undefined : JSON.stringify(call.body),
+      body: call.requestBody?.payload === undefined ? undefined : JSON.stringify(call.requestBody.payload),
     }), causationid);
     if (system) asSystem(request);
 

@@ -11,10 +11,11 @@ for how framework files sit beside a set's own.
 ## Overview
 
 The platform domain is the infrastructure every contract set shares, whatever
-its programs and domains: one log of every event every domain sends, and the
+its programs and domains: one log of every event every domain sends, the
 named, citable entries — regulatory policies, design patterns — the contracts
-declare. It owns no business process and no lifecycle. Everything else the
-framework provides belongs to a business domain — transcripts to communication,
+declare, and the events that ask for a timer. It owns no business process and
+no lifecycle. Everything else the framework provides belongs to a business
+domain — transcripts to communication,
 suggestions to decision support — and comes as a capability a set opts into;
 the platform is what is left when every domain is taken away.
 
@@ -27,6 +28,10 @@ the platform is what is left when every domain is taken away.
 2. Every registry the contracts declare can be read by type: which types there
    are, the entries of one, and a single entry. A new registry type is readable
    the moment a file declares it, with no endpoint written for it.
+3. Any state machine can ask for a time-based callback — a deadline, a
+   reminder, an expiry — and cancel one, whatever domains the set includes. The
+   request and the cancellation are events; the timer service that answers
+   them is the state's own. See [Timers](timers.md).
 
 ## Entity model
 
@@ -59,6 +64,7 @@ All in `blueprint-core/base-contracts/domains/platform/`.
 |---|---|
 | API — the event log | `platform-events-openapi.yaml` |
 | API — registries, read by type | `platform-registries-openapi.yaml` |
+| Events — requesting and cancelling a timer | `platform-timers-asyncapi.yaml` |
 
 A set's own registry files — `*-registry-{type}.yaml`, in any domain — are what
 the registries API serves.
@@ -179,7 +185,6 @@ domain's. See [Decision 3](#decision-3-the-platform-is-infrastructure-only).
 
 - **Search** — a contract set's own concern; see [Search](search.md).
 - **Identity and access** — see [Identity & Access](identity-access.md).
-- **Timers** — see [Scheduling Service](scheduling-service.md).
 - **Capabilities such as transcripts and suggestions** — in the business
   domains they belong to; see [Communication](../domains/communication.md) and
   [AI Services](ai-services.md).

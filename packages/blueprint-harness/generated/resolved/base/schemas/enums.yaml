@@ -12,7 +12,6 @@ $defs:
       - eligibility
       - intake
       - platform
-      - scheduling
   MetricCollection:
     type: string
     description: |

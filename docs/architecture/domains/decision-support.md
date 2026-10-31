@@ -379,17 +379,18 @@ procedures:
     steps:
       - call:
           operationId: createSuggestion
-          body:
-            kind: informing
-            category: $params.category
-            subjectType: $params.subjectType
-            subjectId: $params.id
-        onFailure: { then: [] }     # already open, or dismissed: nothing to do
+          requestBody:
+            payload:
+              kind: informing
+              category: $params.category
+              subjectType: $params.subjectType
+              subjectId: $params.id
+        catch: { do: [] }           # already open, or dismissed: nothing to do
 ```
 
 - **It proposes through the operation**, so the API's checks apply as they
   would to a person proposing it: one already open, or dismissed, is refused
-  with `409`, which `onFailure` ignores. It proposes as the system, the
+  with `409`, which `catch` ignores. It proposes as the system, the
   default, so it isn't held to the roles of whoever started the interview.
 - **Each suggestion is proposed in a procedure of its own**, because a failed
   call ends the procedure it is in: one already open stops only its own
@@ -431,7 +432,7 @@ A domain or state adds categories with a registry file of its own.
 ### When a suggestion expires
 
 At its `expiresAt`: a day after it was proposed, unless it says otherwise. The
-state machine sets the default (`$now+1d`), so an overlay changes it by
+state machine sets the default (`$now+P1D`), so an overlay changes it by
 replacing that value. Creating a suggestion asks the scheduler for a timer at
 its `expiresAt`, and accepting, dismissing or expiring it cancels the timer; a
 refused suggestion is still open, so its timer keeps running. A timer that

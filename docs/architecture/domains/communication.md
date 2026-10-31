@@ -557,6 +557,6 @@ until they are closed; the profiles the framework provides set 30 minutes.
 - [Inter-Domain Communication](../inter-domain-communication.md) — command vs. event pattern decision rule
 - [Contract-Driven Architecture](../contract-driven-architecture.md) — contract artifacts and the adapter pattern
 - [AI Services](../cross-cutting/ai-services.md) — how transcripts feed fact extraction and suggestions
-- [Scheduling Service](../cross-cutting/scheduling-service.md) — the timers closing an abandoned transcript uses
+- [Timers](../cross-cutting/timers.md) — the timers closing an abandoned transcript uses
 - [IETF Idempotency-Key HTTP header draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
 - [Amazon Transcribe streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html)

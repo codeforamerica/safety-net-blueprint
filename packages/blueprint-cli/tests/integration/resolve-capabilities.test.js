@@ -11,10 +11,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESOLVE = join(__dirname, '../../scripts/resolve.js');
@@ -60,6 +61,7 @@ describe('x-capabilities', () => {
       assert.equal(status, 0, stderr);
       assert.ok(existsSync(join(out, 'base/domains/platform/platform-events-openapi.yaml')), 'platform always comes along');
       assert.ok(!existsSync(join(out, 'base/domains/communication')), 'transcripts were not asked for');
+      assert.ok(!existsSync(join(out, 'base/domains/decision-support')), 'suggestions were not asked for');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -88,6 +90,32 @@ describe('x-capabilities', () => {
         assert.ok(existsSync(join(out, `base/domains/decision-support/decision-support-suggestions-${file}.yaml`)), file);
       }
       assert.ok(!existsSync(join(out, 'base/domains/communication')), 'transcripts were not asked for');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a set narrows who may accept a suggestion, and changes how long one waits, by overlay", () => {
+    const dir = contractSet(['suggestions']);
+    try {
+      writeFileSync(join(dir, 'overlays/suggestions.yaml'), [
+        "overlay: '1.0.0'",
+        'info: { title: Suggestions, version: 1.0.0 }',
+        'actions:',
+        "  - target: $.machines[?(@.object == 'Suggestion')].actions[?(@.id == 'accept')].guards[0]",
+        '    update: { actors: [admin], conditions: [callOnlyForAnOperation, sameOperation] }',
+        "  - target: $.machines[?(@.object == 'Suggestion')].on[?(@.type == 'decision-support.suggestion.created')].steps[0].then[0].set",
+        '    update: { field: expiresAt, value: $now+P3D }',
+        '',
+      ].join('\n'));
+      const { out, status, stderr } = resolveSet(dir);
+      assert.equal(status, 0, stderr);
+      const resolved = readFileSync(join(out, 'base/domains/decision-support/decision-support-suggestions-state-machine.yaml'), 'utf8');
+      const [machine] = yaml.load(resolved).machines;
+      const accept = machine.actions.find((action) => action.id === 'accept');
+      assert.deepEqual(accept.guards[0].actors, ['admin']);
+      const created = machine.on.find((entry) => entry.type.endsWith('decision-support.suggestion.created'));
+      assert.equal(created.steps[0].then[0].set.value, '$now+P3D');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

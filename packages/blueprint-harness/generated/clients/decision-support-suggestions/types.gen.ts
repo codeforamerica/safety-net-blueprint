@@ -80,9 +80,19 @@ export type OperationSuggestionFields = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 };
 
@@ -219,9 +229,19 @@ export type SuggestionCreate = ({
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 }) | ({
     /**
@@ -344,9 +364,19 @@ export type OperationSuggestionCreate = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 };
 
@@ -462,9 +492,19 @@ export type Suggestion = ({
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 } & {
     /**
@@ -525,9 +565,19 @@ export type Suggestion = ({
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 }) | ({
     /**
@@ -665,9 +715,19 @@ export type OperationSuggestion = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 } & {
     /**
@@ -728,9 +788,19 @@ export type OperationSuggestion = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 };
 
@@ -871,9 +941,19 @@ export type SuggestionList = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -934,9 +1014,19 @@ export type SuggestionList = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -1065,9 +1155,19 @@ export type AcceptRequest = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 };
 
@@ -1127,9 +1227,19 @@ export type SuggestionWritable = ({
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 }) | ({
     /**
@@ -1234,9 +1344,19 @@ export type OperationSuggestionWritable = {
             value: unknown;
         }>;
         /**
-         * The request body, in the operation's request schema.
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
          */
-        body?: unknown;
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
     };
 };
 
@@ -1344,9 +1464,19 @@ export type SuggestionListWritable = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -1648,9 +1778,19 @@ export type ListSuggestionsResponses = {
                     value: unknown;
                 }>;
                 /**
-                 * The request body, in the operation's request schema.
+                 * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+                 *
                  */
-                body?: unknown;
+                requestBody?: {
+                    /**
+                     * One of the media types the operation's requestBody lists. Defaults to application/json.
+                     */
+                    contentType?: string;
+                    /**
+                     * The request body, in the operation's request schema.
+                     */
+                    payload?: unknown;
+                };
             };
         } & {
             /**
@@ -1711,9 +1851,19 @@ export type ListSuggestionsResponses = {
                     value: unknown;
                 }>;
                 /**
-                 * The request body, in the operation's request schema.
+                 * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+                 *
                  */
-                body?: unknown;
+                requestBody?: {
+                    /**
+                     * One of the media types the operation's requestBody lists. Defaults to application/json.
+                     */
+                    contentType?: string;
+                    /**
+                     * The request body, in the operation's request schema.
+                     */
+                    payload?: unknown;
+                };
             };
         }) | ({
             /**
@@ -1887,9 +2037,19 @@ export type CreateSuggestionData = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -2098,9 +2258,19 @@ export type CreateSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -2161,9 +2331,19 @@ export type CreateSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -2378,9 +2558,19 @@ export type GetSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -2441,9 +2631,19 @@ export type GetSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -2568,9 +2768,19 @@ export type AcceptSuggestionData = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     };
     path: {
@@ -2726,9 +2936,19 @@ export type AcceptSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -2789,9 +3009,19 @@ export type AcceptSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -3049,9 +3279,19 @@ export type DismissSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -3112,9 +3352,19 @@ export type DismissSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**
@@ -3367,9 +3617,19 @@ export type ExpireSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     } & {
         /**
@@ -3430,9 +3690,19 @@ export type ExpireSuggestionResponses = {
                 value: unknown;
             }>;
             /**
-             * The request body, in the operation's request schema.
+             * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+             *
              */
-            body?: unknown;
+            requestBody?: {
+                /**
+                 * One of the media types the operation's requestBody lists. Defaults to application/json.
+                 */
+                contentType?: string;
+                /**
+                 * The request body, in the operation's request schema.
+                 */
+                payload?: unknown;
+            };
         };
     }) | ({
         /**

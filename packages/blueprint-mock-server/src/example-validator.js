@@ -5,16 +5,16 @@
 
 import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { isTimeToken } from './time-tokens.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
 // Seed data may contain $now time tokens (e.g. "$now-30d") in date-time fields.
 // These are resolved at runtime by the mock server — treat them as valid here.
-const TIME_TOKEN_RE = /^\$now([+-]\d+[dhwm])?(?:@\d{1,2}:\d{2})?$/;
-const isDateTimeOrToken = (v) => TIME_TOKEN_RE.test(v) || !isNaN(Date.parse(v));
+const isDateTimeOrToken = (v) => isTimeToken(v) || !isNaN(Date.parse(v));
 ajv.addFormat('date-time', { validate: isDateTimeOrToken });
-ajv.addFormat('date', { validate: (v) => TIME_TOKEN_RE.test(v) || /^\d{4}-\d{2}-\d{2}$/.test(v) });
+ajv.addFormat('date', { validate: (v) => isTimeToken(v) || /^\d{4}-\d{2}-\d{2}$/.test(v) });
 
 /**
  * Derive schema name from an example key.

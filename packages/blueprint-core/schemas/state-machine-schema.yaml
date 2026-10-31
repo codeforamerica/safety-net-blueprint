@@ -480,15 +480,15 @@ $defs:
   # StepItem — step vocabulary and value expressions
   # ---------------------------------------------------------------------------
   # VALUE EXPRESSIONS
-  # Anywhere a step accepts a value (set: value:, emit: data:, call: body:,
-  # forEach: body:), you write a value expression — a short $-prefixed string
+  # Anywhere a step accepts a value (set: value:, emit: data:, a call's
+  # requestBody: payload:), you write a value expression — a short $-prefixed string
   # that the engine resolves at runtime to a concrete value. Expressions let
   # steps reference the current object, the caller, the request body, the
   # event payload, and any context-bound entity without hardcoding data.
   #
   #   $now              Current timestamp (ISO 8601)
-  #   $now+1d           A time from now: + or -, a whole number, and d (days),
-  #                     h (hours), m (minutes) or w (weeks) — $now-30m, $now+2w
+  #   $now+P1D          A time from now: + or - and an ISO 8601 duration —
+  #                     $now-PT30M, $now+P2W; M is months before T, minutes after
   #   $caller.field     Field on the authenticated caller
   #   $object.field     Field on the governed object
   #   $request.field    Field from the operation request body
@@ -556,9 +556,10 @@ $defs:
   #   POST to a collection path — creates a new resource:
   #     - call:
   #         POST: intake/applications/documents
-  #         body:
-  #           applicationId: $application.id
-  #           category: income
+  #         requestBody:
+  #           payload:
+  #             applicationId: $application.id
+  #             category: income
   #
   #   POST to an operation path — triggers a state machine operation on an
   #   existing resource (path ends with the operation name):
@@ -568,25 +569,32 @@ $defs:
   #   PATCH to a resource path — appends to an array field using $push:
   #     - call:
   #         PATCH: intake/application-members/$member.id
-  #         body:
-  #           verifications:
-  #             $push:
-  #               type: $this.data.verificationType
-  #               status: $this.data.result
+  #         requestBody:
+  #           payload:
+  #             verifications:
+  #               $push:
+  #                 type: $this.data.verificationType
+  #                 status: $this.data.result
   #
-  #   Body operators — special keys in a body object:
+  #   The body of a call by method and path is written as one by operationId
+  #   is, Arazzo's requestBody with its payload; a body: beside the method is
+  #   deprecated, and still read.
+  #
+  #   Body operators — special keys in a payload:
   #     $merge — copy all fields from a source object; explicit sibling keys override.
   #              Use to create a new resource from an existing one with minimal changes:
   #       - call:
   #           POST: workflow/tasks
-  #           body:
-  #             $merge: $object
-  #             status: pending
+  #           requestBody:
+  #             payload:
+  #               $merge: $object
+  #               status: pending
   #     $push  — append a value to a named array field (PATCH only):
-  #       body:
-  #         appointments: {$push: $this.subject}
+  #       requestBody:
+  #         payload:
+  #           appointments: {$push: $this.subject}
   #
-  #   Path slots and body values use the same $alias.field expression syntax.
+  #   Path slots and payload values use the same $alias.field expression syntax.
   #
   # EVALUATE
   #   Evaluate a ruleset (same domain) against mapped inputs; bind the result
@@ -630,13 +638,15 @@ $defs:
   #         identity:
   #           - call:
   #               POST: data-exchange/service-calls
-  #               body:
-  #                 serviceId: $identityService.id
+  #               requestBody:
+  #                 payload:
+  #                   serviceId: $identityService.id
   #         income:
   #           - call:
   #               POST: data-exchange/service-calls
-  #               body:
-  #                 serviceId: $incomeService.id
+  #               requestBody:
+  #                 payload:
+  #                   serviceId: $incomeService.id
   #
   # FOREACH
   #   Query a collection and execute do: steps once per matching record.
@@ -649,7 +659,7 @@ $defs:
   #   Example:
   #     - forEach: {from: intake/application-members, where: {applicationId: $application.id}, as: member}
   #       do:
-  #         - call: {POST: data-exchange/service-calls, body: {applicationId: $application.id, requestingResourceId: $member.id}}
+  #         - call: {POST: data-exchange/service-calls, requestBody: {payload: {applicationId: $application.id, requestingResourceId: $member.id}}}
   #
   #   Nested forEach is supported for multi-level iteration.
   #   Use a JSON Logic where: to filter on more than equality (see ContextBinding).
@@ -768,11 +778,11 @@ $defs:
           - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
             description: >
               A call to an operation by its operationId, as an Arazzo step
-              names one. Parameter values and the body are value expressions.
+              names one. Parameter values and the payload are value expressions.
           - type: object
             description: >
               HTTP call — one key is the method (POST, PATCH, GET, DELETE) and
-              its value is the path; optional body:. Exactly one method, and no
+              its value is the path; optional requestBody:. Exactly one method, and no
               other keys: a step written as `path:` and `method:` used to pass
               validation and then do nothing.
             additionalProperties: false
@@ -794,8 +804,14 @@ $defs:
               DELETE:
                 type: string
                 description: The path to DELETE.
+              requestBody:
+                $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/RequestBody"
+                description: The request body; the payload's field values are value expressions resolved when the step runs.
               body:
-                description: The request body. Field values are value expressions resolved when the step runs.
+                deprecated: true
+                description: >
+                  Deprecated: write `requestBody: {payload: …}`. The request
+                  body, still read when requestBody isn't given.
               description:
                 type: string
       runAs:
@@ -809,23 +825,31 @@ $defs:
           the system. `caller` is made as the person or service that triggered
           this step, under the operation's own permissions — as making it by
           hand would be.
-      onFailure:
+      catch:
         type: object
         additionalProperties: false
         description: >
-          What happens when a call to an operation fails: these steps run
+          What happens when a call to an operation fails: the `do` steps run
           instead of the action's steps, which are discarded, and the action
-          ends in `to`. The failure is $failure — `status`, and `error` in the
-          shared Error shape. The action answers with the call's failure, the
-          record as it now is in details. Without onFailure, a failed call
-          fails the action and nothing is saved.
+          ends in `to`. The failure is bound as `as` names it, `error` when it
+          doesn't — its HTTP `status` alongside the shared Error shape's
+          `code`, `message` and `details`. The action answers with the call's
+          failure, the record as it now is in details. Without catch, a failed
+          call fails the action and nothing is saved. `catch` on the call is
+          the Amazon States Language's Catch on a Task; `as` and `do` are
+          Serverless Workflow's catch; `to` is the transition's own.
         properties:
+          as:
+            type: string
+            pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+            default: error
+            description: The name the failure is bound to for the `do` steps.
+          do:
+            type: array
+            items: {$ref: "#/$defs/StepItem"}
           to:
             type: string
             description: The state the action ends in instead of its transition's `to`.
-          then:
-            type: array
-            items: {$ref: "#/$defs/StepItem"}
       with:
         type: object
         additionalProperties: true

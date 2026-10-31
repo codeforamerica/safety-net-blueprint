@@ -7,7 +7,7 @@
  * behavior (via event stub engine), and event subscriptions.
  *
  * Timer-triggered behavior is tested using the event stub engine: register a
- * stub for scheduling.timer.requested before triggering the flow, and the stub
+ * stub for platform.timer.requested before triggering the flow, and the stub
  * fires the timer callback synchronously without waiting for real time.
  *
  * Run with: npm run test:integration
@@ -781,7 +781,7 @@ async function testWorkflowTimerBehavior() {
   await test('creation_deadline: task auto-escalates on creation when stub fires', async () => {
     await clearStubs();
     await registerStub({
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.creation_deadline' },
     });
 
@@ -805,7 +805,7 @@ async function testWorkflowTimerBehavior() {
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
 
     await registerStub({
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.client_timeout' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
@@ -828,7 +828,7 @@ async function testWorkflowTimerBehavior() {
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
 
     await registerStub({
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.verification_timeout' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
@@ -850,7 +850,7 @@ async function testWorkflowTimerBehavior() {
     const id = await createTask();
 
     await registerStub({
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.sla_warning' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}`, {
@@ -874,7 +874,7 @@ async function testWorkflowTimerBehavior() {
     const id = await createTask();
 
     await registerStub({
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.sla_breach' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}`, {
@@ -951,8 +951,8 @@ async function testWorkflowEventSubscriptions() {
       body: { name: 'SLA schedule test', programType: 'snap' },
     })).json();
 
-    await registerStub({ on: 'scheduling.timer.requested', match: { 'data.callback.event': 'workflow.sla_warning' } });
-    await registerStub({ on: 'scheduling.timer.requested', match: { 'data.callback.event': 'workflow.sla_breach' } });
+    await registerStub({ on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.sla_warning' } });
+    await registerStub({ on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.sla_breach' } });
 
     await fetch(`${BASE_URL}${TASK}/${id}`, {
       method: 'PATCH', headers: CASEWORKER,

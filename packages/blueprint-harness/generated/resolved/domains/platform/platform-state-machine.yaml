@@ -10,7 +10,7 @@ procedures:
       - fireAfter
       - fireAt
     emit:
-      type: scheduling.timer.requested
+      type: platform.timer.requested
       subject: $object.id
       data:
         timerId: $params.timerId

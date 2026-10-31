@@ -39,7 +39,7 @@ const memberUpdate = (overrides = {}) => ({
     { name: 'applicationId', in: 'path', value: APPLICATION },
     { name: 'memberId', in: 'path', value: MEMBER },
   ],
-  body: { firstName: 'Rosa' },
+  requestBody: { payload: { firstName: 'Rosa' } },
   ...overrides,
 });
 const fields = (response) => response.body.details.map((d) => d.field);
@@ -61,13 +61,13 @@ test('an operation a state machine adds can be proposed too, and is checked the 
   const pause = (body) => propose({
     operationId: 'pauseTranscript',
     parameters: [{ name: 'transcriptId', in: 'path', value: '4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2' }],
-    body,
+    requestBody: { payload: body },
   });
   const accepted = await pause({ at: '2026-10-12T10:00:00Z' });
   assert.strictEqual(accepted.status, 201, JSON.stringify(accepted.body));
   const refused = await pause({ at: 'yesterday' });
   assert.strictEqual(refused.status, 422);
-  assert.deepStrictEqual(fields(refused), ['call.body.at']);
+  assert.deepStrictEqual(fields(refused), ['call.requestBody.payload.at']);
 });
 
 test('an operationId the set does not declare is refused, naming it', async () => {
@@ -78,9 +78,9 @@ test('an operationId the set does not declare is refused, naming it', async () =
 });
 
 test('a body the operation\'s request schema refuses is refused, naming the field', async () => {
-  const response = await propose(memberUpdate({ body: { firstName: 5 } }));
+  const response = await propose(memberUpdate({ requestBody: { payload: { firstName: 5 } } }));
   assert.strictEqual(response.status, 422);
-  assert.deepStrictEqual(fields(response), ['call.body.firstName']);
+  assert.deepStrictEqual(fields(response), ['call.requestBody.payload.firstName']);
 });
 
 test('a parameter the operation does not declare is refused', async () => {
@@ -204,12 +204,12 @@ test('expiring closes an open suggestion, and a closed one cannot be decided', a
 // out unless it says when — and deciding it cancels the timer. Scheduling
 // events go to the bus, for a scheduler or a stub, not to /platform/events.
 const scheduling = [];
-eventBus.on('domain-event', (event) => { if (event.type.startsWith('scheduling.')) scheduling.push(event); });
+eventBus.on('domain-event', (event) => { if (event.type.startsWith('platform.timer.')) scheduling.push(event); });
 const eventsOf = async (type) => (await send('GET', `/platform/events?type=${type}`)).body.items;
 const timerFor = async (id) => scheduling
-  .find((e) => e.type === 'scheduling.timer.requested' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
+  .find((e) => e.type === 'platform.timer.requested' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
 const cancelledFor = async (id) => scheduling
-  .filter((e) => e.type === 'scheduling.timer.cancelled' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
+  .filter((e) => e.type === 'platform.timer.cancelled' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
 
 test('a suggestion with no expiresAt expires a day out, and asks for a timer then', async () => {
   const before = Date.now();
@@ -234,7 +234,7 @@ test('a suggestion that says when it expires keeps that, and its timer fires the
 test('the timer firing expires a suggestion nobody decided', async () => {
   await send('DELETE', '/mock/stubs/events');
   await send('POST', '/mock/stubs/events', {
-    on: 'scheduling.timer.requested', match: { 'data.callback.event': 'decision-support.suggestion_expiry' },
+    on: 'platform.timer.requested', match: { 'data.callback.event': 'decision-support.suggestion_expiry' },
   });
   try {
     const { body: created } = await inform();
@@ -282,7 +282,7 @@ test('proposing the same change again while it is open is refused, naming the op
 
 test('the same call differing only in case, spacing or the order of its parameters is the same', async () => {
   const { body: first } = await propose(memberUpdate());
-  const call = memberUpdate({ body: { firstName: '  ROSA ' } });
+  const call = memberUpdate({ requestBody: { payload: { firstName: '  ROSA ' } } });
   call.parameters.reverse();
   const { status, body } = await propose(call);
   assert.strictEqual(status, 409, JSON.stringify(body));
@@ -291,7 +291,7 @@ test('the same call differing only in case, spacing or the order of its paramete
 
 test('changing an argument is a different suggestion', async () => {
   await propose(memberUpdate());
-  const { status, body } = await propose(memberUpdate({ body: { firstName: 'Rosalind' } }));
+  const { status, body } = await propose(memberUpdate({ requestBody: { payload: { firstName: 'Rosalind' } } }));
   assert.strictEqual(status, 201, JSON.stringify(body));
 });
 

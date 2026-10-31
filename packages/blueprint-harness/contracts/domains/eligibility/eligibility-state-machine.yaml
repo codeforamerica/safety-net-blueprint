@@ -38,6 +38,7 @@ machines:
           # the event's subject.
           - call:
               POST: eligibility/determinations
-              body:
-                applicationId: $this.subject
+              requestBody:
+                payload:
+                  applicationId: $this.subject
               description: Create a pending determination for the submitted application.

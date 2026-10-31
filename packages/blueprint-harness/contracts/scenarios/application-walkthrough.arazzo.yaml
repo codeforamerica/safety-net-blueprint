@@ -162,11 +162,11 @@ workflows:
           Stand in for the scheduler
 
           - Nothing in the contract set implements a scheduler, and `submit` asks for one `72 hours` out. That gap is declared, not accidental.
-          - This registers a stand-in for `scheduling.timer.requested`, so the callback lands the moment it is asked for. The contract did not change — the thing on the other end of it did.
+          - This registers a stand-in for `platform.timer.requested`, so the callback lands the moment it is asked for. The contract did not change — the thing on the other end of it did.
         operationId: $sourceDescriptions.mock.registerEventStub
         requestBody:
           payload:
-            'on': scheduling.timer.requested
+            'on': platform.timer.requested
         successCriteria:
           - condition: $statusCode == 201
       - stepId: submitApplication
@@ -174,7 +174,7 @@ workflows:
           Submit the application
 
           - The contract declares this move as `draft → submitted`. From any other state the mock refuses it — not from a check somebody wrote for this endpoint, but by reading that line.
-          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `scheduling.timer.requested`. The stand-in you registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
+          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `platform.timer.requested`. The stand-in you registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
           - `submittedAt` is annotated with `snap-processing-clock`, which the shared policy registry resolves to 7 CFR § 273.2(g). SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
           - `200` and `400`, `404`, `409`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. A `409` is declared here because the contract anticipates this call being made out of turn.
         operationId: $sourceDescriptions.intake.submitApplication

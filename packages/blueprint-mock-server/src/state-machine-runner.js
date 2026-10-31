@@ -4,7 +4,7 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findOperation, evaluateGuards, applyStepsInOrder } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
@@ -95,9 +95,9 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
  * Steps run in order; a call to an operation is made as it is reached. When
- * one fails, its `onFailure:` runs instead of the action's steps and names the
+ * one fails, its `catch:` runs instead of the action's steps and names the
  * state the action ends in, and the action answers with the call's failure
- * and the record in `details`. With no `onFailure:`, the action fails and
+ * and the record in `details`. With no `catch:`, the action fails and
  * nothing is saved.
  *
  * @returns {Promise<{ success: boolean, result?: Object, status?: number, code?: string, error?: string, details?: Object[] }>}
@@ -179,22 +179,22 @@ export async function executeTransition({
   let target = transitionTo;
   let failure = null;
 
-  // A call that failed: its onFailure: runs instead of the action's steps, and
+  // A call that failed: its catch: runs instead of the action's steps, and
   // says where the action ends; with none, the action fails and nothing is saved.
   if (applied.failed) {
     const { step, outcome } = applied.failed;
-    if (!step.onFailure) return refusedBy(outcome);
+    if (!step.catch) return refusedBy(outcome);
     failure = outcome;
     updated = fresh();
     const failureContext = {
       ...context,
       // As the record was before the steps that failed, not as they left it.
       object: { ...resource },
-      entities: { ...(context.entities ?? {}), failure: { status: outcome.status, error: outcome.body } },
+      entities: caughtEntities(step, outcome, context.entities ?? {}),
     };
-    applied = await applyStepsInOrder(step.onFailure.then ?? [], updated, failureContext, store, perform);
+    applied = await applyStepsInOrder(step.catch.do ?? [], updated, failureContext, store, perform);
     if (applied.failed) return refusedBy(applied.failed.outcome);
-    target = step.onFailure.to ?? transitionTo;
+    target = step.catch.to ?? transitionTo;
   }
   const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
 
@@ -288,7 +288,7 @@ export async function executeTransition({
     }
   }
 
-  // The call failed and onFailure: handled it: the action ends where it said,
+  // The call failed and catch: handled it: the action ends where it said,
   // and answers with the call's failure, the record as it now is in details.
   if (failure) {
     return {

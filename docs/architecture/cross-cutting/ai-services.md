@@ -273,21 +273,22 @@ services:
           anything not stated. Give the ids of the lines each value came from.
       request:
         POST: /model/$config.modelId/converse
-        body:
-          system:
-            - text: $config.prompt
-          messages:
-            - role: user
-              content:
-                - text: $input.transcript
-          toolConfig:
-            tools:
-              - toolSpec:
-                  name: record
-                  inputSchema:
-                    json: $input.resultSchema       # the blueprint's own schema
-            toolChoice:
-              tool: {name: record}                  # forces a schema-shaped answer
+        requestBody:
+          payload:
+            system:
+              - text: $config.prompt
+            messages:
+              - role: user
+                content:
+                  - text: $input.transcript
+            toolConfig:
+              tools:
+                - toolSpec:
+                    name: record
+                    inputSchema:
+                      json: $input.resultSchema       # the blueprint's own schema
+              toolChoice:
+                tool: {name: record}                  # forces a schema-shaped answer
       response:
         result: $response.output.message.content[0].toolUse.input
 ```
@@ -366,7 +367,7 @@ state (see [Decision Support](../domains/decision-support.md#domain-events));
 only by whoever is displaying them at that moment — lines still firming up, a
 "reconnecting" status — and storing them would cost memory for nothing. If one
 of those ever travels on the bus, each event type would declare whether it is
-persisted, replacing the mock's hard-coded rule that `scheduling.*` events are
+persisted, replacing the mock's hard-coded rule that `platform.timer.*` events are
 broadcast but not stored. Nothing planned needs it yet: only finished lines
 reach the blueprint.
 

@@ -102,7 +102,7 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
       - `POST intake/applications/verifications`
 - **`communication.notice.sent`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
-  - `PATCH intake/applications/verifications/$verification.id`
+  - `PATCH intake/applications/$verification.applicationId/verifications/$verification.id`
 
 ---
 

@@ -436,3 +436,24 @@ test('emitEvent', async (t) => {
 });
 
 console.log('\n✓ All emitEvent tests passed\n');
+
+test('an event is keyed by the record at the top of the one it is about', async (t) => {
+  const { registerEventOwners } = await import('../../src/emit-event.js');
+  const keyed = createMemoryStore();
+  registerEventOwners(new Map([
+    ['intake.application', { collection: 'applications', parent: null, parentField: null }],
+    ['intake.application_income', { collection: 'incomes', parent: 'intake.application', parentField: 'applicationId' }],
+  ]));
+  t.after(() => registerEventOwners(new Map()));
+  keyed.insertResource('applications', { id: 'app-1' });
+  keyed.insertResource('incomes', { id: 'income-1', applicationId: 'app-1' });
+
+  const income = emitEvent({ store: keyed, domain: 'intake', object: 'application_income', action: 'updated', resourceId: 'income-1', data: { changes: [] } });
+  assert.strictEqual(income.partitionkey, 'app-1', "an income's events carry its application's id");
+
+  const application = emitEvent({ store: keyed, domain: 'intake', object: 'application', action: 'updated', resourceId: 'app-1' });
+  assert.strictEqual(application.partitionkey, 'app-1', "an application's carry its own");
+
+  const unknown = emitEventEnvelope({ type: 'platform.timer.requested', subject: 'x' }, keyed);
+  assert.strictEqual('partitionkey' in unknown, false, 'an event about no resource the APIs serve has none');
+});

@@ -98,7 +98,6 @@ application.interviews[].scheduledFor: { type: date }
 application.interviews[].status: { type: enum, values: [scheduled, in_progress, completed] }
 application.interviews[].startedAt: { type: datetime }
 application.interviews[].completedAt: { type: datetime }
-application.interviews[].suggestionsProcessedAt: { type: datetime }
 application.interviews[].links: { type: object }
 application.interviews[].links.application: { type: string }
 

@@ -280,8 +280,8 @@ function normalizeStep(step) {
       request: isProcedure ? null : step.call,
       ...(step.runAs ? { runAs: step.runAs } : {}),
       description: step.description,
-      children: step.onFailure
-        ? [{ kind: 'onFailure', ...(step.onFailure.to ? { to: step.onFailure.to } : {}), children: normalizeSteps(step.onFailure.then) }]
+      children: step.catch
+        ? [{ kind: 'catch', ...(step.catch.to ? { to: step.catch.to } : {}), children: normalizeSteps(step.catch.do) }]
         : [],
     };
   }

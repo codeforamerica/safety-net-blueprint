@@ -14,7 +14,7 @@
 import { eventBus } from './event-bus.js';
 import { theSystem } from './auth-context.js';
 import { executeTransition, performerFor } from './state-machine-runner.js';
-import { applyStepsWithCalls, evaluateGuards, whenReady } from './state-machine-engine.js';
+import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
@@ -146,6 +146,21 @@ function executePendingAppend({ path, body }, store) {
  */
 let currentDispatch = null;
 
+// The reactions still running for each partitionkey. One whose key has a
+// reaction running waits for it; one whose key has none runs at once, as it
+// always has. Events with no key wait for nothing.
+const running = new Map();
+
+export function inOrder(key, run) {
+  if (key == null) return run();
+  const before = running.get(key);
+  const result = before ? before.then(run) : run();
+  if (!result || typeof result.then !== 'function') return;
+  const settled = result.then(() => {}, () => {});
+  running.set(key, settled);
+  settled.then(() => { if (running.get(key) === settled) running.delete(key); });
+}
+
 // What a step's call means, read against the API (step-calls.js). Set when
 // subscriptions are registered; without it, calls fall back to reading the
 // path by convention, which cannot create a nested record.
@@ -218,6 +233,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     eventBus.off('domain-event', currentDispatch);
     currentDispatch = null;
   }
+  running.clear();
 
   // Collect each machine's on: entries — the events it reacts to
   const machineEventSubs = [];
@@ -238,233 +254,239 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.type}`);
   }
 
+  // Each subscription to an event's type handles it, in order with the
+  // events before it that share its partitionkey (inOrder below).
   currentDispatch = (event) => {
-    // Machine event subscriptions
     for (const { smEntry, entry } of machineEventSubs) {
-      if (!eventTypeMatches(event.type, entry.type)) continue;
+      if (eventTypeMatches(event.type, entry.type)) inOrder(event.partitionkey, () => react(smEntry, entry, event));
+    }
+  };
 
-      try {
-        const now = new Date().toISOString();
-        const caller = theSystem();
+  // One subscription handling one event. What it returns settles when the
+  // reaction, and every call it makes, is done.
+  function react(smEntry, entry, event) {
+    try {
+      const now = new Date().toISOString();
+      const caller = theSystem();
 
-        // When transition: is present, the event targets an existing resource
-        // (identified by event.subject). Look it up and enforce the from state guard.
-        let resource = {};
-        let targetCollection = null;
-        let originalSnapshot = null;
-        if (entry.transition) {
-          targetCollection = collectionOf(smEntry);
-          if (!targetCollection) {
-            console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
-            continue;
-          }
-          const found = store.findById(targetCollection, event.subject);
-          if (!found) {
-            console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
-            continue;
-          }
-          const from = entry.transition.from;
-          if (from) {
-            const fromArr = Array.isArray(from) ? from : [from];
-            if (!fromArr.includes(found.status)) continue;
-          }
-          resource = { ...found };
-          originalSnapshot = { ...found };
-        } else if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) {
-          // No transition, but the event is about one of this machine's own
-          // records — a decision's machine hearing that a decision was created
-          // — so $object is that record, found by the event's subject as a
-          // transition finds it. An event about another resource gives the
-          // machine no record of its own, and no $object: it reads the record's
-          // id from this.subject and what the event carries from this.data.
-          // The payload is never taken for the record.
-          const collection = collectionOf(smEntry);
-          const found = collection && store.findById(collection, event.subject);
-          if (found) resource = { ...found };
+      // When transition: is present, the event targets an existing resource
+      // (identified by event.subject). Look it up and enforce the from state guard.
+      let resource = {};
+      let targetCollection = null;
+      let originalSnapshot = null;
+      if (entry.transition) {
+        targetCollection = collectionOf(smEntry);
+        if (!targetCollection) {
+          console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
+          return;
         }
+        const found = store.findById(targetCollection, event.subject);
+        if (!found) {
+          console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
+          return;
+        }
+        const from = entry.transition.from;
+        if (from) {
+          const fromArr = Array.isArray(from) ? from : [from];
+          if (!fromArr.includes(found.status)) return;
+        }
+        resource = { ...found };
+        originalSnapshot = { ...found };
+      } else if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) {
+        // No transition, but the event is about one of this machine's own
+        // records — a decision's machine hearing that a decision was created
+        // — so $object is that record, found by the event's subject as a
+        // transition finds it. An event about another resource gives the
+        // machine no record of its own, and no $object: it reads the record's
+        // id from this.subject and what the event carries from this.data.
+        // The payload is never taken for the record.
+        const collection = collectionOf(smEntry);
+        const found = collection && store.findById(collection, event.subject);
+        if (found) resource = { ...found };
+      }
 
-        const baseContext = {
-          caller,
-          object: { ...resource },
-          request: {},
-          this: event,
-          now,
-        };
+      const baseContext = {
+        caller,
+        object: { ...resource },
+        request: {},
+        this: event,
+        now,
+      };
 
-        const entities = resolveContextLayers(
-          [smEntry.stateMachine?.context, smEntry.machine?.context, entry.context],
-          resource,
-          baseContext,
-          store
+      const entities = resolveContextLayers(
+        [smEntry.stateMachine?.context, smEntry.machine?.context, entry.context],
+        resource,
+        baseContext,
+        store
+      );
+      if (entities === null) {
+        console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
+        return;
+      }
+      const context = { ...baseContext, entities };
+
+      // Evaluate guards if defined on this onEvent entry
+      const guardConditions = entry.guards?.conditions || [];
+      if (guardConditions.length > 0) {
+        const guardsMap = Object.fromEntries(
+          mergeByPrecedence(smEntry.stateMachine?.guards || [], smEntry.machine?.guards || [])
+            .map(g => [g.id, g])
         );
-        if (entities === null) {
-          console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
-          continue;
-        }
-        const context = { ...baseContext, entities };
+        const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
+        if (!guardResult.pass) return;
+      }
 
-        // Evaluate guards if defined on this onEvent entry
-        const guardConditions = entry.guards?.conditions || [];
-        if (guardConditions.length > 0) {
-          const guardsMap = Object.fromEntries(
-            mergeByPrecedence(smEntry.stateMachine?.guards || [], smEntry.machine?.guards || [])
-              .map(g => [g.id, g])
-          );
-          const guardResult = evaluateGuards(guardConditions, guardsMap, resource, context);
-          if (!guardResult.pass) continue;
-        }
+      // A call to an operation is made where it stands, as the system, its
+      // events caused by this one. One that fails ends the reaction as an
+      // action's does: its catch: runs instead of the steps, and with
+      // none, nothing it did is saved.
+      const perform = performerFor({
+        callerId: caller.id, callerRoles: caller.roles, timestamp: now,
+        traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, stepCalls: currentStepCalls,
+      });
+      const before = { ...resource };
+      const restore = () => {
+        for (const key of Object.keys(resource)) if (!(key in before)) delete resource[key];
+        Object.assign(resource, before);
+      };
+      const unhandled = ({ step, outcome }) => {
+        restore();
+        const named = typeof step.call === 'string' ? step.call : step.call.operationId;
+        console.error(`Machine onEvent "${entry.type}": call ${named} failed with ${outcome.status}: ${outcome.body?.message ?? ''} — nothing saved`);
+      };
 
-        // A call to an operation is made where it stands, as the system, its
-        // events caused by this one. One that fails ends the reaction as an
-        // action's does: its onFailure: runs instead of the steps, and with
-        // none, nothing it did is saved.
-        const perform = performerFor({
-          callerId: caller.id, callerRoles: caller.roles, timestamp: now,
-          traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, stepCalls: currentStepCalls,
-        });
-        const before = { ...resource };
-        const restore = () => {
-          for (const key of Object.keys(resource)) if (!(key in before)) delete resource[key];
-          Object.assign(resource, before);
+      const reaction = whenReady(applyStepsWithCalls(entry.steps, resource, context, store, perform), (applied) => {
+        if (!applied.failed) return finish(applied, context, entry.transition?.to);
+        const { step, outcome } = applied.failed;
+        if (!step.catch) return unhandled(applied.failed);
+        restore();
+        const failureContext = {
+          ...context,
+          object: { ...before },
+          entities: caughtEntities(step, outcome, context.entities),
         };
-        const unhandled = ({ step, outcome }) => {
-          restore();
-          const named = typeof step.call === 'string' ? step.call : step.call.operationId;
-          console.error(`Machine onEvent "${entry.type}": call ${named} failed with ${outcome.status}: ${outcome.body?.message ?? ''} — nothing saved`);
-        };
+        return whenReady(applyStepsWithCalls(step.catch.do ?? [], resource, failureContext, store, perform), (handled) =>
+          handled.failed ? unhandled(handled.failed) : finish(handled, failureContext, step.catch.to ?? entry.transition?.to));
+      });
+      if (reaction && typeof reaction.then === 'function') {
+        reaction.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
+      }
+      return reaction;
+      // What a reaction's steps left to do, once they have run.
+      function finish(applied, at, target) {
+        const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
 
-        const reaction = whenReady(applyStepsWithCalls(entry.steps, resource, context, store, perform), (applied) => {
-          if (!applied.failed) return finish(applied, context, entry.transition?.to);
-          const { step, outcome } = applied.failed;
-          if (!step.onFailure) return unhandled(applied.failed);
-          restore();
-          const failureContext = {
-            ...context,
-            object: { ...before },
-            entities: { ...context.entities, failure: { status: outcome.status, error: outcome.body } },
-          };
-          return whenReady(applyStepsWithCalls(step.onFailure.then ?? [], resource, failureContext, store, perform), (handled) =>
-            handled.failed ? unhandled(handled.failed) : finish(handled, failureContext, step.onFailure.to ?? entry.transition?.to));
-        });
-        if (reaction && typeof reaction.then === 'function') {
-          reaction.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
+        // Apply state transition if present (mutations are persisted after procedures run)
+        if (target) {
+          resource.status = target;
         }
-        // What a reaction's steps left to do, once they have run.
-        function finish(applied, at, target) {
-          const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
 
-          // Apply state transition if present (mutations are persisted after procedures run)
-          if (target) {
-            resource.status = target;
-          }
-
-          // Handle collection creates
-          for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
+        // Handle collection creates
+        for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
+          try {
+            const stored = store.create(entity, data);
+            const created = currentStepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
+            // Named for the resource the API serves at that path, where the
+            // route can be found; otherwise for the path's last segment.
+            let object = eventObject || entity.replace(/s$/, '');
             try {
-              const stored = store.create(entity, data);
-              const created = currentStepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
-              // Named for the resource the API serves at that path, where the
-              // route can be found; otherwise for the path's last segment.
-              let object = eventObject || entity.replace(/s$/, '');
-              try {
-                const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
-                if (resolved?.resource?.eventName) object = resolved.resource.eventName;
-              } catch { /* not a declared route: keep the path's name */ }
-              emitEvent({
-                store,
-                domain: entDomain || smEntry.domain,
-                object,
-                action: 'created',
-                resourceId: created.id,
-                source: `/${entDomain || smEntry.domain}`,
-                data: { ...created },
-                callerId: 'system',
-                traceparent: event.traceparent,
-                causationid: event.id,
-                now,
-              });
-            } catch (e) {
-              console.error(`onEvent create failed for ${entity}:`, e.message);
-            }
+              const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+              if (resolved?.resource?.eventName) object = resolved.resource.eventName;
+            } catch { /* not a declared route: keep the path's name */ }
+            emitEvent({
+              store,
+              domain: entDomain || smEntry.domain,
+              object,
+              action: 'created',
+              resourceId: created.id,
+              source: `/${entDomain || smEntry.domain}`,
+              data: { ...created },
+              callerId: 'system',
+              traceparent: event.traceparent,
+              causationid: event.id,
+              now,
+            });
+          } catch (e) {
+            console.error(`onEvent create failed for ${entity}:`, e.message);
           }
+        }
 
-          // Handle array appends
-          for (const append of pendingAppends) {
-            try {
-              executePendingAppend(append, store);
-            } catch (e) {
-              console.error(`onEvent append failed for "${append.path}":`, e.message);
-            }
+        // Handle array appends
+        for (const append of pendingAppends) {
+          try {
+            executePendingAppend(append, store);
+          } catch (e) {
+            console.error(`onEvent append failed for "${append.path}":`, e.message);
           }
+        }
 
-          // Handle operation triggers
-          for (const op of pendingOperations) {
+        // Handle operation triggers
+        for (const op of pendingOperations) {
+          try {
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
+          } catch (e) {
+            console.error(`onEvent operation failed for "${op.path}":`, e.message);
+          }
+        }
+
+        // Handle events emitted directly by onEvent steps
+        const domain = smEntry.domain;
+        const subjectId = entry.transition ? event.subject : null;
+        const allPendingEvents = [...(pendingEvents || [])];
+
+        // Procedure calls (call: steps in on: blocks) run before anything is
+        // saved; one whose call failed with nothing to handle it saves nothing.
+        const inlineRules = buildInlineRules(smEntry.stateMachine, smEntry.machine);
+        const procedures = pendingProcedures.length > 0
+          ? executeProcedures(pendingProcedures, resource, inlineRules, at, store, perform)
+          : { pendingOperations: [], pendingEvents: [] };
+
+        return whenReady(procedures, ({ pendingOperations: procOps, pendingEvents: procEvts, failed }) => {
+          if (failed) return unhandled(failed);
+          for (const op of procOps) {
             try {
               executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
             } catch (e) {
-              console.error(`onEvent operation failed for "${op.path}":`, e.message);
+              console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
+            }
+          }
+          allPendingEvents.push(...(procEvts || []));
+
+          // Persist all resource mutations (from direct steps and procedures) after everything runs
+          if (entry.transition && targetCollection && originalSnapshot) {
+            const diff = {};
+            for (const [key, value] of Object.entries(resource)) {
+              if (originalSnapshot[key] !== value && key !== 'id' && key !== 'createdAt') {
+                diff[key] = value;
+              }
+            }
+            if (Object.keys(diff).length > 0) {
+              store.update(targetCollection, event.subject, diff);
             }
           }
 
-          // Handle events emitted directly by onEvent steps
-          const domain = smEntry.domain;
-          const subjectId = entry.transition ? event.subject : null;
-          const allPendingEvents = [...(pendingEvents || [])];
-
-          // Procedure calls (call: steps in on: blocks) run before anything is
-          // saved; one whose call failed with nothing to handle it saves nothing.
-          const inlineRules = buildInlineRules(smEntry.stateMachine, smEntry.machine);
-          const procedures = pendingProcedures.length > 0
-            ? executeProcedures(pendingProcedures, resource, inlineRules, at, store, perform)
-            : { pendingOperations: [], pendingEvents: [] };
-
-          return whenReady(procedures, ({ pendingOperations: procOps, pendingEvents: procEvts, failed }) => {
-            if (failed) return unhandled(failed);
-            for (const op of procOps) {
-              try {
-                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
-              } catch (e) {
-                console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
-              }
+          for (const evt of allPendingEvents) {
+            try {
+              emitEventEnvelope({
+                type: evt.type,
+                source: `/${domain}`,
+                subject: evt.subject ?? subjectId,
+                data: evt.data || null,
+                traceparent: event.traceparent,
+                causationid: event.id,
+                time: now,
+                ...authContext('system'),
+              }, store);
+            } catch (e) {
+              console.error(`onEvent emit "${evt.type}" failed:`, e.message);
             }
-            allPendingEvents.push(...(procEvts || []));
-
-            // Persist all resource mutations (from direct steps and procedures) after everything runs
-            if (entry.transition && targetCollection && originalSnapshot) {
-              const diff = {};
-              for (const [key, value] of Object.entries(resource)) {
-                if (originalSnapshot[key] !== value && key !== 'id' && key !== 'createdAt') {
-                  diff[key] = value;
-                }
-              }
-              if (Object.keys(diff).length > 0) {
-                store.update(targetCollection, event.subject, diff);
-              }
-            }
-
-            for (const evt of allPendingEvents) {
-              try {
-                emitEventEnvelope({
-                  type: evt.type,
-                  source: `/${domain}`,
-                  subject: evt.subject ?? subjectId,
-                  data: evt.data || null,
-                  traceparent: event.traceparent,
-                  causationid: event.id,
-                  time: now,
-                  ...authContext('system'),
-                }, store);
-              } catch (e) {
-                console.error(`onEvent emit "${evt.type}" failed:`, e.message);
-              }
-            }
-          });
-        }
-      } catch (e) {
-        console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
+          }
+        });
       }
+    } catch (e) {
+      console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
     }
-  };
+  }
 
   eventBus.on('domain-event', currentDispatch);
 }

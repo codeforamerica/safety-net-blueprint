@@ -51,8 +51,19 @@
             }
           }
         },
-        "body": {
-          "description": "The request body, in the operation's request schema."
+        "requestBody": {
+          "type": "object",
+          "description": "The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.\n",
+          "additionalProperties": false,
+          "properties": {
+            "contentType": {
+              "type": "string",
+              "description": "One of the media types the operation's requestBody lists. Defaults to application/json."
+            },
+            "payload": {
+              "description": "The request body, in the operation's request schema."
+            }
+          }
         }
       }
     }

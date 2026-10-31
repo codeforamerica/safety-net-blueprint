@@ -159,7 +159,7 @@ async function testNoStubNoError() {
 }
 
 // =============================================================================
-// Timer stub — scheduling.timer.requested fires callback event
+// Timer stub — platform.timer.requested fires callback event
 // =============================================================================
 
 async function testTimerStub() {
@@ -170,7 +170,7 @@ async function testTimerStub() {
   const postRes = await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
     body: {
-      on: 'scheduling.timer.requested',
+      on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.creation_deadline' }
     }
   });
@@ -180,10 +180,10 @@ async function testTimerStub() {
   assert(stub.id, 'stub should have an id');
   assert(stub.response === undefined, 'timer stub should have no response field');
 
-  // Inject a scheduling.timer.requested event with callback data
+  // Inject a platform.timer.requested event with callback data
   const subjectId = 'task-timer-test-1';
   const injectRes = await injectEvent(
-    'scheduling.timer.requested',
+    'platform.timer.requested',
     {
       timerId: `workflow.creation_deadline.${subjectId}`,
       callback: {
@@ -198,7 +198,7 @@ async function testTimerStub() {
   // Stub should be consumed
   const after = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
   assert(after.total === 0, 'timer stub should be consumed after trigger event fires');
-  console.log('  ✓ Timer stub consumed when scheduling.timer.requested fires');
+  console.log('  ✓ Timer stub consumed when platform.timer.requested fires');
 
   // The callback event (workflow.creation_deadline) should have been emitted
   const eventsRes = await fetch(`${BASE_URL}/platform/events`);
@@ -290,12 +290,12 @@ async function testTimerStubCausationid() {
 
   await fetch(`${BASE_URL}/mock/stubs/events`, {
     method: 'POST',
-    body: { on: 'scheduling.timer.requested', match: { 'data.callback.event': 'workflow.creation_deadline' } }
+    body: { on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.creation_deadline' } }
   });
 
   const subjectId = 'task-timer-causation-1';
   const injectRes = await injectEvent(
-    'scheduling.timer.requested',
+    'platform.timer.requested',
     { timerId: `workflow.creation_deadline.${subjectId}`, callback: { event: 'workflow.creation_deadline', data: {} } },
     subjectId
   );
@@ -308,7 +308,7 @@ async function testTimerStubCausationid() {
   const callbackEvent = events.items[0];
   assert.strictEqual(callbackEvent.type, 'workflow.creation_deadline', 'filtered event should be the timer callback');
   assert.strictEqual(callbackEvent.subject, subjectId, 'timer callback should keep the trigger subject');
-  assert.strictEqual(callbackEvent.causationid, trigger.id, 'timer callback causationid should be the scheduling.timer.requested event id');
+  assert.strictEqual(callbackEvent.causationid, trigger.id, 'timer callback causationid should be the platform.timer.requested event id');
   console.log('  ✓ GET /platform/events?causationid=<timer.requested id> returns the timer callback event');
 
   await clearStubs();

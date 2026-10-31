@@ -32,10 +32,11 @@ export function emitEventEnvelope(envelope, store) {
     ...(envelope.data !== undefined ? { data: withoutEngineFields(envelope.data) } : {}),
     id: envelope.id || crypto.randomUUID(),
     time: envelope.time || new Date().toISOString(),
+    partitionkey: envelope.partitionkey ?? partitionKeyOf(envelope.type, envelope.subject, envelope.data, store),
   });
   // Infrastructure events (scheduling, etc.) are broadcast for stub interception
   // but not persisted — they are not domain events observable via /platform/events.
-  const isInfrastructureEvent = record.type?.startsWith('scheduling.');
+  const isInfrastructureEvent = record.type?.startsWith('platform.timer.');
   if (!isInfrastructureEvent) {
     saveEvent(store, record);
   }
@@ -56,7 +57,44 @@ function saveEvent(store, record) {
 
 // The optional CloudEvents attributes, which the events contract has an event
 // leave out when it has no value for them rather than carry as null.
-const OPTIONAL_ATTRIBUTES = ['traceparent', 'causationid', 'authid', 'authtype', 'data'];
+const OPTIONAL_ATTRIBUTES = ['traceparent', 'causationid', 'partitionkey', 'authid', 'authtype', 'data'];
+
+/**
+ * Which record each resource's records sit under, by the name its events carry
+ * (`intake.application_income`): where its records are kept, and the field
+ * naming the one above. Registered when the API documents load (spec-loader.js).
+ *
+ * @type {Map<string, { collection: string, parent: string|null, parentField: string|null }>}
+ */
+const owners = new Map();
+
+export function registerEventOwners(map) {
+  owners.clear();
+  for (const [name, owner] of map) owners.set(name, owner);
+}
+
+/**
+ * The CloudEvents partitionkey the mock gives an event: the id of the record at
+ * the top of the one it's about — an income's events, its application's id; an
+ * application's, its own. CloudEvents leaves the key to the producer; this is
+ * the mock's choice. None for an event about no resource the APIs serve.
+ */
+function partitionKeyOf(type, subject, data, store) {
+  const parts = String(type ?? '').split('.');
+  if (parts.length < 3 || !subject) return null;
+  let owner = owners.get(parts.slice(-3, -1).join('.'));
+  if (!owner) return null;
+  let id = subject;
+  let record = store?.findById?.(owner.collection, id) ?? data;
+  while (owner?.parent) {
+    const above = record?.[owner.parentField];
+    if (!above) break;
+    id = above;
+    owner = owners.get(owner.parent);
+    record = owner ? store?.findById?.(owner.collection, id) : null;
+  }
+  return id;
+}
 
 function withoutAbsent(envelope) {
   const out = { ...envelope };
@@ -123,6 +161,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     datacontenttype: 'application/json',
     traceparent,
     causationid,
+    partitionkey: partitionKeyOf(type, subject ?? resourceId, data, store),
     ...authContext(callerId, callerRoles),
     // The record an event carries, as a client would read it.
     data: withoutEngineFields(data),

@@ -101,6 +101,48 @@ describe('a set referring to a capability it has not listed', () => {
     assert.equal(error.message, 'Step "a" calls createWidget, which no API in the set declares.');
   });
 
+  // A state machine proposing suggestions, by operation or by path, in a set
+  // that hasn't listed the capability they come from.
+  const proposing = (call) => toDoc({
+    path: '/set/domains/demo/demo-state-machine.yaml',
+    relativePath: 'domains/demo/demo-state-machine.yaml',
+    type: 'state-machine',
+    content: {
+      domain: 'demo',
+      machines: [{
+        object: 'Demo',
+        states: [{ id: 'open', slaClock: 'stopped' }],
+        initialState: 'open',
+        actions: [{ id: 'flag', steps: [{ call }] }],
+      }],
+    },
+  });
+  const suggestion = { kind: 'informing', category: 'x', subjectType: 'demo', subjectId: '$object.id' };
+  // The record the machine governs.
+  const demoApi = toDoc({ ...api, content: { ...api.content, components: { schemas: { Demo: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' } } } } } } });
+  // What every set has, which a state machine is checked against: platform and the shared files.
+  const shared = framework.filter((doc) => !doc.capability)
+    .map((doc) => toDoc({ ...doc, relativePath: `base/${doc.relativePath}` }));
+
+  test('a state machine calling its operation is told which capability that is', () => {
+    const [error] = errorsOf([...shared, demoApi, proposing({ operationId: 'createSuggestion', requestBody: { payload: suggestion } })], 'unknown-operation');
+    assert.ok(error, 'a call to an operation the set does not have is refused');
+    assert.match(error.message, /"createSuggestion" is declared by the framework's "suggestions" capability, which the set does not list in x-capabilities\./);
+  });
+
+  test('a state machine calling its path is told too', () => {
+    const [error] = errorsOf([...shared, demoApi, proposing({ POST: 'decision-support/suggestions', body: suggestion })], 'unknown-call-path');
+    assert.ok(error);
+    assert.match(error.message, /"decision-support" is declared by the framework's "suggestions" capability/);
+  });
+
+  test('a state machine calling an operation the set has is not refused', () => {
+    const listed = framework.filter((doc) => !doc.capability || doc.capability === 'suggestions')
+      .map((doc) => toDoc({ ...doc, relativePath: `base/${doc.relativePath}` }));
+    const errors = validate([...listed, demoApi, proposing({ operationId: 'createSuggestion', requestBody: { payload: suggestion } })]).results.flatMap((r) => r.errors);
+    assert.deepEqual(errors.filter((e) => e.rule === 'unknown-operation'), []);
+  });
+
   test('a set that lists the capability is not told it is missing', () => {
     const listed = framework.filter((doc) => !doc.capability || doc.capability === 'transcripts')
       .map((doc) => toDoc({ ...doc, relativePath: `base/${doc.relativePath}` }));

@@ -493,8 +493,9 @@ components:
             - name: memberId
               in: path
               value: 1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26
-          body:
-            firstName: Rosa
+          requestBody:
+            payload:
+              firstName: Rosa
         evidence:
           - sourceType: transcript_entry
             sourceId: 9c2e4a10-7b1d-4f3e-8a62-1d5c0b7e9f24

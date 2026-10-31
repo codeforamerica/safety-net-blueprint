@@ -18,7 +18,7 @@
 # {Resource}CreatedEvent schema in its own AsyncAPI file.
 #
 # Used by: workflow-openapi.yaml, platform-openapi.yaml, domain *-asyncapi.yaml files,
-# and any domain OpenAPI spec that emits CRUD lifecycle or scheduling events.
+# and any domain OpenAPI spec that emits CRUD lifecycle or timer events.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/base/schemas/events.yaml"
@@ -70,7 +70,7 @@ $defs:
           causationid:
             type: string
             description: >
-              CloudEvents Causation extension (optional). Value expression resolving to the id
+              CloudEvents Correlation extension (optional). Value expression resolving to the id
               of the event that directly caused this one. Use when an event is emitted in
               response to another event (e.g., auto-resume triggered by a timer callback).
           data:
@@ -134,11 +134,22 @@ $defs:
               - "null"
             format: uuid
             description: >
-              CloudEvents Causation extension (optional). The `id` of the event
+              CloudEvents Correlation extension (optional). The `id` of the event
               that directly caused this one. Use when an event is emitted in direct
               response to another event (e.g., a task auto-resumed because a timer
               fired). Allows consumers to trace the immediate cause without
               inspecting the full distributed trace.
+          partitionkey:
+            type:
+              - string
+              - "null"
+            minLength: 1
+            description: >
+              CloudEvents Partitioning extension (optional). Groups events that
+              must be handled in order: a subscriber handles events with the same
+              partitionkey one at a time, in the order they occurred. The producer
+              chooses the key — typically the id of the record that owns the
+              others, so everything about one application stays in order.
           authid:
             type:
               - string
@@ -215,10 +226,10 @@ ResourceDeletedEvent:
     removed.
   properties: {}
 
-SchedulingTimerCancelledEvent:
+TimerCancelledEvent:
   type: object
   description: |
-    Payload for a timer cancellation request sent to the scheduling service.
+    Payload for a timer cancellation request sent to the timer service.
     If the timer has already fired or does not exist, this is a no-op.
   required:
     - timerId
@@ -227,10 +238,10 @@ SchedulingTimerCancelledEvent:
       type: string
       description: The timer to cancel.
 
-SchedulingTimerRequestedEvent:
+TimerRequestedEvent:
   type: object
   description: |
-    Payload for a timer request sent to the scheduling service. The scheduling
+    Payload for a timer request sent to the timer service. The timer
     service registers the timer and fires the caller-specified callback event
     when the timer expires, passing callback.data through unchanged and adding
     timerId to the payload.
@@ -246,6 +257,7 @@ SchedulingTimerRequestedEvent:
         Used as the cancellation key — safe to register idempotently with the same ID.
     fireAfter:
       type: string
+      format: duration
       description: ISO 8601 duration to wait before firing (e.g., PT72H, P30D). Mutually exclusive with fireAt.
     fireAt:
       type: string
@@ -253,6 +265,10 @@ SchedulingTimerRequestedEvent:
       description: Absolute timestamp to fire at. Use when the fire time is tied to a known deadline on the object. Mutually exclusive with fireAfter.
     fireOffset:
       type: string
+      # An ISO 8601 duration that may be negative, as iCalendar's alarm
+      # triggers are (RFC 5545). JSON Schema's duration format has no sign, so
+      # a pattern says what it would.
+      pattern: '^-?P(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$'
       description: ISO 8601 duration (negative) applied to fireAt to fire before the target time (e.g., -PT48H fires 48 hours before fireAt). Only valid when fireAt is set.
     calendarType:
       type: string
@@ -271,21 +287,21 @@ SchedulingTimerRequestedEvent:
           type: string
           description: >
             CloudEvents type of the domain-specific event to emit when the timer expires
-            (e.g., workflow.creation_deadline). The scheduling service passes this through
+            (e.g., workflow.creation_deadline). The timer service passes this through
             unchanged — it does not derive or modify the event name.
         data:
           type: object
-          description: Payload to include in the callback event, passed through unchanged. The scheduling service adds timerId to this payload before delivery.
+          description: Payload to include in the callback event, passed through unchanged. The timer service adds timerId to this payload before delivery.
           additionalProperties: true
 
 TimerCallbackEvent:
   type: object
   description: |
-    Payload delivered by the scheduling service when a timer expires. Contains
-    callback.data from the original scheduling.timer.requested event, passed
-    through unchanged, with timerId added by the scheduling service.
+    Payload delivered by the timer service when a timer expires. Contains
+    callback.data from the original platform.timer.requested event, passed
+    through unchanged, with timerId added by the timer service.
 
-    The scheduling service is a pure relay — it does not add, derive, or modify
+    The timer service is a pure relay — it does not add, derive, or modify
     any fields beyond timerId. The event name is the domain-specific name from
     callback.event in the original request (e.g., workflow.creation_deadline),
     not a generic scheduler.timer.fired event.
@@ -294,5 +310,5 @@ TimerCallbackEvent:
   properties:
     timerId:
       type: string
-      description: The deterministic timer ID from the original scheduling request.
+      description: The deterministic timer ID from the original timer request.
   additionalProperties: true

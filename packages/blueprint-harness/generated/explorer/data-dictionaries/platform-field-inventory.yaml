@@ -14,5 +14,6 @@ event.source: { type: string }
 event.time: { type: datetime }
 event.datacontenttype: { type: string }
 event.traceparent: { type: [string, 'null'] }
+event.partitionkey: { type: [string, 'null'] }
 event.authid: { type: [string, 'null'] }
 event.authtype: { type: enum, values: [user, service_account, api_key, system, unauthenticated, unknown, null] }

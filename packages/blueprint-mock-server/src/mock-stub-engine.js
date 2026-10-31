@@ -8,7 +8,7 @@
  * Two stub formats are supported:
  * - General: `{ on, match?, response: { type, subject?, source?, data? } }` — fires
  *   the specified response event when the stub matches.
- * - Timer: `{ on: "scheduling.timer.requested", match? }` — fires the callback
+ * - Timer: `{ on: "platform.timer.requested", match? }` — fires the callback
  *   event embedded in the triggering event's `data.callback` envelope. `response`
  *   is not needed; the callback type and data come from the event itself.
  *
@@ -33,7 +33,7 @@ const httpStubs = [];
 /** Per-event-suffix counters for generating human-readable IDs. */
 const idCounters = new Map();
 
-const TIMER_REQUESTED = 'scheduling.timer.requested';
+const TIMER_REQUESTED = 'platform.timer.requested';
 
 /** Per-URL-segment counters for generating human-readable HTTP stub IDs. */
 const httpIdCounters = new Map();
@@ -93,7 +93,7 @@ function matchCriteria(stub, envelope) {
  * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data-exchange.external_service_call.created")
  * @param {Object} [stub.match]  - Dot-path field matchers against the event envelope
  * @param {Object} [stub.response] - Event to fire when matched: { type, subject?, source?, data? }.
- *   Omit for scheduling.timer.requested stubs — the callback is read from the event.
+ *   Omit for platform.timer.requested stubs — the callback is read from the event.
  * @returns {Object} The registered stub with id assigned
  */
 export function registerStub(stub) {
@@ -238,7 +238,7 @@ export function clearAllStubs() {
 /**
  * Fire the appropriate response for a matched stub.
  *
- * For scheduling.timer.requested: fires the callback event embedded in
+ * For platform.timer.requested: fires the callback event embedded in
  * the trigger event's data.callback envelope.
  *
  * For all other events: fires the stub's response event, merging trigger
@@ -251,7 +251,7 @@ function dispatchStubResponse(stub, envelope, store) {
     const callbackEvent = envelope.data?.callback?.event;
     const callbackData = envelope.data?.callback?.data ?? null;
     if (!callbackEvent) {
-      console.warn(`[stub] matched ${stub.id} — scheduling.timer.requested missing callback.event`);
+      console.warn(`[stub] matched ${stub.id} — platform.timer.requested missing callback.event`);
       return;
     }
     const timerId = envelope.data?.timerId;

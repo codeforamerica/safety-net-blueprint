@@ -1477,11 +1477,6 @@ components:
               type: string
               format: date-time
               readOnly: true
-            suggestionsProcessedAt:
-              type: string
-              format: date-time
-              readOnly: true
-              description: When the interview last evaluated its flags and proposed or expired suggestions for them.
             createdAt:
               type: string
               format: date-time

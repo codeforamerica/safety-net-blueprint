@@ -239,9 +239,6 @@ machines:
                 then:
                   - call: expireSuggestionOf
                     with: {id: $open.id}
-          - set:
-              field: suggestionsProcessedAt
-              value: $now
 
       # One suggestion per procedure: a failed call ends the procedure it's
       # in, so one already open, or dismissed, stops only its own proposal.
@@ -250,14 +247,15 @@ machines:
         steps:
           - call:
               operationId: createSuggestion
-              body:
-                kind: informing
-                category: $params.category
-                subjectType: application_income
-                subjectId: $params.id
-                metadata:
-                  intake: {interviewId: $object.id, flag: $params.flag, recordId: $params.id}
-            onFailure: {then: []}
+              requestBody:
+                payload:
+                  kind: informing
+                  category: $params.category
+                  subjectType: application_income
+                  subjectId: $params.id
+                  metadata:
+                    intake: {interviewId: $object.id, flag: $params.flag, recordId: $params.id}
+            catch: {do: []}
 
       # A flag that knows the corrected figure proposes the change itself.
       - id: proposeCorrection
@@ -265,17 +263,18 @@ machines:
         steps:
           - call:
               operationId: createSuggestion
-              body:
-                kind: operation
-                call:
-                  operationId: updateApplicationIncome
-                  parameters:
-                    - {name: applicationId, in: path, value: $object.applicationId}
-                    - {name: incomeId, in: path, value: $params.correction.id}
-                  body: {amount: $params.correction.amount, frequency: $params.correction.frequency}
-                metadata:
-                  intake: {interviewId: $object.id, flag: flagged.incomeDiffersFromPayStub, recordId: $params.correction.id}
-            onFailure: {then: []}
+              requestBody:
+                payload:
+                  kind: operation
+                  call:
+                    operationId: updateApplicationIncome
+                    parameters:
+                      - {name: applicationId, in: path, value: $object.applicationId}
+                      - {name: incomeId, in: path, value: $params.correction.id}
+                    requestBody: {payload: {amount: $params.correction.amount, frequency: $params.correction.frequency}}
+                  metadata:
+                    intake: {interviewId: $object.id, flag: flagged.incomeDiffersFromPayStub, recordId: $params.correction.id}
+            catch: {do: []}
 
       - id: expireOpenSuggestions
         steps:

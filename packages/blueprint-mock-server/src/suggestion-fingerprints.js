@@ -65,11 +65,11 @@ function normalized(value) {
 /** The values that identify a suggestion, by its kind. */
 function identityOf(suggestion) {
   if (suggestion.kind === 'operation') {
-    const { operationId, parameters = [], body } = suggestion.call ?? {};
+    const { operationId, parameters = [], requestBody } = suggestion.call ?? {};
     // Parameters in a fixed order, so the same arguments listed differently match.
     const ordered = [...parameters].sort((a, b) =>
       `${a.in}\u0000${a.name}`.localeCompare(`${b.in}\u0000${b.name}`));
-    return { kind: 'operation', call: { operationId, parameters: ordered, body } };
+    return { kind: 'operation', call: { operationId, parameters: ordered, payload: requestBody?.payload } };
   }
   const { subjectType, subjectId, path = '', category, message } = suggestion;
   return category

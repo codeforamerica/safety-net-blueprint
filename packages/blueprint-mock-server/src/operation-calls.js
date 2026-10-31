@@ -4,7 +4,7 @@
  *
  * A call is a value in the shared `OperationCall` shape
  * (base/schemas/operations.yaml): an operationId, its parameters by name and
- * location, and a body. Wherever a request schema uses that shape, the call is
+ * location, and a requestBody with its payload. Wherever a request schema uses that shape, the call is
  * checked the way the operation would check the request it stands for: the
  * operationId is one the set declares, as overlays leave it; each parameter is
  * one the operation declares, every required one is given, and each value
@@ -127,16 +127,17 @@ export function callProblems({ field, call }, operations) {
     }
   }
 
-  if (call.body === undefined) {
-    if (operation.bodyRequired) problems.push({ field: at('body'), message: `${call.operationId} requires a body.` });
+  const payload = call.requestBody?.payload;
+  if (payload === undefined) {
+    if (operation.bodyRequired) problems.push({ field: at('requestBody.payload'), message: `${call.operationId} requires a body.` });
   } else if (!operation.requestSchema) {
-    problems.push({ field: at('body'), message: `${call.operationId} takes no body.` });
+    problems.push({ field: at('requestBody.payload'), message: `${call.operationId} takes no body.` });
   } else {
-    const { valid, errors } = validate(call.body, operation.requestSchema, `${call.operationId}-body`,
+    const { valid, errors } = validate(payload, operation.requestSchema, `${call.operationId}-body`,
       { relativePath: operation.relativePath, ref: operation.requestSchemaRef });
     if (!valid) {
       for (const error of errors) {
-        problems.push({ field: error.field === 'body' ? at('body') : at(`body.${error.field}`), message: error.message });
+        problems.push({ field: error.field === 'body' ? at('requestBody.payload') : at(`requestBody.payload.${error.field}`), message: error.message });
       }
     }
   }

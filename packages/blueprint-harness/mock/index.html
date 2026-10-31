@@ -1229,6 +1229,18 @@ const currentScenario = () => {
     ?? all[0] ?? null;
 };
 
+/**
+ * A URL with its query as a person writes it — `q=status:proposed -category:*`
+ * — not as it's encoded to send, `q=status%3Aproposed+-category%3A*`. The
+ * request itself is sent encoded.
+ */
+const asWritten = (url) => {
+  const at = url.indexOf('?');
+  if (at === -1) return url;
+  const query = [...new URLSearchParams(url.slice(at + 1))].map(([name, value]) => `${name}=${value}`).join('&');
+  return `${url.slice(0, at)}?${query}`;
+};
+
 /** A section's name: its workflow's summary, or its id. */
 const sectionOf = (workflow) => workflow.summary ?? workflow.workflowId;
 
@@ -1506,7 +1518,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   if ((doc.content.workflows ?? []).length > 1) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
-  panel.append(el('p', sending ? `${sending.method} ${sending.url}` : step.operationId, 'path'));
+  panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
   if (shown.length > 0) panel.append(el('p', shown.join('   ·   '), 'cited'));
   const cited = citedLine(op);

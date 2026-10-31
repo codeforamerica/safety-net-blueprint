@@ -92,8 +92,10 @@ export function validate(docs) {
 
   const context = {
     docs,
-    // Computed once, and only when the set has scenarios to check.
-    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
+    // Computed once, and only when the set has scenarios, or state machines
+    // calling operations, to check.
+    operationIds: docs.some((d) => d.type === 'arazzo' || (d.type === 'state-machine' && JSON.stringify(d.content).includes('"operationId"')))
+      ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -712,6 +714,32 @@ function channelsGenerated(doc, generated) {
   return errors;
 }
 
+/**
+ * Calls that send their body as `body:` beside the method, which `requestBody:
+ * {payload: …}` replaced — the Arazzo shape a call by operationId takes. Still
+ * read, so a warning rather than an error.
+ *
+ * @param {import('../types.js').Doc} doc - A state-machine document
+ * @returns {object[]}
+ */
+function deprecatedCallBodies(doc) {
+  const warnings = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.call && typeof node.call === 'object' && !Array.isArray(node.call) && 'body' in node.call) {
+      warnings.push({
+        rule: 'deprecated-call-body',
+        message: 'A call\'s `body:` is deprecated: write `requestBody: {payload: …}`, as a call by operationId and an Arazzo step do.',
+        path: `${doc.path}#${at}/call/body`,
+      });
+    }
+    for (const [key, value] of Object.entries(node)) walk(value, `${at}/${key}`);
+  };
+  walk(doc.content, '');
+  return warnings;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -773,6 +801,7 @@ function validateDoc(doc, context) {
           path: doc.path,
         });
       }
+      warnings.push(...deprecatedCallBodies(doc));
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -785,7 +814,7 @@ function validateDoc(doc, context) {
       }
       errors.push(...validateWithinFile(doc.path, doc.content, { validRoles: context.validRoles }));
       errors.push(
-        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex)
+        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operationIds)
       );
       errors.push(...validateEvents(doc, context.channels));
       errors.push(...resourcesNotNested(doc, context.docs));

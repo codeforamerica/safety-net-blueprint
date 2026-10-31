@@ -35,7 +35,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -85,7 +85,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -869,7 +876,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -919,7 +926,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1010,7 +1024,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1060,7 +1074,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1126,7 +1147,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1176,7 +1197,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1304,7 +1332,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1354,7 +1382,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1496,7 +1531,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1546,7 +1581,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1637,7 +1679,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1687,7 +1729,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -1760,11 +1809,6 @@ channels:
                           type: string
                           format: date-time
                           readOnly: true
-                        suggestionsProcessedAt:
-                          type: string
-                          format: date-time
-                          readOnly: true
-                          description: When the interview last evaluated its flags and proposed or expired suggestions for them.
                         createdAt:
                           type: string
                           format: date-time
@@ -1812,7 +1856,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -1862,7 +1906,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2182,7 +2233,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2232,7 +2283,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2323,7 +2381,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2373,7 +2431,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2439,7 +2504,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2489,7 +2554,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2548,7 +2620,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2598,7 +2670,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2657,7 +2736,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2707,7 +2786,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2766,7 +2852,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2816,7 +2902,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2875,7 +2968,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -2925,7 +3018,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -2984,7 +3084,7 @@ channels:
                         causationid:
                           type: string
                           description: |
-                            CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                            CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                         data:
                           type: object
                           additionalProperties: true
@@ -3034,7 +3134,14 @@ channels:
                         - "null"
                       format: uuid
                       description: |
-                        CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                        CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    partitionkey:
+                      type:
+                        - string
+                        - "null"
+                      minLength: 1
+                      description: |
+                        CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                     authid:
                       type:
                         - string
@@ -3092,7 +3199,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -3142,7 +3249,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -3923,7 +4037,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -3973,7 +4087,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4061,7 +4182,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4111,7 +4232,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4174,7 +4302,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4224,7 +4352,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4349,7 +4484,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4399,7 +4534,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4538,7 +4680,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4588,7 +4730,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4676,7 +4825,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4726,7 +4875,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -4799,11 +4955,6 @@ components:
                         type: string
                         format: date-time
                         readOnly: true
-                      suggestionsProcessedAt:
-                        type: string
-                        format: date-time
-                        readOnly: true
-                        description: When the interview last evaluated its flags and proposed or expired suggestions for them.
                       createdAt:
                         type: string
                         format: date-time
@@ -4848,7 +4999,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -4898,7 +5049,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5215,7 +5373,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5265,7 +5423,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5353,7 +5518,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5403,7 +5568,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5466,7 +5638,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5516,7 +5688,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5572,7 +5751,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5622,7 +5801,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5678,7 +5864,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5728,7 +5914,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5784,7 +5977,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5834,7 +6027,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5890,7 +6090,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -5940,7 +6140,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -5996,7 +6203,7 @@ components:
                       causationid:
                         type: string
                         description: |
-                          CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                          CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                       data:
                         type: object
                         additionalProperties: true
@@ -6046,7 +6253,14 @@ components:
                       - "null"
                     format: uuid
                     description: |
-                      CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                      CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                  partitionkey:
+                    type:
+                      - string
+                      - "null"
+                    minLength: 1
+                    description: |
+                      CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                   authid:
                     type:
                       - string
@@ -6100,7 +6314,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -6150,7 +6364,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -6928,7 +7149,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -6978,7 +7199,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7063,7 +7291,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7113,7 +7341,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7173,7 +7408,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7223,7 +7458,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7345,7 +7587,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7395,7 +7637,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7531,7 +7780,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7581,7 +7830,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7666,7 +7922,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7716,7 +7972,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -7789,11 +8052,6 @@ components:
                       type: string
                       format: date-time
                       readOnly: true
-                    suggestionsProcessedAt:
-                      type: string
-                      format: date-time
-                      readOnly: true
-                      description: When the interview last evaluated its flags and proposed or expired suggestions for them.
                     createdAt:
                       type: string
                       format: date-time
@@ -7835,7 +8093,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -7885,7 +8143,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8199,7 +8464,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8249,7 +8514,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8334,7 +8606,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8384,7 +8656,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8444,7 +8723,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8494,7 +8773,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8547,7 +8833,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8597,7 +8883,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8650,7 +8943,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8700,7 +8993,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8753,7 +9053,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8803,7 +9103,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8856,7 +9163,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -8906,7 +9213,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string
@@ -8959,7 +9273,7 @@ components:
                     causationid:
                       type: string
                       description: |
-                        CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+                        CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
                     data:
                       type: object
                       additionalProperties: true
@@ -9009,7 +9323,14 @@ components:
                     - "null"
                   format: uuid
                   description: |
-                    CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                    CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+                partitionkey:
+                  type:
+                    - string
+                    - "null"
+                  minLength: 1
+                  description: |
+                    CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
                 authid:
                   type:
                     - string

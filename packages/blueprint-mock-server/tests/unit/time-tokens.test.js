@@ -171,3 +171,48 @@ test('resolveTimeTokens — throws on malformed token in nested object', () => {
     /Invalid time token/
   );
 });
+
+// ISO 8601 offsets
+
+test('resolveTimeToken — an ISO 8601 offset, signed', () => {
+  assert.strictEqual(resolveTimeToken('$now+P7D', T), '2025-06-08T12:00:00.000Z');
+  assert.strictEqual(resolveTimeToken('$now-P30D', T), '2025-05-02T12:00:00.000Z');
+  assert.strictEqual(resolveTimeToken('$now+PT8H', T), '2025-06-01T20:00:00.000Z');
+  assert.strictEqual(resolveTimeToken('$now+P1DT12H', T), '2025-06-03T00:00:00.000Z');
+});
+
+test('resolveTimeToken — M is months before T and minutes after it', () => {
+  assert.strictEqual(resolveTimeToken('$now+PT90M', T), '2025-06-01T13:30:00.000Z');
+  assert.strictEqual(resolveTimeToken('$now+P1M', T), '2025-07-01T12:00:00.000Z');
+});
+
+test('resolveTimeToken — a month past the end of the next lands on its last day', () => {
+  assert.strictEqual(resolveTimeToken('$now+P1M', new Date('2025-01-31T12:00:00.000Z')), '2025-02-28T12:00:00.000Z');
+  assert.strictEqual(resolveTimeToken('$now-P1Y', new Date('2024-02-29T12:00:00.000Z')), '2023-02-28T12:00:00.000Z');
+});
+
+test('resolveTimeToken — an ISO offset keeps the @HH:MM pin', () => {
+  const pinned = new Date(resolveTimeToken('$now+P2D@09:30', T));
+  assert.strictEqual(pinned.getHours(), 9);
+  assert.strictEqual(pinned.getMinutes(), 30);
+});
+
+test('resolveTimeToken — an ISO offset naming no amount, or a date unit after T, throws', () => {
+  for (const token of ['$now+P', '$now+PT', '$now+P1H', '$now+PT1D']) {
+    assert.throws(() => resolveTimeToken(token, T), /Invalid time token/, token);
+  }
+});
+
+test('resolveTimeToken — the old offset resolves as before, warning once with the ISO form', () => {
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = (message) => warnings.push(message);
+  try {
+    assert.strictEqual(resolveTimeToken('$now+45m', T), resolveTimeToken('$now+PT45M', T));
+    resolveTimeToken('$now+45m', T);
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /"\$now\+45m" is deprecated: write "\$now\+PT45M"/);
+});

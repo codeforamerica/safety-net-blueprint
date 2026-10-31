@@ -60,14 +60,14 @@ machines:
             then:
               - call: $request.call
                 runAs: caller
-                onFailure:
+                catch:
                   to: refused
-                  then:
+                  do:
                     - emit:
                         event: refused
                         data:
                           call: $request.call
-                          error: $failure.error
+                          error: $error
                         type: decision-support.suggestion.refused
               - set:
                   field: performed
@@ -76,14 +76,14 @@ machines:
             then:
               - call: $object.call
                 runAs: caller
-                onFailure:
+                catch:
                   to: refused
-                  then:
+                  do:
                     - emit:
                         event: refused
                         data:
                           call: $object.call
-                          error: $failure.error
+                          error: $error
                         type: decision-support.suggestion.refused
           - call: cancelExpiry
           - emit:
@@ -128,9 +128,9 @@ machines:
             then:
               - set:
                   field: expiresAt
-                  value: $now+1d
+                  value: $now+P1D
           - emit:
-              type: scheduling.timer.requested
+              type: platform.timer.requested
               data:
                 timerId: decision-support.suggestion_expiry.{$object.id}
                 fireAt: $object.expiresAt
@@ -150,7 +150,7 @@ machines:
       - id: cancelExpiry
         description: Cancel the expiry timer of a suggestion that was decided or expired by hand.
         emit:
-          type: scheduling.timer.cancelled
+          type: platform.timer.cancelled
           data:
             timerId: decision-support.suggestion_expiry.{$object.id}
 $defs:

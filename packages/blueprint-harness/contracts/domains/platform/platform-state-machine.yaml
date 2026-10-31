@@ -18,7 +18,7 @@ procedures:
       testable in a second.
     parameters: [timerId, callback, fireAfter, fireAt]
     emit:
-      type: scheduling.timer.requested
+      type: platform.timer.requested
       # The timer is about a resource, and the callback carries the subject
       # through unchanged — which is how a subscription with a `from` state
       # finds the record to guard and act on.

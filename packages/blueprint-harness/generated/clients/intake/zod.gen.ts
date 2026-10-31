@@ -607,7 +607,6 @@ export const zInterview = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -632,7 +631,6 @@ export const zInterviewList = z.object({
         ]),
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-        suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -3726,7 +3724,6 @@ export const zListApplicationInterviewsResponse = z.object({
         ]),
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-        suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -3765,7 +3762,6 @@ export const zCreateApplicationInterviewResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -3798,7 +3794,6 @@ export const zGetApplicationInterviewResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -5481,7 +5476,6 @@ export const zStartInterviewResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -5514,7 +5508,6 @@ export const zProcessSuggestionsInterviewResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -5547,7 +5540,6 @@ export const zCompleteInterviewResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
-    suggestionsProcessedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({

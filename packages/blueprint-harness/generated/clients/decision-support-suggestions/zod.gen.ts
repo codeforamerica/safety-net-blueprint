@@ -34,7 +34,10 @@ export const zOperationSuggestionFields = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     })
 });
 
@@ -95,7 +98,10 @@ export const zSuggestionCreate = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })),
     z.object({
@@ -146,7 +152,10 @@ export const zOperationSuggestionCreate = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     })
 }));
 
@@ -197,7 +206,10 @@ export const zSuggestion = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -225,7 +237,10 @@ export const zSuggestion = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({
@@ -287,7 +302,10 @@ export const zOperationSuggestion = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     })
 })).and(z.object({
     id: z.uuid().readonly(),
@@ -315,7 +333,10 @@ export const zOperationSuggestion = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     }).readonly())
 }));
 
@@ -378,7 +399,10 @@ export const zSuggestionList = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             })
         })).and(z.object({
             id: z.uuid().readonly(),
@@ -406,7 +430,10 @@ export const zSuggestionList = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
@@ -460,7 +487,10 @@ export const zAcceptRequest = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     }))
 });
 
@@ -490,7 +520,10 @@ export const zSuggestionWritable = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })),
     z.object({
@@ -539,7 +572,10 @@ export const zOperationSuggestionWritable = z.object({
             ]),
             value: z.unknown()
         }))),
-        body: z.optional(z.unknown())
+        requestBody: z.optional(z.object({
+            contentType: z.optional(z.string()),
+            payload: z.optional(z.unknown())
+        }))
     })
 }));
 
@@ -589,7 +625,10 @@ export const zSuggestionListWritable = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             })
         })), z.object({
             evidence: z.optional(z.array(z.object({
@@ -659,7 +698,10 @@ export const zListSuggestionsResponse = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             })
         })).and(z.object({
             id: z.uuid().readonly(),
@@ -687,7 +729,10 @@ export const zListSuggestionsResponse = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
@@ -753,7 +798,10 @@ export const zCreateSuggestionData = z.object({
                     ]),
                     value: z.unknown()
                 }))),
-                body: z.optional(z.unknown())
+                requestBody: z.optional(z.object({
+                    contentType: z.optional(z.string()),
+                    payload: z.optional(z.unknown())
+                }))
             })
         })),
         z.object({
@@ -808,7 +856,10 @@ export const zCreateSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -836,7 +887,10 @@ export const zCreateSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({
@@ -909,7 +963,10 @@ export const zGetSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -937,7 +994,10 @@ export const zGetSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({
@@ -990,7 +1050,10 @@ export const zAcceptSuggestionData = z.object({
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }))
     }),
     path: z.object({
@@ -1025,7 +1088,10 @@ export const zAcceptSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -1053,7 +1119,10 @@ export const zAcceptSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({
@@ -1128,7 +1197,10 @@ export const zDismissSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -1156,7 +1228,10 @@ export const zDismissSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({
@@ -1229,7 +1304,10 @@ export const zExpireSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         })
     })).and(z.object({
         id: z.uuid().readonly(),
@@ -1257,7 +1335,10 @@ export const zExpireSuggestionResponse = z.union([
                 ]),
                 value: z.unknown()
             }))),
-            body: z.optional(z.unknown())
+            requestBody: z.optional(z.object({
+                contentType: z.optional(z.string()),
+                payload: z.optional(z.unknown())
+            }))
         }).readonly())
     })),
     z.object({

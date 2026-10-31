@@ -424,6 +424,16 @@ export function findOperation(machine, transitionName, resource) {
  * @param {Array} pendingOperations - Accumulator for pending operations
  * @param {Array} pendingAppends - Accumulator for pending appends
  */
+// Calls still sending `body:`, warned about once each.
+const warnedBodies = new Set();
+
+function warnDeprecatedBody(method, rawPath) {
+  const call = `${method} ${rawPath}`;
+  if (warnedBodies.has(call)) return;
+  warnedBodies.add(call);
+  console.warn(`call: ${call} sends body:, which is deprecated — write requestBody: {payload: …}. It is still read, and will be removed in a later release.`);
+}
+
 function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, pendingAppends) {
   const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : 'GET' in spec ? 'GET' : 'DELETE' in spec ? 'DELETE' : null;
   if (!method) {
@@ -433,7 +443,8 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
 
   const rawPath = spec[method];
   const path = interpolatePath(rawPath, context);
-  const body = resolveBody(spec.body, context);
+  if (spec.body !== undefined && spec.requestBody === undefined) warnDeprecatedBody(method, rawPath);
+  const body = resolveBody(spec.requestBody?.payload ?? spec.body, context);
 
   if (method === 'POST') {
     if (rawPath.includes('{') || rawPath.includes('$')) {
@@ -674,7 +685,7 @@ function emptyPending() {
 }
 
 /**
- * Whether a call names an operation — `{ operationId, parameters, body }` —
+ * Whether a call names an operation — `{ operationId, parameters, requestBody }` —
  * or takes one from data, `$request.call`, rather than naming a procedure or a
  * method and path.
  *
@@ -691,7 +702,7 @@ export function isOperationCall(call) {
  *
  * @param {string|Object} call - A step's `call:`
  * @param {Object} context
- * @returns {{ operationId: string, parameters?: Array, body?: * }|null}
+ * @returns {{ operationId: string, parameters?: Array, requestBody?: { contentType?: string, payload?: * } }|null}
  */
 export function operationCallOf(call, context) {
   if (typeof call === 'string') {
@@ -702,7 +713,10 @@ export function operationCallOf(call, context) {
   if (call.parameters) {
     resolved.parameters = call.parameters.map((p) => ({ ...p, value: resolveValue(p.value, context) }));
   }
-  if (call.body !== undefined) resolved.body = resolveBody(call.body, context);
+  if (call.requestBody !== undefined) {
+    resolved.requestBody = { ...call.requestBody };
+    if (call.requestBody.payload !== undefined) resolved.requestBody.payload = resolveBody(call.requestBody.payload, context);
+  }
   return resolved;
 }
 
@@ -735,12 +749,27 @@ export function applySteps(steps, resource, context, store) {
 }
 
 /**
+ * The entities a call's `catch:` steps see: the failure under the name its
+ * `as` gives, `error` by default as in Serverless Workflow — the HTTP status
+ * alongside the error body's code, message and details.
+ *
+ * @param {Object} step - A call step with `catch:`
+ * @param {{ status: number, body: * }} outcome
+ * @param {Object} [entities]
+ * @returns {Object}
+ */
+export function caughtEntities(step, outcome, entities = {}) {
+  const body = outcome.body && typeof outcome.body === 'object' ? outcome.body : {};
+  return { ...entities, [step.catch.as ?? 'error']: { status: outcome.status, ...body } };
+}
+
+/**
  * Apply an action's steps in order, performing each call to an operation as
  * it is reached.
  *
  * A call that fails stops the walk. What the steps did up to then is
  * returned under `failed`, with the step and the outcome, for the action to
- * discard: `onFailure:` runs instead of them, and with none the action fails.
+ * discard: `catch:` runs instead of them, and with none the action fails.
  *
  * @param {Array} steps
  * @param {Object} resource - Mutated in place

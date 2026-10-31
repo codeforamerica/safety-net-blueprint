@@ -49,7 +49,7 @@ Resources and services every domain uses.
 |----------|---------------|
 | [Platform](cross-cutting/platform.md) | The infrastructure every contract set gets: one event log across domains, and the registries the contracts declare |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
-| [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
+| [Timers](cross-cutting/timers.md) | How a state machine asks for a time-based callback, and the timer service a state provides to answer it |
 
 ### Patterns and concerns
 

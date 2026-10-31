@@ -30,7 +30,7 @@ describe('event names', () => {
   });
 
   test('a machine with nothing to expand comes back as it was', () => {
-    const machine = { object: 'Timer', procedures: [{ id: 'p', steps: [{ emit: { type: 'scheduling.timer.requested' } }] }] };
+    const machine = { object: 'Timer', procedures: [{ id: 'p', steps: [{ emit: { type: 'platform.timer.requested' } }] }] };
     assert.equal(expandEmits(machine, 'platform'), machine);
   });
 });

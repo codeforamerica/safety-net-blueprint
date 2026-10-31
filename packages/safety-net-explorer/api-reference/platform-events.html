@@ -308,7 +308,7 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
 </span>
       </div>
       
@@ -400,7 +400,18 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/platform.html#field-event.partitionkey" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">partitionkey</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
 </span>
       </div>
       
@@ -594,7 +605,7 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
 </span>
       </div>
       
@@ -686,7 +697,18 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/platform.html#field-event.partitionkey" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">partitionkey</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
 </span>
       </div>
       
@@ -776,7 +798,7 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
 </span>
       </div>
       
@@ -868,7 +890,18 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/platform.html#field-event.partitionkey" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">partitionkey</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
 </span>
       </div>
       
@@ -1155,7 +1188,7 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
 </span>
       </div>
       
@@ -1247,7 +1280,18 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/platform.html#field-event.partitionkey" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">partitionkey</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
 </span>
       </div>
       

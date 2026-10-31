@@ -1,6 +1,6 @@
 /**
  * A procedure, or a machine's reaction to an event, calling an operation: made
- * where it stands, and handled with `onFailure:` when it fails, as in an
+ * where it stands, and handled with `catch:` when it fails, as in an
  * action (operation-calls-in-actions.test.js).
  *
  * Run against the harness's contracts, the Suggestion machine given trial
@@ -70,16 +70,16 @@ const settle = () => new Promise((done) => setTimeout(done, 20));
 
 // Propose one more suggestion about the same member, through the operation,
 // as the worker who ran the action.
-const proposeAbout = (category, onFailure) => ({
+const proposeAbout = (category, caught) => ({
   call: {
     operationId: 'createSuggestion',
-    body: { kind: 'informing', subjectType: '$object.subjectType', subjectId: '$object.subjectId', category },
+    requestBody: { payload: { kind: 'informing', subjectType: '$object.subjectType', subjectId: '$object.subjectId', category } },
   },
   runAs: 'caller',
-  ...(onFailure ? { onFailure } : {}),
+  ...(caught ? { catch: caught } : {}),
 });
 
-test('a procedure calls an operation, and a repeat it handles with onFailure ends only that procedure', async () => {
+test('a procedure calls an operation, and a repeat it handles with catch ends only that procedure', async () => {
   await boot({
     actions: [{
       id: 'spread',
@@ -89,7 +89,7 @@ test('a procedure calls an operation, and a repeat it handles with onFailure end
     procedures: [{
       id: 'proposeOne',
       parameters: ['category'],
-      steps: [proposeAbout('$params.category', { then: [] })],
+      steps: [proposeAbout('$params.category', { do: [] })],
     }],
   });
   const { body: first } = await inform('name-mismatch');
@@ -104,7 +104,7 @@ test('a procedure calls an operation, and a repeat it handles with onFailure end
   assert.match(added.fingerprint, /^[0-9a-f]{64}$/);
 });
 
-test('a procedure\'s call failing with no onFailure fails the action, and nothing is saved', async () => {
+test('a procedure\'s call failing with no catch fails the action, and nothing is saved', async () => {
   await boot({
     actions: [{
       id: 'spread',
@@ -137,13 +137,13 @@ test('a reaction to an event calls an operation, its events caused by the event'
   assert.equal(created.causationid, dismissed.id);
 });
 
-test('a reaction\'s call that fails runs its onFailure, with $failure', async () => {
+test('a reaction\'s call that fails runs its catch, with $error', async () => {
   await boot({
     on: [{
       type: 'decision-support.suggestion.dismissed',
       steps: [
         proposeAbout('name-mismatch', {
-          then: [{ emit: { event: 'failed_try', data: { status: '$failure.status', code: '$failure.error.code' } } }],
+          do: [{ emit: { event: 'failed_try', data: { status: '$error.status', code: '$error.code' } } }],
         }),
         { emit: 'tried' },
       ],
@@ -153,9 +153,28 @@ test('a reaction\'s call that fails runs its onFailure, with $failure', async ()
   await send('POST', `/decision-support/suggestions/${first.id}/dismiss`, { reason: 'Spelled right.' });
   await settle();
   const [failed] = await events('decision-support.suggestion.failed_try');
-  assert.ok(failed, 'onFailure ran');
+  assert.ok(failed, 'catch ran');
   assert.deepEqual(failed.data, { status: 409, code: 'CONFLICT' });
   assert.equal((await events('decision-support.suggestion.tried')).length, 0);
+});
+
+test('catch names the failure as `as` says', async () => {
+  await boot({
+    on: [{
+      type: 'decision-support.suggestion.dismissed',
+      steps: [
+        proposeAbout('name-mismatch', {
+          as: 'refusal',
+          do: [{ emit: { event: 'failed_try', data: { status: '$refusal.status', code: '$refusal.code' } } }],
+        }),
+      ],
+    }],
+  });
+  const { body: first } = await inform('name-mismatch');
+  await send('POST', `/decision-support/suggestions/${first.id}/dismiss`, { reason: 'Spelled right.' });
+  await settle();
+  const [failed] = await events('decision-support.suggestion.failed_try');
+  assert.deepEqual(failed?.data, { status: 409, code: 'CONFLICT' });
 });
 
 test('a record a step creates directly starts in its initial state, and is announced as an API create would be', async () => {
@@ -166,7 +185,7 @@ test('a record a step creates directly starts in its initial state, and is annou
       steps: [{
         call: {
           POST: 'decision-support/suggestions',
-          body: { kind: 'informing', subjectType: 'application_member', subjectId: MEMBER, category: 'missing-income' },
+          requestBody: { payload: { kind: 'informing', subjectType: 'application_member', subjectId: MEMBER, category: 'missing-income' } },
         },
       }, { emit: 'tried' }],
     }],
@@ -196,7 +215,7 @@ const retire = (runAs) => ({
     call: {
       operationId: 'dismissSuggestion',
       parameters: [{ name: 'suggestionId', in: 'path', value: '$request.otherId' }],
-      body: { reason: 'Covered by another.' },
+      requestBody: { payload: { reason: 'Covered by another.' } },
     },
     ...(runAs ? { runAs } : {}),
   }, { emit: 'tried' }],
@@ -236,7 +255,7 @@ test('a system call is still validated: a proposal the schema refuses fails the 
     actions: [{
       id: 'spread',
       transition: { from: 'proposed', to: 'dismissed' },
-      steps: [{ call: { operationId: 'createSuggestion', body: { kind: 'informing', subjectType: 'application_member' } } }],
+      steps: [{ call: { operationId: 'createSuggestion', requestBody: { payload: { kind: 'informing', subjectType: 'application_member' } } } }],
     }],
   });
   const { body: one } = await inform('name-mismatch');
@@ -250,7 +269,7 @@ test('a system call repeating a suggestion still open gets the 409', async () =>
     actions: [{
       id: 'spread',
       transition: { from: 'proposed', to: 'proposed' },
-      steps: [{ call: { operationId: 'createSuggestion', body: { kind: 'informing', subjectType: '$object.subjectType', subjectId: '$object.subjectId', category: 'name-mismatch' } } }],
+      steps: [{ call: { operationId: 'createSuggestion', requestBody: { payload: { kind: 'informing', subjectType: '$object.subjectType', subjectId: '$object.subjectId', category: 'name-mismatch' } } } }],
     }],
   });
   const { body: one } = await inform('name-mismatch');
@@ -265,7 +284,7 @@ test('a record a step updates directly is announced as an API update would be', 
     actions: [{
       id: 'spread',
       transition: { from: 'proposed', to: 'proposed' },
-      steps: [{ call: { PATCH: `intake/applications/${APPLICATION}/members/$request.memberId`, body: { firstName: 'Rosa' } } }],
+      steps: [{ call: { PATCH: `intake/applications/${APPLICATION}/members/$request.memberId`, requestBody: { payload: { firstName: 'Rosa' } } } }],
     }],
   });
   const { body: member } = await send('POST', `/intake/applications/${APPLICATION}/members`, { firstName: 'Rose', lastName: 'Diaz', relationship: 'self' });

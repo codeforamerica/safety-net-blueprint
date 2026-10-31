@@ -69,13 +69,16 @@ Seed files support `$now` tokens in date and datetime fields so that fixtures st
 | Token | Resolves to |
 |-------|-------------|
 | `$now` | Server start time T |
-| `$now-30d` | T − 30 days |
-| `$now+7d` | T + 7 days |
-| `$now+8h` | T + 8 hours |
-| `$now+2d@09:30` | T + 2 days, local time pinned to 09:30 |
+| `$now-P30D` | T − 30 days |
+| `$now+P7D` | T + 7 days |
+| `$now+PT8H` | T + 8 hours |
+| `$now+P1M` | T + 1 calendar month |
+| `$now+P2D@09:30` | T + 2 days, local time pinned to 09:30 |
 | `$now@17:00` | Today, local time pinned to 17:00 |
 
-Units: `d` (days), `h` (hours), `m` (minutes), `w` (weeks). Integer amounts only — use a smaller unit for precision (e.g. `$now+36h` rather than `$now+1.5d`). The `@HH:MM` pin sets the time-of-day component in local server time.
+The offset is `+` or `-` and an ISO 8601 duration, in whole numbers. `M` is months before the `T` and minutes after it: `$now+P1M` is a month away, `$now+PT30M` half an hour — so `$now+P30M` is 30 months. A month past the end of the next lands on its last day: January 31 + `P1M` is February 28. The `@HH:MM` pin sets the time of day in local server time.
+
+The old offsets — `$now+7d`, `$now+8h`, `$now+30m`, `$now+1w` — still resolve, with a warning naming the ISO form, and will be removed in a later release.
 
 All tokens in a single seed load resolve against the same instant, so relative timestamps within a fixture are internally consistent.
 
@@ -84,8 +87,8 @@ Malformed tokens (e.g. `$now+7dasys`) cause the server to exit with an error rat
 ```yaml
 AppointmentExample1:
   id: 7e1c6f9a-0000-0000-0000-000000000001
-  startAt: "$now+1d@09:30"
-  endAt: "$now+1d@10:00"
+  startAt: "$now+P1D@09:30"
+  endAt: "$now+P1D@10:00"
   status: scheduled
 ```
 
@@ -173,14 +176,14 @@ The response envelope is built by merging: an entity ID derived from the trigger
 
 ### Timer stubs
 
-Timer stubs are a variant for `scheduling.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
+Timer stubs are a variant for `platform.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
 
 ```bash
 # Register a stub for creation_deadline timers
 curl -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
-    "on": "scheduling.timer.requested",
+    "on": "platform.timer.requested",
     "match": { "data.callback.event": "workflow.creation_deadline" }
   }'
 
