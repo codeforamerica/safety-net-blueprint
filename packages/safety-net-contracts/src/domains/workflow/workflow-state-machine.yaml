@@ -439,7 +439,10 @@ machines:
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-resume, requestBody: {payload: {causationid: $this.id}}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
       - type: eligibility.determination.expedited
-        description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
+        description: >
+          Flag the intake review task as expedited when SNAP expedited criteria are confirmed
+          (7 CFR § 273.2(i)). Its SLA stays as created: a task's SLA types can't change after
+          it's created yet.
         context:
           - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
         steps:
@@ -450,7 +453,6 @@ machines:
                   requestBody:
                     payload:
                       isExpedited: true
-                      slaType: snap_expedited
       - type: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:

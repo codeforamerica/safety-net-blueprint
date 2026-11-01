@@ -943,6 +943,24 @@ async function testWorkflowEventSubscriptions() {
     assert.strictEqual(task.priority, 1, 'priority should be 1 (expedited) after isExpedited set');
   });
 
+  // eligibility.determination.expedited → the application's review task is flagged expedited
+  await test('eligibility.determination.expedited: flags the application review task as expedited', async () => {
+    const subjectId = crypto.randomUUID();
+    const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { name: 'Expedited determination test', programType: 'snap', taskType: 'application_review', subjectId },
+    })).json();
+    const res = await injectEvent('eligibility.determination.expedited', {}, subjectId);
+    assert.ok(res.ok, `expected the event to be accepted, got ${res.status}`);
+    let task;
+    for (let tries = 0; tries < 20; tries++) {
+      task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
+      if (task.isExpedited) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.strictEqual(task.isExpedited, true, 'the review task should be flagged expedited');
+  });
+
   // workflow.task.updated: slaDeadline set → both sla_warning and sla_breach timers scheduled
   await test('workflow.task.updated: setting slaDeadline schedules sla_warning and sla_breach timers', async () => {
     await clearStubs();
