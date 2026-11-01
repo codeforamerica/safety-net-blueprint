@@ -115,6 +115,10 @@ npm run resolve -- --spec=packages/safety-net-contracts --overlay=packages/safet
 npm run postman:generate
 ```
 
+## Scenarios
+
+A scenario is an Arazzo file (`*.arazzo.yaml`) in the harness's contract set. When to write one is in [contract-files.yaml](../conventions/contract-files.yaml) (`scenarios`). `harness-scenarios.test.js` runs every harness scenario against a fresh mock, so CI fails when a step does. What the mock's runner supports, and how to write steps, is in the [mock server guide](mock-server.md#scenarios).
+
 ## Preflight Checks
 
 Before creating a PR, always run:

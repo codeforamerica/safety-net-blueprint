@@ -4,6 +4,25 @@
 version: "1.0"
 
 naming:
+  # Casing: pick a name's casing by what kind of name it is, so the casing
+  # tells a reader what they're looking at.
+  #   - A type name: PascalCase. Code generators turn schemas into classes,
+  #     which every mainstream language names in PascalCase.
+  #   - A JSON field or a name code calls: camelCase, the default in
+  #     JavaScript and most JSON APIs. x-casing lets a state serve fields in
+  #     snake_case instead.
+  #   - A name that ends up in a URL or a file name: kebab-case, the usual
+  #     form for both.
+  #   - A value: snake_case, the most common casing for JSON values (GitHub,
+  #     Stripe). Values are stored and compared in rules, so they keep one
+  #     casing whatever x-casing serves fields in.
+  # Write a reference to a name as the name is declared.
+  casing:
+    type_names: PascalCase
+    fields_and_code_names: camelCase
+    url_and_file_names: kebab-case
+    values: snake_case
+
   # URL path segments: kebab-case (lowercase with hyphens)
   # REST example: /user-profiles, /order-items
   # RPC example: /tasks/{id}/claim
@@ -34,9 +53,41 @@ naming:
   # Example: applicationId, dateOfBirth, submittedAt
   schema_properties: camelCase
 
+  # Field paths: to name a field, write $, then each property name from the
+  # root after a dot, with [*] after each list. Each name is a valid CEL
+  # identifier. That's RFC 9535 JSONPath limited to those segments, so any
+  # JSONPath library reads it, and CEL reads $.person.age as person.age.
+  # Example: $.application.members[*].personalInformation.ssn
+  # Annotation and data dictionary keys and rules input paths still use an
+  # older form, with no $ and [] for [*] (application.members[].ssn), until
+  # they're moved. Match it there; use field paths in anything new.
+  # Not field paths: a fact's name, which is a CEL name (ageVerified), and a
+  # search field, which is a name in the search syntax (metadata.intake.interviewId).
+  field_paths: $ then dot-separated names, [*] for list items
+
   # File names: kebab-case
   # Example: user-profiles.yaml, common-parameters.yaml
   files: kebab-case
+
+  # Domains: kebab-case; a domain is a URL and file name segment.
+  # Example: case-management, data-exchange
+  domains: kebab-case
+
+  # State machine action ids: kebab-case; each becomes an RPC path segment.
+  # Example: approve-determination → POST /applications/{applicationId}/approve-determination
+  action_ids: kebab-case
+
+  # Registry types: kebab-case; a registry's type is its file name's suffix.
+  # Example: intake-registry-suggestion-categories.yaml has type: suggestion-categories
+  # A reference to one is written as declared: x-enum-source: {registry: transcription-services}
+  registry_types: kebab-case
+
+  # Values: snake_case. That covers enum values, state ids, SLA type ids and
+  # registry entry ids.
+  # Example: in_person, awaiting_client, snap_expedited
+  # Exception: registry entry ids are kebab-case (name-mismatch), which
+  # registry-schema.yaml enforces, until they're renamed.
+  values: snake_case
 
   # CloudEvents types: {domain}.{resource}.{event}
   # Full format: org.codeforamerica.safety-net-blueprint.{domain}.{resource}.{event}

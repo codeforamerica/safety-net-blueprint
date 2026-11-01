@@ -68,6 +68,14 @@ contract_files:
       A capability, like a domain, is declared rather than inferred from a
       folder or a file name.
 
+  scenarios:
+    rule: When you add or change a capability that takes several calls to see working, write an Arazzo scenario of it in the harness's contract set (packages/blueprint-harness/contracts/scenarios/).
+    rationale: >
+      One file is the test (CI runs every harness scenario against a fresh
+      mock), the walkthrough (a tour in the harness page, a step at a time),
+      and a check any Arazzo runner can run against a real system. How to
+      write steps is in docs/guides/mock-server.md (Scenarios).
+
   generated_files:
     rule: Resolve writes documents a set does not author — an API document beside each rules file, an events AsyncAPI document beside each OpenAPI document — into the resolved set only. They are never edited.
     rationale: >
