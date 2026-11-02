@@ -38,12 +38,23 @@ export const listSuggestions = <ThrowOnError extends boolean = false>(options?: 
 /**
  * Propose a suggestion
  *
- * Propose a suggestion. It begins in `proposed`. An operation suggestion
- * is refused when its operation does not exist, or its call's arguments
- * do not match the operation; an informing one, when its category does
- * not exist. One whose fingerprint matches a suggestion still open
- * (`proposed` or `refused`) or `dismissed` is refused with `409`, naming
- * that suggestion in `details`.
+ * Propose a suggestion. It begins in `proposed`.
+ *
+ * An operation suggestion is refused with `422` when its operation does
+ * not exist, or its call doesn't fit the operation: a parameter the
+ * operation doesn't declare, a required parameter left out, or a
+ * parameter value or request body the operation's schemas refuse.
+ * `details` names the field, as `call.requestBody.payload.<field>` for the
+ * body.
+ *
+ * An informing suggestion is refused with `422` when its category does
+ * not exist, when it has neither a category nor a message, or when its
+ * `path` isn't a JSON Pointer.
+ *
+ * One whose fingerprint matches a suggestion still open (`proposed` or
+ * `refused`) or `dismissed` is refused with `409`, naming that suggestion
+ * in `details`. One matching an `accepted` or `expired` suggestion may be
+ * proposed again.
  *
  */
 export const createSuggestion = <ThrowOnError extends boolean = false>(options: Options<CreateSuggestionData, ThrowOnError>) => (options.client ?? client).post<CreateSuggestionResponses, CreateSuggestionErrors, ThrowOnError>({
@@ -75,6 +86,8 @@ export const getSuggestion = <ThrowOnError extends boolean = false>(options: Opt
  * Accept suggestion
  *
  * Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
+ *
+ * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
 export const acceptSuggestion = <ThrowOnError extends boolean = false>(options: Options<AcceptSuggestionData, ThrowOnError>) => (options.client ?? client).post<AcceptSuggestionResponses, AcceptSuggestionErrors, ThrowOnError>({
     requestValidator: async (data) => await zAcceptSuggestionData.parseAsync(data),

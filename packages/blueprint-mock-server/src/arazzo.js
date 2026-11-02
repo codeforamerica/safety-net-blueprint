@@ -19,7 +19,16 @@
  *   - runtime expressions: $statusCode, $response.body#/<pointer>,
  *     $response.header.<name>, $steps.<id>.outputs.<name>, $inputs.<name>,
  *     whole or embedded in a string as {$…}
- *   - `successCriteria` simple conditions: ==, !=, <, <=, >, >= joined by &&
+ *   - selectors (Arazzo 1.1), in outputs, parameter values and request
+ *     bodies: `{ context, selector, type }`, where `type` is `jsonpath`
+ *     (RFC 9535) or `jsonpointer` — to pick items out of a list by what they
+ *     hold, not by where they sit. Arazzo doesn't say what a JSONPath gives;
+ *     here its shape follows the query, as RFC 9535 sorts them: a singular
+ *     query (names and indexes only, `$.items[0].id`) gives the value it
+ *     names, and the step fails when there is none; any other (a filter, a
+ *     wildcard) gives a list, which may be empty
+ *   - `successCriteria` simple conditions: ==, !=, <, <=, >, >= joined by &&,
+ *     and `jsonpath` conditions, which pass when they match anything
  *   - `outputs`
  *   - workflows that depend on earlier ones (`dependsOn`), reading what they
  *     produced as `$workflows.<id>.outputs.<name>` — a long scenario in
@@ -31,6 +40,8 @@
  * served mock.
  */
 
+import { query as jsonPath } from 'jsonpath-rfc9535';
+import parseJsonPath from 'jsonpath-rfc9535/parser';
 import { CONTROL_OPERATIONS } from './platform-routes.js';
 
 const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs', 'onFailure']);
@@ -130,8 +141,56 @@ function evaluate(expression, scope) {
   throw new Error(`Runtime expression ${expression} is not one this runner supports`);
 }
 
+/** A selector's type: `jsonpath` or `jsonpointer`, written alone or with its version. */
+function selectorTypeOf(type) {
+  const name = typeof type === 'string' ? type : type?.type;
+  const version = typeof type === 'string' ? undefined : type?.version;
+  if (name === 'jsonpath' && (version === undefined || version === 'rfc9535')) return 'jsonpath';
+  if (name === 'jsonpointer' && (version === undefined || version === 'rfc6901')) return 'jsonpointer';
+  throw new Error(`Selector type ${JSON.stringify(type)} is not one this runner supports; use jsonpath (RFC 9535) or jsonpointer`);
+}
+
+/** An Arazzo 1.1 Selector Object: `{ context, selector, type }`. */
+function isSelector(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    && typeof value.context === 'string' && typeof value.selector === 'string' && 'type' in value;
+}
+
+/** Thrown when a selector names a value that isn't there, so the step that used it fails. */
+class NoMatch extends Error {}
+
+/**
+ * Whether a JSONPath is singular, in RFC 9535's sense: each segment a name or
+ * an index, so it names at most one place.
+ */
+function isSingular(selector) {
+  return parseJsonPath(selector).segments.every(({ type, node }) => type === 'ChildSegment'
+    && (node.type === 'MemberNameShorthand'
+      || (node.type === 'BracketedSelection' && node.selectors.length === 1
+        && ['NameSelector', 'IndexSelector'].includes(node.selectors[0].type))));
+}
+
+/**
+ * What a selector picks out of its context. A JSON Pointer or a singular
+ * JSONPath gives the value it names, and naming nothing is an error; any other
+ * JSONPath gives the list of what it matches, empty or not.
+ */
+function select({ context, selector, type }, scope) {
+  const data = evaluate(context, scope);
+  if (selectorTypeOf(type) === 'jsonpointer') {
+    const value = pointer(data, selector);
+    if (value === undefined) throw new NoMatch(`${selector} matched nothing in ${context}`);
+    return value;
+  }
+  const nodes = jsonPath(data ?? null, selector);
+  if (!isSingular(selector)) return nodes;
+  if (nodes.length === 0) throw new NoMatch(`${selector} matched nothing in ${context}`);
+  return nodes[0];
+}
+
 /** A value with its runtime expressions resolved: whole (`$x`) or embedded (`a-{$x}`). */
 function resolve(value, scope) {
+  if (isSelector(value)) return select(value, scope);
   if (typeof value === 'string') {
     if (/^\$[a-zA-Z]/.test(value) && !value.includes(' ')) return evaluate(value, scope);
     if (value.includes('{$')) return value.replace(/\{(\$[^{}]+)\}/g, (_, e) => String(evaluate(e, scope) ?? ''));
@@ -170,6 +229,18 @@ function holds(condition, scope) {
       default: return a >= b;
     }
   });
+}
+
+/**
+ * Whether a success criterion holds: a simple condition, or a JSONPath one,
+ * which holds when it matches anything in its context.
+ */
+function meets(criterion, scope, step) {
+  if (!criterion.type || criterion.type === 'simple') return holds(criterion.condition, scope);
+  if (selectorTypeOf(criterion.type) !== 'jsonpath') throw new Error(`Step ${step.stepId}: jsonpointer is not a criterion type`);
+  if (!criterion.context) throw new Error(`Step ${step.stepId}: a jsonpath criterion needs a context`);
+  const condition = criterion.condition.replace(/\{(\$[^{}]+)\}/g, (_, e) => String(evaluate(e, scope) ?? ''));
+  return jsonPath(evaluate(criterion.context, scope) ?? null, condition).length > 0;
 }
 
 /**
@@ -292,18 +363,33 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
       const responseHeaders = Object.fromEntries([...response.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
       stepScope = { ...scope, response: { status: response.status, statusText: response.statusText, body: parsed, headers: responseHeaders } };
 
-      checks = (step.successCriteria ?? []).map((criterion) => {
-        if (criterion.type && criterion.type !== 'simple') throw new Error(`Step ${step.stepId}: ${criterion.type} criteria are not supported`);
-        return { condition: criterion.condition, passed: holds(criterion.condition, stepScope) };
-      });
+      checks = (step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) }));
       passed = checks.every((c) => c.passed);
       if (passed || !retry || attempt >= retry.limit) break;
       await new Promise((settle) => setTimeout(settle, retry.after * 1000));
     }
-    const outputs = passed
-      ? Object.fromEntries(Object.entries(step.outputs ?? {}).map(([k, e]) => [k, resolve(e, stepScope)]))
-      : {};
+    // Outputs whose selector names a value that isn't there fail the step,
+    // as a check that says which output.
+    const outputsOf = (map, from, label) => {
+      const values = {};
+      for (const [name, expression] of Object.entries(map ?? {})) {
+        try {
+          values[name] = resolve(expression, from);
+        } catch (error) {
+          if (!(error instanceof NoMatch)) throw error;
+          checks.push({ condition: `${label} ${name}: ${error.message}`, passed: false });
+          passed = false;
+          return {};
+        }
+      }
+      return values;
+    };
+    const outputs = passed ? outputsOf(step.outputs, stepScope, 'output') : {};
     scope.steps[step.stepId] = { outputs };
+    // A workflow's outputs, once its last step has passed, for the workflows
+    // that depend on it.
+    let finished = null;
+    if (passed && step === workflow.steps.at(-1)) finished = outputsOf(workflow.outputs, scope, 'workflow output');
 
     const result = {
       workflowId: workflow.workflowId,
@@ -322,11 +408,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     // A failed step stops its workflow: later steps would act on what it did
     // not produce.
     if (!passed) { run.passed = false; stopped.add(workflow.workflowId); }
-    // A workflow's outputs, once its last step has passed, for the workflows
-    // that depend on it.
-    else if (step === workflow.steps.at(-1)) {
-      workflowOutputs[workflow.workflowId] = Object.fromEntries(Object.entries(workflow.outputs ?? {}).map(([k, e]) => [k, resolve(e, scope)]));
-    }
+    else if (finished) workflowOutputs[workflow.workflowId] = finished;
     return result;
   }
 

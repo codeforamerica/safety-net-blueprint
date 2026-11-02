@@ -42,6 +42,24 @@ $defs:
               description: The parameter's value.
       requestBody:
         $ref: "#/$defs/RequestBody"
+  CallError:
+    type: object
+    description: |
+      Why a call failed: the HTTP status it answered with, alongside the shared Error shape's code, message and details. What a state machine's catch binds, and what an event about a failed call carries.
+    required:
+      - status
+      - code
+      - message
+    properties:
+      status:
+        type: integer
+        description: The HTTP status the call answered with.
+      code:
+        $ref: ../components/responses.yaml#/Error/properties/code
+      message:
+        $ref: ../components/responses.yaml#/Error/properties/message
+      details:
+        $ref: ../components/responses.yaml#/Error/properties/details
   RequestBody:
     type: object
     description: |

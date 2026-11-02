@@ -1037,7 +1037,7 @@ export const zGetSuggestionResponse = z.union([
 ]);
 
 export const zAcceptSuggestionData = z.object({
-    body: z.object({
+    body: z.optional(z.object({
         call: z.optional(z.object({
             operationId: z.string(),
             parameters: z.optional(z.array(z.object({
@@ -1055,7 +1055,7 @@ export const zAcceptSuggestionData = z.object({
                 payload: z.optional(z.unknown())
             }))
         }))
-    }),
+    })),
     path: z.object({
         suggestionId: z.uuid()
     }),

@@ -144,6 +144,12 @@ export type SuggestionRead = {
      * path and category — or, uncategorized, its message. A keyed hash,
      * so nothing can be read back from it.
      *
+     * Before hashing, values are made comparable, so two suggestions that
+     * differ only in these ways have the same fingerprint: text is
+     * trimmed, runs of spaces become one, and case is ignored; a
+     * date-time is compared as the instant it names; an object's keys
+     * and a call's parameters may come in any order.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -525,6 +531,12 @@ export type Suggestion = ({
      * path and category — or, uncategorized, its message. A keyed hash,
      * so nothing can be read back from it.
      *
+     * Before hashing, values are made comparable, so two suggestions that
+     * differ only in these ways have the same fingerprint: text is
+     * trimmed, runs of spaces become one, and case is ignored; a
+     * date-time is compared as the instant it names; an object's keys
+     * and a call's parameters may come in any order.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -647,6 +659,12 @@ export type Suggestion = ({
      * path and category — or, uncategorized, its message. A keyed hash,
      * so nothing can be read back from it.
      *
+     * Before hashing, values are made comparable, so two suggestions that
+     * differ only in these ways have the same fingerprint: text is
+     * trimmed, runs of spaces become one, and case is ignored; a
+     * date-time is compared as the instant it names; an object's keys
+     * and a call's parameters may come in any order.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -747,6 +765,12 @@ export type OperationSuggestion = {
      * operation suggestion's whole call; an informing one's subject,
      * path and category — or, uncategorized, its message. A keyed hash,
      * so nothing can be read back from it.
+     *
+     * Before hashing, values are made comparable, so two suggestions that
+     * differ only in these ways have the same fingerprint: text is
+     * trimmed, runs of spaces become one, and case is ignored; a
+     * date-time is compared as the instant it names; an object's keys
+     * and a call's parameters may come in any order.
      *
      */
     readonly fingerprint?: string;
@@ -875,6 +899,12 @@ export type InformingSuggestion = {
      * path and category — or, uncategorized, its message. A keyed hash,
      * so nothing can be read back from it.
      *
+     * Before hashing, values are made comparable, so two suggestions that
+     * differ only in these ways have the same fingerprint: text is
+     * trimmed, runs of spaces become one, and case is ignored; a
+     * date-time is compared as the instant it names; an object's keys
+     * and a call's parameters may come in any order.
+     *
      */
     readonly fingerprint?: string;
     /**
@@ -973,6 +1003,12 @@ export type SuggestionList = {
          * operation suggestion's whole call; an informing one's subject,
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
+         *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
          *
          */
         readonly fingerprint?: string;
@@ -1095,6 +1131,12 @@ export type SuggestionList = {
          * operation suggestion's whole call; an informing one's subject,
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
+         *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
          *
          */
         readonly fingerprint?: string;
@@ -1586,6 +1628,16 @@ export type ListSuggestionsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -1811,6 +1863,12 @@ export type ListSuggestionsResponses = {
              * path and category — or, uncategorized, its message. A keyed hash,
              * so nothing can be read back from it.
              *
+             * Before hashing, values are made comparable, so two suggestions that
+             * differ only in these ways have the same fingerprint: text is
+             * trimmed, runs of spaces become one, and case is ignored; a
+             * date-time is compared as the instant it names; an object's keys
+             * and a call's parameters may come in any order.
+             *
              */
             readonly fingerprint?: string;
             /**
@@ -1941,6 +1999,12 @@ export type ListSuggestionsResponses = {
              * operation suggestion's whole call; an informing one's subject,
              * path and category — or, uncategorized, its message. A keyed hash,
              * so nothing can be read back from it.
+             *
+             * Before hashing, values are made comparable, so two suggestions that
+             * differ only in these ways have the same fingerprint: text is
+             * trimmed, runs of spaces become one, and case is ignored; a
+             * date-time is compared as the instant it names; an object's keys
+             * and a call's parameters may come in any order.
              *
              */
             readonly fingerprint?: string;
@@ -2291,6 +2355,12 @@ export type CreateSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2421,6 +2491,12 @@ export type CreateSuggestionResponses = {
          * operation suggestion's whole call; an informing one's subject,
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
+         *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
          *
          */
         readonly fingerprint?: string;
@@ -2591,6 +2667,12 @@ export type GetSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2722,6 +2804,12 @@ export type GetSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -2742,7 +2830,7 @@ export type GetSuggestionResponses = {
 export type GetSuggestionResponse = GetSuggestionResponses[keyof GetSuggestionResponses];
 
 export type AcceptSuggestionData = {
-    body: {
+    body?: {
         /**
          * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
          *
@@ -2814,6 +2902,25 @@ export type AcceptSuggestionErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -2833,9 +2940,28 @@ export type AcceptSuggestionErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */
@@ -2969,6 +3095,12 @@ export type AcceptSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -3100,6 +3232,12 @@ export type AcceptSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -3157,6 +3295,25 @@ export type DismissSuggestionErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -3176,9 +3333,28 @@ export type DismissSuggestionErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */
@@ -3312,6 +3488,12 @@ export type DismissSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -3443,6 +3625,12 @@ export type DismissSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -3495,6 +3683,25 @@ export type ExpireSuggestionErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -3514,7 +3721,7 @@ export type ExpireSuggestionErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -3650,6 +3857,12 @@ export type ExpireSuggestionResponses = {
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
          *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
+         *
          */
         readonly fingerprint?: string;
         /**
@@ -3780,6 +3993,12 @@ export type ExpireSuggestionResponses = {
          * operation suggestion's whole call; an informing one's subject,
          * path and category — or, uncategorized, its message. A keyed hash,
          * so nothing can be read back from it.
+         *
+         * Before hashing, values are made comparable, so two suggestions that
+         * differ only in these ways have the same fingerprint: text is
+         * trimmed, runs of spaces become one, and case is ignored; a
+         * date-time is compared as the instant it names; an object's keys
+         * and a call's parameters may come in any order.
          *
          */
         readonly fingerprint?: string;

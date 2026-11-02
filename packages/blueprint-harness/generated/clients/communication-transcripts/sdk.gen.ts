@@ -249,6 +249,8 @@ export const updateTranscriptionProfile = <ThrowOnError extends boolean = false>
  * Pause transcript
  *
  * Take the conversation off the record, at the time the client says.
+ *
+ * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
 export const pauseTranscript = <ThrowOnError extends boolean = false>(options: Options<PauseTranscriptData, ThrowOnError>) => (options.client ?? client).post<PauseTranscriptResponses, PauseTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zPauseTranscriptData.parseAsync(data),
@@ -266,6 +268,8 @@ export const pauseTranscript = <ThrowOnError extends boolean = false>(options: O
  * Resume transcript
  *
  * Put the conversation back on the record, at the time the client says.
+ *
+ * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
 export const resumeTranscript = <ThrowOnError extends boolean = false>(options: Options<ResumeTranscriptData, ThrowOnError>) => (options.client ?? client).post<ResumeTranscriptResponses, ResumeTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zResumeTranscriptData.parseAsync(data),
@@ -283,6 +287,8 @@ export const resumeTranscript = <ThrowOnError extends boolean = false>(options: 
  * Close transcript
  *
  * End the transcript, at the time the client says. A pause still open ends then too.
+ *
+ * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
 export const closeTranscript = <ThrowOnError extends boolean = false>(options: Options<CloseTranscriptData, ThrowOnError>) => (options.client ?? client).post<CloseTranscriptResponses, CloseTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zCloseTranscriptData.parseAsync(data),

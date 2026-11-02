@@ -28,7 +28,7 @@
     "fingerprint": {
       "type": "string",
       "readOnly": true,
-      "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n"
+      "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n\nBefore hashing, values are made comparable, so two suggestions that\ndiffer only in these ways have the same fingerprint: text is\ntrimmed, runs of spaces become one, and case is ignored; a\ndate-time is compared as the instant it names; an object's keys\nand a call's parameters may come in any order.\n"
     },
     "reason": {
       "type": "string",

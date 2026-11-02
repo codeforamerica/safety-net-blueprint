@@ -339,6 +339,16 @@ export type ListDeterminationsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -802,6 +812,16 @@ export type ListDecisionsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -1029,6 +1049,25 @@ export type CompleteDeterminationErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -1048,7 +1087,7 @@ export type CompleteDeterminationErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**

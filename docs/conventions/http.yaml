@@ -84,7 +84,8 @@ error_handling:
       retryable: true
 
 # =============================================================================
-# API Versioning# =============================================================================
+# API Versioning
+# =============================================================================
 # STATUS: Not yet implemented
 
 versioning:
@@ -236,7 +237,8 @@ batch_operations:
     scope: Entire batch (not individual operations)
 
 # =============================================================================
-# Authentication# =============================================================================
+# Authentication
+# =============================================================================
 # STATUS: Not yet implemented
 # NOTE: States will use their own identity providers. This section defines the
 #       interface contract, not the specific provider implementation.
@@ -280,25 +282,40 @@ correlation_ids:
       - Include in async job metadata
 
 # =============================================================================
-# ETags and Optimistic Concurrency# =============================================================================
-# STATUS: Not yet implemented
+# ETags and Optimistic Concurrency (RFC 9110, sections 8.8.3 and 13.1.1)
+# =============================================================================
+# STATUS: Not yet implemented — the mock server doesn't send ETags or check
+# If-Match, and the framework contracts don't declare them.
 
 etags:
-  description: |
-    ETags enable optimistic concurrency control (prevent lost updates) and
-    conditional requests (caching). REST APIs should support ETags for
-    resources that can be updated.
+  rule: |
+    Give every resource that can change an ETag, and let a write name the
+    version it expects with If-Match. A write based on an outdated read is then
+    refused with 412, and doesn't overwrite a newer change.
+
+  when_to_send_if_match: |
+    Send If-Match whenever a write is based on something read earlier: a
+    person saving a form they loaded, a state machine reaction that reads
+    records and then writes, a suggestion whose call was worked out from a
+    record. Use the ETag of the record that was read. A suggestion's call
+    carries it among its parameters, so accepting a suggestion made from an
+    outdated read fails instead of undoing a newer change.
+
+  with_event_ordering: |
+    Use ETags together with event ordering (events.yaml, event_ordering).
+    Ordering keeps reactions to one aggregate's events from overlapping or
+    running out of turn; it can't hold back a person's request. ETags refuse a
+    write that a newer change has made outdated, whoever made it.
 
   response_headers:
     ETag:
-      description: Opaque identifier for the current resource version
+      description: Send it on every read and write of a single resource; it identifies the version returned.
       format: Quoted string (e.g., "abc123" or W/"abc123" for weak)
       generation: Hash of resource content or version number
 
   request_headers:
     If-Match:
-      description: Update only if ETag matches (optimistic locking)
-      use_case: Prevent lost updates when multiple users edit same resource
+      description: Accept it on every update, delete and action; apply the write only if it matches the current ETag.
       behavior: |
         1. Client GETs resource, receives ETag
         2. Client PATCHes with If-Match: "etag-value"
@@ -306,8 +323,7 @@ etags:
         4. If ETag doesn't match: return 412 Precondition Failed
 
     If-None-Match:
-      description: Return resource only if ETag differs (caching)
-      use_case: Avoid re-downloading unchanged resources
+      description: Accept it on reads; return 304 when the client's copy is current.
       behavior: |
         1. Client GETs resource, caches response with ETag
         2. Client GETs again with If-None-Match: "etag-value"
@@ -326,10 +342,9 @@ etags:
       body: Empty (client uses cached version)
 
   implementation_notes:
-    - ETags should be opaque to clients (don't expose version numbers directly)
-    - Use strong ETags for byte-for-byte comparison
-    - Use weak ETags (W/"...") for semantic equivalence
-    - Consider ETag scope: entire resource or specific fields
+    - Keep ETags opaque to clients; don't expose version numbers directly.
+    - Use strong ETags for byte-for-byte comparison, weak ETags (W/"...") for semantic equivalence.
+    - Give a resource one ETag for the whole record, not one per field.
 
 # =============================================================================
 # Sorting

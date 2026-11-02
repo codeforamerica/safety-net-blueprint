@@ -70,6 +70,14 @@ contract_files:
 
   scenarios:
     rule: When you add or change a capability that takes several calls to see working, write an Arazzo scenario of it in the harness's contract set (packages/blueprint-harness/contracts/scenarios/).
+    writing:
+      - Show the capability, not the setup. Seed the records it starts from in the set's mock data, and refer to them by their seeded ids.
+      - Include only the steps that show the capability. Leave each refusal and each repeat to unit tests, unless the scenario is about it.
+      - Open with info.description, one paragraph on who does what. Split the story into workflows, one per stage, each with a summary (its heading in the page) and a description (bullets on what happens in it).
+      - Give each step a description whose first line is its title and whose bullets are what to notice. Say who does what (the caseworker, the AI assistant, a state machine, an API) in plain, literal words.
+      - Name, in backticks, the contract elements that do the work, such as an action, a procedure, a ruleset, a fact, the event a reaction listens for, a composition or a field. The harness page shows each from the contracts.
+      - Take a value from a response with a JSON Pointer when it's at a fixed place, and with a JSONPath selector when you find it by what it holds (standards.yaml, Arazzo).
+      - Run the harness's regenerate before its scenario tests, which run the generated bundle.
     rationale: >
       One file is the test (CI runs every harness scenario against a fresh
       mock), the walkthrough (a tour in the harness page, a step at a time),

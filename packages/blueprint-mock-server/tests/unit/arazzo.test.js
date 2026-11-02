@@ -92,5 +92,53 @@ test('refuses what it does not support, by name', async () => {
   await refuse([{ stepId: 's', operationId: 'createThing', onFailure: [{ name: 'f', type: 'goto', stepId: 's' }] }], /onFailure actions of type goto are not supported/);
   await refuse([{ stepId: 's', operationId: 'nothingLikeThis' }], /names operation nothingLikeThis, which no API in the set declares/);
   await refuse([{ stepId: 's', operationId: 'createThing', successCriteria: [{ condition: '$statusCode == 201 || $statusCode == 200' }] }], /uses \|\| or grouping/);
-  await refuse([{ stepId: 's', operationId: 'createThing', successCriteria: [{ condition: '$.x', type: 'jsonpath', context: '$response.body' }] }], /jsonpath criteria are not supported/);
+  await refuse([{ stepId: 's', operationId: 'createThing', successCriteria: [{ condition: '/x', type: 'xpath', context: '$response.body' }] }], /Selector type "xpath" is not one this runner supports/);
+  await refuse([{ stepId: 's', operationId: 'createThing', outputs: { x: { context: '$response.body', selector: '$.x', type: { type: 'jsonpath', version: 'draft-goessner-dispatch-jsonpath-00' } } } }], /is not one this runner supports/);
+});
+
+test('a selector picks values by what they hold: a singular query gives the value, any other a list', async () => {
+  const things = { items: [{ id: 'a', kind: 'x' }, { id: 'b', kind: 'y' }, { id: 'c', kind: 'y' }] };
+  const urls = [];
+  const fetch = async (request) => { urls.push(new URL(request.url).pathname); return Response.json(things); };
+  const list = { stepId: 'list', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: 'all' }],
+    successCriteria: [{ context: '$response.body', condition: "$.items[?@.kind == 'x']", type: 'jsonpath' }],
+    outputs: {
+      first: { context: '$response.body', selector: '$.items[0].id', type: 'jsonpath' },
+      xs: { context: '$response.body', selector: "$.items[?@.kind == 'x'].id", type: 'jsonpath' },
+      ys: { context: '$response.body', selector: "$.items[?@.kind == 'y'].id", type: { type: 'jsonpath', version: 'rfc9535' } },
+      zs: { context: '$response.body', selector: "$.items[?@.kind == 'z'].id", type: 'jsonpath' },
+    } };
+  const document = { arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [{
+    workflowId: 'w', steps: [list],
+    outputs: { x: { context: '$steps.list.outputs.xs', selector: '/0', type: 'jsonpointer' } },
+  }, {
+    workflowId: 'then', dependsOn: ['w'],
+    steps: [{ stepId: 'get', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: '$workflows.w.outputs.x' }] }],
+  }] };
+
+  const [run, then] = await runScenario(document, { fetch, operations });
+  assert.ok(run.passed && then.passed, JSON.stringify(run.steps[0].checks));
+  assert.deepStrictEqual(run.steps[0].outputs, { first: 'a', xs: ['a'], ys: ['b', 'c'], zs: [] });
+  assert.strictEqual(urls.at(-1), '/demo/things/a', 'a JSON Pointer took the one item out of the list');
+});
+
+test('a selector naming a value that is not there fails its step, saying which output', async () => {
+  const fetch = async () => Response.json({ items: [] });
+  const [run] = await runScenario(doc([
+    { stepId: 'list', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: 'all' }],
+      outputs: { first: { context: '$response.body', selector: '$.items[0].id', type: 'jsonpath' } } },
+  ]), { fetch, operations });
+  assert.strictEqual(run.passed, false);
+  assert.match(run.steps[0].checks.at(-1).condition, /^output first: \$\.items\[0\]\.id matched nothing/);
+});
+
+test('a jsonpath criterion passes when it matches something, with runtime expressions embedded', async () => {
+  const fetch = async () => Response.json({ items: [{ id: 't1' }] });
+  const check = (condition) => runScenario(doc([
+    { stepId: 'make', operationId: 'createThing', outputs: { id: '$response.body#/items/0/id' } },
+    { stepId: 'look', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: 't1' }],
+      successCriteria: [{ context: '$response.body', condition, type: 'jsonpath' }] },
+  ]), { fetch, operations });
+  assert.strictEqual((await check("$.items[?@.id == '{$steps.make.outputs.id}']"))[0].passed, true);
+  assert.strictEqual((await check("$.items[?@.id == 'nope']"))[0].passed, false);
 });

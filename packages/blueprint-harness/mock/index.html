@@ -148,6 +148,9 @@
   }
   .steps .section:first-child { margin-top: .2rem; }
   #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
+  #stage > .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
+  #stage > ul.note { padding-left: 1.1rem; }
+  #stage > ul.note li { margin: 0 0 .25rem; }
   .panel .sectionline { margin: 0 0 .2rem; font-size: .8rem; font-weight: 600; color: var(--muted); }
   .op .n {
     font-family: var(--mono); font-size: .7rem; color: var(--faint);
@@ -1290,6 +1293,20 @@ const introOf = (doc) => {
   return panelParts;
 };
 
+/**
+ * A section's introduction, from its workflow's description: what happens in
+ * it, as a sentence or bullets. Standard Arazzo, like a step's description.
+ */
+const sectionIntroOf = (workflow) => {
+  const text = String(workflow.description ?? '').trim();
+  if (!text) return [];
+  const points = text.split('\n').map((line) => line.trim()).filter((line) => line.startsWith('- ')).map((line) => line.slice(2));
+  if (points.length === 0) return [el('p', text.replace(/\s+/g, ' '), 'note')];
+  const list = noticeList(points, null);
+  list.className = 'note';
+  return [list];
+};
+
 /** The run of the tour on this server, started at its first step. */
 const runnerFor = (doc) => {
   if (!tourRunner) {
@@ -1515,7 +1532,11 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   panel.id = `tour-step-${index}`;
 
   const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
-  if ((doc.content.workflows ?? []).length > 1) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
+  const sectioned = (doc.content.workflows ?? []).length > 1;
+  if (sectioned) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
+  // The section's introduction, on its first step when a step at a time; the
+  // whole tour shows it under the section's heading instead.
+  if (sectioned && live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
   panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
@@ -1633,7 +1654,10 @@ const renderTourStage = (stage, doc) => {
     const sectioned = (doc.content.workflows ?? []).length > 1;
     for (const [index, entry] of entries.entries()) {
       if (!tourResults.has(entry.key)) continue;
-      if (sectioned && entry.workflow !== entries[index - 1]?.workflow) stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+      if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
+        stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+        for (const part of sectionIntroOf(entry.workflow)) stage.append(part);
+      }
       stage.append(tourStepPanel(doc, entries, index, { live: false }));
     }
     return;
@@ -2002,6 +2026,43 @@ const locate = (token, op) => {
   for (const [name, declared] of Object.entries(op.ruleset?.ruleset?.inputs?.policy?.properties ?? {})) {
     if (name !== token) continue;
     return { path: op.ruleset.doc, yaml: snippet(name, declared, { prose: true }) };
+  }
+
+  // A procedure, by its id: what an action's `call: suggestFlags` runs.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    const procedures = [
+      ...(candidate.content?.procedures ?? []),
+      ...(candidate.content?.machines ?? []).flatMap((machine) => machine.procedures ?? []),
+    ];
+    const procedure = procedures.find((one) => one.id === token);
+    if (procedure) return { path: candidate.relativePath, yaml: asList(essential(procedure)) };
+  }
+
+  // A reaction, by the event it reacts to: `on: intake.application_income.updated`.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    for (const machine of candidate.content?.machines ?? []) {
+      const reaction = (machine.on ?? []).find((one) => one.type === token);
+      if (reaction) return { path: candidate.relativePath, yaml: snippet(`${machine.object} on`, [essential(reaction)]) };
+    }
+  }
+
+  // A ruleset, by its name: what it takes and what it gives back. Its facts
+  // are found one at a time below.
+  for (const { name, ruleset, doc: at } of rulesets()) {
+    if (name !== token) continue;
+    return {
+      path: at,
+      yaml: snippet(name, { inputs: Object.keys(ruleset.inputs ?? {}), outputs: Object.keys(ruleset.outputs ?? {}) }),
+    };
+  }
+
+  // A fact in any ruleset, by its path, for an operation that isn't a rules
+  // endpoint itself: a state machine evaluates one and acts on what it says.
+  if (!op.ruleset) {
+    for (const { ruleset, doc: at } of rulesets()) {
+      const fact = (ruleset.facts ?? []).find((one) => one.path === factPath);
+      if (fact) return { path: at, yaml: asList(essential(fact)) };
+    }
   }
 
   // A schema anywhere in the set.

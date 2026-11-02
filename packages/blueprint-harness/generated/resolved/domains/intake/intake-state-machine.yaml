@@ -28,6 +28,17 @@ machines:
     emits:
       - id: submitted
         description: TODO — describe when this event is emitted and who consumes it.
+        schema:
+          type: object
+          required:
+            - programsAppliedFor
+          additionalProperties: false
+          properties:
+            programsAppliedFor:
+              type: array
+              items:
+                type: string
+              description: The programs the household applied for, which eligibility screens.
       - id: closed
         description: TODO — describe when this event is emitted and who consumes it.
       - id: withdrawn

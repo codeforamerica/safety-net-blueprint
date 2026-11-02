@@ -61,6 +61,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -3586,6 +3596,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -4105,6 +4125,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -4862,6 +4892,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -5334,6 +5374,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -7889,6 +7939,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -7913,7 +7986,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -8731,6 +8804,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -8755,7 +8851,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -9591,6 +9687,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -9615,7 +9734,30 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "422":
+          description: The request was well-formed but contained semantic errors.
           content:
             application/json:
               schema:
@@ -10433,6 +10575,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -10457,7 +10622,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -10616,6 +10781,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -10640,7 +10828,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -10800,6 +10988,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -10824,7 +11035,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -10983,6 +11194,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -11007,7 +11241,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -11327,6 +11561,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -11568,6 +11812,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -11816,6 +12070,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 

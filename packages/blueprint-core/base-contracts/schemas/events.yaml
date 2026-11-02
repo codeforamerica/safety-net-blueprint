@@ -245,6 +245,10 @@ TimerRequestedEvent:
     service registers the timer and fires the caller-specified callback event
     when the timer expires, passing callback.data through unchanged and adding
     timerId to the payload.
+
+    The request event's subject is the record the timer is for. The callback
+    event carries the same subject, so a state machine reacting to it with a
+    transition acts on that record.
   required:
     - timerId
     - callback
@@ -301,10 +305,13 @@ TimerCallbackEvent:
     callback.data from the original platform.timer.requested event, passed
     through unchanged, with timerId added by the timer service.
 
-    The timer service is a pure relay — it does not add, derive, or modify
-    any fields beyond timerId. The event name is the domain-specific name from
-    callback.event in the original request (e.g., workflow.creation_deadline),
-    not a generic scheduler.timer.fired event.
+    The timer service adds nothing to the payload but timerId. The event name
+    is the domain-specific name from callback.event in the original request
+    (e.g., workflow.creation_deadline), not a generic scheduler.timer.fired
+    event.
+
+    The callback's envelope carries the timer request's subject, the record the
+    timer is for, and sets causationid to the id of the timer request event.
   required:
     - timerId
   properties:

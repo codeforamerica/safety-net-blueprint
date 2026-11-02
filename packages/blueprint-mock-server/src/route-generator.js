@@ -481,7 +481,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
             const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
             const expandedItems = expandFields.length > 0
-              ? items.map(item => applyExpand(item, expandFields, findById))
+              ? items.map(item => applyExpand(item, expandFields, (c, id) => store.findById(c, id)))
               : items;
             return Response.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
           };

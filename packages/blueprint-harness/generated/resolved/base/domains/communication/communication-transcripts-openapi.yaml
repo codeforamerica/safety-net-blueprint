@@ -454,7 +454,10 @@ paths:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
       summary: Pause transcript
-      description: Take the conversation off the record, at the time the client says.
+      description: |-
+        Take the conversation off the record, at the time the client says.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: pauseTranscript
       requestBody:
         required: true
@@ -471,10 +474,18 @@ paths:
                 $ref: "#/components/schemas/Transcript"
         "400":
           $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
         "404":
           $ref: ../../components/responses.yaml#/NotFound
         "409":
-          $ref: ../../components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
       tags:
@@ -488,7 +499,10 @@ paths:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
       summary: Resume transcript
-      description: Put the conversation back on the record, at the time the client says.
+      description: |-
+        Put the conversation back on the record, at the time the client says.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: resumeTranscript
       requestBody:
         required: true
@@ -505,10 +519,18 @@ paths:
                 $ref: "#/components/schemas/Transcript"
         "400":
           $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
         "404":
           $ref: ../../components/responses.yaml#/NotFound
         "409":
-          $ref: ../../components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
       tags:
@@ -522,7 +544,10 @@ paths:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
       summary: Close transcript
-      description: End the transcript, at the time the client says. A pause still open ends then too.
+      description: |-
+        End the transcript, at the time the client says. A pause still open ends then too.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: closeTranscript
       requestBody:
         required: true
@@ -539,10 +564,18 @@ paths:
                 $ref: "#/components/schemas/Transcript"
         "400":
           $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
         "404":
           $ref: ../../components/responses.yaml#/NotFound
         "409":
-          $ref: ../../components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
       tags:

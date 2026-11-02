@@ -279,7 +279,10 @@ $defs:
       onEvent structure:
         type        — fully qualified event type (e.g., intake.application.submitted).
         description — human-readable summary of what this subscription does.
-        transition  — if present, requires an existing instance; from limits source states.
+        transition  — if present, the handler acts on the machine's record whose id is
+                      the event's subject, which must exist; from limits source states.
+                      An event whose subject names no such record, or a record in
+                      another state, is skipped.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
@@ -832,8 +835,9 @@ $defs:
           What happens when a call to an operation fails: the `do` steps run
           instead of the action's steps, which are discarded, and the action
           ends in `to`. The failure is bound as `as` names it, `error` when it
-          doesn't — its HTTP `status` alongside the shared Error shape's
-          `code`, `message` and `details`. The action answers with the call's
+          doesn't — a CallError (base/schemas/operations.yaml): its HTTP
+          `status` alongside the shared Error shape's `code`, `message` and
+          `details`. The action answers with the call's
           failure, the record as it now is in details. Without catch, a failed
           call fails the action and nothing is saved. `catch` on the call is
           the Amazon States Language's Catch on a Task; `as` and `do` are

@@ -348,7 +348,8 @@ The same file runs as a test, is one of the tours in the demo page's Show me aro
 - steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`
 - runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
-- `successCriteria` comparisons joined by `&&`, and `outputs`
+- selectors (Arazzo 1.1), `{ context, selector, type }`, in outputs, parameter values and request bodies — `type: jsonpath` to pick items out of a list by what they hold, `type: jsonpointer` for a value at a fixed place. A JSONPath's shape follows the query, as RFC 9535 sorts them: one made only of names and indexes (`$.items[0].id`) gives that value, and fails the step when it isn't there; one with a filter or a wildcard (`$.items[?@.status == 'proposed'].id`) gives a list, which may be empty. To use one item of such a list later, select `/0` from it with a JSON Pointer
+- `successCriteria` comparisons joined by `&&`, and `jsonpath` conditions, which pass when they match anything; and `outputs`
 - workflows that depend on earlier ones, `dependsOn`, reading what they produced as `$workflows.<id>.outputs.<name>` — a long scenario in sections, one workflow each, on the same mock throughout; the demo page heads each section with its workflow's `summary`
 - `onFailure` actions of type `retry`, with `retryAfter` in seconds and `retryLimit` — for a step checking what the mock does after it answers, such as a state machine's reaction to an event, which may not have run the moment the step before it returns
 - `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
@@ -370,7 +371,7 @@ workflow.passed; // and workflow.steps: each request, response and check
 
 A failed step stops its workflow, since later steps would act on what it did not produce.
 
-A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text.
+A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text. A name in backticks in those bullets links to where the contracts declare it, shown when you hover or tap it. That works for the step operation's own parameters, fields and responses, and across the set for actions, procedures, reactions (by the event they listen for), rulesets, facts, compositions, SLA types, registry entries and schemas. A workflow's `description` is shown under its section's heading, in the same form.
 
 ## The mock's own endpoints
 

@@ -8,6 +8,7 @@
  * Both return an array of { rule, message, path } error objects.
  */
 
+import { everyStep } from '../steps.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import yaml from 'js-yaml';
@@ -134,19 +135,9 @@ export function extractConditionIds(conditions) {
 }
 
 function* walkCallStrings(steps) {
-  if (!Array.isArray(steps)) return;
-  for (const step of steps) {
-    if (!step || typeof step !== 'object') continue;
+  for (const step of everyStep(steps)) {
     // A string starting with $ holds a call to an operation, not a procedure's name.
     if (typeof step.call === 'string' && !step.call.startsWith('$')) yield step.call;
-    yield* walkCallStrings(step.then);
-    yield* walkCallStrings(step.else);
-    yield* walkCallStrings(step.do);
-    yield* walkCallStrings(step.catch?.do);
-    if (step.when && typeof step.when === 'object') {
-      for (const substeps of Object.values(step.when)) yield* walkCallStrings(substeps);
-    }
-    if (step.forEach?.do) yield* walkCallStrings(step.forEach.do);
   }
 }
 
@@ -157,21 +148,11 @@ function* walkCallStrings(steps) {
  * answers with a response; the others are logged, and written after the steps.
  */
 function* walkUnreachableFailures(steps) {
-  if (!Array.isArray(steps)) return;
-  for (const step of steps) {
-    if (!step || typeof step !== 'object') continue;
+  for (const step of everyStep(steps)) {
     if ((step.catch || step.bind) && step.call !== undefined) {
       const operation = typeof step.call === 'string' ? step.call.startsWith('$') : 'operationId' in (step.call ?? {});
       if (!operation) yield step;
     }
-    yield* walkUnreachableFailures(step.then);
-    yield* walkUnreachableFailures(step.else);
-    yield* walkUnreachableFailures(step.do);
-    yield* walkUnreachableFailures(step.catch?.do);
-    if (step.when && typeof step.when === 'object') {
-      for (const substeps of Object.values(step.when)) yield* walkUnreachableFailures(substeps);
-    }
-    if (step.forEach?.do) yield* walkUnreachableFailures(step.forEach.do);
   }
 }
 
@@ -378,16 +359,40 @@ function checkGuardClauses(guards, path, validRoles, guardIds) {
  * @param {object[]} steps - Authored steps
  * @returns {string[]}
  */
-function shortEmitsIn(steps) {
+function emitsIn(steps) {
   const out = [];
-  for (const step of steps || []) {
-    if (!step || typeof step !== 'object') continue;
-    if (typeof step.emit === 'string') out.push(step.emit);
-    else if (step.emit?.event) out.push(step.emit.event);
-    out.push(...shortEmitsIn(step.then), ...shortEmitsIn(step.else), ...shortEmitsIn(step.do));
-    for (const branch of Object.values(step.when || {})) out.push(...shortEmitsIn(branch));
+  for (const step of everyStep(steps)) {
+    if (typeof step.emit === 'string') out.push({ event: step.emit });
+    else if (step.emit?.event) out.push({ event: step.emit.event, data: step.emit.data });
   }
   return out;
+}
+
+/**
+ * What's wrong with the data an emit step sends, against the schema its event
+ * declares: a property the schema requires that the step doesn't send; one it
+ * sends that the schema doesn't declare, when the schema allows no others; or
+ * data at all, when the event declares no schema and so carries none. The
+ * values are runtime expressions, so only the property names are checked.
+ *
+ * @param {{ event: string, data?: object }} emit
+ * @param {{ schema?: object }} declared - The event, as the machine's emits declares it
+ * @returns {string[]} Messages
+ */
+function emitDataProblems(emit, declared) {
+  const sent = emit.data && typeof emit.data === 'object' ? Object.keys(emit.data) : [];
+  const schema = declared.schema;
+  if (!schema) {
+    return sent.length ? [`emit "${emit.event}" sends data (${sent.join(', ')}), but the event declares no schema, so it carries none. Declare the data under its schema in emits.`] : [];
+  }
+  const problems = [];
+  const missing = (schema.required || []).filter((name) => !sent.includes(name));
+  if (missing.length) problems.push(`emit "${emit.event}" doesn't send ${missing.join(', ')}, which its schema requires.`);
+  if (schema.additionalProperties === false) {
+    const undeclared = sent.filter((name) => !Object.hasOwn(schema.properties || {}, name));
+    if (undeclared.length) problems.push(`emit "${emit.event}" sends ${undeclared.join(', ')}, which its schema doesn't declare.`);
+  }
+  return problems;
 }
 
 export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROLES } = {}) {
@@ -415,21 +420,27 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       errors.push({ rule: 'renamed-key', message: '`events:` is now `on:` — the events this machine reacts to.', path: `${ctx}.events` });
     }
 
-    // Every event a step sends by id is one the machine declares under emits.
-    const emitted = new Set();
+    // Every event a step sends by id is one the machine declares under emits,
+    // and the data it sends fits the schema the event declares.
+    const emitted = new Map();
     for (const e of (machine.emits || [])) {
       if (!e?.id) continue;
       if (emitted.has(e.id)) errors.push({ rule: 'duplicate-id', message: `Duplicate emitted event id "${e.id}"`, path: `${ctx}.emits` });
-      emitted.add(e.id);
+      emitted.set(e.id, e);
     }
     for (const [key, holders] of [['actions', machine.actions], ['on', machine.on], ['procedures', machine.procedures]]) {
       for (const holder of holders || []) {
-        for (const name of shortEmitsIn(holder?.steps)) {
-          if (!emitted.has(name)) {
+        for (const emit of emitsIn(holder?.steps)) {
+          const name = emit.event;
+          if (emitted.has(name)) {
+            for (const message of emitDataProblems(emit, emitted.get(name))) {
+              errors.push({ rule: 'emit-data', message, path: `${ctx}.${key}[${holder.id ?? holder.type ?? '?'}]` });
+            }
+          } else {
             errors.push({
               rule: 'undeclared-emit',
               message: `emit "${name}" is not an event the ${machine.object} machine declares under emits` +
-                (emitted.size ? ` (declared: ${[...emitted].join(', ')})` : ', which declares none') + '.',
+                (emitted.size ? ` (declared: ${[...emitted.keys()].join(', ')})` : ', which declares none') + '.',
               path: `${ctx}.${key}[${holder.id ?? holder.type ?? '?'}]`,
             });
           }

@@ -69,12 +69,23 @@ paths:
     post:
       summary: Propose a suggestion
       description: |
-        Propose a suggestion. It begins in `proposed`. An operation suggestion
-        is refused when its operation does not exist, or its call's arguments
-        do not match the operation; an informing one, when its category does
-        not exist. One whose fingerprint matches a suggestion still open
-        (`proposed` or `refused`) or `dismissed` is refused with `409`, naming
-        that suggestion in `details`.
+        Propose a suggestion. It begins in `proposed`.
+
+        An operation suggestion is refused with `422` when its operation does
+        not exist, or its call doesn't fit the operation: a parameter the
+        operation doesn't declare, a required parameter left out, or a
+        parameter value or request body the operation's schemas refuse.
+        `details` names the field, as `call.requestBody.payload.<field>` for the
+        body.
+
+        An informing suggestion is refused with `422` when its category does
+        not exist, when it has neither a category nor a message, or when its
+        `path` isn't a JSON Pointer.
+
+        One whose fingerprint matches a suggestion still open (`proposed` or
+        `refused`) or `dismissed` is refused with `409`, naming that suggestion
+        in `details`. One matching an `accepted` or `expired` suggestion may be
+        proposed again.
       operationId: createSuggestion
       tags:
         - Suggestions
@@ -252,6 +263,12 @@ components:
             operation suggestion's whole call; an informing one's subject,
             path and category — or, uncategorized, its message. A keyed hash,
             so nothing can be read back from it.
+
+            Before hashing, values are made comparable, so two suggestions that
+            differ only in these ways have the same fingerprint: text is
+            trimmed, runs of spaces become one, and case is ignored; a
+            date-time is compared as the instant it names; an object's keys
+            and a call's parameters may come in any order.
         reason:
           type: string
           readOnly: true

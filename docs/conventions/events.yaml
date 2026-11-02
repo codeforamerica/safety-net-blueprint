@@ -180,6 +180,32 @@ event_catalog:
           user ID only, not name or email. Required when authtype is present.
           Required for FTI-governed events per IRS Pub. 1075.
         required: false
+      - name: causationid
+        description: |
+          CloudEvents Correlation extension (optional). The id of the event
+          that caused this one, set when an event is emitted in reaction to
+          another. Events caused by a request carry traceparent instead.
+        required: false
+      - name: partitionkey
+        description: |
+          CloudEvents Partitioning extension. The id of the aggregate the
+          event belongs to; see event_ordering.
+        required: false
+
+  event_ordering:
+    rule: |
+      Set partitionkey to the id of the aggregate the event belongs to: the
+      record that owns the others, as the application owns its members,
+      incomes and interviews. A subscriber handles events with the same key one
+      at a time, in the order they occurred, and finishes one before it takes
+      the next.
+    rationale: |
+      It keeps a subscriber from acting on stale data: two reactions to the
+      same application can't overlap or finish out of order. It doesn't hold
+      back a person's request that changes a record while a reaction is
+      running; a write based on an earlier read sends If-Match for that
+      (http.yaml, etags).
+    details: docs/architecture/inter-domain-communication.md (Event ordering)
 
   type_naming:
     pattern: "org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}"

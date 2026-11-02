@@ -11,6 +11,7 @@
  * applies it.
  */
 
+import { everyStep } from '../steps.js';
 import { governedResource } from '../attachment.js';
 import { buildParameterIndex, buildPathEntry, extractRefName } from '../openapi/utils.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
@@ -36,10 +37,11 @@ export function buildOperationId(trigger, objectName) {
  * @param {Object|null} requestSchema - The schema.request value (resolved JSON Schema object)
  * @returns {Object|null} OpenAPI requestBody object, or null if no schema provided
  */
-function buildRequestBody(requestSchema) {
+function buildRequestBody(requestSchema, defs = {}) {
   if (!requestSchema) return null;
   return {
-    required: true,
+    // Written only when true: false is OpenAPI's default (naming.yaml, omit_defaults).
+    ...(requiresSomething(requestSchema, defs) ? { required: true } : {}),
     content: {
       'application/json': {
         // Deep-clone so rewriteLocalDefsRefs does not mutate the source
@@ -48,6 +50,24 @@ function buildRequestBody(requestSchema) {
       }
     }
   };
+}
+
+/**
+ * Whether a request schema needs a body: it requires a property, or sets
+ * minProperties. A schema that requires nothing can be left out, as accepting
+ * a suggestion as proposed sends no body. A reference into the machine's own
+ * $defs is followed; one that can't be is taken to need a body.
+ * @param {Object} schema
+ * @param {Object} defs - The state machine's $defs
+ * @returns {boolean}
+ */
+function requiresSomething(schema, defs) {
+  const local = typeof schema?.$ref === 'string' ? /^#\/\$defs\/(.+)$/.exec(schema.$ref) : null;
+  if (schema?.$ref) {
+    if (!local || !defs[local[1]]) return true;
+    return requiresSomething(defs[local[1]], defs);
+  }
+  return (schema?.required ?? []).length > 0 || (schema?.minProperties ?? 0) > 0;
 }
 
 /**
@@ -118,6 +138,23 @@ function hoistDefs(defs, rootNames, domain) {
 }
 
 /**
+ * Whether an action's own steps call another operation: a `call` naming an
+ * operation, or one whose call is a runtime expression (`$request.call`). A
+ * `call` of a bare name runs a procedure, and is not counted.
+ * @param {Object[]} steps
+ * @returns {boolean}
+ */
+function callsAnOperation(steps) {
+  for (const { call } of everyStep(steps)) {
+    if (call && typeof call === 'object') return true;
+    if (typeof call === 'string' && call.startsWith('$')) return true;
+  }
+  return false;
+}
+
+const CALL_FAILURE = 'It calls another operation. When that call fails, the action answers with the call\'s own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.';
+
+/**
  * Generate an OpenAPI overlay for a single state machine.
  * @param {Object} stateMachine - The parsed state machine contract
  * @param {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string }} endpointInfo
@@ -146,13 +183,15 @@ export function generateOverlay(stateMachine, endpointInfo) {
       const to = transition.transition?.to ?? '(in-place)';
       const fromLabel = Array.isArray(from) ? from.join(' | ') : (from ?? '?');
 
+      const calls = callsAnOperation(transition.steps);
+      const described = transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`;
       const operation = {
         summary: `${transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' ')} ${objectName.toLowerCase()}`,
-        description: transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`,
+        description: calls ? `${described}\n\n${CALL_FAILURE}` : described,
         operationId,
       };
 
-      const requestBody = buildRequestBody(transition.schema?.request || null);
+      const requestBody = buildRequestBody(transition.schema?.request || null, stateMachine.$defs);
       if (requestBody) {
         operation.requestBody = requestBody;
       }
@@ -167,8 +206,14 @@ export function generateOverlay(stateMachine, endpointInfo) {
           content: { 'application/json': { schema: responseSchema } }
         },
         '400': { $ref: './components/responses.yaml#/BadRequest' },
+        // A guard can name the roles allowed to take the action.
+        '403': { $ref: './components/responses.yaml#/Forbidden' },
         '404': { $ref: './components/responses.yaml#/NotFound' },
-        '409': { $ref: './components/responses.yaml#/Conflict' },
+        '409': {
+          description: 'The record is in a state this action can\'t start from, or one of its guards isn\'t met.',
+          content: { 'application/json': { schema: { $ref: './components/responses.yaml#/Error' } } },
+        },
+        ...(requestBody || calls ? { '422': { $ref: './components/responses.yaml#/UnprocessableEntity' } } : {}),
         '500': { $ref: './components/responses.yaml#/InternalError' }
       };
 

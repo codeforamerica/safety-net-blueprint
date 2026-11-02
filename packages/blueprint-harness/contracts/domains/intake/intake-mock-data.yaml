@@ -19,6 +19,73 @@ ApplicationExample1:
   createdAt: "2026-02-01T09:00:00Z"
   updatedAt: "2026-02-01T09:15:00Z"
 
+# Rosa, on the application above, and the incomes she reported. Each income
+# has something the interview flags: wages that vary, cash tips that also
+# vary, self-employment income, and a salary a pay stub shows is higher.
+ApplicationMemberExample1:
+  id: 11111111-1111-4111-8111-100000000001
+  applicationId: 11111111-1111-4111-8111-111111111111
+  firstName: Rosa
+  lastName: Diaz
+  relationship: self
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:00:00Z"
+
+ApplicationIncomeExample1:
+  id: 11111111-1111-4111-8111-200000000001
+  applicationId: 11111111-1111-4111-8111-111111111111
+  memberId: 11111111-1111-4111-8111-100000000001
+  source: earned
+  amount: 300
+  frequency: weekly
+  amountVaries: true
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:00:00Z"
+
+ApplicationIncomeExample2:
+  id: 11111111-1111-4111-8111-200000000002
+  applicationId: 11111111-1111-4111-8111-111111111111
+  memberId: 11111111-1111-4111-8111-100000000001
+  source: earned
+  amount: 120
+  frequency: weekly
+  paidInCash: true
+  amountVaries: true
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:00:00Z"
+
+ApplicationIncomeExample3:
+  id: 11111111-1111-4111-8111-200000000003
+  applicationId: 11111111-1111-4111-8111-111111111111
+  memberId: 11111111-1111-4111-8111-100000000001
+  source: self_employment
+  amount: 400
+  frequency: monthly
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:00:00Z"
+
+ApplicationIncomeExample4:
+  id: 11111111-1111-4111-8111-200000000004
+  applicationId: 11111111-1111-4111-8111-111111111111
+  memberId: 11111111-1111-4111-8111-100000000001
+  source: earned
+  amount: 1100
+  frequency: monthly
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:00:00Z"
+
+IncomeVerificationExample3:
+  id: 11111111-1111-4111-8111-300000000001
+  applicationId: 11111111-1111-4111-8111-111111111111
+  kind: pay_stub
+  memberId: 11111111-1111-4111-8111-100000000001
+  incomeId: 11111111-1111-4111-8111-200000000004
+  period: "2026-10-15"
+  amount: 1250
+  frequency: monthly
+  createdAt: "2026-10-16T09:00:00Z"
+  updatedAt: "2026-10-16T09:00:00Z"
+
 ApplicationExample2:
   id: 22222222-2222-4222-8222-222222222222
   status: draft

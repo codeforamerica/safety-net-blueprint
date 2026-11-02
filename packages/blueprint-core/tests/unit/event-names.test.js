@@ -58,6 +58,36 @@ describe('a machine\'s emits', () => {
     assert.deepEqual(errorsOf(doc, 'schema-conformance'), []);
   });
 
+  test('a step inside a call\'s catch is checked too', () => {
+    const doc = machineDoc({ emits: [{ id: 'shipped' }], actions: [{ id: 'ship', steps: [{ call: { operationId: 'x' }, catch: { do: [{ emit: 'shiped' }] } }] }] });
+    assert.equal(errorsOf(doc, 'undeclared-emit').length, 1);
+  });
+
+  describe('the data a step sends, against the event\'s schema', () => {
+    const schema = { type: 'object', required: ['reason'], additionalProperties: false, properties: { reason: { type: 'string' }, note: { type: 'string' } } };
+    const sending = (data) => machineDoc({ emits: [{ id: 'held', schema }], actions: [{ id: 'hold', steps: [{ emit: { event: 'held', data } }] }] });
+
+    test('data that fits the schema is clean', () => {
+      assert.deepEqual(errorsOf(sending({ reason: '$request.reason', note: '$request.note' }), 'emit-data'), []);
+    });
+
+    test('a property the schema requires and the step doesn\'t send is an error', () => {
+      const [error] = errorsOf(sending({ note: '$request.note' }), 'emit-data');
+      assert.match(error.message, /emit "held" doesn't send reason, which its schema requires/);
+    });
+
+    test('a property the schema doesn\'t declare, when it allows no others, is an error', () => {
+      const [error] = errorsOf(sending({ reason: 'x', mood: 'x' }), 'emit-data');
+      assert.match(error.message, /emit "held" sends mood, which its schema doesn't declare/);
+    });
+
+    test('data on an event that declares no schema is an error', () => {
+      const doc = machineDoc({ emits: [{ id: 'held' }], actions: [{ id: 'hold', steps: [{ emit: { event: 'held', data: { reason: 'x' } } }] }] });
+      const [error] = errorsOf(doc, 'emit-data');
+      assert.match(error.message, /emit "held" sends data \(reason\), but the event declares no schema/);
+    });
+  });
+
   test('`events:` is reported as renamed to `on:`', () => {
     const [error] = errorsOf(machineDoc({ events: [] }), 'renamed-key');
     assert.match(error.message, /`events:` is now `on:`/);

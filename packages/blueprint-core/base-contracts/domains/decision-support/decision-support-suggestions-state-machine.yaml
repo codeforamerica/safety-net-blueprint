@@ -37,6 +37,15 @@ machines:
         description: A person said yes; for an operation suggestion, the call was made, and its own events name this one as their cause.
       - id: refused
         description: A person said yes, and the call could not be made. Carries the call and the error.
+        schema:
+          type: object
+          required: [call, error]
+          properties:
+            call:
+              $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
+              description: The call that was tried, the corrected one sent or else the one proposed.
+            error:
+              $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/CallError"
       - id: dismissed
         description: A person said no, with a reason.
       - id: expired

@@ -3830,6 +3830,16 @@ export type ListApplicationsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -6156,6 +6166,16 @@ export type ListIncomeVerificationsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -6512,6 +6532,16 @@ export type ListApplicationIncomesData = {
          * | `-field:value` | Exclude / negate | `-status:denied` |
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
          *
          * ## Examples
          *
@@ -7001,6 +7031,16 @@ export type ListApplicationInterviewsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -7295,6 +7335,16 @@ export type ListApplicationMembersData = {
          * | `-field:value` | Exclude / negate | `-status:denied` |
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
          *
          * ## Examples
          *
@@ -8516,6 +8566,25 @@ export type SubmitApplicationErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -8535,7 +8604,7 @@ export type SubmitApplicationErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -9072,6 +9141,25 @@ export type OpenApplicationErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -9091,7 +9179,7 @@ export type OpenApplicationErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -9637,6 +9725,25 @@ export type CloseApplicationErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -9656,9 +9763,28 @@ export type CloseApplicationErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */
@@ -10193,6 +10319,25 @@ export type WithdrawApplicationErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -10212,7 +10357,7 @@ export type WithdrawApplicationErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -10750,6 +10895,25 @@ export type StartInterviewErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -10769,7 +10933,7 @@ export type StartInterviewErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -10879,6 +11043,25 @@ export type ProcessSuggestionsInterviewErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -10898,7 +11081,7 @@ export type ProcessSuggestionsInterviewErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -11008,6 +11191,25 @@ export type CompleteInterviewErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -11027,7 +11229,7 @@ export type CompleteInterviewErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
         /**
@@ -11341,6 +11543,16 @@ export type GetApplicationReviewDemographicsSectionData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -11520,6 +11732,16 @@ export type GetApplicationReviewContactSectionData = {
          * | `-field:value` | Exclude / negate | `-status:denied` |
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
          *
          * ## Examples
          *
@@ -11704,6 +11926,16 @@ export type ListReviewProgressBySectionData = {
          * | `-field:value` | Exclude / negate | `-status:denied` |
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
          *
          * ## Examples
          *

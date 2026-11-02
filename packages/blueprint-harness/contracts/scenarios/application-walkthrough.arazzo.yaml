@@ -3,7 +3,7 @@
 # relationship, search, a lifecycle, a composition, rules, the event log, and
 # the mock's own controls. Each step's first line is its title in the page, and
 # its bullets are what the page shows under What to notice.
-arazzo: 1.0.1
+arazzo: 1.1.0
 info:
   title: The application walk-through
   version: 1.0.0

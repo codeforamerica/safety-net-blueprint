@@ -52,6 +52,16 @@ SearchQueryParam:
     | `field:*` | Field exists (not null) | `email:*` |
     | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+    ## Lists
+
+    A condition on a list matches when any item matches. That holds for a list
+    of values (`programs:snap`) and for a list of objects anywhere along a
+    dotted path (`members.firstName:Jo`, any member named Jo).
+
+    Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+    matches when some member is named Jo and some member, not necessarily the
+    same one, is over 60. There is no way to require the same item.
+
     ## Examples
 
     - `john` — exact match for "john" in searchable fields
