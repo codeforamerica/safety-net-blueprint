@@ -188,7 +188,26 @@ machines:
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
           - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
           - if: has(request.createFollowUp) && request.createFollowUp == true
-            then: [{call: {POST: workflow/tasks, requestBody: {payload: {$merge: $object, status: pending}}}, description: Create a follow-up task when caller requests one}]
+            then:
+              - call:
+                  POST: workflow/tasks
+                  requestBody:
+                    payload:
+                      name: $object.name
+                      description: $object.description
+                      taskType: $object.taskType
+                      subjectType: $object.subjectType
+                      subjectId: $object.subjectId
+                      programType: $object.programType
+                      isExpedited: $object.isExpedited
+                      queueId: $object.queueId
+                      priority: $object.priority
+                      status: pending
+                description: >
+                  Create a follow-up task when the caller asks for one: the same
+                  work, for the same subject, in the same queue. It carries none of
+                  the finished task's id, timestamps, outcome or assignment, so it
+                  starts pending and unassigned.
       - id: release
         description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
