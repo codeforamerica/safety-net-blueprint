@@ -184,6 +184,8 @@ paths:
                 $ref: "#/components/schemas/ExternalServiceCall"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -430,10 +432,12 @@ components:
 
     ExternalServiceCallCreate:
       type: object
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
       description: |
         Fields required to submit a new external service call. Exactly one of `serviceId`
         or `serviceType` must be provided to identify the target ExternalService catalog entry.
-      additionalProperties: false
+      unevaluatedProperties: false
       required:
         - requestingResourceId
       oneOf:

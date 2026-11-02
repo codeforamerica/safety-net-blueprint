@@ -446,6 +446,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentType"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -569,6 +571,8 @@ paths:
                 $ref: "#/components/schemas/DocumentLink"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -837,7 +841,9 @@ components:
 
     DocumentTypeCreate:
       type: object
-      additionalProperties: false
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
+      unevaluatedProperties: false
       required:
         - name
         - retentionYears
@@ -927,7 +933,9 @@ components:
 
     DocumentLinkCreate:
       type: object
-      additionalProperties: false
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
+      unevaluatedProperties: false
       required:
         - documentId
         - subjectType

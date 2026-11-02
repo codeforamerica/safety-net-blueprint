@@ -132,6 +132,8 @@ paths:
                 $ref: "#/components/schemas/Application"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -268,6 +270,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -450,6 +454,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -567,6 +573,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -685,6 +693,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -850,6 +860,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -967,6 +979,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1084,6 +1098,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1200,6 +1216,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1317,6 +1335,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1439,6 +1459,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1557,6 +1579,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1675,6 +1699,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1793,6 +1819,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -1911,6 +1939,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -2029,6 +2059,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -2147,6 +2179,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -2265,6 +2299,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -2389,6 +2425,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -2756,6 +2794,7 @@ components:
     ApplicationCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/Application"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - programsAppliedFor
@@ -2832,6 +2871,7 @@ components:
     ApplicationMemberCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/ApplicationMember"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - roles
@@ -2907,6 +2947,7 @@ components:
     IncomeCreate:
       allOf:
         - $ref: "../../common/schemas/income.yaml"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -2979,6 +3020,7 @@ components:
     ExpenseCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/Expense"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - type
@@ -3052,6 +3094,7 @@ components:
     AssetCreate:
       allOf:
         - $ref: "../../common/schemas/assets.yaml"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -3124,6 +3167,7 @@ components:
     JobCreate:
       allOf:
         - $ref: "../../common/schemas/employment.yaml"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -3187,7 +3231,9 @@ components:
               readOnly: true
 
     HealthPlanCreate:
-      $ref: "../../common/schemas/health.yaml"
+      allOf:
+        - $ref: "../../common/schemas/health.yaml"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     HealthPlanUpdate:
       description: >
@@ -3254,6 +3300,7 @@ components:
     HealthEnrollmentCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/HealthEnrollment"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -3327,6 +3374,7 @@ components:
     AssetDisposalCreate:
       allOf:
         - $ref: "../../common/schemas/assets.yaml#/$defs/AssetDisposal"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - type
@@ -3404,6 +3452,7 @@ components:
     DeductionCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/Deduction"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - type
@@ -3481,6 +3530,7 @@ components:
     DisabilityBenefitCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/DisabilityBenefit"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -3547,7 +3597,9 @@ components:
               readOnly: true
 
     ContactCreate:
-      $ref: "../../common/schemas/contact.yaml"
+      allOf:
+        - $ref: "../../common/schemas/contact.yaml"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     ContactUpdate:
       allOf:
@@ -3602,7 +3654,9 @@ components:
               readOnly: true
 
     OrganizationCreate:
-      $ref: "../intake/intake-schema.yaml#/$defs/Organization"
+      allOf:
+        - $ref: "../intake/intake-schema.yaml#/$defs/Organization"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     OrganizationUpdate:
       allOf:
@@ -3657,7 +3711,9 @@ components:
               readOnly: true
 
     PersonRelationshipCreate:
-      $ref: "../intake/intake-schema.yaml#/$defs/PersonRelationship"
+      allOf:
+        - $ref: "../intake/intake-schema.yaml#/$defs/PersonRelationship"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     PersonRelationshipUpdate:
       allOf:
@@ -3712,7 +3768,9 @@ components:
               readOnly: true
 
     AuthorizedRepresentativeCreate:
-      $ref: "../intake/intake-schema.yaml#/$defs/AuthorizedRepresentative"
+      allOf:
+        - $ref: "../intake/intake-schema.yaml#/$defs/AuthorizedRepresentative"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     AuthorizedRepresentativeUpdate:
       allOf:
@@ -3776,6 +3834,7 @@ components:
     TaxFilerCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/TaxFiler"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - memberId
@@ -3842,6 +3901,7 @@ components:
     SponsorCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/Sponsor"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - sponsoredMemberId
@@ -3899,7 +3959,9 @@ components:
               readOnly: true
 
     SignatureCreate:
-      $ref: "../intake/intake-schema.yaml#/$defs/Signature"
+      allOf:
+        - $ref: "../intake/intake-schema.yaml#/$defs/Signature"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
 
     SignatureUpdate:
       allOf:
@@ -4037,6 +4099,7 @@ components:
     VerificationCreate:
       allOf:
         - $ref: "../intake/intake-schema.yaml#/$defs/Verification"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           required:
             - category

@@ -75,6 +75,15 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         }
       }
 
+      // A caller may choose the new record's id, but not one another record has.
+      if (requestBody.id !== undefined && store.findById(endpoint.collectionName, requestBody.id)) {
+        return Response.json({
+          code: 'CONFLICT',
+          message: `Another record already has the id ${requestBody.id}.`,
+          details: [{ field: 'id', message: 'already in use' }],
+        }, { status: 409 });
+      }
+
       // An id that names no record is refused, like any other invalid value.
       const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
         parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
