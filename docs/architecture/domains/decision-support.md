@@ -144,8 +144,8 @@ In `blueprint-core/base-contracts/domains/decision-support/`.
 | # | Decision | Summary |
 |---|---|---|
 | 1 | [A framework domain a set opts into](#decision-1-a-framework-domain-a-set-opts-into) | Not on platform, not in intake |
-| 2 | [Two kinds: a proposed operation, or information](#decision-2-two-kinds-a-proposed-operation-or-information) | A change names its operation; anything else has a category |
-| 3 | [One suggestion is one change](#decision-3-one-suggestion-is-one-change) | A patch of five changes is five suggestions |
+| 2 | [Two kinds: a proposed operation, or information](#decision-2-two-kinds-a-proposed-operation-or-information) | A change names its operation; anything else has a category. Planned: a change to data is a JSON Patch against a composition |
+| 3 | [One suggestion is one change](#decision-3-one-suggestion-is-one-change) | A patch of five changes is five suggestions. Planned: changes that depend on each other go together |
 | 4 | [Accepting performs the change as the person who accepts](#decision-4-accepting-performs-the-change-as-the-person-who-accepts) | The same permissions and rules as making it by hand |
 | 5 | [A failed accept is recorded and can be retried](#decision-5-a-failed-accept-is-recorded-and-can-be-retried) | Refused, and retried by a person until it expires |
 | 6 | [Evidence refers, it does not quote](#decision-6-evidence-refers-it-does-not-quote) | Nothing sensitive copied out of its source |
@@ -178,7 +178,7 @@ decides who can use it and who has to carry it.
 
 ### Decision 2: Two kinds: a proposed operation, or information
 
-**Status:** Decided: B
+**Status:** Decided: B. C is planned for changes to data.
 
 **What's being decided:** Some suggestions are changes to make and some are only
 things to notice, so how a suggestion says what it is decides what accepting
@@ -189,18 +189,30 @@ it does.
   with its request schema; Arazzo names an operation the same way.
 - A question to ask or a risk to probe changes nothing, and differs by domain.
 - Data exchange already gives each service type its own result schema.
+- A person reviewing a change needs to see the record as it would be, and the
+  rules run on it, before accepting. An operation and its arguments don't say
+  that; every app would work it out from the operation's method and path.
+- A model often finds a new record together with records that refer to it,
+  such as a new member and their income.
 
 **Options:**
-- **(A)** A patch to any record, applied on accept. It would bypass each
-  operation's own rules.
+- **(A)** A patch written straight to the records on accept. It would bypass
+  each operation's own rules.
 - **(B) ✓** A proposed change names its operation and arguments, checked against
   the contracts when proposed, in the shape an Arazzo step names a call.
   Everything else names a category its domain declares, says what it points
   out in a message, or both.
+- **(C) Planned** A change to data is a JSON Patch (RFC 6902) against a
+  composition whose records are keyed by id. On accept, the server applies it
+  all or nothing, making each change through its record's own operation as the
+  person who accepts, so Decision 4 still holds. New records carry ids the
+  caller chooses, so a change can refer to a record another change creates.
+  Each change cites its own evidence. Operations stay for actions that aren't
+  changes to data, such as starting an interview.
 
 ### Decision 3: One suggestion is one change
 
-**Status:** Decided: B
+**Status:** Decided: B. C is planned, with Decision 2's C.
 
 **What's being decided:** A model reading a conversation can find several changes
 at once, so how they are grouped decides what a person can accept or turn down.
@@ -209,11 +221,16 @@ at once, so how they are grouped decides what a person can accept or turn down.
 - A person may agree with three of five changes.
 - A dismissed change is remembered so it is not proposed again, which needs each
   change on its own.
+- Some changes only make sense together: an income can't name a member who
+  doesn't exist yet.
 
 **Options:**
 - **(A)** One suggestion per batch, accepted or dismissed whole.
 - **(B) ✓** One suggestion per change. Whatever turns a result into suggestions
   splits it.
+- **(C) Planned** One suggestion per set of changes that depend on each other,
+  such as a new member and their income, accepted or dismissed whole. Changes
+  that don't depend on each other are still separate suggestions.
 
 ### Decision 4: Accepting performs the change as the person who accepts
 
