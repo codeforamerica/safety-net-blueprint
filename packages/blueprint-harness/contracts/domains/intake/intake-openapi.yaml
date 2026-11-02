@@ -46,9 +46,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationList'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Create an application
       operationId: createApplication
@@ -73,11 +73,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}:
     parameters:
@@ -94,9 +94,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     patch:
       summary: Update an application
       operationId: updateApplication
@@ -115,13 +115,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Application'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     delete:
       summary: Delete a draft application
       operationId: deleteApplication
@@ -130,9 +130,9 @@ paths:
         '204':
           description: Application deleted successfully.
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/income-verifications:
     parameters:
@@ -153,9 +153,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncomeVerificationList'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Record an income verification
       operationId: createIncomeVerification
@@ -174,13 +174,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncomeVerification'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/income-verifications/{incomeVerificationId}:
     parameters:
@@ -203,9 +203,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncomeVerification'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   # Incomes and the interview are records of their own under the application,
   # pared down from safety-net's, so an interview's flags and suggestions can
@@ -229,9 +229,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationIncomeList'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Report an income
       operationId: createApplicationIncome
@@ -250,13 +250,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationIncome'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/incomes/{incomeId}:
     parameters:
@@ -279,9 +279,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationIncome'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     patch:
       summary: Update an income
       operationId: updateApplicationIncome
@@ -300,13 +300,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationIncome'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/interviews:
     parameters:
@@ -327,9 +327,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/InterviewList'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Schedule an interview
       operationId: createApplicationInterview
@@ -348,13 +348,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Interview'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/interviews/{interviewId}:
     parameters:
@@ -377,9 +377,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Interview'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/members:
     parameters:
@@ -404,9 +404,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationMemberList'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Add a household member
       operationId: createApplicationMember
@@ -425,13 +425,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationMember'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /applications/{applicationId}/members/{memberId}:
     parameters:
@@ -449,9 +449,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationMember'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     patch:
       summary: Update a household member
       operationId: updateApplicationMember
@@ -470,13 +470,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApplicationMember'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     delete:
       summary: Remove a household member
       operationId: deleteApplicationMember
@@ -485,9 +485,9 @@ paths:
         '204':
           description: Household member removed successfully.
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
   parameters:

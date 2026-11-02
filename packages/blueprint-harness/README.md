@@ -132,9 +132,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 ### Shared schemas and components
 
-**[`contracts/common/components/responses.yaml`](contracts/common/components/responses.yaml)**
 **[`contracts/common/schemas/shared.yaml`](contracts/common/schemas/shared.yaml)**
-- Common error responses and shared schema types referenced across domain specs
+- Shared schema types referenced across domain specs. Error responses come from core's base contracts (`base/components/responses.yaml`), as in any contract set.
 
 ## Regenerating generated outputs
 

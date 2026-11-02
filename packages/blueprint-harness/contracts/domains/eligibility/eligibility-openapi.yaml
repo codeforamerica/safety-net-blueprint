@@ -47,9 +47,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeterminationList'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Create a determination
       operationId: createDetermination
@@ -74,11 +74,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Determination'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /determinations/{determinationId}:
     parameters:
@@ -95,9 +95,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Determination'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     patch:
       summary: Update a determination
       operationId: updateDetermination
@@ -116,13 +116,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Determination'
         '400':
-          $ref: '../../common/components/responses.yaml#/BadRequest'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /determinations/{determinationId}/decisions:
     parameters:
@@ -143,9 +143,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/DecisionList'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /determinations/{determinationId}/decisions/{decisionId}:
     parameters:
@@ -163,9 +163,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Decision'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
-          $ref: '../../common/components/responses.yaml#/InternalError'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
   parameters:

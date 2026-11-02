@@ -1761,8 +1761,8 @@ const flattened = (schema, doc) => {
  * What a given status answers with, named and located.
  *
  * A success is declared inline and lives in this document. A failure is a
- * `$ref` to `common/components/responses.yaml`, which every operation in
- * every domain shares — so the response object has to be followed before
+ * `$ref` to the shared responses in core's base contracts, which every
+ * operation in every domain shares — so the response object has to be followed before
  * there is a schema to name, and the file it is named in is not this one.
  * Without that, the page showed a shape for the happy path and nothing at
  * all for the four declared ways to fail.
