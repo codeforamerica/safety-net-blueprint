@@ -349,6 +349,7 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
+          compositeType: 'sectionView',
           resource: 'applications',
           state: {
             schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
@@ -365,6 +366,7 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
+          compositeType: 'sectionView',
           resource: 'applications',
           state: {
             schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
@@ -383,6 +385,7 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
+          compositeType: 'sectionView',
           resource: 'applications',
           state: { methods: ['put'] },
         },
@@ -397,6 +400,7 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
+          compositeType: 'sectionView',
           resource: 'applications',
           state: { schema: { type: 'object' } },
         },
@@ -411,6 +415,7 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
+          compositeType: 'sectionView',
           resource: 'applications',
           state: {
             schema: { name: 'ReviewProgress', type: 'object' },
@@ -542,3 +547,83 @@ test('compositions-schema sectionView', async (t) => {
 
 });
 
+
+test('compositions-schema editable', async (t) => {
+  const editable = (extra = {}, include = {}) => ({
+    version: '1.0',
+    compositions: {
+      applicationDetails: {
+        compositeType: 'editable',
+        resource: 'applications',
+        include: { members: { resource: 'application-members', bind: 'applicationId', ...include } },
+        ...extra,
+      },
+    },
+  });
+
+  await t.test('an editable composition with includes is valid', () => {
+    const { valid, errors } = validate(editable());
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('an include may select fields that keep id, or all of them', () => {
+    for (const fields of [['id', 'firstName'], ['*']]) {
+      const { valid, errors } = validate(editable({}, { fields }));
+      assert.ok(valid, `${fields}: ${errorPaths(errors).join('\n')}`);
+    }
+  });
+
+  await t.test('an include whose fields leave out id is refused', () => {
+    assert.ok(!validate(editable({}, { fields: ['firstName'] })).valid);
+  });
+
+  await t.test('filter and flatten are refused on an include, at any depth', () => {
+    assert.ok(!validate(editable({}, { filter: "status == 'active'" })).valid);
+    assert.ok(!validate(editable({}, { flatten: true })).valid);
+    assert.ok(!validate(editable({}, {
+      include: { incomes: { resource: 'incomes', bind: 'memberId', filter: 'true' } },
+    })).valid);
+  });
+
+  await t.test('filter, flatten, sections and panel are refused on the composition', () => {
+    for (const extra of [{ filter: 'true' }, { flatten: true }, { sections: { s: { resource: 'x' } } }, { panel: { include: {} } }]) {
+      assert.ok(!validate(editable(extra)).valid, JSON.stringify(extra));
+    }
+  });
+
+  await t.test('a composition that is not editable may still filter its includes', () => {
+    const doc = editable({}, { filter: 'true' });
+    delete doc.compositions.applicationDetails.compositeType;
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('view may be written out, and is what no type means', () => {
+    const doc = editable({}, { filter: 'true' });
+    doc.compositions.applicationDetails.compositeType = 'view';
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('sections and panel belong to sectionView only', () => {
+    for (const extra of [{ sections: { s: { resource: 'x' } } }, { panel: { include: {} } }]) {
+      const doc = editable(extra);
+      doc.compositions.applicationDetails.compositeType = 'view';
+      assert.ok(!validate(doc).valid, JSON.stringify(extra));
+    }
+  });
+
+  await t.test('state belongs to sectionView only', () => {
+    const state = { schema: { name: 'ReviewProgress', type: 'object' } };
+    for (const type of ['view', 'editable']) {
+      const doc = editable({ state });
+      doc.compositions.applicationDetails.compositeType = type;
+      assert.ok(!validate(doc).valid, type);
+    }
+  });
+
+  await t.test('an endpoint declares only get; patch comes from the type', () => {
+    const doc = editable({ endpoint: { path: '/applications/{applicationId}/details', methods: ['get', 'patch'] } });
+    assert.ok(!validateAsWritten(doc).valid);
+  });
+});
