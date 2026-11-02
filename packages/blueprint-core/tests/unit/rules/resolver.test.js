@@ -515,6 +515,15 @@ test('generateRulesApi', async (t) => {
     assert.strictEqual(response.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
   });
 
+  await t.test('response schema names each output, its value typed as declared', () => {
+    const response = generateRulesApi('eligibility', rulesDoc).components.schemas['ExpeditedSnapResponse'];
+    const outputs = response.allOf[1];
+    assert.deepStrictEqual(outputs.required, ['eligible']);
+    const [fact, narrowed] = outputs.properties.eligible.allOf;
+    assert.strictEqual(fact.$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationFact');
+    assert.deepStrictEqual(narrowed.properties.value, { anyOf: [{ type: 'boolean' }, { type: 'null' }] });
+  });
+
   await t.test('error responses resolve from anywhere, by their canonical URL', () => {
     const responses = generateRulesApi('eligibility', rulesDoc).paths['/assess-expedited-snap'].post.responses;
     assert.match(responses['400'].$ref, /^https:\/\/blueprint\.codeforamerica\.org\/base\/components\/responses\.yaml#/);

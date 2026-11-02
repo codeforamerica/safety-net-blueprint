@@ -255,7 +255,7 @@ already have, so `month.hoursWorked` always means one thing.
 Two things about a declared type change the answers a ruleset gives.
 
 **`integer` means integer arithmetic.** Division truncates: an income of 7
-divided by 4 is 1, not 1.75. That is CEL's behaviour for two integers and what
+divided by 4 is 1, not 1.75. That is CEL's behavior for two integers and what
 the declaration asks for, but in a benefit calculation it is a policy choice.
 A fact that wants real division converts explicitly — `double(x) / 4.0`.
 
@@ -319,10 +319,100 @@ generators read it like any other API. A rules file is not merged into its
 domain's OpenAPI document, so a domain can have any number of documents, and a
 rules file needs none.
 
+The response is the ruleset's outputs, keyed by output name, each with its
+state and what that state carries: `value` when complete or a placeholder,
+`missing` when inputs are absent, `message` on an error. A result is read by
+name — `#/eligible/value` — and the generated response schema types each
+output's `value` as the ruleset declares it:
+
+```json
+{
+  "eligible":      { "state": "complete", "value": true },
+  "benefitAmount": { "state": "missing", "value": null, "missing": ["$.household.income"] }
+}
+```
+
 Path parameters are not permitted. Nothing binds a path segment to ruleset
 inputs, so a parameter would be accepted and silently ignored — the path would
 promise resource hydration the endpoint does not perform. Identifiers go in the
 body with everything else.
+
+## Rulesets that flag records
+
+A ruleset can **flag records** a person should look into — a member with no
+medical costs listed, a household whose income is below its expenses. Each
+flag is an output that returns the ids of the records it flags, empty when it
+flags none, rather than true or false. Use `filter` where a yes-or-no fact
+would use `exists`. A flag about the whole application returns the
+application's id, taken as an input. The output says what its ids are with
+`x-relationship`, as any id field does, and validation checks the resource
+exists.
+
+```yaml
+rulesets:
+  householdFlags:
+    endpoint:
+      path: /applications/evaluate-household-flags
+    inputs:
+      applicationId: { type: string }
+      current: { $ref: '…#/$defs/Household' }
+    outputs:
+      elderlyWithoutMedicalCosts:
+        type: array
+        items: { type: string, x-relationship: { resource: ApplicationMember } }
+      incomeBelowExpenses:
+        type: array
+        items: { type: string, x-relationship: { resource: Application } }
+    facts:
+      - path: elderlyWithoutMedicalCosts
+        expression: >
+          current.members
+            .filter(m, m.age >= 60
+                       && !current.expenses.exists(e, e.type == 'medical' && e.memberId == m.id))
+            .map(m, m.id)
+      - path: incomeBelowExpenses
+        expression: "current.monthlyIncome < current.monthlyExpenses ? [applicationId] : []"
+```
+
+A flag may also carry what the ruleset worked out for each record it flags —
+a member's monthly income, calculated from their pay stubs, say — as a list
+of objects rather than of ids:
+
+```yaml
+    outputs:
+      monthlyIncomeToCorrect:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string, x-relationship: { resource: ApplicationMember } }
+            monthlyIncome: { type: number }
+```
+
+A state machine can turn each into a suggestion to change that record to that
+value.
+
+The ruleset only flags. It knows nothing about who looks at the records or how,
+so a screen, a report or another service can use the same flags.
+
+**Each flag has a category** in a `suggestion-categories` registry, whose
+description is what a person reads when the flag is put in front of them:
+
+```yaml
+type: suggestion-categories
+entries:
+  elderly-without-medical-costs:
+    description: An elderly member has no medical costs listed. Ask about doctor visits, prescriptions, or medical supplies.
+  income-below-expenses:
+    description: Reported income is less than expenses. Ask how the household covers the difference.
+```
+
+Keep category ids stable: a suggestion a person dismissed is matched by its
+category, so renaming one brings back everything dismissed under the old name.
+A flag can be renamed freely.
+
+How a state machine evaluates the ruleset and turns each flagged record into a
+suggestion is in [Decision Support](../architecture/domains/decision-support.md#from-flags-to-suggestions).
 
 ## Examples
 

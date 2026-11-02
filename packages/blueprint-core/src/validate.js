@@ -38,10 +38,11 @@ import {
 } from './indexes.js';
 import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
-import { readConfigs } from './contract-readers.js';
+import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
 import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
+import { unlistedCapabilityNames, withCapability } from './capabilities.js';
 
 /**
  * Contract types with no validator of their own.
@@ -91,8 +92,10 @@ export function validate(docs) {
 
   const context = {
     docs,
-    // Computed once, and only when the set has scenarios to check.
-    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
+    // Computed once, and only when the set has scenarios, or state machines
+    // calling operations, to check.
+    operationIds: docs.some((d) => d.type === 'arazzo' || (d.type === 'state-machine' && JSON.stringify(d.content).includes('"operationId"')))
+      ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -133,6 +136,16 @@ export function validate(docs) {
       warnings: warnings.map((finding) => normalize(finding, doc)),
     };
   });
+
+  // A finding naming something from a framework capability the set has not
+  // listed says so: the unknown operation or domain is not a typo, it is a
+  // capability left out. Worked out only when there is something to explain.
+  if (results.some((r) => !r.ok)) {
+    const unlisted = unlistedCapabilityNames(docs, { generatedOverlays, rulesApis });
+    for (const finding of results.flatMap((r) => r.errors)) {
+      finding.message = withCapability(finding.message, unlisted);
+    }
+  }
 
   return {
     ok: results.every((r) => r.ok),
@@ -579,7 +592,7 @@ function configCatalogs(doc, docs, schemaIndex) {
   // Anything past the envelope is a catalog. One in another shape — a bare
   // list, as catalogs once were — would otherwise seed nothing, silently.
   for (const [key, value] of Object.entries(doc.content ?? {})) {
-    if (['$schema', 'version', 'domain'].includes(key)) continue;
+    if (CONFIG_METADATA_KEYS.has(key)) continue;
     if (typeof value?.resource !== 'string' || !Array.isArray(value?.entries)) {
       errors.push({
         rule: 'not-a-catalog',
@@ -701,6 +714,32 @@ function channelsGenerated(doc, generated) {
   return errors;
 }
 
+/**
+ * Calls that send their body as `body:` beside the method, which `requestBody:
+ * {payload: …}` replaced — the Arazzo shape a call by operationId takes. Still
+ * read, so a warning rather than an error.
+ *
+ * @param {import('../types.js').Doc} doc - A state-machine document
+ * @returns {object[]}
+ */
+function deprecatedCallBodies(doc) {
+  const warnings = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.call && typeof node.call === 'object' && !Array.isArray(node.call) && 'body' in node.call) {
+      warnings.push({
+        rule: 'deprecated-call-body',
+        message: 'A call\'s `body:` is deprecated: write `requestBody: {payload: …}`, as a call by operationId and an Arazzo step do.',
+        path: `${doc.path}#${at}/call/body`,
+      });
+    }
+    for (const [key, value] of Object.entries(node)) walk(value, `${at}/${key}`);
+  };
+  walk(doc.content, '');
+  return warnings;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -762,6 +801,7 @@ function validateDoc(doc, context) {
           path: doc.path,
         });
       }
+      warnings.push(...deprecatedCallBodies(doc));
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -774,7 +814,7 @@ function validateDoc(doc, context) {
       }
       errors.push(...validateWithinFile(doc.path, doc.content, { validRoles: context.validRoles }));
       errors.push(
-        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex)
+        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operationIds)
       );
       errors.push(...validateEvents(doc, context.channels));
       errors.push(...resourcesNotNested(doc, context.docs));

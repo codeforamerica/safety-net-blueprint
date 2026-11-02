@@ -61,6 +61,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -491,6 +501,9 @@ paths:
                                 - under_review
                                 - withdrawn
                                 - closed
+                                - scheduled
+                                - in_progress
+                                - completed
                             submittedAt:
                               type:
                                 - string
@@ -793,8 +806,19 @@ paths:
                                               - under_review
                                               - withdrawn
                                               - closed
+                                              - scheduled
+                                              - in_progress
+                                              - completed
                                           programsAppliedFor:
-                                            type: string
+                                            type: array
+                                            items:
+                                              type: string
+                                              enum:
+                                                - snap
+                                                - medicaid
+                                                - chip
+                                                - tanf
+                                            description: Benefit programs the household is applying for.
                                           programCount:
                                             type: integer
                                             readOnly: true
@@ -1364,6 +1388,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -1666,8 +1693,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -2122,6 +2160,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -2424,8 +2465,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -2971,6 +3023,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -3273,8 +3328,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -3529,6 +3595,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -3998,6 +4074,1248 @@ paths:
                 properties:
                   message:
                     type: string
+  /applications/{applicationId}/incomes:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+    get:
+      summary: List an application's incomes
+      operationId: listApplicationIncomes
+      tags:
+        - Applications
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Search query using field:value syntax. Multiple conditions separated by
+            spaces are ANDed together.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples in this documentation
+            show human-readable syntax for clarity.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `term` | Full-text exact match | `john` |
+            | `*term*` | Full-text contains | `*john*` |
+            | `term*` | Full-text starts with | `john*` |
+            | `*term` | Full-text ends with | `*smith` |
+            | `field:value` | Exact match on field | `status:approved` |
+            | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+            | `field:value*` | Starts with | `name:john*` |
+            | `field:*value` | Ends with | `email:*@example.com` |
+            | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+            | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+            | `field:>value` | Greater than | `income:>1000` |
+            | `field:>=value` | Greater than or equal | `income:>=1000` |
+            | `field:<value` | Less than | `income:<5000` |
+            | `field:<=value` | Less than or equal | `income:<=5000` |
+            | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+            | `-field:value` | Exclude / negate | `-status:denied` |
+            | `field:*` | Field exists (not null) | `email:*` |
+            | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
+            ## Examples
+
+            - `john` — exact match for "john" in searchable fields
+            - `*john*` — contains "john" in searchable fields
+            - `name:*smith*` — name contains "smith" (case-insensitive)
+            - `email:*@example.com` — email ends with "@example.com"
+            - `status:approved` — exact match on status field
+            - `status:approved,pending` — status is "approved" OR "pending"
+            - `income:>=1000` — income greater than or equal to 1000
+            - `created:>2024-01-01` — created after January 1, 2024
+            - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+            - `-status:denied` — exclude records with status "denied"
+            - `-deletedAt:*` — only records where deletedAt does not exist
+            - `applicant.state:CA` — nested field filter
+
+            ## URL Encoding Reference
+
+            When manually constructing URLs, encode these characters:
+
+            | Character | Encoded |
+            |-----------|---------|
+            | (space) | `%20` or `+` |
+            | `"` | `%22` |
+            | `:` | `%3A` |
+            | `>` | `%3E` |
+            | `<` | `%3C` |
+            | `,` | `%2C` |
+
+            **Example:**
+            ```
+            Human-readable: q=status:approved income:>=1000
+            URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+            ```
+          examples:
+            simpleSearch:
+              summary: Full-text exact match
+              value: john
+            containsSearch:
+              summary: Full-text contains
+              value: "*john*"
+            exactMatch:
+              summary: Filter by status
+              value: status:approved
+            containsField:
+              summary: Name contains (case-insensitive)
+              value: name:*smith*
+            startsWithField:
+              summary: Name starts with
+              value: name:john*
+            endsWithField:
+              summary: Email ends with domain
+              value: email:*@example.com
+            multipleFilters:
+              summary: Status and income filter
+              value: status:approved income:>=1000
+            dateRange:
+              summary: Created after date
+              value: created:>2024-01-01
+            multiValue:
+              summary: Multiple statuses (OR)
+              value: status:approved,pending,under_review
+            negation:
+              summary: Exclude denied
+              value: "-status:denied"
+            notExists:
+              summary: Field does not exist
+              value: "-deletedAt:*"
+            nestedField:
+              summary: Filter by nested field
+              value: applicant.state:CA
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: The incomes reported on this application.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - type: object
+                          properties:
+                            memberId:
+                              type: string
+                              format: uuid
+                              description: The member who receives it.
+                              x-relationship:
+                                type: fk
+                                resource: ApplicationMember
+                                style: links-only
+                            source:
+                              type: string
+                              enum:
+                                - earned
+                                - self_employment
+                                - unearned
+                            amount:
+                              type: number
+                              minimum: 0
+                              description: The amount received each time it's paid, in dollars.
+                            frequency:
+                              type: string
+                              enum:
+                                - weekly
+                                - biweekly
+                                - semimonthly
+                                - monthly
+                                - irregular
+                              description: How often it's paid.
+                            paidInCash:
+                              type: boolean
+                            amountVaries:
+                              type: boolean
+                              description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                            links:
+                              type: object
+                              readOnly: true
+                              description: Related resource links.
+                              properties:
+                                member:
+                                  type: string
+                                  format: uri-reference
+                                  description: Link to the related ApplicationMember resource.
+                        - type: object
+                          required:
+                            - id
+                            - applicationId
+                            - memberId
+                            - source
+                            - amount
+                            - frequency
+                            - createdAt
+                            - updatedAt
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                            applicationId:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                              x-relationship:
+                                resource: Application
+                            createdAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            links:
+                              type: object
+                              readOnly: true
+                              description: Related resource links.
+                              properties:
+                                application:
+                                  type: string
+                                  format: uri-reference
+                                  description: Link to the related Application resource.
+                  total:
+                    type: integer
+                    minimum: 0
+                  limit:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  offset:
+                    type: integer
+                    minimum: 0
+                  hasNext:
+                    type: boolean
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    post:
+      summary: Report an income
+      operationId: createApplicationIncome
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    memberId:
+                      type: string
+                      format: uuid
+                      description: The member who receives it.
+                      x-relationship:
+                        type: fk
+                        resource: ApplicationMember
+                        style: links-only
+                    source:
+                      type: string
+                      enum:
+                        - earned
+                        - self_employment
+                        - unearned
+                    amount:
+                      type: number
+                      minimum: 0
+                      description: The amount received each time it's paid, in dollars.
+                    frequency:
+                      type: string
+                      enum:
+                        - weekly
+                        - biweekly
+                        - semimonthly
+                        - monthly
+                        - irregular
+                      description: How often it's paid.
+                    paidInCash:
+                      type: boolean
+                    amountVaries:
+                      type: boolean
+                      description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        member:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related ApplicationMember resource.
+                - type: object
+                  required:
+                    - memberId
+                    - source
+                    - amount
+                    - frequency
+      responses:
+        "201":
+          description: Income reported.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                        description: The member who receives it.
+                        x-relationship:
+                          type: fk
+                          resource: ApplicationMember
+                          style: links-only
+                      source:
+                        type: string
+                        enum:
+                          - earned
+                          - self_employment
+                          - unearned
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: The amount received each time it's paid, in dollars.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                          - irregular
+                        description: How often it's paid.
+                      paidInCash:
+                        type: boolean
+                      amountVaries:
+                        type: boolean
+                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          member:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related ApplicationMember resource.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - memberId
+                      - source
+                      - amount
+                      - frequency
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /applications/{applicationId}/incomes/{incomeId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: incomeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an income
+      operationId: getApplicationIncome
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Income retrieved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                        description: The member who receives it.
+                        x-relationship:
+                          type: fk
+                          resource: ApplicationMember
+                          style: links-only
+                      source:
+                        type: string
+                        enum:
+                          - earned
+                          - self_employment
+                          - unearned
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: The amount received each time it's paid, in dollars.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                          - irregular
+                        description: How often it's paid.
+                      paidInCash:
+                        type: boolean
+                      amountVaries:
+                        type: boolean
+                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          member:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related ApplicationMember resource.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - memberId
+                      - source
+                      - amount
+                      - frequency
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    patch:
+      summary: Update an income
+      operationId: updateApplicationIncome
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    memberId:
+                      type: string
+                      format: uuid
+                      description: The member who receives it.
+                      x-relationship:
+                        type: fk
+                        resource: ApplicationMember
+                        style: links-only
+                    source:
+                      type: string
+                      enum:
+                        - earned
+                        - self_employment
+                        - unearned
+                    amount:
+                      type: number
+                      minimum: 0
+                      description: The amount received each time it's paid, in dollars.
+                    frequency:
+                      type: string
+                      enum:
+                        - weekly
+                        - biweekly
+                        - semimonthly
+                        - monthly
+                        - irregular
+                      description: How often it's paid.
+                    paidInCash:
+                      type: boolean
+                    amountVaries:
+                      type: boolean
+                      description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        member:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related ApplicationMember resource.
+                - type: object
+                  minProperties: 1
+      responses:
+        "200":
+          description: Income updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      memberId:
+                        type: string
+                        format: uuid
+                        description: The member who receives it.
+                        x-relationship:
+                          type: fk
+                          resource: ApplicationMember
+                          style: links-only
+                      source:
+                        type: string
+                        enum:
+                          - earned
+                          - self_employment
+                          - unearned
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: The amount received each time it's paid, in dollars.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                          - irregular
+                        description: How often it's paid.
+                      paidInCash:
+                        type: boolean
+                      amountVaries:
+                        type: boolean
+                        description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          member:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related ApplicationMember resource.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - memberId
+                      - source
+                      - amount
+                      - frequency
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /applications/{applicationId}/interviews:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+    get:
+      summary: List an application's interviews
+      operationId: listApplicationInterviews
+      tags:
+        - Applications
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Search query using field:value syntax. Multiple conditions separated by
+            spaces are ANDed together.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples in this documentation
+            show human-readable syntax for clarity.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `term` | Full-text exact match | `john` |
+            | `*term*` | Full-text contains | `*john*` |
+            | `term*` | Full-text starts with | `john*` |
+            | `*term` | Full-text ends with | `*smith` |
+            | `field:value` | Exact match on field | `status:approved` |
+            | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+            | `field:value*` | Starts with | `name:john*` |
+            | `field:*value` | Ends with | `email:*@example.com` |
+            | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+            | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+            | `field:>value` | Greater than | `income:>1000` |
+            | `field:>=value` | Greater than or equal | `income:>=1000` |
+            | `field:<value` | Less than | `income:<5000` |
+            | `field:<=value` | Less than or equal | `income:<=5000` |
+            | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+            | `-field:value` | Exclude / negate | `-status:denied` |
+            | `field:*` | Field exists (not null) | `email:*` |
+            | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
+            ## Examples
+
+            - `john` — exact match for "john" in searchable fields
+            - `*john*` — contains "john" in searchable fields
+            - `name:*smith*` — name contains "smith" (case-insensitive)
+            - `email:*@example.com` — email ends with "@example.com"
+            - `status:approved` — exact match on status field
+            - `status:approved,pending` — status is "approved" OR "pending"
+            - `income:>=1000` — income greater than or equal to 1000
+            - `created:>2024-01-01` — created after January 1, 2024
+            - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+            - `-status:denied` — exclude records with status "denied"
+            - `-deletedAt:*` — only records where deletedAt does not exist
+            - `applicant.state:CA` — nested field filter
+
+            ## URL Encoding Reference
+
+            When manually constructing URLs, encode these characters:
+
+            | Character | Encoded |
+            |-----------|---------|
+            | (space) | `%20` or `+` |
+            | `"` | `%22` |
+            | `:` | `%3A` |
+            | `>` | `%3E` |
+            | `<` | `%3C` |
+            | `,` | `%2C` |
+
+            **Example:**
+            ```
+            Human-readable: q=status:approved income:>=1000
+            URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+            ```
+          examples:
+            simpleSearch:
+              summary: Full-text exact match
+              value: john
+            containsSearch:
+              summary: Full-text contains
+              value: "*john*"
+            exactMatch:
+              summary: Filter by status
+              value: status:approved
+            containsField:
+              summary: Name contains (case-insensitive)
+              value: name:*smith*
+            startsWithField:
+              summary: Name starts with
+              value: name:john*
+            endsWithField:
+              summary: Email ends with domain
+              value: email:*@example.com
+            multipleFilters:
+              summary: Status and income filter
+              value: status:approved income:>=1000
+            dateRange:
+              summary: Created after date
+              value: created:>2024-01-01
+            multiValue:
+              summary: Multiple statuses (OR)
+              value: status:approved,pending,under_review
+            negation:
+              summary: Exclude denied
+              value: "-status:denied"
+            notExists:
+              summary: Field does not exist
+              value: "-deletedAt:*"
+            nestedField:
+              summary: Filter by nested field
+              value: applicant.state:CA
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: The interviews scheduled for this application.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  items:
+                    type: array
+                    items:
+                      description: |
+                        An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                      allOf:
+                        - type: object
+                          properties:
+                            scheduledFor:
+                              type: string
+                              format: date
+                              description: The date the interview is scheduled for.
+                        - type: object
+                          required:
+                            - id
+                            - applicationId
+                            - status
+                            - createdAt
+                            - updatedAt
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                            applicationId:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                              x-relationship:
+                                resource: Application
+                            status:
+                              type: string
+                              readOnly: true
+                              description: Where the interview stands.
+                              enum:
+                                - scheduled
+                                - in_progress
+                                - completed
+                            startedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            completedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            links:
+                              type: object
+                              readOnly: true
+                              description: Related resource links.
+                              properties:
+                                application:
+                                  type: string
+                                  format: uri-reference
+                                  description: Link to the related Application resource.
+                  total:
+                    type: integer
+                    minimum: 0
+                  limit:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  offset:
+                    type: integer
+                    minimum: 0
+                  hasNext:
+                    type: boolean
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    post:
+      summary: Schedule an interview
+      operationId: createApplicationInterview
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduledFor:
+                  type: string
+                  format: date
+                  description: The date the interview is scheduled for.
+      responses:
+        "201":
+          description: Interview scheduled.
+          content:
+            application/json:
+              schema:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /applications/{applicationId}/interviews/{interviewId}:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an interview
+      operationId: getApplicationInterview
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Interview retrieved.
+          content:
+            application/json:
+              schema:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /applications/{applicationId}/members:
     parameters:
       - name: applicationId
@@ -4056,6 +5374,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -4445,8 +5773,19 @@ paths:
                                     - under_review
                                     - withdrawn
                                     - closed
+                                    - scheduled
+                                    - in_progress
+                                    - completed
                                 programsAppliedFor:
-                                  type: string
+                                  type: array
+                                  items:
+                                    type: string
+                                    enum:
+                                      - snap
+                                      - medicaid
+                                      - chip
+                                      - tanf
+                                  description: Benefit programs the household is applying for.
                                 programCount:
                                   type: integer
                                   readOnly: true
@@ -4936,8 +6275,19 @@ paths:
                               - under_review
                               - withdrawn
                               - closed
+                              - scheduled
+                              - in_progress
+                              - completed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -5250,8 +6600,19 @@ paths:
                               - under_review
                               - withdrawn
                               - closed
+                              - scheduled
+                              - in_progress
+                              - completed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -5722,8 +7083,19 @@ paths:
                               - under_review
                               - withdrawn
                               - closed
+                              - scheduled
+                              - in_progress
+                              - completed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -6085,6 +7457,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -6387,8 +7762,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -6553,6 +7939,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -6577,7 +7986,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -6913,6 +8322,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -7215,8 +8627,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -7381,6 +8804,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -7405,7 +8851,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -7759,6 +9205,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -8061,8 +9510,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -8227,6 +9687,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -8251,7 +9734,30 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "422":
+          description: The request was well-formed but contained semantic errors.
           content:
             application/json:
               schema:
@@ -8587,6 +10093,9 @@ paths:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       submittedAt:
                         type:
                           - string
@@ -8889,8 +10398,19 @@ paths:
                                         - under_review
                                         - withdrawn
                                         - closed
+                                        - scheduled
+                                        - in_progress
+                                        - completed
                                     programsAppliedFor:
-                                      type: string
+                                      type: array
+                                      items:
+                                        type: string
+                                        enum:
+                                          - snap
+                                          - medicaid
+                                          - chip
+                                          - tanf
+                                      description: Benefit programs the household is applying for.
                                     programCount:
                                       type: integer
                                       readOnly: true
@@ -9055,6 +10575,29 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
         "404":
           description: The requested resource was not found.
           content:
@@ -9079,7 +10622,7 @@ paths:
                       type: object
                       additionalProperties: true
         "409":
-          description: A conflict occurred with the current state of the resource.
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
           content:
             application/json:
               schema:
@@ -9130,6 +10673,625 @@ paths:
         type: state-machine-action
         domain: intake
         id: withdraw
+  /applications/{applicationId}/interviews/{interviewId}/start:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Start interview
+      description: Starts the interview and puts its flags to the worker.
+      operationId: startInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "404":
+          description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: start
+  /applications/{applicationId}/interviews/{interviewId}/process-suggestions:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Process suggestions interview
+      description: |
+        Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.
+      operationId: processSuggestionsInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "404":
+          description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: process-suggestions
+  /applications/{applicationId}/interviews/{interviewId}/complete:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Complete interview
+      description: Finishes the interview and expires its suggestions still open.
+      operationId: completeInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                description: |
+                  An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+                allOf:
+                  - type: object
+                    properties:
+                      scheduledFor:
+                        type: string
+                        format: date
+                        description: The date the interview is scheduled for.
+                  - type: object
+                    required:
+                      - id
+                      - applicationId
+                      - status
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      applicationId:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                        x-relationship:
+                          resource: Application
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Where the interview stands.
+                        enum:
+                          - scheduled
+                          - in_progress
+                          - completed
+                      startedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      completedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          application:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related Application resource.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "403":
+          description: The authenticated user does not have permission to perform this action.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "404":
+          description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: complete
   /applications/{applicationId}/summary:
     parameters:
       - name: applicationId
@@ -9399,6 +11561,16 @@ paths:
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
 
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
+
             ## Examples
 
             - `john` — exact match for "john" in searchable fields
@@ -9640,6 +11812,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -9888,6 +12070,16 @@ paths:
             | `-field:value` | Exclude / negate | `-status:denied` |
             | `field:*` | Field exists (not null) | `email:*` |
             | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Lists
+
+            A condition on a list matches when any item matches. That holds for a list
+            of values (`programs:snap`) and for a list of objects anywhere along a
+            dotted path (`members.firstName:Jo`, any member named Jo).
+
+            Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+            matches when some member is named Jo and some member, not necessarily the
+            same one, is over 60. There is no way to require the same item.
 
             ## Examples
 
@@ -11303,6 +13495,9 @@ components:
                 - under_review
                 - withdrawn
                 - closed
+                - scheduled
+                - in_progress
+                - completed
             submittedAt:
               type:
                 - string
@@ -11605,8 +13800,19 @@ components:
                               - under_review
                               - withdrawn
                               - closed
+                              - scheduled
+                              - in_progress
+                              - completed
                           programsAppliedFor:
-                            type: string
+                            type: array
+                            items:
+                              type: string
+                              enum:
+                                - snap
+                                - medicaid
+                                - chip
+                                - tanf
+                            description: Benefit programs the household is applying for.
                           programCount:
                             type: integer
                             readOnly: true
@@ -12190,6 +14396,494 @@ components:
           minimum: 0
         hasNext:
           type: boolean
+    ApplicationIncomeWritable:
+      type: object
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The member who receives it.
+          x-relationship:
+            type: fk
+            resource: ApplicationMember
+            style: links-only
+        source:
+          type: string
+          enum:
+            - earned
+            - self_employment
+            - unearned
+        amount:
+          type: number
+          minimum: 0
+          description: The amount received each time it's paid, in dollars.
+        frequency:
+          type: string
+          enum:
+            - weekly
+            - biweekly
+            - semimonthly
+            - monthly
+            - irregular
+          description: How often it's paid.
+        paidInCash:
+          type: boolean
+        amountVaries:
+          type: boolean
+          description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            member:
+              type: string
+              format: uri-reference
+              description: Link to the related ApplicationMember resource.
+    ApplicationIncome:
+      allOf:
+        - type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+              description: The member who receives it.
+              x-relationship:
+                type: fk
+                resource: ApplicationMember
+                style: links-only
+            source:
+              type: string
+              enum:
+                - earned
+                - self_employment
+                - unearned
+            amount:
+              type: number
+              minimum: 0
+              description: The amount received each time it's paid, in dollars.
+            frequency:
+              type: string
+              enum:
+                - weekly
+                - biweekly
+                - semimonthly
+                - monthly
+                - irregular
+              description: How often it's paid.
+            paidInCash:
+              type: boolean
+            amountVaries:
+              type: boolean
+              description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                member:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related ApplicationMember resource.
+        - type: object
+          required:
+            - id
+            - applicationId
+            - memberId
+            - source
+            - amount
+            - frequency
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+    ApplicationIncomeCreate:
+      allOf:
+        - type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+              description: The member who receives it.
+              x-relationship:
+                type: fk
+                resource: ApplicationMember
+                style: links-only
+            source:
+              type: string
+              enum:
+                - earned
+                - self_employment
+                - unearned
+            amount:
+              type: number
+              minimum: 0
+              description: The amount received each time it's paid, in dollars.
+            frequency:
+              type: string
+              enum:
+                - weekly
+                - biweekly
+                - semimonthly
+                - monthly
+                - irregular
+              description: How often it's paid.
+            paidInCash:
+              type: boolean
+            amountVaries:
+              type: boolean
+              description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                member:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related ApplicationMember resource.
+        - type: object
+          required:
+            - memberId
+            - source
+            - amount
+            - frequency
+    ApplicationIncomeUpdate:
+      allOf:
+        - type: object
+          properties:
+            memberId:
+              type: string
+              format: uuid
+              description: The member who receives it.
+              x-relationship:
+                type: fk
+                resource: ApplicationMember
+                style: links-only
+            source:
+              type: string
+              enum:
+                - earned
+                - self_employment
+                - unearned
+            amount:
+              type: number
+              minimum: 0
+              description: The amount received each time it's paid, in dollars.
+            frequency:
+              type: string
+              enum:
+                - weekly
+                - biweekly
+                - semimonthly
+                - monthly
+                - irregular
+              description: How often it's paid.
+            paidInCash:
+              type: boolean
+            amountVaries:
+              type: boolean
+              description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                member:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related ApplicationMember resource.
+        - type: object
+          minProperties: 1
+    ApplicationIncomeList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+              - type: object
+                properties:
+                  memberId:
+                    type: string
+                    format: uuid
+                    description: The member who receives it.
+                    x-relationship:
+                      type: fk
+                      resource: ApplicationMember
+                      style: links-only
+                  source:
+                    type: string
+                    enum:
+                      - earned
+                      - self_employment
+                      - unearned
+                  amount:
+                    type: number
+                    minimum: 0
+                    description: The amount received each time it's paid, in dollars.
+                  frequency:
+                    type: string
+                    enum:
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
+                      - irregular
+                    description: How often it's paid.
+                  paidInCash:
+                    type: boolean
+                  amountVaries:
+                    type: boolean
+                    description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      member:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related ApplicationMember resource.
+              - type: object
+                required:
+                  - id
+                  - applicationId
+                  - memberId
+                  - source
+                  - amount
+                  - frequency
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  applicationId:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    x-relationship:
+                      resource: Application
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    InterviewWritable:
+      type: object
+      properties:
+        scheduledFor:
+          type: string
+          format: date
+          description: The date the interview is scheduled for.
+    Interview:
+      description: |
+        An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+      allOf:
+        - type: object
+          properties:
+            scheduledFor:
+              type: string
+              format: date
+              description: The date the interview is scheduled for.
+        - type: object
+          required:
+            - id
+            - applicationId
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            status:
+              type: string
+              readOnly: true
+              description: Where the interview stands.
+              enum:
+                - scheduled
+                - in_progress
+                - completed
+            startedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            completedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+    InterviewCreate:
+      type: object
+      properties:
+        scheduledFor:
+          type: string
+          format: date
+          description: The date the interview is scheduled for.
+    InterviewList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            description: |
+              An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+            allOf:
+              - type: object
+                properties:
+                  scheduledFor:
+                    type: string
+                    format: date
+                    description: The date the interview is scheduled for.
+              - type: object
+                required:
+                  - id
+                  - applicationId
+                  - status
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  applicationId:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    x-relationship:
+                      resource: Application
+                  status:
+                    type: string
+                    readOnly: true
+                    description: Where the interview stands.
+                    enum:
+                      - scheduled
+                      - in_progress
+                      - completed
+                  startedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  completedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
     ApplicationList:
       type: object
       additionalProperties: false
@@ -12467,6 +15161,9 @@ components:
                       - under_review
                       - withdrawn
                       - closed
+                      - scheduled
+                      - in_progress
+                      - completed
                   submittedAt:
                     type:
                       - string
@@ -12769,8 +15466,19 @@ components:
                                     - under_review
                                     - withdrawn
                                     - closed
+                                    - scheduled
+                                    - in_progress
+                                    - completed
                                 programsAppliedFor:
-                                  type: string
+                                  type: array
+                                  items:
+                                    type: string
+                                    enum:
+                                      - snap
+                                      - medicaid
+                                      - chip
+                                      - tanf
+                                  description: Benefit programs the household is applying for.
                                 programCount:
                                   type: integer
                                   readOnly: true
@@ -13349,8 +16057,19 @@ components:
                     - under_review
                     - withdrawn
                     - closed
+                    - scheduled
+                    - in_progress
+                    - completed
                 programsAppliedFor:
-                  type: string
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - snap
+                      - medicaid
+                      - chip
+                      - tanf
+                  description: Benefit programs the household is applying for.
                 programCount:
                   type: integer
                   readOnly: true
@@ -13993,8 +16712,19 @@ components:
                           - under_review
                           - withdrawn
                           - closed
+                          - scheduled
+                          - in_progress
+                          - completed
                       programsAppliedFor:
-                        type: string
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - snap
+                            - medicaid
+                            - chip
+                            - tanf
+                        description: Benefit programs the household is applying for.
                       programCount:
                         type: integer
                         readOnly: true

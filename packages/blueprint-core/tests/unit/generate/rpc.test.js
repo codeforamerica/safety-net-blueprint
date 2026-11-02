@@ -106,6 +106,7 @@ test('buildOperationId — creates correct operation ID', () => {
   assert.strictEqual(buildOperationId('claim', 'Task'), 'claimTask');
   assert.strictEqual(buildOperationId('complete', 'Task'), 'completeTask');
   assert.strictEqual(buildOperationId('release', 'Task'), 'releaseTask');
+  assert.strictEqual(buildOperationId('process-suggestions', 'Interview'), 'processSuggestionsInterview');
 });
 
 // =============================================================================
@@ -374,4 +375,35 @@ test('generateOverlay — does not mutate input state machine schema refs', () =
     '#/$defs/ApproveDecisionRequest',
     'generateOverlay must not mutate schema.request.$ref on the input state machine'
   );
+});
+
+test('generateOverlay — an action lists the errors it can answer with', () => {
+  const machine = {
+    domain: 'demo', object: 'Widget', apiSpec: 'demo-openapi.yaml',
+    $defs: {
+      Optional: { type: 'object', properties: { note: { type: 'string' } } },
+      Needed: { type: 'object', required: ['reason'], properties: { reason: { type: 'string' } } },
+    },
+    machines: [{
+      object: 'Widget', states: [{ id: 'a' }, { id: 'b' }], initialState: 'a',
+      actions: [
+        { id: 'plain', transition: { from: 'a', to: 'b' }, steps: [] },
+        { id: 'noted', transition: { from: 'a', to: 'b' }, schema: { request: { $ref: '#/$defs/Optional' } }, steps: [] },
+        { id: 'reasoned', transition: { from: 'a', to: 'b' }, schema: { request: { $ref: '#/$defs/Needed' } }, steps: [] },
+        { id: 'calling', transition: { from: 'a', to: 'b' }, steps: [{ if: 'true', then: [{ call: '$request.call', catch: { to: 'a' } }] }] },
+      ],
+    }],
+  };
+  const paths = generateOverlay(machine, { itemPath: '/widgets/{widgetId}', schemaRef: '#/components/schemas/Widget' }).actions[0].update;
+  const op = (id) => paths[`/widgets/{widgetId}/${id}`].post;
+
+  assert.deepStrictEqual(Object.keys(op('plain').responses), ['200', '400', '403', '404', '409', '500']);
+  assert.match(op('plain').responses['409'].description, /a state this action can't start from, or one of its guards isn't met/);
+  assert.ok(op('noted').responses['422'], 'an action that takes a body can refuse it');
+  assert.ok(op('calling').responses['422'], 'an action that calls another operation can pass on its 422');
+  assert.match(op('calling').description, /When that call fails, the action answers with the call's own status and error/);
+  assert.doesNotMatch(op('plain').description, /calls another operation/);
+
+  assert.strictEqual(op('noted').requestBody.required, undefined, 'a body whose schema requires nothing may be left out');
+  assert.strictEqual(op('reasoned').requestBody.required, true);
 });

@@ -4,12 +4,13 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
+import { playsAnyOf } from './auth-context.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -42,7 +43,7 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   );
 
   const allActors = guardItems.flatMap(g => g.actors || []);
-  const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
+  const callerHasAnyRole = playsAnyOf(callerRoles, allActors);
   if (!callerHasAnyRole) {
     const uniqueActors = [...new Set(allActors)];
     return { status: 403, error: `Only ${listed(uniqueActors, 'or')} can ${label}.` };
@@ -55,7 +56,7 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   const failed = [];
   const clausePassed = guardItems.some(g => {
     const clauseActors = g.actors || [];
-    if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
+    if (!playsAnyOf(callerRoles, clauseActors)) return false;
     const clauseConditions = g.conditions || [];
     if (clauseConditions.length === 0) return true;
     const result = evaluateGuards(clauseConditions, guardsMap, resource, context);
@@ -93,9 +94,15 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
- * @returns {{ success: boolean, result?: Object, status?: number, error?: string }}
+ * Steps run in order; a call to an operation is made as it is reached. When
+ * one fails, its `catch:` runs instead of the action's steps and names the
+ * state the action ends in, and the action answers with the call's failure
+ * and the record in `details`. With no `catch:`, the action fails and
+ * nothing is saved.
+ *
+ * @returns {Promise<{ success: boolean, result?: Object, status?: number, code?: string, error?: string, details?: Object[] }>}
  */
-export function executeTransition({
+export async function executeTransition({
   resourceName,
   resourceId,
   trigger,
@@ -155,14 +162,44 @@ export function executeTransition({
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
   if (refused) return { success: false, ...refused };
 
-  const updated = { ...resource };
-  if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
+  // The id of the first event this action sends, chosen now so a call it
+  // makes can name it as the cause of the call's own events.
+  const actionEventId = crypto.randomUUID();
+  const perform = performerFor({
+    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
+  });
 
-  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-    applySteps(steps, updated, context, store);
+  const fresh = () => {
+    const copy = { ...resource };
+    if (resource.slaInfo) copy.slaInfo = resource.slaInfo.map(e => ({ ...e }));
+    return copy;
+  };
+  let updated = fresh();
+  let applied = await applyStepsInOrder(steps, updated, context, store, perform);
+  let target = transitionTo;
+  let failure = null;
 
-  if (transitionTo != null && transitionTo !== '') {
-    updated.status = transitionTo;
+  // A call that failed: its catch: runs instead of the action's steps, and
+  // says where the action ends; with none, the action fails and nothing is saved.
+  if (applied.failed) {
+    const { step, outcome } = applied.failed;
+    if (!step.catch) return refusedBy(outcome);
+    failure = outcome;
+    updated = fresh();
+    const failureContext = {
+      ...context,
+      // As the record was before the steps that failed, not as they left it.
+      object: { ...resource },
+      entities: caughtEntities(step, outcome, context.entities ?? {}),
+    };
+    applied = await applyStepsInOrder(step.catch.do ?? [], updated, failureContext, store, perform);
+    if (applied.failed) return refusedBy(applied.failed.outcome);
+    target = step.catch.to ?? transitionTo;
+  }
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
+
+  if (target != null && target !== '') {
+    updated.status = target;
   }
 
   if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
@@ -170,9 +207,12 @@ export function executeTransition({
   }
 
   const inlineRules = buildInlineRules(stateMachine, machine);
-  const { pendingEvents: ruleEvents } = executeProcedures(
-    pendingProcedures, updated, inlineRules, context, store
+  const procedures = await executeProcedures(
+    pendingProcedures, updated, inlineRules, context, store, perform
   );
+  // A procedure's call that failed with nothing to handle it fails the action.
+  if (procedures.failed) return refusedBy(procedures.failed.outcome);
+  const ruleEvents = procedures.pendingEvents;
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
@@ -180,9 +220,15 @@ export function executeTransition({
   }
   const result = store.update(resourceName, resourceId, diff);
 
-  for (const { entity, data } of pendingCreates) {
-    try { store.create(entity, data); }
-    catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
+  // A record a step creates directly has its SLA clocks started and is
+  // announced as a create through the API would be, caused by the action.
+  for (const { entity, domain, stubUrl, data } of pendingCreates) {
+    try {
+      const record = store.create(entity, data);
+      stepCalls?.settleCreated(`${domain}${stubUrl ?? ''}`, record, {
+        caller: { id: callerId, roles: callerRoles }, traceparent, causationid: actionEventId, now: timestamp,
+      });
+    } catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
   }
 
   // Calls that name a record — a nested create, an update, another action —
@@ -194,7 +240,7 @@ export function executeTransition({
     ];
     for (const call of calls) {
       try {
-        stepCalls.apply(call, {
+        await stepCalls.apply(call, {
           caller: { id: callerId, roles: callerRoles },
           traceparent,
           causationid,
@@ -224,9 +270,10 @@ export function executeTransition({
 
   const domain = stateMachine.domain;
   const allEvents = [...pendingEvents, ...(ruleEvents || [])];
-  for (const event of allEvents) {
+  for (const [i, event] of allEvents.entries()) {
     try {
       emitEventEnvelope({
+        ...(i === 0 ? { id: actionEventId } : {}),
         type: event.type,
         source: `/${domain}`,
         subject: event.subject ?? resource.id,
@@ -241,5 +288,84 @@ export function executeTransition({
     }
   }
 
+  // The call failed and catch: handled it: the action ends where it said,
+  // and answers with the call's failure, the record as it now is in details.
+  if (failure) {
+    return {
+      success: false,
+      status: failure.status,
+      code: failure.body?.code,
+      error: failure.body?.message ?? `The call failed with ${failure.status}`,
+      details: [result],
+    };
+  }
+
   return { success: true, result };
+}
+
+/** An action refused because a call it made failed with nothing to handle it. */
+function refusedBy(outcome) {
+  return {
+    success: false,
+    status: outcome.status,
+    code: outcome.body?.code,
+    error: outcome.body?.message ?? `The call failed with ${outcome.status}`,
+    details: outcome.body?.details,
+  };
+}
+
+/**
+ * What makes a step's calls to operations, as the step says to run each one:
+ * for an action, a procedure it calls, or an event's reaction.
+ *
+ * @param {Object} options
+ * @param {string|null} options.callerId
+ * @param {string[]} options.callerRoles
+ * @param {string} options.timestamp
+ * @param {string|null} options.traceparent
+ * @param {string|null} options.causationid - The event the call's own events name as their cause
+ * @param {Object} options.store
+ * @param {Object|null} options.stepCalls
+ * @returns {((call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>) & { settleCreated: (path: string, record: Object) => Object|null }}
+ */
+export function performerFor(options) {
+  const perform = (call, step) => performCall(call, step, options);
+  // A record a procedure's step creates directly is settled the same way — its
+  // SLA clocks started and its created event sent — as whoever this performs for.
+  perform.settleCreated = (path, record) => options.stepCalls?.settleCreated(path, record, {
+    caller: { id: options.callerId, roles: options.callerRoles },
+    traceparent: options.traceparent,
+    causationid: options.causationid,
+    now: options.timestamp,
+  }) ?? null;
+  return perform;
+}
+
+function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls }) {
+  if (!stepCalls) {
+    return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
+  }
+  return stepCalls.perform(call, {
+    runAs: step.runAs ?? 'system',
+    caller: { id: callerId, roles: callerRoles },
+    traceparent,
+    causationid,
+    now: timestamp,
+    runAction: ({ entry, collection, id, action, body }) => executeTransition({
+      resourceName: collection,
+      resourceId: id,
+      trigger: action,
+      callerId,
+      callerRoles,
+      now: timestamp,
+      stateMachine: entry.stateMachine,
+      machine: entry.machine,
+      slaTypes: stepCalls.slaTypesFor(entry.domain),
+      requestBody: body,
+      traceparent,
+      causationid,
+      store,
+      stepCalls,
+    }),
+  });
 }

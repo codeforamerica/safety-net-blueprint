@@ -43,6 +43,17 @@ compositions:
           - period
           - amount
           - frequency
+      incomes:
+        resource: incomes
+        bind: applicationId
+        fields:
+          - id
+          - memberId
+          - source
+          - amount
+          - frequency
+          - paidInCash
+          - amountVaries
   applicationReview:
     compositeType: sectionView
     resource: applications

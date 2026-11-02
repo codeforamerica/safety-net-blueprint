@@ -36,7 +36,7 @@ const start = (profileId) => send('POST', '/communication/transcripts', {
   profileId, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z',
 });
 const stubIdleCheck = () => send('POST', '/mock/stubs/events', {
-  on: 'scheduling.timer.requested', match: { 'data.callback.event': 'communication.idle_check' },
+  on: 'platform.timer.requested', match: { 'data.callback.event': 'communication.idle_check' },
 });
 
 test('a transcript whose profile sets an idleTimeout closes when the check finds it quiet', async () => {

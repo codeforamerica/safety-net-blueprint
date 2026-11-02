@@ -343,7 +343,10 @@
                   "submitted",
                   "under_review",
                   "withdrawn",
-                  "closed"
+                  "closed",
+                  "scheduled",
+                  "in_progress",
+                  "completed"
                 ]
               },
               "submittedAt": {
@@ -732,11 +735,24 @@
                                 "submitted",
                                 "under_review",
                                 "withdrawn",
-                                "closed"
+                                "closed",
+                                "scheduled",
+                                "in_progress",
+                                "completed"
                               ]
                             },
                             "programsAppliedFor": {
-                              "type": "string"
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "snap",
+                                  "medicaid",
+                                  "chip",
+                                  "tanf"
+                                ]
+                              },
+                              "description": "Benefit programs the household is applying for."
                             },
                             "programCount": {
                               "type": "integer",

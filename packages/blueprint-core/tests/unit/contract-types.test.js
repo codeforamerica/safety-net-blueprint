@@ -18,6 +18,7 @@ import { basename } from 'node:path';
 import {
   detectType,
   extractDomain,
+  extractCapability,
   CONTRACT_TYPES,
   requiresDomain,
   fileNameOf,
@@ -182,6 +183,19 @@ describe('extractDomain', () => {
     // does not.
     for (const content of [{}, null, undefined, { info: {} }]) {
       assert.equal(extractDomain(content), null);
+    }
+  });
+});
+
+describe('extractCapability', () => {
+  test('what the content declares, the way a domain is declared', () => {
+    assert.equal(extractCapability({ info: { 'x-capability': 'transcripts' } }), 'transcripts');
+    assert.equal(extractCapability({ capability: 'transcripts' }), 'transcripts');
+  });
+
+  test('nothing declared is no capability: the file comes with every set', () => {
+    for (const content of [{}, null, undefined, { info: {} }, { domain: 'communication' }]) {
+      assert.equal(extractCapability(content), null);
     }
   });
 });

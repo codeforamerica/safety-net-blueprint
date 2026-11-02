@@ -34,6 +34,7 @@ import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { createStepCalls } from './step-calls.js';
+import { initRulesIndex } from './state-machine-engine.js';
 export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
 
 
@@ -102,7 +103,9 @@ export async function createMockServer({
   // so one registered on the server it replaces cannot answer here.
   clearAllStubs();
   subscribeStubDispatch(store);
-  if (rulesFiles.length > 0) buildRulesIndex(rulesFiles, graphs);
+  // The rulesets a state machine's `evaluate:` step runs, as the Node server
+  // loads them.
+  initRulesIndex(buildRulesIndex(graphs));
 
   // Registration order is priority — the same order the Node server uses.
   const routes = new Map();
@@ -128,5 +131,8 @@ export async function createMockServer({
   const forwarded = applyForwarding(routes, forwarding);
   for (const key of forwarded) console.log(`  FORWARD ${key}`);
 
-  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints, forwarded };
+  const fetch = createDispatcher(routes, { basePath });
+  // An action calling an operation as its caller sends the call through here.
+  stepCalls.serve(createDispatcher(routes));
+  return { fetch, routes, store, endpoints, forwarded };
 }

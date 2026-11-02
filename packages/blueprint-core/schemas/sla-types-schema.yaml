@@ -25,6 +25,13 @@ properties:
     type: string
     description: Domain namespace (e.g., workflow).
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   slaTypes:
     type: array
     description: SLA type definitions.

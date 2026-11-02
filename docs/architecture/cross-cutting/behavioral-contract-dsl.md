@@ -151,10 +151,111 @@ Procedures are invoked by name (string form). HTTP operations use the object for
 
 # HTTP call — inline form
 - call: {POST: intake/applications/$application.id/open}
-- call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId}}
+- call: {POST: data-exchange/service-calls, requestBody: {payload: {serviceId: $params.serviceId}}}
 ```
 
 When a procedure declares `parameters:`, callers pass values via `with:`. Inside the procedure, parameters are referenced as `$params.name`.
+
+An HTTP call by method and path is the machine's own direct write. It skips the
+API's checks — the create or update schema, the checks on a call a record
+carries, the operation's guards, refusing a duplicate — and is checked only
+against the resource's full schema. A call to an operation, by its
+`operationId` (below), is the validated path.
+
+### Calling an operation
+
+An action, a procedure, or a machine's reaction to an event can also call an
+operation by its `operationId`, in the `OperationCall`
+shape (`base/schemas/operations.yaml`) an Arazzo step names one with, or take a
+call held in data — a suggestion's, say — with a value expression:
+
+```yaml
+- call:
+    operationId: updateApplicationMember
+    parameters:
+      - {name: applicationId, in: path, value: $object.applicationId}
+      - {name: memberId, in: path, value: $member.id}
+    requestBody: {payload: {firstName: $request.firstName}}
+  runAs: caller
+  catch:
+    to: refused
+    do:
+      - set: {field: reason, value: $error.message}
+
+- call: $request.call       # a call held in data
+  runAs: caller
+```
+
+A call to an operation is made where it stands: a step after it runs after it.
+
+`runAs` says who the call is made as. Either way, the call goes through the API,
+so the operation's validation, the checks on a call a record carries, its
+guards' conditions and refusing a duplicate all apply. `system`, the default,
+makes it as the system: it skips only role matching — who a guard's `actors`
+allow — and its events name the system as who acted (`authid: system`,
+`authtype: system`), their `causationid` linking them to the event of what
+caused the call. `caller` makes it as whoever triggered the action — in a
+reaction to an event, the system — under their roles, as making it by hand
+would be. Salesforce Flow's run context and ServiceNow's Run As make the same
+choice explicit. Only the mock's own call is the system: a client sending
+`X-Caller-Roles: system` is a caller with a role named `system`.
+
+`catch` says what happens when the call fails: its `do:` steps run instead of
+the action's, which are discarded, the failure readable as `$error` — its HTTP
+`status` alongside the shared Error shape's `code`, `message` and `details` —
+and the action ends in `to` rather than its transition's. `as` names the
+failure something else: `as: refusal` makes it `$refusal`. The action answers
+with the call's failure, the record as it now is in `details`. With no `catch`,
+a failed call fails the action, and nothing is saved.
+
+`catch` borrows from two sources. The [Amazon States
+Language](https://states-language.net/spec.html) puts a `Catch` on the task
+itself, with no `try` around it; `as` and `do`, and `error` as the name when
+`as` gives none, are [Serverless
+Workflow](https://github.com/serverlessworkflow/specification/blob/main/dsl-reference.md)'s
+catch. `to` is the DSL's own, as in a transition: the States Language's `Next`
+names the next step of a workflow, where `to` names the state the record ends
+in. It isn't named `onFailure`, which Arazzo — the scenarios' format — uses for
+retrying or leaving a step.
+
+In a reaction to an event, `catch` works the same way: `to` replaces the
+reaction's transition, and with no `catch` nothing the reaction did is saved.
+In a procedure, it ends the procedure: what its steps did is undone and `do:`
+runs instead; a procedure has no transition, so `to` doesn't apply. A failure
+no `catch` handles fails the action that called the procedure. A
+failure ends only the procedure it happens in, so a call that may fail for one
+item of many — a suggestion already proposed — goes in a procedure called for
+each, from inside the `forEach`:
+
+```yaml
+- forEach: {in: $flagged, as: id}
+  do:
+    - call: proposeSuggestion
+      with: {id: $id}            # read where the call stands: this item's id
+```
+
+`bind` keeps what the call answered for the steps after it: the whole body as
+one variable, or fields of it as variables of their own. An interview reads the
+household this way before evaluating its flags:
+
+```yaml
+- call:
+    operationId: getInterviewFlagsInputs
+    parameters:
+      - {name: applicationId, in: path, value: $object.applicationId}
+  bind: $inputs
+- evaluate: interviewFlags
+  inputs:
+    current: {incomes: $inputs.incomes}    # an input built from what was read
+    verified: $inputs.verified
+```
+
+Only a call to an operation reports a failure or answers. Validation refuses
+`catch` or `bind` on a call by method and path, or on a call to a
+procedure, where it would never run.
+
+The events a call causes name, as their `causationid`, the action's first event
+— or, in a reaction, the event reacted to.
 
 ### Context
 
@@ -234,7 +335,21 @@ Two built-in shared procedures encapsulate the timer boilerplate:
   with: {timerId: "intake.snap_deadline.{$object.id}"}
 ```
 
-`fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Scheduling Service](scheduling-service.md) for the full event contract.
+`fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Timers](timers.md) for the full event contract.
+
+To store a deadline on the object, set it to a time from now: `$now`, then `+` or `-` and an ISO 8601 duration, as a timer's `fireAfter` is written — `$now+P1D` is a day from now, `$now-PT30M` half an hour ago. `M` is months before the `T` and minutes after it: `$now+P1M` is a month away, `$now+PT1M` a minute. A suggestion's default expiry is set this way and read back by its timer, so an overlay changes the default by replacing one value:
+
+```yaml
+- if: '!has(object.expiresAt)'
+  then:
+    - set: {field: expiresAt, value: $now+P1D}
+- emit:
+    type: platform.timer.requested
+    data:
+      timerId: "decision-support.suggestion_expiry.{$object.id}"
+      fireAt: $object.expiresAt
+      callback: {event: decision-support.suggestion_expiry, data: {}}
+```
 
 ### Receiving the callback
 
@@ -248,12 +363,12 @@ timers:
 on:
   - name: intake.snap_deadline
     steps:
-      - call: {POST: intake/applications/$this.subject/auto-deny, body: {reason: snap_deadline_exceeded}}
+      - call: {POST: intake/applications/$this.subject/auto-deny, requestBody: {payload: {reason: snap_deadline_exceeded}}}
 ```
 
-The `timers:` section declares the timer types the machine uses. The event name follows the convention `{domain}.{id}` — `intake.snap_deadline` for a timer declared in the `intake` domain with id `snap_deadline`. The scheduling service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
+The `timers:` section declares the timer types the machine uses. The event name follows the convention `{domain}.{id}` — `intake.snap_deadline` for a timer declared in the `intake` domain with id `snap_deadline`. The timer service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
 
-The scheduling service is a separate contract boundary — see [Scheduling Service](scheduling-service.md) for the full event contract, timer ID conventions, and implementation guidance. Because timers are events, timer behavior is testable via the same event stub mechanism used for all other events.
+The timer service is a separate contract boundary — see [Timers](timers.md) for the full event contract, timer ID conventions, and implementation guidance. Because timers are events, timer behavior is testable via the same event stub mechanism used for all other events.
 
 ## Domain-owned HTTP endpoints
 
@@ -281,7 +396,7 @@ Transition IDs use kebab-case verbs (`complete-review`, `mark-inconclusive`). Th
 | 2 | [Standards evaluation](#decision-2-evaluating-standards-as-alternatives-to-the-custom-dsl) | CNCF Serverless Workflow, BPMN 2.0, and CMMN were evaluated as alternatives. No standard covers all three DSL layers; the custom DSL is retained with vocabulary aligned to recognized concepts. |
 | 3 | [Internal consistency](#decision-3-internal-consistency) | `if`/`match`/`when` as step types, `call:` for all invocations, guards as CEL conditions. Removes parallel condition syntaxes within the execution layer. |
 | 4 | [Fully event-driven model](#decision-4-fully-event-driven-model) | `onCreate:`, `onUpdate:`, and `onTimer:` are removed. All machine reactions — including creation, field changes, and timer callbacks — are expressed as named event subscriptions. |
-| 5 | [Timer-as-event](#decision-5-timer-as-event) | Timers are requested and delivered as events. Predictable timer IDs are required. The scheduling service contract defines the event boundary. |
+| 5 | [Timer-as-event](#decision-5-timer-as-event) | Timers are requested and delivered as events. Predictable timer IDs are required. The timer service contract defines the event boundary. |
 | 6 | [Named RPC transitions, not PATCH](#decision-6-named-rpc-transitions-not-patch) | Each transition is a named endpoint; PATCH is reserved for field updates — named triggers map to audit events and can carry action-specific request bodies |
 | 7 | [Effects declared in state machine YAML](#decision-7-effects-declared-in-state-machine-yaml) | The contract is the specification — behavior is inspectable without reading code |
 | 8 | [Reactive cross-domain coordination via event subscriptions](#decision-8-reactive-cross-domain-coordination-via-event-subscriptions) | Each domain handles its own reactions; the publishing domain has no knowledge of downstream behavior |
@@ -322,7 +437,7 @@ Transition IDs use kebab-case verbs (`complete-review`, `mark-inconclusive`). Th
 
 **Considerations:**
 
-*CNCF Serverless Workflow* covers the execution model well: event-triggered states, operation states, switch states, and forEach states map directly to triggers/procedures/steps. CloudEvents integration is built in. However, CNCF has no concept of domain object lifecycle states — CNCF "states" are workflow execution nodes (operation, switch, foreach, sleep), not persistent domain object statuses like `draft` or `submitted`. There is no authorization model (guards, actors). Functions are not reusable across workflow definitions — machine-level shared context has no equivalent, requiring each workflow to fetch its own dependencies. The default expression language is jq, which has complex syntax. The project is at CNCF Sandbox level (the least mature CNCF tier) with limited production adoption. Adopting CNCF for procedures while keeping a custom lifecycle layer would produce a hybrid with two formats in every state machine file — more complex, not less.
+*CNCF Serverless Workflow* (1.x) covers the execution model well: its tasks (`call`, `emit`, `listen`, `for`, `switch`, `set`, `try`, `wait`) map directly to triggers/procedures/steps, and CloudEvents integration is built in. Functions can be defined once and reused across workflows through catalogs. However, it has no concept of domain object lifecycle states — its statuses (`running`, `waiting`, `completed`, …) describe a workflow run, not persistent domain object statuses like `draft` or `submitted`. Its authentication covers the calls a workflow makes, not who may act on a record (guards, actors). The default expression language is jq, which has complex syntax. The project is at CNCF Sandbox level (the least mature CNCF tier) with limited production adoption. Adopting it for procedures while keeping a custom lifecycle layer would produce a hybrid with two formats in every state machine file — more complex, not less. The DSL borrows its names and shapes instead (see `docs/conventions/standards.yaml`).
 
 *BPMN 2.0* is the dominant process standard, supported natively by Camunda, Activiti, jBPM, IBM BPM, and Zeebe. States using those engines could import BPMN and execute it directly. However, BPMN is XML-only with no YAML representation. Domain lifecycle states require mapping to implicit token positions in a process flow rather than explicit named object statuses. Authorization is not modeled natively. Equivalent logic is 3–4× more verbose than the current DSL.
 
@@ -331,7 +446,7 @@ Transition IDs use kebab-case verbs (`complete-review`, `mark-inconclusive`). Th
 *YAML-format BPMN:* No official YAML serialization of BPMN 2.0 exists. A custom YAML-to-BPMN transpiler would keep YAML readability and produce importable BPMN XML, but the lifecycle layer would still require custom vocabulary — and maintaining the transpiler is comparable in scope to maintaining the DSL schema.
 
 **Options:**
-- **(A)** Adopt CNCF Serverless Workflow for execution layer — stops maintaining execution model spec, but 3× verbosity, no shared context, lifecycle layer remains custom, jq expressions
+- **(A)** Adopt CNCF Serverless Workflow for execution layer — stops maintaining execution model spec, but lifecycle layer remains custom, no guard model, jq expressions
 - **(B)** Adopt BPMN 2.0 — states using Camunda/Activiti could execute directly, but XML-only, lifecycle states are implicit in token position, no auth model
 - **(C)** Adopt CMMN — closest domain model fit, but XML-only, limited adoption, no auth model
 - **(D) ✓** Retain custom DSL, document alignment to recognized standards
@@ -406,13 +521,13 @@ Removal of special-cased trigger types (`onCreate:`, `onUpdate:`, `onTimer:`) is
 **Considerations:**
 - The timer-as-event pattern — emit a scheduling request, receive a callback event when it fires — is used by Temporal, AWS Step Functions (wait states), and Azure Durable Functions. It is a well-established pattern in event-driven systems.
 - Cancellation is expressible as a cancellation event, keeping the model event-driven throughout.
-- The scheduling service is a contract boundary, not a blueprint-owned domain. States implement it using their infrastructure of choice, keeping the blueprint runtime-agnostic.
+- The timer service is a contract boundary, not a blueprint-owned domain. States implement it using their infrastructure of choice, keeping the blueprint runtime-agnostic.
 
 **Options:**
 - **(A)** Keep `onTimer:` — simpler to read for common cases, but breaks event-driven consistency and is not cancellable without additional special-casing
-- **(B) ✓** Timer-as-event — `scheduling.timer.requested` and a named callback event per timer type; scheduling service is a state-implemented contract boundary and pure relay
+- **(B) ✓** Timer-as-event — `platform.timer.requested` and a named callback event per timer type; timer service is a state-implemented contract boundary and pure relay
 
-**Decision:** Timer-as-event (B). All triggers are events — timer callbacks follow the same subscription model as every other machine reaction. Each timer type is a named domain event declared in the state machine `timers:` section. Predictable timer IDs are a required convention. See [Scheduling Service](scheduling-service.md) for the full event contract and timer event naming.
+**Decision:** Timer-as-event (B). All triggers are events — timer callbacks follow the same subscription model as every other machine reaction. Each timer type is a named domain event declared in the state machine `timers:` section. Predictable timer IDs are a required convention. See [Timers](timers.md) for the full event contract and timer event naming.
 
 ---
 

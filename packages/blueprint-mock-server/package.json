@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-mock-server",
   "version": "0.3.0",
-  "description": "Mock API server for contract-first development \u2014 auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
+  "description": "Mock API server for contract-first development — auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
   "type": "module",
   "files": [
     "src/",
@@ -56,6 +56,7 @@
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "json-logic-js": "^2.0.5",
+    "jsonpath-rfc9535": "^1.3.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

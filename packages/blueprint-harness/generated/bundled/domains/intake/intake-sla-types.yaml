@@ -8,6 +8,10 @@ slaTypes:
       amount: 30
       unit: days
     warningThresholdPercent: 80
+    autoAssignWhen:
+      in:
+        - snap
+        - var: programsAppliedFor
     pauseWhen:
       in:
         - var: status

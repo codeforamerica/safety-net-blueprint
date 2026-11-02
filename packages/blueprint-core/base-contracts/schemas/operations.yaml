@@ -1,0 +1,76 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml"
+title: CommonOperations
+description: >
+  An operation named by its operationId, with its arguments — what a suggestion
+  proposes and accepting it performs. Written as an Arazzo step writes a call:
+  parameters by name and location, and the request body as `requestBody` with
+  its `payload`.
+
+$defs:
+  OperationCall:
+    type: object
+    description: >
+      An operation and its arguments. The operationId is one the contracts
+      declare, as overlays leave them; the arguments are checked against that
+      operation's parameters and request schema.
+    additionalProperties: false
+    required: [operationId]
+    properties:
+      operationId:
+        type: string
+        description: The operation's operationId, e.g. `updateApplicationMember`.
+        example: updateApplicationMember
+      parameters:
+        type: array
+        description: >
+          The operation's path, query, header and cookie parameters, as an
+          Arazzo step or an OpenAPI operation lists them.
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, in, value]
+          properties:
+            name:
+              type: string
+              description: The parameter's name, as the operation declares it.
+            in:
+              type: string
+              enum: [path, query, header, cookie]
+            value:
+              description: The parameter's value.
+      requestBody:
+        $ref: "#/$defs/RequestBody"
+
+  CallError:
+    type: object
+    description: >
+      Why a call failed: the HTTP status it answered with, alongside the
+      shared Error shape's code, message and details. What a state machine's
+      catch binds, and what an event about a failed call carries.
+    required: [status, code, message]
+    properties:
+      status:
+        type: integer
+        description: The HTTP status the call answered with.
+      code:
+        $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error/properties/code"
+      message:
+        $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error/properties/message"
+      details:
+        $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error/properties/details"
+
+  RequestBody:
+    type: object
+    description: >
+      The request body a call sends, as an Arazzo step's requestBody: the body
+      itself in `payload`, and the media type in `contentType` when the
+      operation accepts more than one.
+    additionalProperties: false
+    properties:
+      contentType:
+        type: string
+        description: One of the media types the operation's requestBody lists. Defaults to application/json.
+        example: application/json
+      payload:
+        description: The request body, in the operation's request schema.

@@ -69,13 +69,16 @@ Seed files support `$now` tokens in date and datetime fields so that fixtures st
 | Token | Resolves to |
 |-------|-------------|
 | `$now` | Server start time T |
-| `$now-30d` | T − 30 days |
-| `$now+7d` | T + 7 days |
-| `$now+8h` | T + 8 hours |
-| `$now+2d@09:30` | T + 2 days, local time pinned to 09:30 |
+| `$now-P30D` | T − 30 days |
+| `$now+P7D` | T + 7 days |
+| `$now+PT8H` | T + 8 hours |
+| `$now+P1M` | T + 1 calendar month |
+| `$now+P2D@09:30` | T + 2 days, local time pinned to 09:30 |
 | `$now@17:00` | Today, local time pinned to 17:00 |
 
-Units: `d` (days), `h` (hours), `m` (minutes), `w` (weeks). Integer amounts only — use a smaller unit for precision (e.g. `$now+36h` rather than `$now+1.5d`). The `@HH:MM` pin sets the time-of-day component in local server time.
+The offset is `+` or `-` and an ISO 8601 duration, in whole numbers. `M` is months before the `T` and minutes after it: `$now+P1M` is a month away, `$now+PT30M` half an hour — so `$now+P30M` is 30 months. A month past the end of the next lands on its last day: January 31 + `P1M` is February 28. The `@HH:MM` pin sets the time of day in local server time.
+
+The old offsets — `$now+7d`, `$now+8h`, `$now+30m`, `$now+1w` — still resolve, with a warning naming the ISO form, and will be removed in a later release.
 
 All tokens in a single seed load resolve against the same instant, so relative timestamps within a fixture are internally consistent.
 
@@ -84,8 +87,8 @@ Malformed tokens (e.g. `$now+7dasys`) cause the server to exit with an error rat
 ```yaml
 AppointmentExample1:
   id: 7e1c6f9a-0000-0000-0000-000000000001
-  startAt: "$now+1d@09:30"
-  endAt: "$now+1d@10:00"
+  startAt: "$now+P1D@09:30"
+  endAt: "$now+P1D@10:00"
   status: scheduled
 ```
 
@@ -173,14 +176,14 @@ The response envelope is built by merging: an entity ID derived from the trigger
 
 ### Timer stubs
 
-Timer stubs are a variant for `scheduling.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
+Timer stubs are a variant for `platform.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
 
 ```bash
 # Register a stub for creation_deadline timers
 curl -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
-    "on": "scheduling.timer.requested",
+    "on": "platform.timer.requested",
     "match": { "data.callback.event": "workflow.creation_deadline" }
   }'
 
@@ -345,7 +348,10 @@ The same file runs as a test, is one of the tours in the demo page's Show me aro
 - steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`
 - runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
-- `successCriteria` comparisons joined by `&&`, and `outputs`
+- selectors (Arazzo 1.1), `{ context, selector, type }`, in outputs, parameter values and request bodies — `type: jsonpath` to pick items out of a list by what they hold, `type: jsonpointer` for a value at a fixed place. A JSONPath's shape follows the query, as RFC 9535 sorts them: one made only of names and indexes (`$.items[0].id`) gives that value, and fails the step when it isn't there; one with a filter or a wildcard (`$.items[?@.status == 'proposed'].id`) gives a list, which may be empty. To use one item of such a list later, select `/0` from it with a JSON Pointer
+- `successCriteria` comparisons joined by `&&`, and `jsonpath` conditions, which pass when they match anything; and `outputs`
+- workflows that depend on earlier ones, `dependsOn`, reading what they produced as `$workflows.<id>.outputs.<name>` — a long scenario in sections, one workflow each, on the same mock throughout; the demo page heads each section with its workflow's `summary`
+- `onFailure` actions of type `retry`, with `retryAfter` in seconds and `retryLimit` — for a step checking what the mock does after it answers, such as a state machine's reaction to an event, which may not have run the moment the step before it returns
 - `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
 - more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
 
@@ -365,7 +371,7 @@ workflow.passed; // and workflow.steps: each request, response and check
 
 A failed step stops its workflow, since later steps would act on what it did not produce.
 
-A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text.
+A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text. A name in backticks in those bullets links to where the contracts declare it, shown when you hover or tap it. That works for the step operation's own parameters, fields and responses, and across the set for actions, procedures, reactions (by the event they listen for), rulesets, facts, compositions, SLA types, registry entries and schemas. A workflow's `description` is shown under its section's heading, in the same form.
 
 ## The mock's own endpoints
 

@@ -44,6 +44,7 @@ const machine = toDoc({
     machines: [{
       object: 'Case', states: [{ id: 'open', slaClock: 'stopped' }], initialState: 'open',
       emits: [{ id: 'transferred', description: 'The case moved county.', schema: { type: 'object', required: ['county'] } }],
+      timers: [{ id: 'review_due', description: 'Reviews a case nobody has looked at.' }],
     }],
   },
 });
@@ -59,8 +60,14 @@ describe('the generated event catalog', () => {
   test('has each resource\'s writes and its machine\'s emits, named domain.resource.event', () => {
     assert.deepEqual(Object.keys(catalog.content.channels), [
       'case-management.case.created', 'case-management.case.updated', 'case-management.case.deleted',
-      'case-management.case.transferred',
+      'case-management.case.transferred', 'case-management.review_due',
     ]);
+  });
+
+  test('has a channel for each timer its machine declares, carrying the timer service\'s callback', () => {
+    const data = catalog.content.components.schemas.CaseManagementReviewDueEvent.allOf[1].properties.data;
+    assert.deepEqual(data, { $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/TimerCallbackEvent' });
+    assert.match(catalog.content.components.messages.CaseManagementReviewDue.summary, /^Reviews a case nobody has looked at\. Sent by the timer service/);
   });
 
   test('carries the resource as a created event\'s data, and the declared schema as an emitted one\'s', () => {

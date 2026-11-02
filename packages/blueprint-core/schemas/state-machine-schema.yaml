@@ -69,6 +69,13 @@ properties:
       declaring machines; omitted by a library document that exists only to be
       inherited via extends.
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   apiSpec:
     type: string
     deprecated: true
@@ -272,7 +279,10 @@ $defs:
       onEvent structure:
         type        — fully qualified event type (e.g., intake.application.submitted).
         description — human-readable summary of what this subscription does.
-        transition  — if present, requires an existing instance; from limits source states.
+        transition  — if present, the handler acts on the machine's record whose id is
+                      the event's subject, which must exist; from limits source states.
+                      An event whose subject names no such record, or a record in
+                      another state, is skipped.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
@@ -473,13 +483,15 @@ $defs:
   # StepItem — step vocabulary and value expressions
   # ---------------------------------------------------------------------------
   # VALUE EXPRESSIONS
-  # Anywhere a step accepts a value (set: value:, emit: data:, call: body:,
-  # forEach: body:), you write a value expression — a short $-prefixed string
+  # Anywhere a step accepts a value (set: value:, emit: data:, a call's
+  # requestBody: payload:), you write a value expression — a short $-prefixed string
   # that the engine resolves at runtime to a concrete value. Expressions let
   # steps reference the current object, the caller, the request body, the
   # event payload, and any context-bound entity without hardcoding data.
   #
   #   $now              Current timestamp (ISO 8601)
+  #   $now+P1D          A time from now: + or - and an ISO 8601 duration —
+  #                     $now-PT30M, $now+P2W; M is months before T, minutes after
   #   $caller.field     Field on the authenticated caller
   #   $object.field     Field on the governed object
   #   $request.field    Field from the operation request body
@@ -527,27 +539,30 @@ $defs:
   #       with:
   #         param: value
   #
-  # CALL with bind: (string form) — bind the whole HTTP response to a variable:
+  # CALL with bind: (string form) — bind the whole response body to a variable:
   #     - call:
-  #         POST: intake/assessments
-  #         body:
-  #           applicationId: $object.id
-  #       bind: $assessment
+  #         operationId: getInterviewFlagsInputs
+  #         parameters:
+  #           - {name: applicationId, in: path, value: $object.applicationId}
+  #       bind: $inputs
   #
-  # CALL with bind: (map form) — bind selected response fields to named variables:
+  # CALL with bind: (map form) — bind fields of the response to variables:
   #     - call:
-  #         POST: intake/assessments
+  #         operationId: getInterviewFlagsInputs
+  #         parameters:
+  #           - {name: applicationId, in: path, value: $object.applicationId}
   #       bind:
-  #         eligible: $eligible
-  #         reason: $reason
+  #         asOf: asOf
+  #         verified: verified
   #
   # CALL (object form) — POST/PATCH/GET/DELETE to an API path:
   #   POST to a collection path — creates a new resource:
   #     - call:
   #         POST: intake/applications/documents
-  #         body:
-  #           applicationId: $application.id
-  #           category: income
+  #         requestBody:
+  #           payload:
+  #             applicationId: $application.id
+  #             category: income
   #
   #   POST to an operation path — triggers a state machine operation on an
   #   existing resource (path ends with the operation name):
@@ -557,25 +572,32 @@ $defs:
   #   PATCH to a resource path — appends to an array field using $push:
   #     - call:
   #         PATCH: intake/application-members/$member.id
-  #         body:
-  #           verifications:
-  #             $push:
-  #               type: $this.data.verificationType
-  #               status: $this.data.result
+  #         requestBody:
+  #           payload:
+  #             verifications:
+  #               $push:
+  #                 type: $this.data.verificationType
+  #                 status: $this.data.result
   #
-  #   Body operators — special keys in a body object:
+  #   The body of a call by method and path is written as one by operationId
+  #   is, Arazzo's requestBody with its payload; a body: beside the method is
+  #   deprecated, and still read.
+  #
+  #   Body operators — special keys in a payload:
   #     $merge — copy all fields from a source object; explicit sibling keys override.
   #              Use to create a new resource from an existing one with minimal changes:
   #       - call:
   #           POST: workflow/tasks
-  #           body:
-  #             $merge: $object
-  #             status: pending
+  #           requestBody:
+  #             payload:
+  #               $merge: $object
+  #               status: pending
   #     $push  — append a value to a named array field (PATCH only):
-  #       body:
-  #         appointments: {$push: $this.subject}
+  #       requestBody:
+  #         payload:
+  #           appointments: {$push: $this.subject}
   #
-  #   Path slots and body values use the same $alias.field expression syntax.
+  #   Path slots and payload values use the same $alias.field expression syntax.
   #
   # EVALUATE
   #   Evaluate a ruleset (same domain) against mapped inputs; bind the result
@@ -619,13 +641,15 @@ $defs:
   #         identity:
   #           - call:
   #               POST: data-exchange/service-calls
-  #               body:
-  #                 serviceId: $identityService.id
+  #               requestBody:
+  #                 payload:
+  #                   serviceId: $identityService.id
   #         income:
   #           - call:
   #               POST: data-exchange/service-calls
-  #               body:
-  #                 serviceId: $incomeService.id
+  #               requestBody:
+  #                 payload:
+  #                   serviceId: $incomeService.id
   #
   # FOREACH
   #   Query a collection and execute do: steps once per matching record.
@@ -638,7 +662,7 @@ $defs:
   #   Example:
   #     - forEach: {from: intake/application-members, where: {applicationId: $application.id}, as: member}
   #       do:
-  #         - call: {POST: data-exchange/service-calls, body: {applicationId: $application.id, requestingResourceId: $member.id}}
+  #         - call: {POST: data-exchange/service-calls, requestBody: {payload: {applicationId: $application.id, requestingResourceId: $member.id}}}
   #
   #   Nested forEach is supported for multi-level iteration.
   #   Use a JSON Logic where: to filter on more than equality (see ContextBinding).
@@ -735,18 +759,33 @@ $defs:
 
   CallStep:
     type: object
-    description: Call a named procedure (string) or make an HTTP API call (object with POST/PATCH/GET/DELETE key).
+    description: >
+      Call a named procedure (string), make an HTTP API call (object with a
+      POST/PATCH/GET/DELETE key), or call an operation by its operationId
+      (object with operationId, or a value expression holding one, such as
+      $request.call). A call to an operation is made where it stands: a step
+      after it runs after it.
     required: [call]
     additionalProperties: false
     properties:
       call:
         oneOf:
           - type: string
+            pattern: "^[^$]"
             description: Named procedure id.
+          - type: string
+            pattern: "^\\$"
+            description: >
+              A value expression holding a call to an operation, in the
+              OperationCall shape — `$request.call`.
+          - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
+            description: >
+              A call to an operation by its operationId, as an Arazzo step
+              names one. Parameter values and the payload are value expressions.
           - type: object
             description: >
               HTTP call — one key is the method (POST, PATCH, GET, DELETE) and
-              its value is the path; optional body:. Exactly one method, and no
+              its value is the path; optional requestBody:. Exactly one method, and no
               other keys: a step written as `path:` and `method:` used to pass
               validation and then do nothing.
             additionalProperties: false
@@ -768,19 +807,64 @@ $defs:
               DELETE:
                 type: string
                 description: The path to DELETE.
+              requestBody:
+                $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/RequestBody"
+                description: The request body; the payload's field values are value expressions resolved when the step runs.
               body:
-                description: The request body. Field values are value expressions resolved when the step runs.
+                deprecated: true
+                description: >
+                  Deprecated: write `requestBody: {payload: …}`. The request
+                  body, still read when requestBody isn't given.
               description:
                 type: string
+      runAs:
+        type: string
+        enum: [system, caller]
+        default: system
+        description: >
+          Who a call to an operation is made as. Both go through the API, under
+          the operation's validation and guards. `system`, the default, is the
+          machine's own call: it skips only role checks, and its events name
+          the system. `caller` is made as the person or service that triggered
+          this step, under the operation's own permissions — as making it by
+          hand would be.
+      catch:
+        type: object
+        additionalProperties: false
+        description: >
+          What happens when a call to an operation fails: the `do` steps run
+          instead of the action's steps, which are discarded, and the action
+          ends in `to`. The failure is bound as `as` names it, `error` when it
+          doesn't — a CallError (base/schemas/operations.yaml): its HTTP
+          `status` alongside the shared Error shape's `code`, `message` and
+          `details`. The action answers with the call's
+          failure, the record as it now is in details. Without catch, a failed
+          call fails the action and nothing is saved. `catch` on the call is
+          the Amazon States Language's Catch on a Task; `as` and `do` are
+          Serverless Workflow's catch; `to` is the transition's own.
+        properties:
+          as:
+            type: string
+            pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+            default: error
+            description: The name the failure is bound to for the `do` steps.
+          do:
+            type: array
+            items: {$ref: "#/$defs/StepItem"}
+          to:
+            type: string
+            description: The state the action ends in instead of its transition's `to`.
       with:
         type: object
         additionalProperties: true
         description: Arguments passed to a named procedure (string call form only).
       bind:
         description: >
-          Bind the HTTP response for use in subsequent steps.
-          String form binds the whole response to one variable.
-          Map form binds selected response fields to named variables.
+          Bind what a call to an operation answered, for the steps after it.
+          String form binds the whole response body to one variable; map form
+          binds fields of it, by dotted path, to variables of their own. Only
+          a call to an operation answers: bind on a call by method and path,
+          or to a procedure, is a validation error.
         oneOf:
           - type: string
             description: Variable name to bind the entire HTTP response to.
@@ -809,7 +893,9 @@ $defs:
         description: >
           Map of input names to value expressions. Keys must match the
           ruleset's input SchemaMap keys; values are state machine value
-          expressions ($object.field, $alias.field, $request.field, etc.).
+          expressions ($object.field, $alias.field, $request.field, etc.),
+          or objects whose fields are, resolved as a call's body is — an
+          input assembled from the records it's read from.
         additionalProperties: true
       bind:
         description: >

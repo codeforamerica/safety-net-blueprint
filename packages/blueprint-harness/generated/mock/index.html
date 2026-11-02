@@ -137,7 +137,21 @@
   .op:hover { background: #f1f4f8; color: var(--ink); }
   .op.here { background: #eef4fb; color: var(--accent); font-weight: 600; }
   .steps { counter-reset: none; }
-  .op.step { padding: .34rem .45rem; font-size: .84rem; }
+  .op.step { padding: .34rem .45rem; font-size: .84rem; display: flex; gap: .2rem; align-items: baseline; }
+  /* A long title wraps under itself, not under its number. */
+  .op.step .n { flex: none; }
+  .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* A tour in sections — one workflow each — names each where it starts. */
+  .steps .section {
+    margin: .8rem 0 .2rem .45rem; font-size: .78rem; font-weight: 700; color: var(--ink);
+    line-height: 1.35;
+  }
+  .steps .section:first-child { margin-top: .2rem; }
+  #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
+  #stage > .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
+  #stage > ul.note { padding-left: 1.1rem; }
+  #stage > ul.note li { margin: 0 0 .25rem; }
+  .panel .sectionline { margin: 0 0 .2rem; font-size: .8rem; font-weight: 600; color: var(--muted); }
   .op .n {
     font-family: var(--mono); font-size: .7rem; color: var(--faint);
     display: inline-block; min-width: 1.9rem;
@@ -200,6 +214,8 @@
   .pager .step-back:hover { color: var(--ink); border-color: #cfd6de; }
   /* Pushed right when it is the only one, so it sits where it always sits. */
   .pager .next-step { margin-left: auto; }
+  /* The steps either side's titles, however long, wrap inside their buttons. */
+  .pager button { max-width: 48%; text-align: left; line-height: 1.35; }
   .op .verb {
     font-family: var(--mono); font-size: .68rem; font-weight: 700;
     display: inline-block; min-width: 3.4rem; color: var(--faint);
@@ -1217,6 +1233,21 @@ const currentScenario = () => {
     ?? all[0] ?? null;
 };
 
+/**
+ * A URL with its query as a person writes it — `q=status:proposed -category:*`
+ * — not as it's encoded to send, `q=status%3Aproposed+-category%3A*`. The
+ * request itself is sent encoded.
+ */
+const asWritten = (url) => {
+  const at = url.indexOf('?');
+  if (at === -1) return url;
+  const query = [...new URLSearchParams(url.slice(at + 1))].map(([name, value]) => `${name}=${value}`).join('&');
+  return `${url.slice(0, at)}?${query}`;
+};
+
+/** A section's name: its workflow's summary, or its id. */
+const sectionOf = (workflow) => workflow.summary ?? workflow.workflowId;
+
 /** Every step of a scenario, in order, across its workflows. */
 const scenarioSteps = (doc) => (doc.content.workflows ?? []).flatMap((workflow) =>
   (workflow.steps ?? []).map((step) => ({ workflow, step, key: `${workflow.workflowId}/${step.stepId}` })));
@@ -1261,6 +1292,20 @@ const introOf = (doc) => {
     panelParts.push(list);
   }
   return panelParts;
+};
+
+/**
+ * A section's introduction, from its workflow's description: what happens in
+ * it, as a sentence or bullets. Standard Arazzo, like a step's description.
+ */
+const sectionIntroOf = (workflow) => {
+  const text = String(workflow.description ?? '').trim();
+  if (!text) return [];
+  const points = text.split('\n').map((line) => line.trim()).filter((line) => line.startsWith('- ')).map((line) => line.slice(2));
+  if (points.length === 0) return [el('p', text.replace(/\s+/g, ' '), 'note')];
+  const list = noticeList(points, null);
+  list.className = 'note';
+  return [list];
 };
 
 /** The run of the tour on this server, started at its first step. */
@@ -1334,13 +1379,17 @@ const renderTourNav = (nav, doc) => {
   const reached = entries.findIndex((entry) => !tourResults.get(entry.key)?.passed);
   const upTo = reached === -1 ? entries.length : reached + 1;
   const list = el('ol', '', 'ops steps');
+  const sectioned = (doc.content.workflows ?? []).length > 1;
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
+    if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
+      list.append(el('li', sectionOf(entry.workflow), 'section'));
+    }
     const item = el('li');
     const button = el('button', '', 'op step');
     const run = Boolean(tourResults.get(entry.key)?.passed);
     button.append(
       el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
-      el('span', describe(entry.step).title)
+      el('span', describe(entry.step).title, 'title')
     );
     if (tourStep === index) button.classList.add('here');
     button.onclick = () => {
@@ -1484,9 +1533,14 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   panel.id = `tour-step-${index}`;
 
   const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
+  const sectioned = (doc.content.workflows ?? []).length > 1;
+  if (sectioned) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
+  // The section's introduction, on its first step when a step at a time; the
+  // whole tour shows it under the section's heading instead.
+  if (sectioned && live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
-  panel.append(el('p', sending ? `${sending.method} ${sending.url}` : step.operationId, 'path'));
+  panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
   if (shown.length > 0) panel.append(el('p', shown.join('   ·   '), 'cited'));
   const cited = citedLine(op);
@@ -1598,8 +1652,14 @@ const renderTourStage = (stage, doc) => {
     again.onclick = () => { tourWhole = false; tourStep = 0; renderGroups(); renderStage(); };
     panel.append(again);
     stage.append(panel);
+    const sectioned = (doc.content.workflows ?? []).length > 1;
     for (const [index, entry] of entries.entries()) {
-      if (tourResults.has(entry.key)) stage.append(tourStepPanel(doc, entries, index, { live: false }));
+      if (!tourResults.has(entry.key)) continue;
+      if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
+        stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+        for (const part of sectionIntroOf(entry.workflow)) stage.append(part);
+      }
+      stage.append(tourStepPanel(doc, entries, index, { live: false }));
     }
     return;
   }
@@ -1967,6 +2027,43 @@ const locate = (token, op) => {
   for (const [name, declared] of Object.entries(op.ruleset?.ruleset?.inputs?.policy?.properties ?? {})) {
     if (name !== token) continue;
     return { path: op.ruleset.doc, yaml: snippet(name, declared, { prose: true }) };
+  }
+
+  // A procedure, by its id: what an action's `call: suggestFlags` runs.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    const procedures = [
+      ...(candidate.content?.procedures ?? []),
+      ...(candidate.content?.machines ?? []).flatMap((machine) => machine.procedures ?? []),
+    ];
+    const procedure = procedures.find((one) => one.id === token);
+    if (procedure) return { path: candidate.relativePath, yaml: asList(essential(procedure)) };
+  }
+
+  // A reaction, by the event it reacts to: `on: intake.application_income.updated`.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    for (const machine of candidate.content?.machines ?? []) {
+      const reaction = (machine.on ?? []).find((one) => one.type === token);
+      if (reaction) return { path: candidate.relativePath, yaml: snippet(`${machine.object} on`, [essential(reaction)]) };
+    }
+  }
+
+  // A ruleset, by its name: what it takes and what it gives back. Its facts
+  // are found one at a time below.
+  for (const { name, ruleset, doc: at } of rulesets()) {
+    if (name !== token) continue;
+    return {
+      path: at,
+      yaml: snippet(name, { inputs: Object.keys(ruleset.inputs ?? {}), outputs: Object.keys(ruleset.outputs ?? {}) }),
+    };
+  }
+
+  // A fact in any ruleset, by its path, for an operation that isn't a rules
+  // endpoint itself: a state machine evaluates one and acts on what it says.
+  if (!op.ruleset) {
+    for (const { ruleset, doc: at } of rulesets()) {
+      const fact = (ruleset.facts ?? []).find((one) => one.path === factPath);
+      if (fact) return { path: at, yaml: asList(essential(fact)) };
+    }
   }
 
   // A schema anywhere in the set.

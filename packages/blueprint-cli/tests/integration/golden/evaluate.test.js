@@ -112,12 +112,16 @@ describe('evaluate — intake/interviewFlags', () => {
       'inconsistencies.jobWithoutEarnedIncome':          false,
       'inconsistencies.earnedIncomeWithoutJob':          false,
       'inconsistencies.utilitiesIncludedButBilled':      true,
+      'flagged.earnedIncomeVaries':                   ['wages'],
+      'flagged.cashOrSelfEmploymentIncome':           ['cleaning'],
+      'flagged.incomeDiffersFromPayStub':             [{ id: 'wages', amount: 840, frequency: 'biweekly' }],
     });
   });
 
   it('nothing changed, nothing error-prone, and everything agrees — no flags raised', () => {
     const result = outputValues(evaluate(graph, examples[1].inputs));
-    assert.ok(Object.values(result).every((value) => value === false), JSON.stringify(result));
+    // A flag is false; a list of flagged records is empty.
+    assert.ok(Object.values(result).every((value) => value === false || (Array.isArray(value) && value.length === 0)), JSON.stringify(result));
   });
 
   it('a member with two jobs is checked against the total of both', () => {

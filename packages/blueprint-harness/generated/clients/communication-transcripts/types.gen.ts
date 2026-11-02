@@ -1292,6 +1292,16 @@ export type ListTranscriptsData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -2317,6 +2327,16 @@ export type ListTranscriptEntriesData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -3172,6 +3192,16 @@ export type ListTranscriptionProfilesData = {
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
          *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
+         *
          * ## Examples
          *
          * - `john` — exact match for "john" in searchable fields
@@ -3893,6 +3923,25 @@ export type PauseTranscriptErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -3912,9 +3961,28 @@ export type PauseTranscriptErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */
@@ -4110,6 +4178,25 @@ export type ResumeTranscriptErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -4129,9 +4216,28 @@ export type ResumeTranscriptErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */
@@ -4327,6 +4433,25 @@ export type CloseTranscriptErrors = {
         }>;
     };
     /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * The requested resource was not found.
      */
     404: {
@@ -4346,9 +4471,28 @@ export type CloseTranscriptErrors = {
         }>;
     };
     /**
-     * A conflict occurred with the current state of the resource.
+     * The record is in a state this action can't start from, or one of its guards isn't met.
      */
     409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
         /**
          * Machine-readable error code.
          */

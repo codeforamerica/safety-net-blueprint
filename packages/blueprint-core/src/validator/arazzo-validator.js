@@ -64,9 +64,21 @@ export function validateArazzo(doc, operationIds) {
   const sources = new Map((c.sourceDescriptions ?? []).map((source) => [source.name, source]));
   const outside = (source) => /^https?:\/\//.test(source?.url ?? '');
 
+  const workflowsById = new Map((c.workflows ?? []).map((w) => [w.workflowId, w]));
   for (const workflow of c.workflows ?? []) {
     const where = `workflows[${workflow.workflowId ?? '?'}]`;
     if (!workflow.workflowId) err('arazzo-shape', 'Each workflow has a workflowId.', where);
+    for (const dependency of workflow.dependsOn ?? []) {
+      if (!workflowsById.has(dependency)) err('unknown-workflow', `Workflow "${workflow.workflowId}" depends on "${dependency}", which this document does not declare.`, where);
+    }
+    // A workflow reads another's outputs only when it depends on it, and only
+    // the outputs that one declares.
+    const fromWorkflows = (value, place) => {
+      for (const [, id, name] of JSON.stringify(value).matchAll(/\$workflows\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)/g)) {
+        if (!(workflow.dependsOn ?? []).includes(id)) err('unknown-workflow', `${place} refers to $workflows.${id}, which "${workflow.workflowId}" does not depend on.`, where);
+        else if (!(name in (workflowsById.get(id)?.outputs ?? {}))) err('unknown-workflow', `${place} refers to $workflows.${id}.outputs.${name}, which "${id}" does not declare.`, where);
+      }
+    };
     const seen = new Set();
     for (const step of workflow.steps ?? []) {
       const stepWhere = `${where}.steps[${step.stepId ?? '?'}]`;
@@ -97,8 +109,14 @@ export function validateArazzo(doc, operationIds) {
       for (const name of new Set(referenced)) {
         if (!seen.has(name)) err('unknown-step', `Step "${step.stepId}" refers to $steps.${name}, which is not an earlier step in this workflow.`, stepWhere);
       }
+      fromWorkflows(step, `Step "${step.stepId}"`);
       if (step.stepId) seen.add(step.stepId);
     }
+    // A workflow's outputs come from its own steps.
+    for (const name of new Set([...JSON.stringify(workflow.outputs ?? {}).matchAll(/\$steps\.([A-Za-z0-9_-]+)\./g)].map((m) => m[1]))) {
+      if (!seen.has(name)) err('unknown-step', `Workflow "${workflow.workflowId}"'s outputs refer to $steps.${name}, which is not a step in this workflow.`, where);
+    }
+    fromWorkflows(workflow.outputs ?? {}, `Workflow "${workflow.workflowId}"'s outputs`);
   }
   return errors;
 }

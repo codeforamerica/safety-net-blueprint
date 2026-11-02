@@ -168,7 +168,6 @@ const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpa
 if (isDirectRun) {
   generatePostmanCollection().catch(error => {
     console.error('\n❌ Generation failed:', error.message);
-    console.error(error.stack);
     process.exit(1);
   });
 }

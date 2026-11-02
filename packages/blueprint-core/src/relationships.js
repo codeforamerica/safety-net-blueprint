@@ -600,7 +600,7 @@ function buildSubsetProperties(resourceName, fields, schemaIndex, warnings) {
   const properties = {};
   const targetInfo = schemaIndex.get(resourceName);
   const targetSchema = targetInfo?.spec.components?.schemas?.[resourceName];
-  const targetProperties = targetSchema ? gatherAllProperties(targetSchema) : {};
+  const targetProperties = targetSchema ? gatherAllProperties(targetSchema, targetInfo.spec) : {};
 
   // Separate simple fields from dot-notation paths, grouping by first segment
   const simpleFields = [];
@@ -661,18 +661,24 @@ function buildSubsetProperties(resourceName, fields, schemaIndex, warnings) {
 /**
  * Gather all properties from a schema, including those in allOf entries.
  */
-function gatherAllProperties(schema) {
+function gatherAllProperties(schema, spec, seen = new Set()) {
   const properties = {};
+  if (!schema || seen.has(schema)) return properties;
+  seen.add(schema);
 
-  if (schema?.properties) {
+  // A part of the schema written as a reference into the same document — a
+  // resource's `allOf` including its `Writable` fields — is followed, so a
+  // field declared there is found with its own type.
+  const local = schema.$ref?.match(/^#\/components\/schemas\/(.+)$/);
+  if (local) return gatherAllProperties(spec?.components?.schemas?.[local[1]], spec, seen);
+
+  if (schema.properties) {
     Object.assign(properties, schema.properties);
   }
 
-  if (Array.isArray(schema?.allOf)) {
+  if (Array.isArray(schema.allOf)) {
     for (const entry of schema.allOf) {
-      if (entry.properties) {
-        Object.assign(properties, entry.properties);
-      }
+      Object.assign(properties, gatherAllProperties(entry, spec, seen));
     }
   }
 

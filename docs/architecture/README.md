@@ -34,7 +34,8 @@ One document per domain — entity model, lifecycle, events, and key design deci
 | [Document Management](domains/document-management.md) | Document upload, classification, verification status, and retention |
 | [Data Exchange](domains/data-exchange.md) | External data requests: income verification, citizenship, state data matches |
 | [Scheduling](domains/scheduling.md) | Appointment scheduling across channels |
-| [Communication](domains/communication.md) | Notices, correspondence, and multi-channel delivery |
+| [Communication](domains/communication.md) | Notices, correspondence, multi-channel delivery, and transcripts of conversations |
+| [Decision Support](domains/decision-support.md) | Suggestions put in front of a person acting on a case, and their decision on each |
 
 ## Cross-cutting docs
 
@@ -48,8 +49,7 @@ Resources and services every domain uses.
 |----------|---------------|
 | [Platform](cross-cutting/platform.md) | The infrastructure every contract set gets: one event log across domains, and the registries the contracts declare |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
-| [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
-| [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
+| [Timers](cross-cutting/timers.md) | How a state machine asks for a time-based callback, and the timer service a state provides to answer it |
 
 ### Patterns and concerns
 

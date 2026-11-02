@@ -1,0 +1,509 @@
+arazzo: 1.1.0
+info:
+  title: An interview's suggestions
+  version: 1.0.0
+  x-domain: intake
+  description: |
+    A caseworker interviews Rosa about her household's income. During the interview, the system creates suggestions about things to ask, and an AI assistant that hears the conversation suggests changes to her record. The caseworker accepts or dismisses each suggestion.
+sourceDescriptions:
+  - name: intake
+    url: ../domains/intake/intake-openapi.yaml
+    type: openapi
+  - name: suggestions
+    url: ../base/domains/decision-support/decision-support-suggestions-openapi.yaml
+    type: openapi
+  - name: registries
+    url: ../base/domains/platform/platform-registries-openapi.yaml
+    type: openapi
+  - name: events
+    url: ../base/domains/platform/platform-events-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    worker:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+    assistant:
+      name: X-Caller-Id
+      in: header
+      value: assistant-1
+    application:
+      name: applicationId
+      in: path
+      value: 11111111-1111-4111-8111-111111111111
+workflows:
+  - workflowId: beforeInterview
+    summary: Rosa's application
+    description: |
+      - Rosa applied for SNAP and reported four incomes: wages, tips, self-employment income and a salary.
+      - A pay stub on file shows a higher salary than she reported.
+      - The caseworker schedules her interview.
+    steps:
+      - stepId: household
+        description: |
+          Rosa's application has one household member
+
+          - Rosa applied for SNAP, and she is the only member of her household on the application.
+        operationId: $sourceDescriptions.intake.listApplicationMembers
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+          - condition: $response.body#/items/0/firstName == 'Rosa'
+      - stepId: incomes
+        description: |
+          Rosa reported four incomes
+
+          - Weekly wages that change from week to week, weekly tips paid in cash, monthly self-employment income, and a monthly salary of 1,100.
+        operationId: $sourceDescriptions.intake.listApplicationIncomes
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 4
+      - stepId: scheduleInterview
+        description: |
+          Schedule Rosa's interview
+
+          - `status` is `scheduled`. The state machine sets a new interview to its initial state.
+        operationId: $sourceDescriptions.intake.createApplicationInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        requestBody:
+          payload:
+            scheduledFor: "2026-10-30"
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'scheduled'
+        outputs:
+          id: $response.body#/id
+    outputs:
+      scheduleInterview: $steps.scheduleInterview.outputs.id
+  - workflowId: interviewStarts
+    summary: The interview starts and creates suggestions
+    description: |
+      - When the interview starts, the system checks Rosa's incomes and flags the kinds that are often reported wrong: wages that change from week to week, tips paid in cash, and self-employment income. Each flag is a suggestion for the caseworker.
+      - Because the pay stub shows a higher salary, the system also suggests correcting it.
+    dependsOn:
+      - beforeInterview
+    steps:
+      - stepId: startInterview
+        description: |
+          Start the interview, which evaluates the flag rules
+
+          - The interview's state machine moves it to `in_progress` and sets `startedAt`.
+          - Its `start` action calls the `suggestFlags` procedure. That reads Rosa's incomes and pay stubs through the `interviewFlagsInputs` composition, and evaluates the `interviewFlags` rules.
+          - The rules return the incomes behind each flag: `flagged.earnedIncomeVaries`, `flagged.cashOrSelfEmploymentIncome` and `flagged.incomeDiffersFromPayStub`. `suggestFlags` proposes a suggestion for each one.
+        operationId: $sourceDescriptions.intake.startInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.beforeInterview.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'in_progress'
+      - stepId: interviewSuggestions
+        description: |
+          The interview created five suggestions
+
+          - `total` is 5. Each suggestion's `metadata.intake` holds the interview's id, the flag, and the id of the income it's about (`recordId`).
+          - Wages: they have `amountVaries: true`, so they're flagged `earned-income-varies`. This suggestion is `kind: informing`: it has a `category` and names the record it's about (`subjectType`, `subjectId`). There's no change to make.
+          - Tips: they have `amountVaries: true` and `paidInCash: true`, so they get two suggestions, one under `earned-income-varies` and one under `cash-or-self-employment-income`. Each category on a record is a separate suggestion.
+          - Self-employment income: it has `source: self_employment`, so it's flagged `cash-or-self-employment-income`.
+          - Salary: Rosa reported 1,100 a month, and a pay stub shows 1,250. This suggestion is `kind: operation`. Its `call` is `updateApplicationIncome` with `amount: 1250`, which runs if the caseworker accepts it. It has no `subjectId`, because the call identifies the record it changes.
+          - `expiresAt` is one day after `createdAt`. The interview's state machine didn't give one, so the suggestions API set the default.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
+          - context: $response.body
+            condition: $.items[?@.subjectId == '11111111-1111-4111-8111-200000000001' && @.kind == 'informing' && @.category == 'earned-income-varies' && @.status == 'proposed']
+            type: jsonpath
+          - context: $response.body
+            condition: $.items[?@.metadata.intake.recordId == '11111111-1111-4111-8111-200000000004' && @.kind == 'operation' && @.call.operationId == 'updateApplicationIncome' && @.call.requestBody.payload.amount == 1250]
+            type: jsonpath
+        outputs:
+          wagesFlag:
+            context: $response.body
+            selector: $.items[?@.metadata.intake.recordId == '11111111-1111-4111-8111-200000000001'].id
+            type: jsonpath
+          salaryCorrection:
+            context: $response.body
+            selector: $.items[?@.metadata.intake.recordId == '11111111-1111-4111-8111-200000000004'].id
+            type: jsonpath
+    outputs:
+      salaryCorrection:
+        context: $steps.interviewSuggestions.outputs.salaryCorrection
+        selector: /0
+        type: jsonpointer
+      wagesFlag:
+        context: $steps.interviewSuggestions.outputs.wagesFlag
+        selector: /0
+        type: jsonpointer
+  - workflowId: assistantSuggests
+    summary: The AI assistant suggests a change
+    description: |
+      - Rosa mentions child support that isn't on her application, and the AI assistant suggests adding it.
+      - When it suggests the same change again, the suggestions API rejects the second as a duplicate.
+    dependsOn:
+      - beforeInterview
+    steps:
+      - stepId: proposeChange
+        description: |
+          The assistant suggests adding child support Rosa didn't report
+
+          - Rosa mentions that she gets child support every month. It isn't on her application.
+          - The assistant hears the amount as 250 and suggests adding the income. The `call` is `createApplicationIncome` with `source: unearned`, `amount: 250` and `frequency: monthly`.
+          - `201`, with `status: proposed`.
+          - `fingerprint` is a hash of the change, used to detect duplicates. The values can't be recovered from it.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: createApplicationIncome
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                payload:
+                  memberId: 11111111-1111-4111-8111-100000000001
+                  source: unearned
+                  amount: 250
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'proposed'
+        outputs:
+          id: $response.body#/id
+      - stepId: proposeItAgain
+        description: |
+          The suggestions API rejects the same suggestion again
+
+          - `409`: an open suggestion already proposes this change. `details` gives that suggestion's id.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: createApplicationIncome
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                payload:
+                  memberId: 11111111-1111-4111-8111-100000000001
+                  source: unearned
+                  amount: 250
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 409
+          - condition: $response.body#/details/0/id == $steps.proposeChange.outputs.id
+    outputs:
+      proposeChange: $steps.proposeChange.outputs.id
+  - workflowId: caseworkerDecides
+    summary: The caseworker decides on suggestions
+    description: |
+      - The caseworker accepts the salary correction.
+      - The assistant heard the child support amount wrong. The caseworker's first attempt to accept it with the correct amount fails, because the edit leaves the amount empty by mistake. The second attempt, with 200 a month, succeeds.
+      - The caseworker dismisses the wages flag and gives a reason.
+    dependsOn:
+      - beforeInterview
+      - interviewStarts
+      - assistantSuggests
+    steps:
+      - stepId: acceptTheCorrection
+        description: |
+          Accept the salary correction
+
+          - The request has no body, so the proposed call runs unchanged.
+          - `status` is `accepted`, and `performed` shows the call that ran: Rosa's salary is now 1,250, the amount on the pay stub.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.salaryCorrection
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+      - stepId: acceptWithABadEdit
+        description: |
+          The caseworker's first attempt to accept fails
+
+          - Rosa says the child support is 200 a month, not 250. The caseworker edits the amount before accepting, and clears the field by mistake: `amount` is empty.
+          - `422`: `createApplicationIncome` rejects an income with no amount, and Rosa's application doesn't change.
+          - `details` holds the suggestion. Its `status` is now `refused`.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeChange
+        requestBody:
+          payload:
+            call:
+              operationId: createApplicationIncome
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                payload:
+                  memberId: 11111111-1111-4111-8111-100000000001
+                  source: unearned
+                  amount: null
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/status == 'refused'
+      - stepId: acceptWithAnEdit
+        description: |
+          The caseworker tries again with the amount corrected
+
+          - The request's `call` has `amount: 200`, the amount Rosa gave.
+          - `status` changes from `refused` to `accepted`. `performed` is the call that ran. `call` still holds what the assistant proposed, `amount: 250`.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.proposeChange
+        requestBody:
+          payload:
+            call:
+              operationId: createApplicationIncome
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                payload:
+                  memberId: 11111111-1111-4111-8111-100000000001
+                  source: unearned
+                  amount: 200
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+          - condition: $response.body#/performed/requestBody/payload/amount == 200
+          - condition: $response.body#/call/requestBody/payload/amount == 250
+      - stepId: incomeAdded
+        description: |
+          Rosa's application now has five incomes
+
+          - `total` is 5. The new one is child support: `source: unearned`, `amount: 200`, `frequency: monthly`.
+        operationId: $sourceDescriptions.intake.listApplicationIncomes
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
+          - context: $response.body
+            condition: $.items[?@.source == 'unearned' && @.amount == 200 && @.frequency == 'monthly']
+            type: jsonpath
+      - stepId: acceptedEvent
+        description: |
+          The event log records who accepted the suggestion
+
+          - `authid` is `worker-1`, the caseworker who accepted it. The suggestion itself doesn't store who decided it.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: $workflows.assistantSuggests.outputs.proposeChange
+          - name: type
+            in: query
+            value: decision-support.suggestion.accepted
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/authid == 'worker-1'
+      - stepId: dismissTheWagesFlag
+        description: |
+          Dismiss the wages flag with a reason
+
+          - The caseworker asked Rosa about her wages, and her pay stubs explain why they change.
+          - `status` is `dismissed`, and the suggestion keeps the `reason`.
+        operationId: $sourceDescriptions.suggestions.dismissSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.wagesFlag
+        requestBody:
+          payload:
+            reason: Her pay stubs explain the changes.
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'dismissed'
+          - condition: $response.body#/reason == 'Her pay stubs explain the changes.'
+  - workflowId: answersChange
+    summary: The caseworker records Rosa's answers
+    description: |
+      - Rosa says her wages are different, and the caseworker updates them. The wages flag still applies, so the interview proposes it again, and the suggestions API rejects it because the caseworker dismissed it.
+      - Rosa explains that her self-employment income is a gift, and the caseworker changes its source. The interview expires the flag on that income.
+    dependsOn:
+      - beforeInterview
+      - interviewStarts
+      - assistantSuggests
+      - caseworkerDecides
+    steps:
+      - stepId: changeWagesAgain
+        description: |
+          The caseworker updates Rosa's wages
+
+          - Rosa says her wages are closer to 320 a week, and the caseworker sets `amount` to 320. Her wages still change from week to week.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: 11111111-1111-4111-8111-200000000001
+        requestBody:
+          payload:
+            amount: 320
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: correctTheSideIncome
+        description: |
+          The caseworker records that Rosa's side income is a gift
+
+          - Rosa explains that the 400 a month is help from her sister, not self-employment, and the caseworker sets `source` to `unearned`.
+          - The change starts the interview's reaction to `intake.application_income.updated`, which calls `suggestFlags` again. `flagged.cashOrSelfEmploymentIncome` no longer lists this income.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: 11111111-1111-4111-8111-200000000003
+        requestBody:
+          payload:
+            source: unearned
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: clearedFlagExpired
+        description: |
+          The interview expires the flag on that income
+
+          - `q` finds the suggestion about this income with `status:expired`.
+          - The income isn't self-employment anymore, so the flag no longer applies, and the interview expired the suggestion.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: metadata.intake.recordId:11111111-1111-4111-8111-200000000003 status:expired
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+        onFailure:
+          - name: waitForTheInterview
+            type: retry
+            retryAfter: 0.05
+            retryLimit: 20
+      - stepId: nothingNew
+        description: |
+          The dismissed wages flag stays dismissed
+
+          - `total` is still 5. Her wages still change from week to week, so the interview proposes the wages flag again. The suggestions API rejects that proposal with 409, because the caseworker dismissed the same suggestion.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5
+  - workflowId: interviewEnds
+    summary: The caseworker completes the interview
+    description: |
+      - When the caseworker completes the interview, its state machine expires the suggestions nobody decided on.
+      - Changes to Rosa's incomes after that create no suggestions.
+    dependsOn:
+      - beforeInterview
+      - answersChange
+    steps:
+      - stepId: completeInterview
+        description: |
+          Complete the interview
+
+          - The interview's state machine moves it to `completed` and sets `completedAt`.
+        operationId: $sourceDescriptions.intake.completeInterview
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: interviewId
+            in: path
+            value: $workflows.beforeInterview.outputs.scheduleInterview
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'completed'
+      - stepId: nothingWaiting
+        description: |
+          No suggestions are left open
+
+          - `q` limits the list to this interview's suggestions with `status:proposed`.
+          - `total` is 0. Nobody decided on the two tips suggestions, so completing the interview expired them.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview} status:proposed
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 0
+      - stepId: changeAfterwards
+        description: |
+          The caseworker updates Rosa's tips after the interview
+
+          - Rosa calls to say her tips are about 140 a week, and the caseworker sets `amount` to 140.
+        operationId: $sourceDescriptions.intake.updateApplicationIncome
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+          - name: incomeId
+            in: path
+            value: 11111111-1111-4111-8111-200000000002
+        requestBody:
+          payload:
+            amount: 140
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: stillFive
+        description: |
+          No new suggestions after the interview
+
+          - `total` is still 5. The interview is completed, so its state machine no longer reacts to income changes.
+        operationId: $sourceDescriptions.suggestions.listSuggestions
+        parameters:
+          - reference: $components.parameters.worker
+          - name: q
+            in: query
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 5

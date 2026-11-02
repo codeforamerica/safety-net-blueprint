@@ -1,0 +1,67 @@
+# The timer events every contract set gets from the framework: how a state
+# machine asks for a time-based callback, and cancels one. Whatever provides
+# scheduling — each state's own infrastructure — answers them
+# (docs/architecture/cross-cutting/timers.md). The payloads are in
+# base/schemas/events.yaml.
+asyncapi: 3.0.0
+info:
+  title: Platform Timer Events
+  version: 0.1.0
+  x-status: alpha
+  x-domain: platform
+  description: |
+    A state machine asks for a time-based callback by publishing
+    `platform.timer.requested`, with the event to deliver when the time comes,
+    and cancels one with `platform.timer.cancelled`. The scheduler that answers
+    is not part of the blueprint.
+
+    The org-specific prefix is never written here — the resolver adds it at resolve
+    time via the x-event-type-prefix overlay config.
+channels:
+  platform.timer.cancelled:
+    address: platform.timer.cancelled
+    messages:
+      timerCancelled:
+        $ref: '#/components/messages/TimerCancelledMessage'
+  platform.timer.requested:
+    address: platform.timer.requested
+    messages:
+      timerRequested:
+        $ref: '#/components/messages/TimerRequestedMessage'
+components:
+  messages:
+    TimerCancelledMessage:
+      name: platform.timer.cancelled
+      summary: >-
+        Cancels a pending timer; a no-op if it has already fired.
+      payload:
+        $ref: '#/components/schemas/TimerCancelledEvent'
+    TimerRequestedMessage:
+      name: platform.timer.requested
+      summary: >-
+        Asks for a timer; the scheduler registers it and publishes the callback event when it fires.
+      payload:
+        $ref: '#/components/schemas/TimerRequestedEvent'
+  schemas:
+    TimerCancelledEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: platform.timer.cancelled
+            data:
+              $ref: >-
+                https://blueprint.codeforamerica.org/base/schemas/events.yaml#/TimerCancelledEvent
+    TimerRequestedEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: platform.timer.requested
+            data:
+              $ref: >-
+                https://blueprint.codeforamerica.org/base/schemas/events.yaml#/TimerRequestedEvent

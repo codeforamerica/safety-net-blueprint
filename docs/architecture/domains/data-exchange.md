@@ -2,6 +2,12 @@
 
 The Data Exchange domain defines the contract surface for all interactions between the blueprint and external agencies and data sources — IRS, SSA, USCIS SAVE, state wage databases, and others. Vendor comparisons draw on IBM Cúram, ServiceNow, Salesforce Government Cloud, and the MITA 3.0 framework. Regulatory context references 7 CFR § 272.8 and 42 CFR § 435.940–965.
 
+> **Planned:** the general part of this domain — the service catalog, the call
+> and its lifecycle, the result events — moves into the framework when its first
+> AI service type is built, and the federal service types stay here, added to
+> it. Service types then come from a registry rather than a fixed list. See
+> [AI Services](../cross-cutting/ai-services.md#ai-calls-as-data-exchange-services).
+
 ## Overview
 
 The Data Exchange domain acts as a facade for all external service interactions. Calling domains (Eligibility, Workflow, Client Management) initiate requests — directly via Data Exchange endpoints or via rules in their own domain that trigger a submission when a relevant event occurs. Data Exchange executes the call, tracks the lifecycle, and emits result events that calling domains subscribe to in order to resume. It owns the catalog of available external services and the lifecycle of every external call made. It does not own the policy decisions that determine whether external data is needed, when to request it, or what to do with the result — those stay in the calling domain.
@@ -43,7 +49,7 @@ Federal data exchange services fall into two categories:
 
 **CMS Federal Data Services Hub (FDSH)** — a CMS-operated routing layer that connects state eligibility systems to multiple federal data sources through a single interface. FDSH exposes discrete named services that can be called selectively; it is not a single bundled call. States configure which FDSH services to invoke based on the eligibility factor being verified. See [Decision 7](#decision-7-service-type-model).
 
-**Income and Eligibility Verification System (IEVS)** — a federal mandate (7 CFR § 272.8, 45 CFR § 205.51) requiring states to query SSA, IRS, state wage records, and unemployment insurance. IEVS is a regulatory framework, not a single service — the underlying systems are separate with distinct interfaces, response schemas, and query cycles. See [Decision 17](#decision-17-ievs-as-regulatory-framework).
+**Income and Eligibility Verification System (IEVS)** — a federal mandate (7 CFR § 272.8, 45 CFR § 205.51) requiring states to query SSA, IRS, state wage records, and unemployment insurance. IEVS is a regulatory framework, not a single service — the underlying systems are separate with distinct interfaces, response schemas, and query cycles. See [Decision 7](#decision-7-service-type-model).
 
 Other federal services: USCIS SAVE (immigration status), inter-state enrollment hubs (duplicate benefit checks), and SSA correctional facility data (incarceration status).
 
@@ -372,7 +378,7 @@ Data Exchange emits lifecycle events on ExternalServiceCall transitions. Calling
 - For async calls, the `call.completed` event is the delivery mechanism — calling domains subscribe and receive the full result payload inline. Querying an event store to retrieve async results is inconsistent with event-driven architecture.
 - The event store retains all events as the immutable audit record, consistent with the platform CloudEvents approach.
 - A separate `/audit` endpoint is additive and can be introduced later without breaking contract changes, once access control and retention requirements are defined.
-- Result payloads contain PII and FTI. The blueprint marks sensitive fields with `x-data-classification` so adapters know which fields require regulatory safeguards. How states implement those safeguards (encryption, access control, log masking) is an infrastructure concern. See [PII in event payloads](../../inter-domain-communication.md#pii-in-event-payloads).
+- Result payloads contain PII and FTI. The blueprint marks sensitive fields with `x-data-classification` so adapters know which fields require regulatory safeguards. How states implement those safeguards (encryption, access control, log masking) is an infrastructure concern. See [PII in event payloads](../inter-domain-communication.md#pii-in-event-payloads).
 
 **Options:**
 - **(A)** Separate result endpoint — calling domains fetch results from `GET /external-service-calls/{id}/result`; creates a second retrieval path alongside event delivery

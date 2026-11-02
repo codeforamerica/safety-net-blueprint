@@ -50,7 +50,7 @@ application.previousHousehold.expenses[].amount: { type: number }
 application.previousHousehold.expenses[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
 application.programCount: { type: integer }
 application.confirmationNumber: { type: string }
-application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed] }
+application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed, scheduled, in_progress, completed] }
 application.submittedAt: { type: datetime }
 application.openedAt: { type: datetime }
 application.slaTypeCode: { type: enum, values: [snap_standard, medicaid_standard] }
@@ -74,6 +74,32 @@ application.incomeVerifications[].amount: { type: number }
 application.incomeVerifications[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
 application.incomeVerifications[].links: { type: object }
 application.incomeVerifications[].links.application: { type: string }
+
+# ── ApplicationIncome ───────────────────────────────────────────────────────────
+
+application.incomes[]: { type: list(ApplicationIncome) }
+application.incomes[].memberId: { type: uuid, relationship: ApplicationMember }
+application.incomes[].id: { type: uuid }
+application.incomes[].applicationId: { type: uuid, relationship: Application }
+application.incomes[].source: { type: enum, values: [earned, self_employment, unearned] }
+application.incomes[].amount: { type: number }
+application.incomes[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly, irregular] }
+application.incomes[].paidInCash: { type: boolean }
+application.incomes[].amountVaries: { type: boolean }
+application.incomes[].links: { type: object }
+application.incomes[].links.application: { type: string }
+
+# ── Interview ───────────────────────────────────────────────────────────────────
+
+application.interviews[]: { type: list(Interview) }
+application.interviews[].id: { type: uuid }
+application.interviews[].applicationId: { type: uuid, relationship: Application }
+application.interviews[].scheduledFor: { type: date }
+application.interviews[].status: { type: enum, values: [scheduled, in_progress, completed] }
+application.interviews[].startedAt: { type: datetime }
+application.interviews[].completedAt: { type: datetime }
+application.interviews[].links: { type: object }
+application.interviews[].links.application: { type: string }
 
 # ── ApplicationMember ───────────────────────────────────────────────────────────
 

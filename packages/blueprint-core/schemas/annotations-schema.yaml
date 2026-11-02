@@ -43,6 +43,13 @@ properties:
   domain:
     $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Domain"
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   schema:
     description: >
       Annotations for data model fields, keyed by JSON path notation.

@@ -59,8 +59,8 @@ The work splits by layer, not by feature:
 
 | Layer | What goes there |
 |---|---|
-| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (in a `communication` domain of its own) and Suggestion (in platform, as infrastructure every domain contributes categories to), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them. |
-| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the `fact_extraction` service and its catalog entry. This is program policy, and belongs with the real domain contracts. |
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (the `transcripts` capability, in `communication`), Suggestion (the `suggestions` capability, in `decision-support`, which every domain contributes categories to), the AI service types such as fact extraction (each a capability, in `data-exchange`), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. A contract set includes each capability it lists. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the catalog entry configuring its `fact_extraction` service. This is program policy, and belongs with the real domain contracts. |
 | **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
 
@@ -215,7 +215,7 @@ and nothing else new:
 
 | Service type | Input | Result | Status |
 |---|---|---|---|
-| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the quoted words it came from | To define |
+| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the transcript lines it came from | To define |
 | `document_classification` | A document | Its type, with a confidence | To define |
 | `document_extraction` | A document and the schema to fill | Values matching it | To define |
 | `notice_drafting` | The notice's facts and template | Draft text | To define |
@@ -231,6 +231,22 @@ The inputs and results in the table are a first guess, not a decision. What a
 call receives — one turn, the conversation so far, the current application —
 and what it returns — values, a patch to the application, flags for the worker
 to ask about — are open; see [Open questions](#open-questions).
+
+**Data Exchange moves into the framework first.** Each AI service type is a
+framework capability a set can leave out, but today the catalog, the call and
+its lifecycle are `safety-net-contracts`' own, so a framework capability would
+have nothing to plug into. Built with the first AI service type:
+
+- The framework provides the `data-exchange` domain's general part — the service
+  catalog, the call and its lifecycle, the result events — as a capability. Its
+  paths and events keep their names; only where the files live changes.
+- `safety-net-contracts` adds its federal service types, their schemas and
+  their catalog entries to the same domain, with files of its own.
+- `serviceType` stops being a fixed enum. Its values come from a
+  `service-types` registry, the way a transcript's service comes from
+  `transcription-services`; the framework's AI service types and a set's
+  federal ones each add entries, and each entry names its input and result
+  schemas.
 
 ### How a service call reaches a provider
 
@@ -254,24 +270,25 @@ services:
         modelId: <model id>
         prompt: >
           Record only what the applicant or worker actually said. Leave out
-          anything not stated. Quote the words each value came from.
+          anything not stated. Give the ids of the lines each value came from.
       request:
         POST: /model/$config.modelId/converse
-        body:
-          system:
-            - text: $config.prompt
-          messages:
-            - role: user
-              content:
-                - text: $input.transcript
-          toolConfig:
-            tools:
-              - toolSpec:
-                  name: record
-                  inputSchema:
-                    json: $input.resultSchema       # the blueprint's own schema
-            toolChoice:
-              tool: {name: record}                  # forces a schema-shaped answer
+        requestBody:
+          payload:
+            system:
+              - text: $config.prompt
+            messages:
+              - role: user
+                content:
+                  - text: $input.transcript
+            toolConfig:
+              tools:
+                - toolSpec:
+                    name: record
+                    inputSchema:
+                      json: $input.resultSchema       # the blueprint's own schema
+              toolChoice:
+                tool: {name: record}                  # forces a schema-shaped answer
       response:
         result: $response.output.message.content[0].toolUse.input
 ```
@@ -304,7 +321,7 @@ template schema is written.
 The written record of a conversation, in a `communication` domain the framework
 provides. Built: its lifecycle, its timeline of lines, lost stretches and
 pauses, and the rules for accepting them. Its design, and what is still to
-come, is in [Transcripts](transcripts.md).
+come, is in [Communication](../domains/communication.md).
 
 ### Provider session
 
@@ -315,28 +332,14 @@ AWS. An adapter contract. *To define.*
 
 ### New resources
 
-**Suggestion**, on platform. Anything an assistant, or a rule, puts in front of
-a worker, and the worker's decision on it. Platform knows only two kinds:
-
-- **Proposes an operation.** Carries the operation and its arguments, the
-  evidence, the source and a confidence. Accepting it performs the operation,
-  with the guards and audit trail of any other request. Recording a household
-  member is one; so is marking a required item covered, which is just an
-  operation on the interview.
-- **Informs.** No operation; the worker acknowledges or dismisses it. A
-  question to ask, a risk to probe, an inconsistency to resolve.
-
-Owning domains declare **categories**, each with its own payload schema —
-eligibility declares "missing determination input", intake "risk",
-"inconsistency" and "required item covered" — the same per-type-schema pattern Data Exchange
-uses for service types. Platform owns the lifecycle — proposed, then accepted,
-rejected, expired or superseded — and knows nothing about interviews. The
-suggestion record is also the provenance: what was proposed, from which words,
-by what, and who decided. *To define.*
-
-The worker's acceptance is what vouches that a value is *true*; schema
-validation only says it has the right shape. So a worker's screen must show
-each suggestion's evidence beside it.
+**Suggestion**, the `suggestions` capability, in a `decision-support` domain
+the framework provides. Anything an assistant, a rule or a person puts in front
+of a worker, and the worker's decision on it: a proposed change, which
+accepting makes as the worker, or something to notice. Its evidence refers to
+transcript lines and other sources rather than quoting them. The worker's
+acceptance is what vouches that a value is *true*; schema validation only says
+it has the right shape, so a worker's screen must show each suggestion's
+evidence beside it. Its design is in [Decision Support](../domains/decision-support.md).
 
 **Interview**, in intake, extended. `safety-net-contracts` already declares an
 `Interview` in `intake-openapi.yaml` — the regulatory record that the interview
@@ -344,7 +347,7 @@ happened, linked to scheduling appointments, as `intake.md` describes. Its
 conduct belongs on the same resource rather than a separate session: recording
 consent, starting, the applicable interview requirements, and completing,
 guarded on every applicable item being covered. It refers to its
-[transcript](transcripts.md), whose recording its consent guards and its
+[transcript](../domains/communication.md#transcript), whose recording its consent guards and its
 completion closes. Its state machine also re-runs the guidance rulesets when the interview's application changes, and
 creates the resulting suggestions. Recertification belongs to case management
 under `eligibility.md`, which does not model it yet; a recertification interview
@@ -356,15 +359,15 @@ when recertification is modeled. *To define.*
 Declared in the `emits:` of each resource's state machine, in whichever domain
 owns it, and generated into that domain's events AsyncAPI document. A
 transcript's paused, resumed and closed exist, and an entry's created event
-covers a line or gap recorded. Still to come: `suggestion.proposed`,
-`.accepted`, `.rejected` and `.expired`; `interview.started` and
-`interview.completed`. *To define.*
+covers a line or gap recorded. Still to come: a suggestion's, one for each
+state (see [Decision Support](../domains/decision-support.md#domain-events));
+`interview.started` and `interview.completed`. *To define.*
 
 **Whether an event is stored could be declared too.** Some events are wanted
 only by whoever is displaying them at that moment — lines still firming up, a
 "reconnecting" status — and storing them would cost memory for nothing. If one
 of those ever travels on the bus, each event type would declare whether it is
-persisted, replacing the mock's hard-coded rule that `scheduling.*` events are
+persisted, replacing the mock's hard-coded rule that `platform.timer.*` events are
 broadcast but not stored. Nothing planned needs it yet: only finished lines
 reach the blueprint.
 
@@ -465,8 +468,8 @@ conversation, or returning a patch or flags would travel the same path.
    it is filling in.
 4. **The mock makes the call** to the model, from the catalog entry, and
    completes it. A declared step turns the result into suggestions — four
-   household members, each proposing "add household member", with the words each
-   came from.
+   household members, each proposing "add household member", citing the lines
+   each came from.
 5. **The worker accepts them.** Each performs its operation, with the guards and
    audit trail of any request.
 6. **The application changed, so the interview re-runs its guidance.** Partial
@@ -493,7 +496,7 @@ The audio stream stays out deliberately: providers design for the browser
 connecting directly, and a mock that relayed audio would become a real
 implementation of a provider integration.
 The blueprint's part is the transcript: what the client reports, and the rules
-it is held to. See [Transcripts](transcripts.md#decision-3-audio-never-passes-through-the-blueprint).
+it is held to. See [Communication](../domains/communication.md#decision-3-audio-never-passes-through-the-blueprint).
 
 ### On a server
 
@@ -898,8 +901,8 @@ the mock serves a contract the moment it is declared.
    streaming to Transcribe from a page and writing to it — the first proof that
    a page with no backend reaches an AI service securely and the blueprint
    follows the conversation.
-2. **The suggestion resource**, on the same domain: its two kinds, its lifecycle
-   and its events. Usable at once — create, accept and reject suggestions
+2. **The suggestion resource**, the `suggestions` capability in `decision-support`: its two kinds, its lifecycle and
+   its events (#469). Usable at once — propose, accept and dismiss suggestions
    against the mock — with no model and no AWS.
 3. **The interview's conduct and its requirements**, in
    `safety-net-contracts`: consent, start, its transcript, the
@@ -907,9 +910,10 @@ the mock serves a contract the moment it is declared.
    complete guarded on them. Useful alone, and it can start before any ruleset
    exists: requirements that always apply need no condition.
 4. **The mock calling services from the catalog** — templates, signing and the
-   adapter role, in the framework — **and the `fact_extraction` service** in
-   `safety-net-contracts`, reading the transcript. The first working assistant
-   end to end.
+   adapter role, in the framework — **and the `fact_extraction` service**, a
+   framework capability once Data Exchange's general part has moved there,
+   configured in `safety-net-contracts` to read the transcript. The first
+   working assistant end to end.
 5. **The risk ruleset**, in `safety-net-contracts`, with severity and probes in
    its annotations.
 6. **The operation extension and toolsets**, then the generator for tool
@@ -956,6 +960,7 @@ Larger and later:
   per version of a document — and whether rules and parameters share one
   mechanism.
 - Who supplies Colorado's values for a Colorado demo.
-- Whether transcripts are ever kept. The transcription tools keep them out of
-  storage, so a suggestion's evidence is the quoted words, not a reference to a
-  stored transcript. Keeping them is a policy decision, not a technical one.
+- How long transcripts are kept. A suggestion's evidence refers to transcript
+  lines rather than quoting them, so a transcript is kept at least as long as
+  the suggestions that cite it; the transcription tools keep transcripts out of
+  storage today. How long beyond that is a policy decision, not a technical one.

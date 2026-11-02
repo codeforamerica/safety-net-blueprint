@@ -326,7 +326,7 @@ describe('injectEnumSources — registry source', () => {
   test('pools the entry ids of every registry of the type, sorted', () => {
     // The framework's providers, and a state's own in a file of its own.
     const result = injectEnumSources([
-      registry('base/domains/communication/communication-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
+      registry('base/domains/communication/communication-transcripts-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
       registry('domains/communication/state-registry-transcription-services.yaml', 'transcription-services', ['state-vendor']),
       api,
     ]);

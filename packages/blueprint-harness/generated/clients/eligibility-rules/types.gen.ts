@@ -42,50 +42,79 @@ export type ExpeditedSnapRequest = {
 };
 
 /**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
+ * Evaluation result for expeditedSnap.
  */
-export type ExpeditedSnapResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
+export type ExpeditedSnapResponse = {
+    [key: string]: {
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    };
+} & {
+    isExpeditedEligible: ({
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        /**
+         * Always null — there is no value yet.
+         */
+        value?: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        /**
+         * Always null — the fact could not be computed.
+         */
+        value?: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }) & {
+        value?: boolean | null;
+    };
+};
 
 export type EvaluateExpeditedSnapData = {
     /**
@@ -174,50 +203,79 @@ export type EvaluateExpeditedSnapError = EvaluateExpeditedSnapErrors[keyof Evalu
 
 export type EvaluateExpeditedSnapResponses = {
     /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
+     * Evaluation result for expeditedSnap.
      */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
+    200: {
+        [key: string]: {
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        };
+    } & {
+        isExpeditedEligible: ({
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            /**
+             * Always null — there is no value yet.
+             */
+            value?: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            /**
+             * Always null — the fact could not be computed.
+             */
+            value?: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        }) & {
+            value?: boolean | null;
+        };
+    };
 };
 
 export type EvaluateExpeditedSnapResponse = EvaluateExpeditedSnapResponses[keyof EvaluateExpeditedSnapResponses];

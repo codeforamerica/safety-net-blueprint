@@ -4,7 +4,7 @@
 
 import { executeTransition } from '../state-machine-runner.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { assertFetchShaped, jsonBody } from '../http/request.js';
 
 /**
@@ -40,7 +40,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
     const now = new Date().toISOString();
     const traceparent = traceparentOf(request);
 
-    const { success, result, status, error } = executeTransition({
+    const { success, result, status, code, error, details } = await executeTransition({
       store,
       stepCalls,
       resourceName,
@@ -53,11 +53,12 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       machine,
       slaTypes,
       requestBody: await jsonBody(request),
-      traceparent
+      traceparent,
+      causationid: causationOf(request),
     });
 
     if (!success) {
-      return Response.json({ code: statusCode(status), message: error }, { status });
+      return Response.json({ code: code ?? statusCode(status), message: error, ...(details ? { details } : {}) }, { status });
     }
 
     return Response.json(result);

@@ -21,6 +21,7 @@
 
 import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-lookup.js';
 import { buildApiModel } from './openapi/model.js';
+import { extractDomain, extractCapability } from './contract-types.js';
 
 /**
  * Build a Doc from already-parsed document data.
@@ -46,7 +47,9 @@ export function toDoc({ path, relativePath = null, domain = null, type, content 
     relativePath,
     // A domain is only ever declared: info.x-domain, or domain on anything
     // that is not OpenAPI, AsyncAPI or Arazzo.
-    domain: domain ?? content?.info?.['x-domain'] ?? content?.domain ?? null,
+    domain: domain ?? extractDomain(content),
+    // A framework file's capability, null for anything else; see extractCapability.
+    capability: extractCapability(content),
     type,
     content,
     refs() { return indexRefs(this.content); },
@@ -268,13 +271,18 @@ function normalizeStep(step) {
   }
 
   if ('call' in step) {
-    const isProcedure = typeof step.call === 'string';
+    // A string names a procedure, unless it starts with $: then it holds a
+    // call to an operation, as `$request.call` does.
+    const isProcedure = typeof step.call === 'string' && !step.call.startsWith('$');
     return {
       kind: 'call',
       procedure: isProcedure ? step.call : null,
       request: isProcedure ? null : step.call,
+      ...(step.runAs ? { runAs: step.runAs } : {}),
       description: step.description,
-      children: [],
+      children: step.catch
+        ? [{ kind: 'catch', ...(step.catch.to ? { to: step.catch.to } : {}), children: normalizeSteps(step.catch.do) }]
+        : [],
     };
   }
 

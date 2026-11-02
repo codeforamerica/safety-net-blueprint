@@ -259,7 +259,7 @@ compliance dashboard use case emerges that needs a live annotation query, an
 | 2 | [Annotation file sections](#decision-2-annotation-file-sections) | Three sections map to artifact types: schema, operations, events |
 | 3 | [Multiple file support](#decision-3-multiple-file-support) | Both policy and annotation files support splitting for scale |
 | 4 | [Annotation endpoint placement](#decision-4-annotation-endpoint-placement) | Domain-scoped initially; platform-level is a future option |
-| 5 | [Element path format](#decision-5-element-path-format) | JSON path notation (RFC 9535); data-root-centric; explicit array brackets |
+| 5 | [Element path format](#decision-5-element-path-format) | Dot-and-bracket notation borrowed from JSONPath; data-root-centric; explicit array brackets |
 | 6 | [Citation URL](#decision-6-citation-url) | Optional `citationUrl` alongside the display `citation` string |
 | 7 | [dataClassification vocabulary](#decision-7-dataclassification-vocabulary) | Extensible baseline vocabulary; baseline values schema-enforced, states can extend |
 | 8 | [programs property and strength](#decision-8-programs-property-and-strength) | Renamed from `requiredForPrograms`; map form with per-program strength; shorthand defaults to `required` |
@@ -414,10 +414,11 @@ SSN field within a household member record, in a format that is stable, standard
 consistent with how other tooling in the system addresses fields.
 
 **Considerations:**
-- JSON path (RFC 9535) uses dot-and-bracket notation to express paths from a root object
-  (`application.members[].personalInformation.ssn`). It is a published IETF standard, widely
-  understood, and already used in overlay `target` expressions throughout the contract toolchain.
-  Array segments are explicit (`[]`), making the data structure self-evident in the key itself.
+- A dot-and-bracket path borrowed from JSONPath (RFC 9535) expresses a path from a root object
+  (`application.members[].personalInformation.ssn`). It reads like the overlay `target`
+  expressions used throughout the contract toolchain, but it is not RFC 9535: there is no
+  leading `$`, and `[]` means "every item", where RFC 9535 writes `[*]`. Array segments are
+  explicit, making the data structure self-evident in the key itself.
 - FHIRPath uses schema-anchored dot notation (`ApplicationMember.ssn`) where the root is the
   schema name, not the data root. FHIR resources are self-contained, so anchoring to the schema
   name is natural there. In the blueprint, schemas are embedded in a larger application data model
@@ -439,9 +440,9 @@ with JSON path conventions.
 - **(B)** FHIRPath-style schema-anchored notation (`ApplicationMember.ssn`) — concise but
   schema-centric; loses path context when the same schema appears at multiple locations in the
   data model.
-- **(C)** ✓ JSON path notation (RFC 9535) (`application.members[].personalInformation.ssn`) —
-  standards-based, data-root-centric, explicit array brackets, consistent with overlay `target`
-  expressions and data dictionary key conventions.
+- **(C)** ✓ Dot-and-bracket notation borrowed from JSONPath (`application.members[].personalInformation.ssn`) —
+  data-root-centric, explicit array brackets, close to overlay `target` expressions and
+  consistent with data dictionary key conventions.
 - **(D)** Type-prefixed string (`schema:application.members[].personalInformation.ssn`) —
   redundant given section context.
 

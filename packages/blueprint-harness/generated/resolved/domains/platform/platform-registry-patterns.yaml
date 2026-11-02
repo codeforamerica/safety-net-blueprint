@@ -92,4 +92,4 @@ entries:
       Intermediate fact used internally by other facts but not returned by the REST endpoint. Exercises fact graph dependency rendering in the rules-docs visualizer.
   array-of-oneof:
     description: |
-      Array whose items are a oneOf discriminated union (e.g., EvaluationResult returning EvaluationFact variants). Exercises array-of-oneOf rendering, discriminator label resolution, and schema variant expansion.
+      Array whose items are a oneOf discriminated union. Exercises array-of-oneOf rendering, discriminator label resolution, and schema variant expansion.

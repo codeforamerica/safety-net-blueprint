@@ -421,9 +421,23 @@ export function generateRulesApi(domain, rulesDoc, paramIndex = new Map()) {
       properties: requestProperties,
     };
 
+    // Response body: one property per output, each an EvaluationFact whose
+    // value has the output's declared type — null while it is missing or in
+    // error, so the narrowing holds for every state.
+    const responseProperties = {};
+    for (const [outputName, outputSchema] of Object.entries(ruleset.outputs || {})) {
+      responseProperties[outputName] = {
+        allOf: [
+          { $ref: 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationFact' },
+          { properties: { value: { anyOf: [outputSchema, { type: 'null' }] } } },
+        ],
+      };
+    }
+
     schemas[responseSchemaName] = {
       allOf: [
         { $ref: 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult' },
+        { type: 'object', required: Object.keys(responseProperties), properties: responseProperties },
       ],
       description: `Evaluation result for ${rulesetName}.`,
     };

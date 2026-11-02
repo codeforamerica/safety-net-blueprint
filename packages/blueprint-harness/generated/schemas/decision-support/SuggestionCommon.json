@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "properties": {
+    "evidence": {
+      "type": "array",
+      "description": "Where it came from.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceType",
+          "sourceId"
+        ],
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "description": "What kind of record it cites, e.g. `transcript_entry`."
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The record it cites. `sourceType` says what kind."
+          }
+        }
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Context from other domains, by the cross-domain pass-through\nconvention — `intake.interviewId`, say — so everything proposed\nduring something can be listed together.\n"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it stops applying, if nothing decides it first. One day after it was proposed, when not given."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/SuggestionCommon"
+}

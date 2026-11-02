@@ -56,7 +56,8 @@ All blueprint events use the [CloudEvents 1.0](https://cloudevents.io/) envelope
 | `time` | When the event occurred |
 | `data` | Event payload (domain-specific) |
 | `traceparent` *(optional)* | W3C Trace Context header propagated from the triggering request or event; carries a trace ID (stable across the full causal chain) and parent ID (immediate parent) |
-| `causationid` *(optional)* | CloudEvents Causation extension. The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event — e.g., a task auto-resumed because a timer fired. Complements `traceparent`: `traceparent` covers the full distributed trace; `causationid` names the immediate parent event specifically. |
+| `causationid` *(optional)* | [CloudEvents Correlation extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/correlation.md). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event — e.g., a task auto-resumed because a timer fired. Complements `traceparent`: `traceparent` covers the full distributed trace; `causationid` names the immediate parent event specifically. |
+| `partitionkey` *(optional)* | [CloudEvents Partitioning extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/partitioning.md). Groups events that must be handled in order — see [Event ordering](#event-ordering). |
 | `authtype` *(optional)* | CloudEvents Auth Context extension. Principal type of the actor who triggered the event. Required when `authid` is present. Values: `user`, `service_account`, `api_key`, `system`, `unauthenticated`, `unknown`. Required for FTI-governed events per IRS Pub. 1075. |
 | `authid` *(optional)* | CloudEvents Auth Context extension. Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. |
 
@@ -141,6 +142,12 @@ When an event is emitted directly in response to another event, producers set th
 Use `causationid` when a consumer needs to identify the immediate trigger without parsing the full trace — for example, a task auto-resumed by a timer carries the timer event ID in `causationid`, allowing a subscriber to look up the original timer context without domain-specific payload fields in the workflow event.
 
 `causationid` is optional. Producers set it only when the event is causally linked to another event. Events triggered by direct user action (HTTP requests) do not set `causationid` — use `traceparent` for those.
+
+#### Event ordering
+
+A subscriber handles events with the same `partitionkey` one at a time, in the order they occurred; events with different keys need not wait for each other. This is what keeps a subscriber from acting on stale data. When a household's incomes change twice in quick succession, an interview's state machine re-evaluates its flags for each change — and if the two re-evaluations ran at once, the earlier one, finishing last, could propose a suggestion the later one had just cleared. With both changes under one key, the second waits for the first.
+
+The CloudEvents Partitioning extension leaves the key to the producer. Choose the id of the record that owns the others — the aggregate, in domain-driven design terms — so that everything that must stay in order shares a key: in intake, the application, for its members, incomes and interviews as much as for itself. Most brokers deliver in order per key already: a Kafka message key, an SQS FIFO message group, an Azure Service Bus session. A subscriber must also finish one event before it takes the next with the same key, rather than taking them concurrently.
 
 ---
 

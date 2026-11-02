@@ -36,16 +36,16 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 
 **File type:** `overlays/config.yaml` — `config:` section.
 
-The capabilities a contract set includes. A capability is a domain the framework provides beyond platform — today, `communication`, which holds transcripts. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
+The capabilities a contract set includes. A capability is one thing the framework provides beyond platform — today, `transcripts`, in the `communication` domain, and `suggestions`, in `decision-support`. Each framework file declares the capability it belongs to; a domain can hold several, and a set takes only the ones it lists. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
 
 ```yaml
 # overlays/config.yaml
 config:
   x-capabilities:
-    - communication
+    - transcripts
 ```
 
-A name the framework does not provide stops resolve, listing the ones it does.
+A name no framework file declares stops resolve, listing the ones they do. A reference into a capability the set has not listed — a scenario calling one of its operations, a file in a domain only it defines — fails validation, naming that capability.
 
 ---
 

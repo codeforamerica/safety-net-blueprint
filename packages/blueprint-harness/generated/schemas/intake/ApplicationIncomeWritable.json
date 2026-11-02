@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "properties": {
+    "memberId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The member who receives it."
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "earned",
+        "self_employment",
+        "unearned"
+      ]
+    },
+    "amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "The amount received each time it's paid, in dollars."
+    },
+    "frequency": {
+      "type": "string",
+      "enum": [
+        "weekly",
+        "biweekly",
+        "semimonthly",
+        "monthly",
+        "irregular"
+      ],
+      "description": "How often it's paid."
+    },
+    "paidInCash": {
+      "type": "boolean"
+    },
+    "amountVaries": {
+      "type": "boolean",
+      "description": "Whether the amount changes from one payment to the next, as with irregular hours or tips."
+    },
+    "links": {
+      "type": "object",
+      "readOnly": true,
+      "description": "Related resource links.",
+      "properties": {
+        "member": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "Link to the related ApplicationMember resource."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationIncomeWritable"
+}

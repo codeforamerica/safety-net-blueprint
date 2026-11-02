@@ -1,6 +1,7 @@
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: communication
+capability: transcripts
 machines:
   - object: Transcript
     states:
@@ -68,10 +69,11 @@ machines:
         steps:
           - call:
               POST: communication/transcripts/$object.id/entries
-              body:
-                kind: pause
-                startedAt: $request.at
-                endedAt: null
+              requestBody:
+                payload:
+                  kind: pause
+                  startedAt: $request.at
+                  endedAt: null
           - emit:
               event: paused
               type: communication.transcript.paused
@@ -94,8 +96,9 @@ machines:
         steps:
           - call:
               PATCH: communication/transcripts/$object.id/entries/$openPause.id
-              body:
-                endedAt: $request.at
+              requestBody:
+                payload:
+                  endedAt: $request.at
           - call: requestIdleCheck
           - emit:
               event: resumed
@@ -126,8 +129,9 @@ machines:
             then:
               - call:
                   PATCH: communication/transcripts/$object.id/entries/$openPause.id
-                  body:
-                    endedAt: $request.at
+                  requestBody:
+                    payload:
+                      endedAt: $request.at
           - emit:
               event: closed
               type: communication.transcript.closed
@@ -144,8 +148,9 @@ machines:
             then:
               - call:
                   PATCH: communication/transcripts/$this.data.transcriptId
-                  body:
-                    lastActivityAt: $this.data.endedAt
+                  requestBody:
+                    payload:
+                      lastActivityAt: $this.data.endedAt
       - type: communication.idle_check
         description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
         transition:
@@ -163,20 +168,22 @@ machines:
                 then:
                   - call:
                       POST: communication/transcripts/$object.id/close
-                      body:
-                        at: $object.lastActivityAt
+                      requestBody:
+                        payload:
+                          at: $object.lastActivityAt
                 else:
                   - call:
                       POST: communication/transcripts/$object.id/close
-                      body:
-                        at: $object.startedAt
+                      requestBody:
+                        payload:
+                          at: $object.startedAt
     procedures:
       - id: requestIdleCheck
         description: Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
         if: profile != null && has(profile.idleTimeout)
         then:
           - emit:
-              type: scheduling.timer.requested
+              type: platform.timer.requested
               data:
                 timerId: communication.idle_check.{$object.id}
                 fireAfter: $profile.idleTimeout

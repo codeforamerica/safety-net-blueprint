@@ -59,10 +59,30 @@ contract_files:
       first one wins.
 
   framework_files:
-    rule: The framework's base contracts are copied into every set under base/. A capability's domain — communication, say — is included only when the set's configuration lists it in x-capabilities.
+    rule: The framework's base contracts are copied into every set under base/. Platform's files always are; every other framework file declares the capability it belongs to — x-capability in info on OpenAPI, AsyncAPI and Arazzo, capability on everything else — and is included only when the set's configuration lists that capability in x-capabilities.
     rationale: >
       Every set gets the platform's infrastructure without writing it, and opts
-      into a capability rather than carrying contracts it does not use.
+      into a capability rather than carrying contracts it does not use. The
+      unit is the capability, not the domain, so a set can take the framework's
+      transcripts without anything else the framework adds to communication.
+      A capability, like a domain, is declared rather than inferred from a
+      folder or a file name.
+
+  scenarios:
+    rule: When you add or change a capability that takes several calls to see working, write an Arazzo scenario of it in the harness's contract set (packages/blueprint-harness/contracts/scenarios/).
+    writing:
+      - Show the capability, not the setup. Seed the records it starts from in the set's mock data, and refer to them by their seeded ids.
+      - Include only the steps that show the capability. Leave each refusal and each repeat to unit tests, unless the scenario is about it.
+      - Open with info.description, one paragraph on who does what. Split the story into workflows, one per stage, each with a summary (its heading in the page) and a description (bullets on what happens in it).
+      - Give each step a description whose first line is its title and whose bullets are what to notice. Say who does what (the caseworker, the AI assistant, a state machine, an API) in plain, literal words.
+      - Name, in backticks, the contract elements that do the work, such as an action, a procedure, a ruleset, a fact, the event a reaction listens for, a composition or a field. The harness page shows each from the contracts.
+      - Take a value from a response with a JSON Pointer when it's at a fixed place, and with a JSONPath selector when you find it by what it holds (standards.yaml, Arazzo).
+      - Run the harness's regenerate before its scenario tests, which run the generated bundle.
+    rationale: >
+      One file is the test (CI runs every harness scenario against a fresh
+      mock), the walkthrough (a tour in the harness page, a step at a time),
+      and a check any Arazzo runner can run against a real system. How to
+      write steps is in docs/guides/mock-server.md (Scenarios).
 
   generated_files:
     rule: Resolve writes documents a set does not author — an API document beside each rules file, an events AsyncAPI document beside each OpenAPI document — into the resolved set only. They are never edited.

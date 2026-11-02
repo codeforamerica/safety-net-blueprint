@@ -6,7 +6,7 @@ import { emitEvent } from '../emit-event.js';
 import { isConfigManaged } from '../config-registry.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
-import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { assertFetchShaped } from '../http/request.js';
 
 /**
@@ -68,6 +68,7 @@ export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
         callerId: callerHeader(request, 'x-caller-id'),
         callerRoles: extractCallerRoles(request),
         traceparent: traceparentOf(request),
+        causationid: causationOf(request),
         now: new Date().toISOString(),
       });
     } catch (eventError) {

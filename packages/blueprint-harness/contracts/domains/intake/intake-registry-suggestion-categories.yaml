@@ -1,0 +1,19 @@
+# The kinds of thing an informing suggestion can point out about an intake
+# record. Fictional, for exercising suggestions: a program's own domains
+# declare theirs, each with a file of this type, and the entries combine.
+$schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
+version: "1.0.0"
+domain: intake
+type: suggestion-categories
+
+entries:
+  name-mismatch:
+    description: A name said in the conversation differs from the one on the record.
+  missing-income:
+    description: Income was mentioned that the record does not have.
+  # One per interview flag the interview puts to the worker (intake-rules.yaml,
+  # flagged.*). Keep the ids stable: a dismissal is matched by its category.
+  earned-income-varies:
+    description: These wages change from one payment to the next, or come irregularly. Ask about recent pay and hours to get a fair monthly figure.
+  cash-or-self-employment-income:
+    description: This income is paid in cash or comes from self-employment, where errors are common. Ask how much comes in and how they keep track.

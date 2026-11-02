@@ -93,6 +93,7 @@ function* emitsIn(steps, where) {
 
     yield* emitsIn(step.children ?? step.then ?? step.do, where);
     yield* emitsIn(step.else, where);
+    yield* emitsIn(step.catch?.do, where);
     for (const branch of Object.values(step.when ?? {})) yield* emitsIn(branch, where);
   }
 }

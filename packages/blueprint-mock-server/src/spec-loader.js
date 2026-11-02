@@ -16,6 +16,7 @@
 import { resolverFor } from './schema-refs.js';
 import { deriveCollectionName } from './collection-utils.js';
 import { registerResourceCollections } from './handlers/expand-utils.js';
+import { registerEventOwners } from './emit-event.js';
 
 /** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
 const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
@@ -272,6 +273,25 @@ export function apiSpecsFromDocs(docs) {
     }
   }
   registerResourceCollections(collections, itemPaths);
+
+  // Which record each resource's records sit under, by the name its events
+  // carry — an income's events find the application above it — so an event
+  // is keyed by the record that owns it (emit-event.js).
+  const owners = new Map();
+  for (const api of loaded) {
+    const domain = (api.serverBasePath ?? '').replace(/^\//, '');
+    for (const resource of api.doc.model?.()?.resources ?? []) {
+      const collection = resource.path('collection');
+      if (!resource.eventName || !collection) continue;
+      const parent = resource.parent;
+      owners.set(`${domain}.${resource.eventName}`, {
+        collection: deriveCollectionName(collection, ''),
+        parent: parent?.eventName ? `${domain}.${parent.eventName}` : null,
+        parentField: parent?.item?.parameter ?? null,
+      });
+    }
+  }
+  registerEventOwners(owners);
 
   return loaded;
 }

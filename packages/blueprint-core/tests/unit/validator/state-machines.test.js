@@ -25,7 +25,6 @@ import {
   collectContextBindings,
   extractConditionIds,
   walkPushBodiesInCalls,
-  collectCallBodyLiterals,
 } from '../../../src/validator/state-machine-validator.js';
 import {
   collectTopLevelProperties,
@@ -227,8 +226,7 @@ describe('extractEnumComparisons', () => {
 describe('walkPushBodiesInCalls', () => {
   test('yields push body from a call with $push in body field', () => {
     const steps = [{
-      call: { PATCH: 'intake/applications/verifications/$id' },
-      body: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } },
+      call: { PATCH: 'intake/applications/verifications/$id', requestBody: { payload: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } } } },
     }];
     const results = [...walkPushBodiesInCalls(steps)];
     assert.equal(results.length, 1);
@@ -242,8 +240,7 @@ describe('walkPushBodiesInCalls', () => {
       match: '$this.data.result',
       when: {
         conclusive: [{
-          call: { PATCH: 'intake/applications/verifications/$id' },
-          body: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } },
+          call: { PATCH: 'intake/applications/verifications/$id', requestBody: { payload: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } } } },
         }],
       },
     }];
@@ -251,51 +248,15 @@ describe('walkPushBodiesInCalls', () => {
   });
 
   test('ignores calls without $push in body', () => {
-    const steps = [{ call: { POST: 'intake/applications' }, body: { status: 'draft' } }];
+    const steps = [{ call: { POST: 'intake/applications', requestBody: { payload: { status: 'draft' } } } }];
     assert.equal([...walkPushBodiesInCalls(steps)].length, 0);
   });
 
   test('ignores $push with non-object value', () => {
     const steps = [{
-      call: { PATCH: 'intake/applications/$id' },
-      body: { appointments: { $push: '$this.subject' } },
+      call: { PATCH: 'intake/applications/$id', requestBody: { payload: { appointments: { $push: '$this.subject' } } } },
     }];
     assert.equal([...walkPushBodiesInCalls(steps)].length, 0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// collectCallBodyLiterals
-// ---------------------------------------------------------------------------
-
-describe('collectCallBodyLiterals', () => {
-  test('collects literal values from call body fields', () => {
-    const steps = [{ call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } }];
-    const map = collectCallBodyLiterals(steps);
-    assert.ok(map.get('serviceType')?.has('fdsh_ssa'));
-  });
-
-  test('collects literals from multiple calls into the same field', () => {
-    const steps = [
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'ssa_ievs' } },
-    ];
-    const map = collectCallBodyLiterals(steps);
-    assert.ok(map.get('serviceType')?.has('fdsh_ssa'));
-    assert.ok(map.get('serviceType')?.has('ssa_ievs'));
-  });
-
-  test('does not collect $-prefixed variable references', () => {
-    const steps = [{ call: { POST: 'data-exchange/service-calls' }, body: { serviceType: '$params.serviceType' } }];
-    assert.equal(collectCallBodyLiterals(steps).has('serviceType'), false);
-  });
-
-  test('collects from nested when: branches', () => {
-    const steps = [{
-      match: '$this.data.x',
-      when: { done: [{ call: { POST: 'some/endpoint' }, body: { status: 'active' } }] },
-    }];
-    assert.ok(collectCallBodyLiterals(steps).get('status')?.has('active'));
   });
 });
 
@@ -888,8 +849,7 @@ describe('validateCrossArtifact — invalid-push-enum-value', () => {
         steps: [
           ...extraSteps,
           {
-            call: { PATCH: 'intake/applications/verifications/$id' },
-            body: { evidence: { $push: pushBody } },
+            call: { PATCH: 'intake/applications/verifications/$id', requestBody: { payload: { evidence: { $push: pushBody } } } },
           },
         ],
       }],
@@ -902,30 +862,38 @@ describe('validateCrossArtifact — invalid-push-enum-value', () => {
     assert.equal(errors.filter(e => e.rule === 'invalid-push-enum-value').length, 0);
   });
 
+  test('an item that is one of several shapes takes what any of them allows', () => {
+    const schemaIndex = makeSchemaIndex({
+      VerificationEvidenceItem: {
+        oneOf: [
+          { $ref: '#/components/schemas/VerificationElectronicEvidence' },
+          { $ref: '#/components/schemas/VerificationDocumentEvidence' },
+        ],
+      },
+      VerificationDocumentEvidence: {
+        type: 'object',
+        properties: { type: { type: 'string', enum: ['document'] }, documentId: { type: 'string' } },
+      },
+    });
+    const valid = validateCrossArtifact('/fake.yaml', makePushDoc({ type: 'document', documentId: '$this.data.documentId' }), schemaIndex, makeEndpointIndex());
+    assert.equal(valid.filter(e => e.rule === 'invalid-push-enum-value').length, 0, JSON.stringify(valid));
+    const invalid = validateCrossArtifact('/fake.yaml', makePushDoc({ type: 'paper' }), schemaIndex, makeEndpointIndex());
+    assert.ok(hasRule(invalid, 'invalid-push-enum-value'));
+  });
+
   test('errors when literal push field value is not in enum', () => {
     const doc = makePushDoc({ type: 'electronic', source: 'not_a_real_source', result: 'conclusive' });
     const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
     assert.ok(hasRule(errors, 'invalid-push-enum-value'));
   });
 
-  test('passes when variable reference traces only to valid enum values', () => {
+  test('a variable is not checked, whatever the machine writes elsewhere to a field of that name', () => {
     const extraSteps = [
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'ssa_ievs' } },
+      { call: { POST: 'data-exchange/service-calls', requestBody: { payload: { serviceType: 'unknown_service' } } } },
     ];
     const doc = makePushDoc({ type: 'electronic', source: '$this.data.serviceType', result: 'conclusive' }, extraSteps);
     const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
     assert.equal(errors.filter(e => e.rule === 'invalid-push-enum-value').length, 0);
-  });
-
-  test('errors when variable reference traces to a value not in enum', () => {
-    const extraSteps = [
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
-      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'unknown_service' } },
-    ];
-    const doc = makePushDoc({ type: 'electronic', source: '$this.data.serviceType', result: 'conclusive' }, extraSteps);
-    const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
-    assert.ok(hasRule(errors, 'invalid-push-enum-value'));
   });
 });
 
@@ -1166,5 +1134,60 @@ describe('scenario: object rename — overlay renames Application schema → Int
     const doc = makeDoc({ object: 'IntakeForm' });
     const errors = validateCrossArtifact('/fake.yaml', doc, schemaIndex, endpointIndex);
     assert.equal(errors.filter(e => e.rule === 'unknown-object').length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// catch: only on a call that reports a failure
+// ---------------------------------------------------------------------------
+
+describe('catch on a call that cannot report a failure', () => {
+  const handled = { do: [] };
+
+  test('a call to an operation, by operationId or a $ value, may have catch', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [
+        { call: { operationId: 'createSuggestion', requestBody: { payload: {} } }, catch: handled },
+        { call: '$request.call', catch: handled },
+      ] }],
+    }));
+    assert.ok(!hasRule(errors, 'catch-never-runs'), JSON.stringify(errors));
+  });
+
+  test('catch on a call by method and path is refused, naming the call', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      on: [{ type: 'intake.application.created', steps: [
+        { forEach: { in: '$this.data.ids', as: 'id' }, do: [
+          { call: { POST: 'decision-support/suggestions', body: {} }, catch: handled },
+        ] },
+      ] }],
+    }));
+    const error = errors.find((e) => e.rule === 'catch-never-runs');
+    assert.ok(error, JSON.stringify(errors));
+    assert.match(error.message, /POST decision-support\/suggestions/);
+    assert.equal(error.path, 'machines[Application].on[intake.application.created]');
+  });
+
+  test('catch on a call to a procedure is refused, in an action or a procedure', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [{ call: 'notify', catch: handled }] }],
+      procedures: [
+        { id: 'notify', emit: 'submitted' },
+        { id: 'wrapper', call: 'notify', catch: handled },
+      ],
+    }));
+    assert.equal(errors.filter((e) => e.rule === 'catch-never-runs').length, 2, JSON.stringify(errors));
+  });
+
+  test('bind on a call to an operation binds; on a call by method and path it is refused', () => {
+    const errors = validateWithinFile('test.yaml', makeDoc({
+      actions: [{ id: 'submit', transition: { from: 'draft', to: 'submitted' }, steps: [
+        { call: { operationId: 'getThing' }, bind: '$thing' },
+        { call: { POST: 'intake/assessments', body: {} }, bind: '$assessment' },
+      ] }],
+    }));
+    const refused = errors.filter((e) => e.rule === 'bind-never-binds');
+    assert.equal(refused.length, 1, JSON.stringify(errors));
+    assert.match(refused[0].message, /POST intake\/assessments/);
   });
 });

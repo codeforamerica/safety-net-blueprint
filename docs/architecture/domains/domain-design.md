@@ -12,7 +12,7 @@ See also: [API Architecture](api-architecture.md)
 
 ### Overview
 
-The Safety Net Benefits API is organized into 8 domains, with 5 cross-cutting concerns:
+The Safety Net Benefits API is organized into 8 domains, with 6 cross-cutting concerns:
 
 | Domain | Design Status | Purpose |
 |--------|---------------|---------|
@@ -31,6 +31,7 @@ The Safety Net Benefits API is organized into 8 domains, with 5 cross-cutting co
 - **Configuration Management** - Business-configurable rules, thresholds, and settings that can be changed without code deployments
 - **Observability** - Health checks, metrics, logging, and tracing for operations staff
 - **Search** - Cross-resource search spanning all domains
+- **Decision Support** - Suggestions about a record in any domain, put in front of the person acting on it
 
 ### Domain Details
 
@@ -135,7 +136,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 
 #### Communication (Cross-Cutting)
 
-Official notices and correspondence that can originate from any domain. **[Details →](cross-cutting/communication.md)**
+Official notices and correspondence that can originate from any domain, and transcripts of conversations. **[Details →](communication.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -324,7 +325,8 @@ Domain-specific design has been moved to separate files:
 | Case Management | [domains/case-management.md](domains/case-management.md) |
 | Data Exchange | [domains/data-exchange.md](domains/data-exchange.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
-| Communication | [cross-cutting/communication.md](cross-cutting/communication.md) |
+| Communication | [communication.md](communication.md) |
+| Decision Support | [decision-support.md](decision-support.md) |
 | Search | [cross-cutting/search.md](cross-cutting/search.md) |
 
 *Note: Client Management, Intake, Eligibility, and Document Management will be added as those domains are designed. Reporting aggregates data from other domains and doesn't have its own design doc.*

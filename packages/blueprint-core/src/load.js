@@ -48,8 +48,7 @@ export function load(file) {
   const { path, relativePath = null, domain = null } =
     typeof file === 'string' ? { path: file } : file;
 
-  const raw = readFileSync(path, 'utf8');
-  const content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
+  const content = readYaml(path);
 
   // Reading is this function's whole job; building the Doc belongs to doc.js,
   // which an artifact can reach without a filesystem.
@@ -60,5 +59,24 @@ export function load(file) {
     type: detectType(basename(path), content),
     content,
   });
+}
+
+/**
+ * Parse a YAML file, naming the file when it does not parse.
+ *
+ * js-yaml's own error gives the line and column but not the file, which in a
+ * set of hundreds is the part that matters.
+ *
+ * @param {string} path - Absolute path to the file
+ * @returns {*} The parsed document
+ */
+export function readYaml(path) {
+  try {
+    return yaml.load(readFileSync(path, 'utf8'), { schema: yaml.CORE_SCHEMA });
+  } catch (err) {
+    if (!(err instanceof yaml.YAMLException)) throw err;
+    const at = err.mark ? ` (line ${err.mark.line + 1}, column ${err.mark.column + 1})` : '';
+    throw new Error(`${path} is not valid YAML: ${err.reason}${at}`, { cause: err });
+  }
 }
 

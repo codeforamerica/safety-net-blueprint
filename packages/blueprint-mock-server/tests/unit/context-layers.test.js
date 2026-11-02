@@ -17,7 +17,6 @@ const store = createMemoryStore();
 // the shim's module-level exports, so they pass that same store.
 const DEPS = { store: store };
 import { resolveContextLayers } from '../../src/handlers/procedure-runner.js';
-import { createUpdateHandler } from '../../src/handlers/update-handler.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
 import { makeRequest, readResponse } from '../helpers/fetch.js';
 
@@ -103,77 +102,6 @@ test('resolveContextLayers — binding that finds no record resolves to null', (
 test('resolveContextLayers — all null/empty layers returns empty entities', () => {
   const result = resolveContextLayers([null, null, null], {}, makeBase(), store);
   assert.deepStrictEqual(result, {});
-});
-
-// =============================================================================
-// Integration: machine-level context available in onCreate steps
-// =============================================================================
-
-test('createCreateHandler — machine-level context available in onCreate steps:', async () => {
-  store.clearAll('testresources');
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
-
-  const apiMetadata = { serverBasePath: '/test' };
-  const endpoint = { collectionName: 'testresources', path: '/testresources', requestSchema: null };
-
-  const machine = {
-    object: 'Testresource',
-    context: [{ snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' } } }],
-    triggers: {
-      onCreate: {
-        steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
-      }
-    }
-  };
-
-  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], machine, DEPS);
-  const request = makeRequest('/testresources', {
-    method: 'POST',
-    body: { name: 'test' },
-    headers: { 'x-caller-id': 'sys', 'x-caller-roles': 'system' },
-  });
-
-  const { status, body } = await readResponse(handler(request, { params: {} }));
-
-  assert.strictEqual(status, 201);
-  assert.strictEqual(body.queueId, 'q-snap');
-});
-
-// =============================================================================
-// Integration: machine-level context available in onUpdate steps
-// =============================================================================
-
-test('createUpdateHandler — machine-level context available in onUpdate steps:', async () => {
-  store.clearAll('testresources');
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
-  store.insertResource('testresources', { id: 'res-ctx-1', isExpedited: false, queueId: null });
-
-  const apiMetadata = { serverBasePath: '/test' };
-  const endpoint = { collectionName: 'testresources', path: '/testresources/{id}', requestSchema: null };
-
-  const machine = {
-    object: 'Testresource',
-    context: [{ snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' } } }],
-    triggers: {
-      onUpdate: {
-        fields: ['isExpedited'],
-        steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
-      }
-    }
-  };
-
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, DEPS);
-  const request = makeRequest('/testresources/res-ctx-1', {
-    method: 'PATCH',
-    body: { isExpedited: true },
-  });
-
-  const { body } = await readResponse(handler(request, { params: { id: 'res-ctx-1' } }));
-
-  assert.ok(body, 'expected a response body');
-  assert.strictEqual(body.queueId, 'q-snap');
 });
 
 // =============================================================================

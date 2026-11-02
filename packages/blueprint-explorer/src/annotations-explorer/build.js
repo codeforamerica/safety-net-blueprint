@@ -24,7 +24,7 @@ import { loadConfig } from '../lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain']);
+const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain', 'capability']);
 
 // ── Registry loading ───────────────────────────────────────────────────────────
 

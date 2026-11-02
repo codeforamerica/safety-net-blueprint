@@ -8,6 +8,7 @@
  * Both return an array of { rule, message, path } error objects.
  */
 
+import { everyStep } from '../steps.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import yaml from 'js-yaml';
@@ -134,17 +135,64 @@ export function extractConditionIds(conditions) {
 }
 
 function* walkCallStrings(steps) {
+  for (const step of everyStep(steps)) {
+    // A string starting with $ holds a call to an operation, not a procedure's name.
+    if (typeof step.call === 'string' && !step.call.startsWith('$')) yield step.call;
+  }
+}
+
+/**
+ * Steps with a `catch:` that can never run, or a `bind:` that never binds:
+ * on a call by method and path, or to a procedure. Only a call to an operation
+ * — `call: { operationId }` or a `$` value holding one — reports a failure and
+ * answers with a response; the others are logged, and written after the steps.
+ */
+function* walkUnreachableFailures(steps) {
+  for (const step of everyStep(steps)) {
+    if ((step.catch || step.bind) && step.call !== undefined) {
+      const operation = typeof step.call === 'string' ? step.call.startsWith('$') : 'operationId' in (step.call ?? {});
+      if (!operation) yield step;
+    }
+  }
+}
+
+/** The errors for a catch: that can never run and a bind: that never binds, naming the call. */
+function unreachableFailure(step, path) {
+  const named = typeof step.call === 'string'
+    ? `procedure "${step.call}"`
+    : ['POST', 'PATCH', 'GET', 'DELETE'].filter((m) => m in step.call).map((m) => `${m} ${step.call[m]}`)[0] ?? 'this call';
+  const errors = [];
+  if (step.catch) {
+    errors.push({
+      rule: 'catch-never-runs',
+      message: `catch: on the call to ${named} never runs — only a call to an operation, by operationId or a $ value holding one, reports a failure. Call the operation by its operationId to handle one.`,
+      path,
+    });
+  }
+  if (step.bind) {
+    errors.push({
+      rule: 'bind-never-binds',
+      message: `bind: on the call to ${named} never binds — only a call to an operation, by operationId or a $ value holding one, answers with a response the steps after it can read. Call the operation by its operationId to bind what it answers.`,
+      path,
+    });
+  }
+  return errors;
+}
+
+/** The operationIds of the calls to operations in steps, wherever they stand. */
+function* walkOperationCalls(steps) {
   if (!Array.isArray(steps)) return;
   for (const step of steps) {
     if (!step || typeof step !== 'object') continue;
-    if (typeof step.call === 'string') yield step.call;
-    yield* walkCallStrings(step.then);
-    yield* walkCallStrings(step.else);
-    yield* walkCallStrings(step.do);
+    if (typeof step.call?.operationId === 'string') yield step.call.operationId;
+    yield* walkOperationCalls(step.then);
+    yield* walkOperationCalls(step.else);
+    yield* walkOperationCalls(step.do);
+    yield* walkOperationCalls(step.catch?.do);
     if (step.when && typeof step.when === 'object') {
-      for (const substeps of Object.values(step.when)) yield* walkCallStrings(substeps);
+      for (const substeps of Object.values(step.when)) yield* walkOperationCalls(substeps);
     }
-    if (step.forEach?.do) yield* walkCallStrings(step.forEach.do);
+    if (step.forEach?.do) yield* walkOperationCalls(step.forEach.do);
   }
 }
 
@@ -156,6 +204,7 @@ function* walkSetFields(steps) {
     yield* walkSetFields(step.then);
     yield* walkSetFields(step.else);
     yield* walkSetFields(step.do);
+    yield* walkSetFields(step.catch?.do);
     if (step.when && typeof step.when === 'object') {
       for (const substeps of Object.values(step.when)) yield* walkSetFields(substeps);
     }
@@ -184,14 +233,23 @@ function* walkObjectCalls(steps) {
   }
 }
 
+/**
+ * The body a call step sends: its `requestBody.payload`, or the deprecated
+ * `body:` beside the method.
+ */
+function payloadOf(step) {
+  return step.call?.requestBody?.payload ?? step.call?.body;
+}
+
 export function* walkPushBodiesInCalls(steps) {
   if (!Array.isArray(steps)) return;
   for (const step of steps) {
     if (!step || typeof step !== 'object') continue;
     if (step.call && typeof step.call === 'object') {
       for (const [method, callPath] of Object.entries(step.call)) {
-        if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && step.body && typeof step.body === 'object') {
-          for (const [bodyField, bodyVal] of Object.entries(step.body)) {
+        const payload = payloadOf(step);
+        if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && payload && typeof payload === 'object') {
+          for (const [bodyField, bodyVal] of Object.entries(payload)) {
             if (bodyVal && typeof bodyVal === 'object' && bodyVal.$push && typeof bodyVal.$push === 'object') {
               yield { method: method.toUpperCase(), callPath: String(callPath), bodyField, pushBody: bodyVal.$push };
             }
@@ -207,49 +265,6 @@ export function* walkPushBodiesInCalls(steps) {
     }
     if (step.forEach?.do) yield* walkPushBodiesInCalls(step.forEach.do);
   }
-}
-
-export function collectCallBodyLiterals(steps) {
-  const map = new Map();
-
-  function addLiteral(key, val) {
-    if (!map.has(key)) map.set(key, new Set());
-    map.get(key).add(val);
-  }
-
-  function walkBody(body) {
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return;
-    for (const [key, val] of Object.entries(body)) {
-      if (typeof val === 'string' && !val.startsWith('$')) {
-        addLiteral(key, val);
-      } else if (Array.isArray(val)) {
-        for (const item of val) {
-          if (typeof item === 'string' && !item.startsWith('$')) addLiteral(key, item);
-          else if (item && typeof item === 'object') walkBody(item);
-        }
-      } else if (val && typeof val === 'object') {
-        walkBody(val);
-      }
-    }
-  }
-
-  function walkSteps(stepsArr) {
-    if (!Array.isArray(stepsArr)) return;
-    for (const step of stepsArr) {
-      if (!step || typeof step !== 'object') continue;
-      if (step.call && typeof step.call === 'object' && step.body) walkBody(step.body);
-      walkSteps(step.then);
-      walkSteps(step.else);
-      walkSteps(step.do);
-      if (step.when && typeof step.when === 'object') {
-        for (const substeps of Object.values(step.when)) walkSteps(substeps);
-      }
-      if (step.forEach?.do) walkSteps(step.forEach.do);
-    }
-  }
-
-  walkSteps(steps);
-  return map;
 }
 
 // Walk all string values in a node, skipping description and $schema keys
@@ -344,16 +359,40 @@ function checkGuardClauses(guards, path, validRoles, guardIds) {
  * @param {object[]} steps - Authored steps
  * @returns {string[]}
  */
-function shortEmitsIn(steps) {
+function emitsIn(steps) {
   const out = [];
-  for (const step of steps || []) {
-    if (!step || typeof step !== 'object') continue;
-    if (typeof step.emit === 'string') out.push(step.emit);
-    else if (step.emit?.event) out.push(step.emit.event);
-    out.push(...shortEmitsIn(step.then), ...shortEmitsIn(step.else), ...shortEmitsIn(step.do));
-    for (const branch of Object.values(step.when || {})) out.push(...shortEmitsIn(branch));
+  for (const step of everyStep(steps)) {
+    if (typeof step.emit === 'string') out.push({ event: step.emit });
+    else if (step.emit?.event) out.push({ event: step.emit.event, data: step.emit.data });
   }
   return out;
+}
+
+/**
+ * What's wrong with the data an emit step sends, against the schema its event
+ * declares: a property the schema requires that the step doesn't send; one it
+ * sends that the schema doesn't declare, when the schema allows no others; or
+ * data at all, when the event declares no schema and so carries none. The
+ * values are runtime expressions, so only the property names are checked.
+ *
+ * @param {{ event: string, data?: object }} emit
+ * @param {{ schema?: object }} declared - The event, as the machine's emits declares it
+ * @returns {string[]} Messages
+ */
+function emitDataProblems(emit, declared) {
+  const sent = emit.data && typeof emit.data === 'object' ? Object.keys(emit.data) : [];
+  const schema = declared.schema;
+  if (!schema) {
+    return sent.length ? [`emit "${emit.event}" sends data (${sent.join(', ')}), but the event declares no schema, so it carries none. Declare the data under its schema in emits.`] : [];
+  }
+  const problems = [];
+  const missing = (schema.required || []).filter((name) => !sent.includes(name));
+  if (missing.length) problems.push(`emit "${emit.event}" doesn't send ${missing.join(', ')}, which its schema requires.`);
+  if (schema.additionalProperties === false) {
+    const undeclared = sent.filter((name) => !Object.hasOwn(schema.properties || {}, name));
+    if (undeclared.length) problems.push(`emit "${emit.event}" sends ${undeclared.join(', ')}, which its schema doesn't declare.`);
+  }
+  return problems;
 }
 
 export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROLES } = {}) {
@@ -381,21 +420,27 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       errors.push({ rule: 'renamed-key', message: '`events:` is now `on:` — the events this machine reacts to.', path: `${ctx}.events` });
     }
 
-    // Every event a step sends by id is one the machine declares under emits.
-    const emitted = new Set();
+    // Every event a step sends by id is one the machine declares under emits,
+    // and the data it sends fits the schema the event declares.
+    const emitted = new Map();
     for (const e of (machine.emits || [])) {
       if (!e?.id) continue;
       if (emitted.has(e.id)) errors.push({ rule: 'duplicate-id', message: `Duplicate emitted event id "${e.id}"`, path: `${ctx}.emits` });
-      emitted.add(e.id);
+      emitted.set(e.id, e);
     }
     for (const [key, holders] of [['actions', machine.actions], ['on', machine.on], ['procedures', machine.procedures]]) {
       for (const holder of holders || []) {
-        for (const name of shortEmitsIn(holder?.steps)) {
-          if (!emitted.has(name)) {
+        for (const emit of emitsIn(holder?.steps)) {
+          const name = emit.event;
+          if (emitted.has(name)) {
+            for (const message of emitDataProblems(emit, emitted.get(name))) {
+              errors.push({ rule: 'emit-data', message, path: `${ctx}.${key}[${holder.id ?? holder.type ?? '?'}]` });
+            }
+          } else {
             errors.push({
               rule: 'undeclared-emit',
               message: `emit "${name}" is not an event the ${machine.object} machine declares under emits` +
-                (emitted.size ? ` (declared: ${[...emitted].join(', ')})` : ', which declares none') + '.',
+                (emitted.size ? ` (declared: ${[...emitted.keys()].join(', ')})` : ', which declares none') + '.',
               path: `${ctx}.${key}[${holder.id ?? holder.type ?? '?'}]`,
             });
           }
@@ -456,6 +501,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: `${ap}.steps` });
         }
       }
+      for (const step of walkUnreachableFailures(action.steps)) errors.push(...unreachableFailure(step, `${ap}.steps`));
     }
 
     // A governed resource's guards are checked as an action's are.
@@ -473,6 +519,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: ep });
         }
       }
+      for (const step of walkUnreachableFailures(event.steps)) errors.push(...unreachableFailure(step, ep));
       // With transition:, the event's subject is one of this machine's records,
       // looked up as $object. Without it, an event about another resource gives
       // the machine no record of its own, so there is no $object: the record
@@ -511,6 +558,10 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       }
 
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
+      // A procedure of one step is that step, written on the procedure.
+      for (const step of walkUnreachableFailures(proc.steps || proc.then ? procSteps : [proc])) {
+        errors.push(...unreachableFailure(step, pp));
+      }
       for (const callId of walkCallStrings(procSteps)) {
         if (!callableIds.has(callId)) {
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: pp });
@@ -532,9 +583,12 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
  * @param {object} doc - Parsed YAML document
  * @param {Map} schemaIndex - From buildSchemaIndex() in indexes.js
  * @param {Map} endpointIndex - From buildCollectionIndex()
+ * @param {Object} [exceptions]
+ * @param {Set<string>|null} [operationIds] - Every operation in the set, from
+ *   operationIdsOf; null skips checking calls to operations
  * @returns {Array<{rule, message, path}>}
  */
-export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}) {
+export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}, operationIds = null) {
   const exceptedFields = new Set(
     (exceptions.unknownFields || []).map(e => `${e.schema}:${e.field}`)
   );
@@ -664,48 +718,37 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
       }
     }
 
+    // A call to an operation names one the set has — one a capability the
+    // set hasn't listed is named as such, by validate.
+    function validateOperationCalls(steps, locationPath) {
+      if (!operationIds) return;
+      for (const id of new Set(walkOperationCalls(steps))) {
+        if (!operationIds.has(id)) {
+          errors.push({ rule: 'unknown-operation', message: `call: operationId "${id}" names no operation in the set.`, path: locationPath });
+        }
+      }
+    }
+
     for (const action of (machine.actions || [])) {
       validateCallPaths(action.steps, `${ctx}.actions[${action.id}].steps`);
+      validateOperationCalls(action.steps, `${ctx}.actions[${action.id}].steps`);
     }
     for (const event of (machine.on || [])) {
       validateCallPaths(event.steps, `${ctx}.on[${event.type}].steps`);
+      validateOperationCalls(event.steps, `${ctx}.on[${event.type}].steps`);
     }
     for (const proc of (machine.procedures || [])) {
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
       validateCallPaths(procSteps, `${ctx}.procedures[${proc.id}]`);
+      validateOperationCalls(procSteps.length ? procSteps : [proc], `${ctx}.procedures[${proc.id}]`);
     }
 
-    // Validate $push body field values against the target array's items schema enum.
-    // For literal values: checks directly. For variable references like $this.data.serviceType:
-    // traces the trailing field name to all literal values used for that field elsewhere in
-    // the machine (call bodies + context where: clauses) and checks those against the enum.
+    // Validate literal $push body field values against the target array's items schema enum.
     const allMachineSteps = [
       ...(machine.actions || []).flatMap(a => a.steps || []),
       ...(machine.on || []).flatMap(e => e.steps || []),
       ...(machine.procedures || []).flatMap(p => [...(p.steps || []), ...(p.then || [])]),
     ];
-    const literalsByField = collectCallBodyLiterals(allMachineSteps);
-
-    // Merge in context where: literals (e.g. service lookup filters that name enum values)
-    const allContextItems = [
-      ...(machine.context || []),
-      ...(machine.actions || []).flatMap(a => a.context || []),
-      ...(machine.on || []).flatMap(e => e.context || []),
-      ...(machine.procedures || []).flatMap(p => p.context || []),
-    ];
-    for (const item of allContextItems) {
-      if (!item || typeof item !== 'object') continue;
-      for (const binding of Object.values(item)) {
-        if (binding?.where && typeof binding.where === 'object') {
-          for (const [field, val] of Object.entries(binding.where)) {
-            if (typeof val === 'string' && !val.startsWith('$')) {
-              if (!literalsByField.has(field)) literalsByField.set(field, new Set());
-              literalsByField.get(field).add(val);
-            }
-          }
-        }
-      }
-    }
 
     for (const { method, callPath, bodyField, pushBody } of walkPushBodiesInCalls(allMachineSteps)) {
       const staticPath = callPath
@@ -727,38 +770,30 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
 
       let itemsSchema = arrayFieldSchema.items;
       if (itemsSchema.$ref) itemsSchema = resolveRef(pushSchemaEntry.spec, itemsSchema.$ref) ?? itemsSchema;
+      // An item that is one of several shapes allows what any of them allows.
+      const shapes = (itemsSchema.oneOf ?? itemsSchema.anyOf ?? [itemsSchema])
+        .map((shape) => (shape.$ref ? resolveRef(pushSchemaEntry.spec, shape.$ref) ?? shape : shape));
 
-      const locationPath = `${ctx} (${method} ${callPath}, body.${bodyField}.$push)`;
+      const locationPath = `${ctx} (${method} ${callPath}, requestBody.payload.${bodyField}.$push)`;
 
       for (const [pushField, pushVal] of Object.entries(pushBody)) {
         if (typeof pushVal !== 'string') continue;
 
-        const pushFieldSchema = getPropertyAtPath(pushSchemaEntry.spec, itemsSchema, pushField);
-        if (!pushFieldSchema) continue;
-        const enumValues = pushFieldSchema.enum;
-        if (!enumValues) continue;
+        const fieldSchemas = shapes
+          .map((shape) => getPropertyAtPath(pushSchemaEntry.spec, shape, pushField))
+          .filter(Boolean);
+        // A shape that takes the field without an enum takes any value.
+        if (fieldSchemas.length === 0 || fieldSchemas.some((field) => !field.enum)) continue;
+        const enumValues = [...new Set(fieldSchemas.flatMap((field) => field.enum))];
 
-        if (!pushVal.startsWith('$')) {
-          if (!enumValues.includes(pushVal)) {
-            errors.push({
-              rule: 'invalid-push-enum-value',
-              message: `"${pushVal}" is not a valid enum value for ${bodyField}[].${pushField} (valid: ${enumValues.join(', ')})`,
-              path: locationPath,
-            });
-          }
-        } else {
-          // Variable reference — trace trailing field name to literals collected from the machine
-          const varFieldName = pushVal.split('.').pop();
-          const tracedLiterals = literalsByField.get(varFieldName) || new Set();
-          for (const literal of tracedLiterals) {
-            if (!enumValues.includes(literal)) {
-              errors.push({
-                rule: 'invalid-push-enum-value',
-                message: `"${literal}" (via ${pushVal}) is not a valid enum value for ${bodyField}[].${pushField} (valid: ${enumValues.join(', ')})`,
-                path: locationPath,
-              });
-            }
-          }
+        // A variable's value isn't known until the step runs.
+        if (pushVal.startsWith('$')) continue;
+        if (!enumValues.includes(pushVal)) {
+          errors.push({
+            rule: 'invalid-push-enum-value',
+            message: `"${pushVal}" is not a valid enum value for ${bodyField}[].${pushField} (valid: ${enumValues.join(', ')})`,
+            path: locationPath,
+          });
         }
       }
     }

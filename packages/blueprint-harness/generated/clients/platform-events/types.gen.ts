@@ -21,7 +21,7 @@ export type Event = {
      */
     subject?: string;
     /**
-     * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+     * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
      *
      */
     causationid?: string;
@@ -62,10 +62,15 @@ export type Event = {
      */
     traceparent?: string | null;
     /**
-     * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+     * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
      *
      */
     causationid?: string | null;
+    /**
+     * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+     *
+     */
+    partitionkey?: string | null;
     /**
      * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
      *
@@ -122,7 +127,7 @@ export type EventList = {
          */
         subject?: string;
         /**
-         * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
          *
          */
         causationid?: string;
@@ -163,10 +168,15 @@ export type EventList = {
          */
         traceparent?: string | null;
         /**
-         * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
          *
          */
         causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
         /**
          * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
          *
@@ -220,6 +230,16 @@ export type ListEventsData = {
          * | `-field:value` | Exclude / negate | `-status:denied` |
          * | `field:*` | Field exists (not null) | `email:*` |
          * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Lists
+         *
+         * A condition on a list matches when any item matches. That holds for a list
+         * of values (`programs:snap`) and for a list of objects anywhere along a
+         * dotted path (`members.firstName:Jo`, any member named Jo).
+         *
+         * Each condition is checked on its own. `members.firstName:Jo members.age:>60`
+         * matches when some member is named Jo and some member, not necessarily the
+         * same one, is over 60. There is no way to require the same item.
          *
          * ## Examples
          *
@@ -421,7 +441,7 @@ export type ListEventsResponses = {
              */
             subject?: string;
             /**
-             * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+             * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
              *
              */
             causationid?: string;
@@ -462,10 +482,15 @@ export type ListEventsResponses = {
              */
             traceparent?: string | null;
             /**
-             * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+             * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
              *
              */
             causationid?: string | null;
+            /**
+             * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+             *
+             */
+            partitionkey?: string | null;
             /**
              * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
              *
@@ -506,7 +531,7 @@ export type PublishEventData = {
          */
         subject?: string;
         /**
-         * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
          *
          */
         causationid?: string;
@@ -547,10 +572,15 @@ export type PublishEventData = {
          */
         traceparent?: string | null;
         /**
-         * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
          *
          */
         causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
         /**
          * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
          *
@@ -656,7 +686,7 @@ export type PublishEventResponses = {
          */
         subject?: string;
         /**
-         * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
          *
          */
         causationid?: string;
@@ -697,10 +727,15 @@ export type PublishEventResponses = {
          */
         traceparent?: string | null;
         /**
-         * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
          *
          */
         causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
         /**
          * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
          *
@@ -814,7 +849,7 @@ export type GetEventResponses = {
          */
         subject?: string;
         /**
-         * CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
          *
          */
         causationid?: string;
@@ -855,10 +890,15 @@ export type GetEventResponses = {
          */
         traceparent?: string | null;
         /**
-         * CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
          *
          */
         causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
         /**
          * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
          *

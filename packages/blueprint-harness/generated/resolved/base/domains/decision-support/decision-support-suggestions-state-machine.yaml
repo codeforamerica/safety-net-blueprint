@@ -1,0 +1,184 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: decision-support
+capability: suggestions
+machines:
+  - object: Suggestion
+    states:
+      - id: proposed
+        slaClock: stopped
+        description: Waiting for a person to decide.
+      - id: accepted
+        slaClock: stopped
+        description: A person said yes, and for an operation suggestion, the call was made. Terminal.
+      - id: refused
+        slaClock: stopped
+        description: A person said yes, and the call could not be made. It can be accepted again until it expires.
+      - id: dismissed
+        slaClock: stopped
+        description: A person said no, with a reason. Terminal.
+      - id: expired
+        slaClock: stopped
+        description: It stopped applying before anyone decided. Terminal.
+    initialState: proposed
+    timers:
+      - id: suggestion_expiry
+        description: Expires a suggestion nobody decided by its expiresAt.
+    emits:
+      - id: accepted
+        description: A person said yes; for an operation suggestion, the call was made, and its own events name this one as their cause.
+      - id: refused
+        description: A person said yes, and the call could not be made. Carries the call and the error.
+        schema:
+          type: object
+          required:
+            - call
+            - error
+          properties:
+            call:
+              $ref: ../../schemas/operations.yaml#/$defs/OperationCall
+              description: The call that was tried, the corrected one sent or else the one proposed.
+            error:
+              $ref: ../../schemas/operations.yaml#/$defs/CallError
+      - id: dismissed
+        description: A person said no, with a reason.
+      - id: expired
+        description: It stopped applying before anyone decided.
+    guards:
+      - id: callOnlyForAnOperation
+        description: a corrected call is sent only for an operation suggestion
+        condition: "!has(request.call) || object.kind == \"operation\""
+      - id: sameOperation
+        description: a corrected call names the suggestion's own operation
+        condition: "!has(request.call) || object.kind != \"operation\" || request.call.operationId == object.call.operationId"
+    actions:
+      - id: accept
+        description: Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
+        transition:
+          from:
+            - proposed
+            - refused
+          to: accepted
+        schema:
+          request:
+            $ref: "#/$defs/AcceptRequest"
+        guards:
+          - conditions:
+              - callOnlyForAnOperation
+              - sameOperation
+        steps:
+          - if: object.kind == "operation" && has(request.call)
+            then:
+              - call: $request.call
+                runAs: caller
+                catch:
+                  to: refused
+                  do:
+                    - emit:
+                        event: refused
+                        data:
+                          call: $request.call
+                          error: $error
+                        type: decision-support.suggestion.refused
+              - set:
+                  field: performed
+                  value: $request.call
+          - if: object.kind == "operation" && !has(request.call)
+            then:
+              - call: $object.call
+                runAs: caller
+                catch:
+                  to: refused
+                  do:
+                    - emit:
+                        event: refused
+                        data:
+                          call: $object.call
+                          error: $error
+                        type: decision-support.suggestion.refused
+          - call: cancelExpiry
+          - emit:
+              event: accepted
+              type: decision-support.suggestion.accepted
+      - id: dismiss
+        description: Say no, with a reason.
+        transition:
+          from:
+            - proposed
+            - refused
+          to: dismissed
+        schema:
+          request:
+            $ref: "#/$defs/DismissRequest"
+        steps:
+          - set:
+              field: reason
+              value: $request.reason
+          - call: cancelExpiry
+          - emit:
+              event: dismissed
+              type: decision-support.suggestion.dismissed
+      - id: expire
+        description: Close a suggestion that no longer applies, before anyone decided.
+        transition:
+          from:
+            - proposed
+            - refused
+          to: expired
+        steps:
+          - call: cancelExpiry
+          - emit:
+              event: expired
+              type: decision-support.suggestion.expired
+    "on":
+      - type: decision-support.suggestion.created
+        description: Default expiresAt to a day out when not given, and ask for the timer that expires it then.
+        transition: {}
+        steps:
+          - if: "!has(object.expiresAt)"
+            then:
+              - set:
+                  field: expiresAt
+                  value: $now+P1D
+          - emit:
+              type: platform.timer.requested
+              data:
+                timerId: decision-support.suggestion_expiry.{$object.id}
+                fireAt: $object.expiresAt
+                callback:
+                  event: decision-support.suggestion_expiry
+                  data: {}
+      - type: decision-support.suggestion_expiry
+        description: Expire a suggestion nobody decided by its expiresAt.
+        transition:
+          from:
+            - proposed
+            - refused
+        steps:
+          - call:
+              POST: decision-support/suggestions/$object.id/expire
+    procedures:
+      - id: cancelExpiry
+        description: Cancel the expiry timer of a suggestion that was decided or expired by hand.
+        emit:
+          type: platform.timer.cancelled
+          data:
+            timerId: decision-support.suggestion_expiry.{$object.id}
+$defs:
+  AcceptRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      call:
+        $ref: ../../schemas/operations.yaml#/$defs/OperationCall
+        description: The call corrected before accepting, for an operation suggestion. It must name the same operation.
+  DismissRequest:
+    type: object
+    additionalProperties: false
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        minLength: 1
+        description: Why the person said no.

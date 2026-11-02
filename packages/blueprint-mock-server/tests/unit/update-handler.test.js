@@ -1,21 +1,11 @@
 /**
  * Unit tests for update handler utilities
- * Tests deepEqual, buildChanges, and onUpdate trigger behavior.
+ * Tests deepEqual and buildChanges.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { createMemoryStore } from '../../src/stores/memory-store.js';
-
-// A store of this file's own, rather than one shared through a module-level
-// singleton. In memory because these cases do not need a database — and
-// because a fresh one per file is isolation they did not have before.
-const store = createMemoryStore();
-
-// The handler takes its store as a parameter; these cases seed through the
-// shim's exports, so they hand it the same one.
-import { deepEqual, buildChanges, createUpdateHandler } from '../../src/handlers/update-handler.js';
-import { makeRequest, readResponse } from '../helpers/fetch.js';
+import { deepEqual, buildChanges } from '../../src/handlers/update-handler.js';
 
 // =============================================================================
 // deepEqual
@@ -112,7 +102,7 @@ test('buildChanges — unchanged objects are not reported', () => {
 });
 
 test('buildChanges — captures rule-driven mutations not in the original PATCH', () => {
-  // Simulates: PATCH sets isExpedited=true, onUpdate rule re-scores priority to "expedited"
+  // Simulates: PATCH sets isExpedited=true, and something else re-scores priority to "expedited"
   const before = { id: '1', updatedAt: 'y', isExpedited: false, priority: 'normal' };
   const after  = { id: '1', updatedAt: 'z', isExpedited: true,  priority: 'expedited' };
   const changes = buildChanges(before, after);
@@ -181,88 +171,4 @@ test('buildChanges — nested object added whole (before null) emits top-level f
   const changes = buildChanges(before, after);
   assert.strictEqual(changes.length, 1);
   assert.deepStrictEqual(changes[0], { field: 'address', before: null, after: { city: 'Oakland', state: 'CA' } });
-});
-
-// =============================================================================
-// createUpdateHandler — onUpdate trigger
-// =============================================================================
-
-/**
- * Call a Fetch-shaped update handler and read its Response.
- *
- * @returns {Promise<{ _code: number, _data: unknown }>} named to match the
- *   assertions these tests already make against a mock response.
- */
-async function callUpdate(handler, params, body, headers = {}) {
-  const request = makeRequest(`/testresources/${params.id ?? ''}`, { method: 'PATCH', body, headers });
-  const { status, body: data } = await readResponse(handler(request, { params }));
-  return { _code: status, _data: data };
-}
-
-const apiMetadata = { serverBasePath: '/test' };
-const endpoint = { collectionName: 'testresources', path: '/testresources/{id}', requestSchema: null };
-
-test('createUpdateHandler — onUpdate fires when watched field is patched', async () => {
-  store.clearAll('testresources');
-  store.insertResource('testresources', { id: 'res-1', isExpedited: false, priority: 'normal' });
-
-  const machine = {
-    object: 'testresource',
-    triggers: {
-      onUpdate: {
-        fields: ['isExpedited'],
-        steps: [{ set: { field: 'priority', value: 'expedited' } }]
-      }
-    }
-  };
-
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const res = await callUpdate(handler, { id: 'res-1' }, { isExpedited: true });
-
-  assert.strictEqual(res._code, 200);
-  const saved = store.findById('testresources', 'res-1');
-  assert.strictEqual(saved.priority, 'expedited');
-});
-
-test('createUpdateHandler — onUpdate does not fire when non-watched field is patched', async () => {
-  store.clearAll('testresources');
-  store.insertResource('testresources', { id: 'res-2', isExpedited: false, priority: 'normal', notes: '' });
-
-  const machine = {
-    object: 'testresource',
-    triggers: {
-      onUpdate: {
-        fields: ['isExpedited'],
-        steps: [{ set: { field: 'priority', value: 'expedited' } }]
-      }
-    }
-  };
-
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const res = await callUpdate(handler, { id: 'res-2' }, { notes: 'updated' });
-
-  assert.strictEqual(res._code, 200);
-  const saved = store.findById('testresources', 'res-2');
-  assert.strictEqual(saved.priority, 'normal'); // onUpdate did not fire
-});
-
-test('createUpdateHandler — onUpdate fires for all fields when no watchedFields defined', async () => {
-  store.clearAll('testresources');
-  store.insertResource('testresources', { id: 'res-3', notes: '', priority: 'normal' });
-
-  const machine = {
-    object: 'testresource',
-    triggers: {
-      onUpdate: {
-        // no fields: — fires on any patch
-        steps: [{ set: { field: 'priority', value: 'high' } }]
-      }
-    }
-  };
-
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const res = await callUpdate(handler, { id: 'res-3' }, { notes: 'anything' });
-
-  const saved = store.findById('testresources', 'res-3');
-  assert.strictEqual(saved.priority, 'high');
 });

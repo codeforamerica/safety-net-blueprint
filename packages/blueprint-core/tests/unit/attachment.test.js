@@ -121,6 +121,29 @@ describe('a state machine still naming apiSpec', () => {
   });
 });
 
+describe('a call sending its body as body:', () => {
+  test('is warned that requestBody: {payload} replaced it, and a payload is not', async () => {
+    const { validate } = await import('../../src/validate.js');
+    const machines = toDoc({
+      path: '/set/domains/intake/intake-state-machine.yaml',
+      relativePath: 'domains/intake/intake-state-machine.yaml',
+      type: 'state-machine',
+      content: {
+        domain: 'intake',
+        procedures: [
+          { id: 'old', steps: [{ call: { POST: 'intake/applications', body: { channel: 'online' } } }] },
+          { id: 'new', steps: [{ call: { POST: 'intake/applications', requestBody: { payload: { channel: 'online' } } } }] },
+        ],
+        machines: [],
+      },
+    });
+    const warnings = validate([intake, machines]).results.flatMap((r) => r.warnings)
+      .filter((w) => w.rule === 'deprecated-call-body');
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0].path, /procedures\/0\/steps\/0\/call\/body$/);
+  });
+});
+
 describe('an operation written by hand that a generated one would replace', async () => {
   const { generate } = await import('../../src/index.js');
   const machine = toDoc({

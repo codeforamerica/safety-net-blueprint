@@ -12,6 +12,8 @@
  * simply ignores the second argument.
  */
 
+import { withoutEngineFields } from '../sla-engine.js';
+
 /**
  * The key a route is stored under.
  *
@@ -209,6 +211,25 @@ export function matchRoute(routes, method, pathname) {
  * @param {Map<string, object>} routes
  * @returns {(request: Request) => Promise<Response>} Same signature as `fetch`
  */
+/**
+ * A response as the contract describes it: a JSON body holding SLA entries
+ * loses the engine's own fields from them (withoutEngineFields). Any other
+ * response is passed through unread.
+ *
+ * @param {Response} response
+ * @returns {Promise<Response>}
+ */
+async function publicResponse(response) {
+  if (!response?.headers?.get('content-type')?.includes('json')) return response;
+  const text = await response.clone().text();
+  if (!text.includes('"slaInfo"') || !text.includes('"_')) return response;
+  return new Response(JSON.stringify(withoutEngineFields(JSON.parse(text))), {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 export function createDispatcher(routes, { basePath = '' } = {}) {
   // A prefix the route table knows nothing about, stripped before matching.
   // A page served from a subdirectory — GitHub Pages puts a project site at
@@ -241,7 +262,7 @@ export function createDispatcher(routes, { basePath = '' } = {}) {
     }
 
     try {
-      return await match.entry.handler(forwarded, { params: match.params });
+      return publicResponse(await match.entry.handler(forwarded, { params: match.params }));
     } catch (error) {
       console.error(`Unhandled error in ${match.key}:`, error);
       return Response.json({

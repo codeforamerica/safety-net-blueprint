@@ -82,6 +82,11 @@ search_syntax:
   description: |
     Search query using field:value syntax. Multiple conditions separated by
     spaces are ANDed together.
+  origin: >
+    Our own syntax, resembling GitHub's search and Elasticsearch's query
+    string without matching either. To support a standard filter syntax,
+    such as AIP-160 or OData $filter, add it as an x-search style; don't
+    change q.
 
   operators:
     - pattern: "term"
@@ -114,6 +119,19 @@ search_syntax:
     - pattern: "field.nested:value"
       description: Nested field using dot notation
       example: "address.state:CA"
+
+  lists: |
+    A condition on a list matches when any item matches. That holds for a
+    list of values (programs:snap) and for a list of objects anywhere along
+    a dotted path (members.firstName:Jo, any member named Jo).
+
+    Each condition is checked on its own. members.firstName:Jo
+    members.age:>60 matches when some member is named Jo and some member,
+    not necessarily the same one, is over 60. q has no way to require the
+    same item.
+
+    This matches GitHub (label:bug), Elasticsearch and KQL, and AIP-160's
+    has operator (:).
 
 # =============================================================================
 # CRUD Operations# =============================================================================

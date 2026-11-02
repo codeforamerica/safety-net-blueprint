@@ -183,10 +183,16 @@ paths:
                 $ref: "#/components/schemas/Determination"
         "400":
           $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
         "404":
           $ref: ../../base/components/responses.yaml#/NotFound
         "409":
-          $ref: ../../base/components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
       tags:

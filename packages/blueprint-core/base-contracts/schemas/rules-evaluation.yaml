@@ -16,11 +16,8 @@ EvaluationFact:
 
 EvaluationFactComplete:
   type: object
-  required: [fact, state, value]
+  required: [state, value]
   properties:
-    fact:
-      type: string
-      description: The fact name.
     state:
       type: string
       enum: [complete]
@@ -29,11 +26,8 @@ EvaluationFactComplete:
 
 EvaluationFactPlaceholder:
   type: object
-  required: [fact, state, value]
+  required: [state, value]
   properties:
-    fact:
-      type: string
-      description: The fact name.
     state:
       type: string
       enum: [placeholder]
@@ -42,14 +36,14 @@ EvaluationFactPlaceholder:
 
 EvaluationFactMissing:
   type: object
-  required: [fact, state, missing]
+  required: [state, missing]
   properties:
-    fact:
-      type: string
-      description: The fact name.
     state:
       type: string
       enum: [missing]
+    value:
+      type: 'null'
+      description: Always null — there is no value yet.
     missing:
       type: array
       description: Input paths required to resolve this fact.
@@ -58,22 +52,24 @@ EvaluationFactMissing:
 
 EvaluationFactError:
   type: object
-  required: [fact, state, message]
+  required: [state, message]
   properties:
-    fact:
-      type: string
-      description: The fact name.
     state:
       type: string
       enum: [error]
+    value:
+      type: 'null'
+      description: Always null — the fact could not be computed.
     message:
       type: string
       description: The reason evaluation failed.
 
 EvaluationResult:
-  type: array
+  type: object
   description: >
-    Ordered list of output fact evaluation results.
-    Only output facts are included; intermediate facts are not returned.
-  items:
+    The ruleset's output facts, keyed by output name, so a result is read by
+    name — `#/eligible/value`. Only output facts are included; intermediate
+    facts are not returned. Each ruleset's response schema names its outputs
+    and the type of each one's value.
+  additionalProperties:
     $ref: '#/EvaluationFact'

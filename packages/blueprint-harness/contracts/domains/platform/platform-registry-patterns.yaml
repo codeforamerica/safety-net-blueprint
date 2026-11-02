@@ -194,6 +194,5 @@ entries:
 
   array-of-oneof:
     description: >
-      Array whose items are a oneOf discriminated union (e.g., EvaluationResult
-      returning EvaluationFact variants). Exercises array-of-oneOf rendering,
+      Array whose items are a oneOf discriminated union. Exercises array-of-oneOf rendering,
       discriminator label resolution, and schema variant expansion.

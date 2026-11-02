@@ -11,12 +11,13 @@ for how framework files sit beside a set's own.
 ## Overview
 
 The platform domain is the infrastructure every contract set shares, whatever
-its programs and domains: one log of every event every domain sends, and the
+its programs and domains: one log of every event every domain sends, the
 named, citable entries — regulatory policies, design patterns — the contracts
-declare. It owns no business process and no lifecycle. A capability with
-business meaning, such as communication, is a domain of its own that a set opts
-into, not part of the platform; the platform is what is left when every domain
-is taken away.
+declare, and the events that ask for a timer. It owns no business process and
+no lifecycle. Everything else the framework provides belongs to a business
+domain — transcripts to communication,
+suggestions to decision support — and comes as a capability a set opts into;
+the platform is what is left when every domain is taken away.
 
 ## What every contract set gets
 
@@ -27,6 +28,10 @@ is taken away.
 2. Every registry the contracts declare can be read by type: which types there
    are, the entries of one, and a single entry. A new registry type is readable
    the moment a file declares it, with no endpoint written for it.
+3. Any state machine can ask for a time-based callback — a deadline, a
+   reminder, an expiry — and cancel one, whatever domains the set includes. The
+   request and the cancellation are events; the timer service that answers
+   them is the state's own. See [Timers](timers.md).
 
 ## Entity model
 
@@ -59,6 +64,7 @@ All in `blueprint-core/base-contracts/domains/platform/`.
 |---|---|
 | API — the event log | `platform-events-openapi.yaml` |
 | API — registries, read by type | `platform-registries-openapi.yaml` |
+| Events — requesting and cancelling a timer | `platform-timers-asyncapi.yaml` |
 
 A set's own registry files — `*-registry-{type}.yaml`, in any domain — are what
 the registries API serves.
@@ -69,7 +75,7 @@ the registries API serves.
 |---|---|---|
 | 1 | [The event log belongs to the framework](#decision-1-the-event-log-belongs-to-the-framework) | Every set gets it; no set declares its own |
 | 2 | [Registries are served from their files](#decision-2-registries-are-served-from-their-files) | One generic API for every registry type, nothing stored |
-| 3 | [The platform is infrastructure only](#decision-3-the-platform-is-infrastructure-only) | Business capabilities are domains a set opts into |
+| 3 | [The platform is infrastructure only](#decision-3-the-platform-is-infrastructure-only) | The framework's other contracts belong to business domains, and a set opts into them one capability at a time |
 
 ### Decision 1: The event log belongs to the framework
 
@@ -112,21 +118,43 @@ an API written for it.
 
 **Status:** Decided: B
 
-**What's being decided:** Shared capabilities like communication are used by
-several domains, and putting them on the platform would make every set carry
-them.
+**What's being decided:** The framework provides more than infrastructure —
+transcripts, suggestions, and later the calls that extract facts from them — so
+where those contracts live, and what a set opts into, decides both their names
+and what a set is made to carry.
 
 **Considerations:**
-- A capability has business meaning, a lifecycle and its own decisions; the
-  event log and registries have none.
-- A set that does not transcribe interviews should not carry transcript
-  contracts.
+- A transcript or a suggestion has business meaning, a lifecycle and its own
+  decisions; the event log and registries have none.
+- A domain is an area of meaning the framework and a set both add to: the
+  framework's transcripts sit beside a set's notices in communication. A set
+  that wants one should not be made to take the other, so the unit a set opts
+  into has to be smaller than a domain.
+- A domain's name is in every path and event type. Salesforce managed packages
+  and ServiceNow scoped applications fix the namespace whoever publishes them
+  chooses, so a tool built against one customer's works against another's.
+- A domain named for one capability repeats itself in every name
+  (`transcription.transcript.created`), and stops fitting when a second
+  capability joins it.
 
 **Options:**
-- **(A)** Shared capabilities live on the platform domain.
-- **(B) ✓** The platform holds only infrastructure. A capability is a framework
-  domain of its own, included when a set lists it in its configuration's
-  capabilities.
+- **(A)** Everything the framework provides lives on the platform, with the
+  optional parts switched on one by one. One name, but an optional part's
+  paths would change if it moved, and a set extending a business area such as
+  data exchange would find its half under another name.
+- **(B)** Each capability is a framework domain of its own, included whole when
+  a set lists it. Opting in is by domain, so a domain can never hold two
+  things a set might want apart.
+- **(C) ✓** The platform holds only infrastructure, and always comes along.
+  Everything else the framework provides belongs to the business domain it
+  means something in, whose name the framework fixes and a set adds to but
+  never renames. Each framework file declares the capability it belongs to,
+  as it declares its domain, and a set lists the capabilities it wants.
+
+**Decision:** A capability's name comes from the files that declare it, as a
+domain's does, so a misspelled one is caught by nothing declaring it. What one
+capability needs from another is not listed: a reference to a capability the
+set has not included fails validation, naming the capability it belongs to.
 
 ## Customization
 
@@ -146,13 +174,20 @@ everyone else's.
 A set adds a registry type, or entries to an existing one, with a registry file
 of its own, in whichever domain the entries belong to.
 
+### Capabilities
+
+A set lists the framework capabilities it wants in its configuration, and gets
+nothing of the ones it leaves out. It adds to the domains they belong to with
+files of its own, and changes them with overlays, as it does any other
+domain's. See [Decision 3](#decision-3-the-platform-is-infrastructure-only).
+
 ## Out of scope
 
 - **Search** — a contract set's own concern; see [Search](search.md).
 - **Identity and access** — see [Identity & Access](identity-access.md).
-- **Timers** — see [Scheduling Service](scheduling-service.md).
-- **Capabilities such as communication** — framework domains of their own; see
-  [Transcripts](transcripts.md).
+- **Capabilities such as transcripts and suggestions** — in the business
+  domains they belong to; see [Communication](../domains/communication.md) and
+  [AI Services](ai-services.md).
 
 ## Capability coverage
 
@@ -166,4 +201,4 @@ of its own, in whichever domain the entries belong to.
 - [CloudEvents 1.0](https://cloudevents.io/)
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 - [Inter-Domain Communication](../inter-domain-communication.md)
-- [Transcripts](transcripts.md)
+- [Communication](../domains/communication.md)

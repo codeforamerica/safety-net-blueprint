@@ -70,4 +70,16 @@ components:
     ExpeditedSnapResponse:
       allOf:
         - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
+        - type: object
+          required:
+            - isExpeditedEligible
+          properties:
+            isExpeditedEligible:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
       description: Evaluation result for expeditedSnap.

@@ -67,12 +67,12 @@ const API = {
 
 const FILES = {
   'communication-transcripts-openapi.yaml': API,
-  'communication-mock-data.yaml': {
+  'communication-transcripts-mock-data.yaml': {
     domain: 'communication',
     TranscriptExample1: { id: 't1', profileId: 'p1' },
     TranscriptEntryExample1: { id: 'e1', transcriptId: 't1' },
   },
-  'communication-config.yaml': {
+  'communication-transcripts-config.yaml': {
     version: '1.0',
     domain: 'communication',
     profiles: { resource: 'TranscriptionProfile', entries: [{ id: 'p1', name: 'english' }] },

@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sourceType",
+    "sourceId"
+  ],
+  "properties": {
+    "sourceType": {
+      "type": "string",
+      "description": "What kind of record it cites, e.g. `transcript_entry`."
+    },
+    "sourceId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The record it cites. `sourceType` says what kind."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/SuggestionEvidence"
+}

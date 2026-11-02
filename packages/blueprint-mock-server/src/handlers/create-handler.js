@@ -4,16 +4,16 @@
 
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
-import { applyEffects, applySteps } from '../state-machine-engine.js';
-import { initializeSlaInfo } from '../sla-engine.js';
-import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
+import { eventDomainOf } from '../collection-utils.js';
+import { startSlaClocks } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
+import { callsIn, callProblems } from '../operation-calls.js';
+import { makesSuggestions, fingerprintOf, repeated } from '../suggestion-fingerprints.js';
 
 
 /**
@@ -24,7 +24,7 @@ import { missingReferences, parentsOf } from '../references.js';
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, operations } = {}, options = {}) {
   // The resource created, in the API's model, for the records it's made under.
   const model = apiMetadata.doc?.model?.();
   const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
@@ -83,8 +83,34 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         return Response.json(createErrorResponse(missing, 422), { status: 422 });
       }
 
+      // A call it carries — a suggestion's proposed change — must be one the
+      // operation it names would accept.
+      const wrongCalls = callsIn(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema)
+        .flatMap((found) => callProblems(found, operations ?? new Map()));
+      if (wrongCalls.length > 0) {
+        return Response.json(createErrorResponse(wrongCalls, 422), { status: 422 });
+      }
+
+      // A suggestion repeating one still open, or dismissed, is refused.
+      let fingerprint;
+      if (makesSuggestions(apiMetadata, endpoint)) {
+        fingerprint = await fingerprintOf(requestBody);
+        const existing = repeated(store, endpoint.collectionName, fingerprint);
+        if (existing) {
+          return Response.json({
+            code: 'CONFLICT',
+            message: `This repeats suggestion ${existing.id}, which is ${existing.status}.`,
+            details: [{ id: existing.id, status: existing.status }],
+          }, { status: 409 });
+        }
+      }
+
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
-      const mergedBody = enrichmentData ? { ...requestBody, ...enrichmentData } : requestBody;
+      const mergedBody = {
+        ...requestBody,
+        ...(enrichmentData ?? {}),
+        ...(fingerprint ? { fingerprint } : {}),
+      };
 
       // Optional non-nullable fields not provided in the request body are intentionally
       // omitted from the stored record (absent ≠ null per OpenAPI 3.1).
@@ -112,6 +138,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
+
+      // Its SLA clocks start now, before its created event carries it.
+      const slaInfo = startSlaClocks(resource, slaTypes, now);
+      if (slaInfo) {
+        resource.slaInfo = slaInfo;
+        store.update(endpoint.collectionName, resource.id, { slaInfo });
+      }
       const traceparent = traceparentOf(request);
       // Named for the domain as declared and the resource the create acts on:
       // `intake.application_member.created`. A path that is no resource's
@@ -119,81 +152,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const domain = eventDomainOf(apiMetadata);
       const object = endpoint.resource?.eventName ?? null;
 
-      const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
-
-      // Execute onCreate steps/effects if this resource has a state machine
-      if (onCreate) {
-        const callerRoles = extractCallerRoles(request);
-
-        // Enforce onCreate actors if defined
-        if (onCreate.actors && onCreate.actors.length > 0) {
-          if (!callerRoles.some(r => onCreate.actors.includes(r))) {
-            return Response.json({
-              code: 'FORBIDDEN',
-              message: `Creating this resource requires one of the following roles: ${onCreate.actors.join(', ')}`
-            }, { status: 403 });
-          }
-        }
-
-        // Snapshot before any steps/effects mutate resource (for DB diff later)
-        const original = JSON.parse(JSON.stringify(resource));
-
-        const baseContext = {
-          caller: { id: callerId, roles: callerRoles },
-          object: { ...resource },
-          request: requestBody,
-          now
-        };
-
-        const entities = resolveContextLayers(
-          [stateMachine?.context, machine?.context, onCreate?.context],
-          resource,
-          baseContext,
-          store
-        );
-        if (entities === null) {
-          console.error('onCreate: required context binding failed — skipping trigger');
-          return Response.json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] }, { status: 500 });
-        }
-        const context = { ...baseContext, entities };
-
-        const { pendingCreates, pendingProcedures } = onCreate.steps?.length > 0
-          ? applySteps(onCreate.steps, resource, context, store)
-          : applyEffects(onCreate.effects || [], resource, context);
-
-        const inlineRules = buildInlineRules(stateMachine, machine);
-        executeProcedures(pendingProcedures, resource, inlineRules, context, store);
-
-        // Execute pending creates
-        for (const { entity, data } of pendingCreates) {
-          try {
-            store.create(entity, data);
-          } catch (createError) {
-            console.error(`Failed to store.create ${entity}:`, createError.message);
-          }
-        }
-
-        // Initialize SLA info if SLA types are configured
-        if (slaTypes.length > 0) {
-          initializeSlaInfo(resource, slaTypes, now);
-        }
-
-        // Persist rule-driven and SLA mutations back to DB
-        const diff = {};
-        for (const [key, value] of Object.entries(resource)) {
-          if (original[key] !== value && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
-            diff[key] = value;
-          }
-        }
-
-        if (Object.keys(diff).length > 0) {
-          store.update(endpoint.collectionName, resource.id, diff);
-          // Refresh resource with updated timestamps
-          Object.assign(resource, diff);
-        }
-      }
-
-      // Auto-emit created event with full resource snapshot (after effects applied)
+      // The created event, with the record as stored
       const callerRoles = extractCallerRoles(request);
       if (object) try {
         emitEvent({
@@ -207,6 +166,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
           callerId,
           callerRoles,
           traceparent,
+          causationid: causationOf(request),
           now,
         });
       } catch (eventError) {

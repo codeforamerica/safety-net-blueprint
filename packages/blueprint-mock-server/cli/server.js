@@ -28,6 +28,7 @@ import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, registerHttpStub, listStubs, listHttpStubs, removeStub, removeHttpStub, clearStubs, clearHttpStubs, clearAllStubs } from '../src/mock-stub-engine.js';
 import { registerConfigManaged } from '../src/config-registry.js';
+import { createStepCalls } from '../src/step-calls.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -66,6 +67,9 @@ Environment:
   MOCK_SERVER_HOST    Host to bind to (default: localhost)
   MOCK_SERVER_PORT    Port to listen on (default: 1080)
   MOCK_STORE          sqlite | memory (takes precedence over --store)
+  MOCK_FINGERPRINT_SECRET
+                      Key for suggestion fingerprints, so a stored suggestion
+                      still matches after a restart (default: generated at start)
 
 Examples:
   npm run mock:start
@@ -276,8 +280,12 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     });
 
 
+    // A step's call to a record — a nested create, an update, another action —
+    // means what the API's route at that method and path means, as in a page.
+    const stepCalls = createStepCalls({ apiSpecs, stateMachines: allStateMachines, slaTypes: allSlaTypes, store });
+
     // Register event subscriptions
-    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs, store);
+    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs, store, stepCalls);
 
     // Stub dispatch is subscribed here rather than on import, since firing a
     // stub emits an event and emitting writes through a store.
@@ -300,7 +308,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     const allEndpoints = registerAllRoutes(routes, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, { store });
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store });
+    const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store, stepCalls });
 
     // A few contract-declared endpoints cannot be served by generated CRUD.
     // Matched by operationId, so adding a platform endpoint to the contract
@@ -350,6 +358,8 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
+    // An action calling an operation as its caller sends the call through here.
+    stepCalls.serve(createDispatcher(routes));
     const server = createNodeServer(createDispatcher(routes));
 
     // Start the server — if the port is in use, kill the existing process and retry once.

@@ -9,9 +9,11 @@
  * integration tests in each script's subdirectory.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +44,30 @@ describe('cli behavior — missing required args', () => {
     it(`${script} exits 1 with no args`, () => {
       const { status } = run(script);
       assert.equal(status, 1, `${script} should exit 1 when required args are missing`);
+    });
+  }
+});
+
+describe('cli behavior — a contract file that is not valid YAML', () => {
+  let dir;
+  before(() => {
+    dir = mkdtempSync(join(tmpdir(), 'cli-unparseable-'));
+    writeFileSync(join(dir, 'intake-state-machine.yaml'), 'domain: intake\nmachine:\n  states: [open\n  initialState: open\n');
+  });
+  after(() => rmSync(dir, { recursive: true, force: true }));
+
+  const invocations = [
+    ['validate.js', () => [`--resolved=${dir}`]],
+    ['resolve.js', () => [`--spec=${dir}`, `--out=${join(dir, 'out')}`]],
+    ['generate-postman-collection.js', () => [`--spec=${dir}`, `--out=${join(dir, 'postman.json')}`]],
+  ];
+
+  for (const [script, args] of invocations) {
+    it(`${script} exits 1 naming the file, without a stack trace`, () => {
+      const { status, stderr } = run(script, ...args());
+      assert.equal(status, 1);
+      assert.match(stderr, /intake-state-machine\.yaml is not valid YAML: .+ \(line \d+, column \d+\)/);
+      assert.doesNotMatch(stderr, /^\s+at /m);
     });
   }
 });

@@ -188,7 +188,7 @@ machines:
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
           - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
           - if: has(request.createFollowUp) && request.createFollowUp == true
-            then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
+            then: [{call: {POST: workflow/tasks, requestBody: {payload: {$merge: $object, status: pending}}}, description: Create a follow-up task when caller requests one}]
       - id: release
         description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
@@ -421,25 +421,28 @@ machines:
       - type: workflow.creation_deadline
         description: Auto-escalate after 72-business-hour creation deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: deadline_exceeded}, description: Auto-escalate after 72h creation deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: deadline_exceeded}}, description: Auto-escalate after 72h creation deadline}
       - type: workflow.sla_warning
         description: Auto-escalate 48 hours before SLA deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_approaching}, description: Auto-escalate 48h before SLA deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: sla_deadline_approaching}}, description: Auto-escalate 48h before SLA deadline}
       - type: workflow.sla_breach
         description: Escalate and record SLA breach at deadline
         steps:
-          - call: {POST: workflow/tasks/$this.subject/sla-escalate, body: {reason: sla_deadline_exceeded}, description: Escalate and record SLA breach at deadline}
+          - call: {POST: workflow/tasks/$this.subject/sla-escalate, requestBody: {payload: {reason: sla_deadline_exceeded}}, description: Escalate and record SLA breach at deadline}
       - type: workflow.client_timeout
         description: Auto-cancel after 30 calendar days of client unresponsiveness
         steps:
-          - call: {POST: workflow/tasks/$this.subject/auto-cancel, body: {reason: client_unresponsive}, description: Auto-cancel after 30 days client unresponsive}
+          - call: {POST: workflow/tasks/$this.subject/auto-cancel, requestBody: {payload: {reason: client_unresponsive}}, description: Auto-cancel after 30 days client unresponsive}
       - type: workflow.verification_timeout
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
-          - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {causationid: $this.id}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
+          - call: {POST: workflow/tasks/$this.subject/auto-resume, requestBody: {payload: {causationid: $this.id}}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
       - type: eligibility.determination.expedited
-        description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
+        description: >
+          Flag the intake review task as expedited when SNAP expedited criteria are confirmed
+          (7 CFR § 273.2(i)). Its SLA stays as created: a task's SLA types can't change after
+          it's created yet.
         context:
           - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
         steps:
@@ -447,13 +450,13 @@ machines:
             then:
               - call:
                   PATCH: workflow/tasks/$task.id
-                  body:
-                    isExpedited: true
-                    slaType: snap_expedited
+                  requestBody:
+                    payload:
+                      isExpedited: true
       - type: intake.application.submitted
         description: Create an application review task when a new application is submitted
         steps:
-          - call: {POST: workflow/tasks, body: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}, description: Create an intake review task when an application is submitted}
+          - call: {POST: workflow/tasks, requestBody: {payload: {taskType: application_review, name: Application review, status: pending, subjectType: application, subjectId: $this.subject}}, description: Create an intake review task when an application is submitted}
       - type: intake.application.closed
         description: Complete open tasks for the application when intake closes; handles direct close, supervisor-approved close, and auto-determination paths
         context:
@@ -464,29 +467,33 @@ machines:
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/approve
-                  body:
-                    outcome: application_closed
+                  requestBody:
+                    payload:
+                      outcome: application_closed
                   description: Complete the caseworker task that was awaiting supervisor approval
           - if: reviewTask != null && reviewTask.status == "in_progress"
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/complete
-                  body:
-                    outcome: application_closed
+                  requestBody:
+                    payload:
+                      outcome: application_closed
                   description: Complete the active caseworker task on application close
           - if: reviewTask != null && reviewTask.status == "pending"
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/cancel
-                  body:
-                    reason: application_closed
+                  requestBody:
+                    payload:
+                      reason: application_closed
                   description: Cancel the unclaimed caseworker task when the application was auto-determined at submission
           - if: approvalTask != null
             then:
               - call:
                   POST: workflow/tasks/$approvalTask.id/complete
-                  body:
-                    outcome: application_closed
+                  requestBody:
+                    payload:
+                      outcome: application_closed
                   description: Complete the supervisor approval task
       - type: intake.application.approval_needed
         description: Move the caseworker's review task to pending_review and create a supervisor approval task when a determination requires sign-off
@@ -500,12 +507,13 @@ machines:
                   description: Move caseworker task to pending_review while supervisor reviews the determination
           - call:
               POST: workflow/tasks
-              body:
-                taskType: determination_approval
-                name: Determination approval
-                status: pending
-                subjectType: application
-                subjectId: $this.subject
+              requestBody:
+                payload:
+                  taskType: determination_approval
+                  name: Determination approval
+                  status: pending
+                  subjectType: application
+                  subjectId: $this.subject
               description: Create a supervisor approval task
       - type: intake.application.determination_rejected
         description: Return the caseworker's review task to in_progress and complete the supervisor approval task when a determination is rejected
@@ -517,15 +525,17 @@ machines:
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/return-to-worker
-                  body:
-                    reason: determination_rejected
+                  requestBody:
+                    payload:
+                      reason: determination_rejected
                   description: Return the caseworker task to in_progress for revision
           - if: approvalTask != null
             then:
               - call:
                   POST: workflow/tasks/$approvalTask.id/complete
-                  body:
-                    outcome: determination_rejected
+                  requestBody:
+                    payload:
+                      outcome: determination_rejected
                   description: Complete the supervisor approval task with a rejected outcome
     timers:
       - id: creation_deadline

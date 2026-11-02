@@ -61,4 +61,188 @@ components:
     InterviewFlagsResponse:
       allOf:
         - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
+        - type: object
+          required:
+            - flagged.earnedIncomeVaries
+            - flagged.cashOrSelfEmploymentIncome
+            - flagged.incomeDiffersFromPayStub
+            - risks.earnedIncomeVaries
+            - risks.cashOrSelfEmploymentIncome
+            - risks.incomeChangedSincePrevious
+            - risks.householdChangedSincePrevious
+            - risks.shelterCostsCarriedOver
+            - risks.elderlyOrDisabledWithoutMedicalCosts
+            - risks.childrenAndEarnersWithoutDependentCare
+            - risks.multipleProgramsApplied
+            - inconsistencies.incomeBelowExpenses
+            - inconsistencies.wagesDifferFromWageRecords
+            - inconsistencies.incomeDiffersFromPayStub
+            - inconsistencies.householdSizeDiffersFromMembers
+            - inconsistencies.jobWithoutEarnedIncome
+            - inconsistencies.earnedIncomeWithoutJob
+            - inconsistencies.utilitiesIncludedButBilled
+          properties:
+            flagged.earnedIncomeVaries:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: string
+                            x-relationship:
+                              resource: ApplicationIncome
+                        - type: "null"
+            flagged.cashOrSelfEmploymentIncome:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: string
+                            x-relationship:
+                              resource: ApplicationIncome
+                        - type: "null"
+            flagged.incomeDiffersFromPayStub:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                x-relationship:
+                                  resource: ApplicationIncome
+                              amount:
+                                type: number
+                              frequency:
+                                type: string
+                        - type: "null"
+            risks.earnedIncomeVaries:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.cashOrSelfEmploymentIncome:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.incomeChangedSincePrevious:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.householdChangedSincePrevious:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.shelterCostsCarriedOver:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.elderlyOrDisabledWithoutMedicalCosts:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.childrenAndEarnersWithoutDependentCare:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            risks.multipleProgramsApplied:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.incomeBelowExpenses:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.wagesDifferFromWageRecords:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.incomeDiffersFromPayStub:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.householdSizeDiffersFromMembers:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.jobWithoutEarnedIncome:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.earnedIncomeWithoutJob:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
+            inconsistencies.utilitiesIncludedButBilled:
+              allOf:
+                - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationFact
+                - properties:
+                    value:
+                      anyOf:
+                        - type: boolean
+                        - type: "null"
       description: Evaluation result for interviewFlags.

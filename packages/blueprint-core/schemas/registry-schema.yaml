@@ -42,6 +42,13 @@ properties:
       The domain that defines and owns this registry (e.g., platform, intake).
       Used by tooling to show the defining domain in the annotations explorer index.
 
+  capability:
+    type: string
+    description: >
+      The framework capability this document belongs to. Only the framework's
+      own files declare one; a contract set includes them by listing the
+      capability in x-capabilities.
+
   type:
     type: string
     pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"

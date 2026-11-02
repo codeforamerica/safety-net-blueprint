@@ -211,6 +211,180 @@ paths:
           $ref: ../../common/components/responses.yaml#/NotFound
         "500":
           $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/incomes:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: List an application's incomes
+      operationId: listApplicationIncomes
+      tags:
+        - Applications
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+      responses:
+        "200":
+          description: The incomes reported on this application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationIncomeList"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    post:
+      summary: Report an income
+      operationId: createApplicationIncome
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationIncomeCreate"
+      responses:
+        "201":
+          description: Income reported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationIncome"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/incomes/{incomeId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: incomeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an income
+      operationId: getApplicationIncome
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Income retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationIncome"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    patch:
+      summary: Update an income
+      operationId: updateApplicationIncome
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationIncomeUpdate"
+      responses:
+        "200":
+          description: Income updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationIncome"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/interviews:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: List an application's interviews
+      operationId: listApplicationInterviews
+      tags:
+        - Applications
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+      responses:
+        "200":
+          description: The interviews scheduled for this application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewList"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    post:
+      summary: Schedule an interview
+      operationId: createApplicationInterview
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewCreate"
+      responses:
+        "201":
+          description: Interview scheduled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/interviews/{interviewId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an interview
+      operationId: getApplicationInterview
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Interview retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
   /applications/{applicationId}/members:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -342,10 +516,16 @@ paths:
                 $ref: "#/components/schemas/Application"
         "400":
           $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
         "404":
           $ref: ../../base/components/responses.yaml#/NotFound
         "409":
-          $ref: ../../base/components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
       tags:
@@ -370,10 +550,16 @@ paths:
                 $ref: "#/components/schemas/Application"
         "400":
           $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
         "404":
           $ref: ../../base/components/responses.yaml#/NotFound
         "409":
-          $ref: ../../base/components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
       tags:
@@ -404,10 +590,18 @@ paths:
                 $ref: "#/components/schemas/Application"
         "400":
           $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
         "404":
           $ref: ../../base/components/responses.yaml#/NotFound
         "409":
-          $ref: ../../base/components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
       tags:
@@ -432,10 +626,16 @@ paths:
                 $ref: "#/components/schemas/Application"
         "400":
           $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
         "404":
           $ref: ../../base/components/responses.yaml#/NotFound
         "409":
-          $ref: ../../base/components/responses.yaml#/Conflict
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
       tags:
@@ -444,6 +644,124 @@ paths:
         type: state-machine-action
         domain: intake
         id: withdraw
+  /applications/{applicationId}/interviews/{interviewId}/start:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Start interview
+      description: Starts the interview and puts its flags to the worker.
+      operationId: startInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: start
+  /applications/{applicationId}/interviews/{interviewId}/process-suggestions:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Process suggestions interview
+      description: |
+        Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.
+      operationId: processSuggestionsInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: process-suggestions
+  /applications/{applicationId}/interviews/{interviewId}/complete:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: interviewId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Complete interview
+      description: Finishes the interview and expires its suggestions still open.
+      operationId: completeInterview
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../base/components/responses.yaml#/Error
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: complete
   /applications/{applicationId}/summary:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -836,6 +1154,9 @@ components:
                 - under_review
                 - withdrawn
                 - closed
+                - scheduled
+                - in_progress
+                - completed
             submittedAt:
               type:
                 - string
@@ -1031,6 +1352,218 @@ components:
           minimum: 0
         hasNext:
           type: boolean
+    ApplicationIncomeWritable:
+      type: object
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The member who receives it.
+          x-relationship:
+            type: fk
+            resource: ApplicationMember
+            style: links-only
+        source:
+          type: string
+          enum:
+            - earned
+            - self_employment
+            - unearned
+        amount:
+          type: number
+          minimum: 0
+          description: The amount received each time it's paid, in dollars.
+        frequency:
+          type: string
+          enum:
+            - weekly
+            - biweekly
+            - semimonthly
+            - monthly
+            - irregular
+          description: How often it's paid.
+        paidInCash:
+          type: boolean
+        amountVaries:
+          type: boolean
+          description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            member:
+              type: string
+              format: uri-reference
+              description: Link to the related ApplicationMember resource.
+    ApplicationIncome:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationIncomeWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - memberId
+            - source
+            - amount
+            - frequency
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+    ApplicationIncomeCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationIncomeWritable"
+        - type: object
+          required:
+            - memberId
+            - source
+            - amount
+            - frequency
+    ApplicationIncomeUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationIncomeWritable"
+        - type: object
+          minProperties: 1
+    ApplicationIncomeList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationIncome"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    InterviewWritable:
+      type: object
+      properties:
+        scheduledFor:
+          type: string
+          format: date
+          description: The date the interview is scheduled for.
+    Interview:
+      description: |
+        An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+      allOf:
+        - $ref: "#/components/schemas/InterviewWritable"
+        - type: object
+          required:
+            - id
+            - applicationId
+            - status
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            status:
+              type: string
+              readOnly: true
+              description: Where the interview stands.
+              enum:
+                - scheduled
+                - in_progress
+                - completed
+            startedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            completedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+    InterviewCreate:
+      $ref: "#/components/schemas/InterviewWritable"
+    InterviewList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Interview"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
     ApplicationList:
       type: object
       additionalProperties: false
@@ -1148,8 +1681,19 @@ components:
                     - under_review
                     - withdrawn
                     - closed
+                    - scheduled
+                    - in_progress
+                    - completed
                 programsAppliedFor:
-                  type: string
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - snap
+                      - medicaid
+                      - chip
+                      - tanf
+                  description: Benefit programs the household is applying for.
                 programCount:
                   type: integer
                   readOnly: true

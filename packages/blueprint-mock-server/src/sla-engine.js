@@ -209,3 +209,47 @@ export function updateSlaInfo(resource, slaTypes, now, states = {}, resolvedEnti
     entry.status = 'active';
   }
 }
+
+/**
+ * Start a new record's SLA clocks: the SLA types its domain declares that it
+ * names in `slaInfo` or that assign themselves (`autoAssignWhen`), each
+ * running from now. Clocks start when the record is created, however it is —
+ * through the API, or written by a state machine's step.
+ *
+ * @param {Object} record - As stored
+ * @param {Array} slaTypes - The record's domain's SLA types
+ * @param {string} now - ISO 8601
+ * @returns {Array|null} The record's `slaInfo` to store, or null when no SLA
+ *   applies and it had none — so a record whose schema has no `slaInfo` is
+ *   left as it is
+ */
+export function startSlaClocks(record, slaTypes, now) {
+  if (!slaTypes?.length) return null;
+  const copy = { ...record };
+  initializeSlaInfo(copy, slaTypes, now);
+  if (copy.slaInfo.length === 0 && record.slaInfo === undefined) return null;
+  return copy.slaInfo;
+}
+
+/**
+ * A value as it leaves the mock: every `slaInfo` entry in it without the
+ * engine's own tracking fields (`_pausedSince`, `_accumulatedPausedMs`), which
+ * the store keeps for pausing and resuming clocks but the `SlaInfo` contract
+ * does not have. Anything else is returned as it is.
+ *
+ * @param {*} value - A record, a list of them, an event, a response body
+ * @returns {*}
+ */
+export function withoutEngineFields(value) {
+  if (Array.isArray(value)) return value.map(withoutEngineFields);
+  if (!value || typeof value !== 'object') return value;
+  const out = {};
+  for (const [key, field] of Object.entries(value)) {
+    out[key] = key === 'slaInfo' && Array.isArray(field)
+      ? field.map((entry) => (entry && typeof entry === 'object'
+        ? Object.fromEntries(Object.entries(entry).filter(([k]) => !k.startsWith('_')))
+        : entry))
+      : withoutEngineFields(field);
+  }
+  return out;
+}

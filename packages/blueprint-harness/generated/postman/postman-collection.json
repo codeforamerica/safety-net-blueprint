@@ -1888,6 +1888,248 @@
       "description": "Transcripts"
     },
     {
+      "name": "Suggestions",
+      "item": [
+        {
+          "name": "List All Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Suggestions (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Suggestion (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "suggestionId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accept Suggestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions/{{suggestionId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions",
+                "{{suggestionId}}",
+                "accept"
+              ],
+              "variables": [
+                "suggestionId"
+              ]
+            },
+            "description": "Trigger the accept transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expire Suggestion (409 Conflict)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/decision-support/suggestions/{{suggestionId}}/expire",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "decision-support",
+                "suggestions",
+                "{{suggestionId}}",
+                "expire"
+              ],
+              "variables": [
+                "suggestionId"
+              ]
+            },
+            "description": "Trigger the expire transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Suggestions"
+    },
+    {
       "name": "Events",
       "item": [
         {
@@ -4356,6 +4598,51 @@
           ]
         },
         {
+          "name": "Get IncomeVerificationExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/income-verifications/11111111-1111-4111-8111-300000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "income-verifications",
+                "11111111-1111-4111-8111-300000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeVerificationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
@@ -4403,7 +4690,460 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Applications (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "*test*",
+                  "description": "Search query (contains match)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by applicationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "applicationId",
+                  "value": "example",
+                  "description": "Unique identifier of the application."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationIncomeExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationIncomeExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000002",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000002"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationIncomeExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000003",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000003"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationIncomeExample4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000004",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000004"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -4411,6 +5151,220 @@
                 "intake",
                 "applications",
                 "{{applicationId}}",
+                "interviews"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Applications (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "interviews"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by applicationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "interviews"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "applicationId",
+                  "value": "example",
+                  "description": "Unique identifier of the application."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "interviews",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "applicationId",
+                "interviewId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
                 "members"
               ],
               "variables": [
@@ -4462,14 +5416,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "11111111-1111-4111-8111-111111111111",
                 "members"
               ],
               "variables": [
@@ -4516,19 +5470,78 @@
           ]
         },
         {
-          "name": "Filter by applicationId",
+          "name": "Search Applications",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "11111111-1111-4111-8111-111111111111",
+                "members"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "*test*",
+                  "description": "Search query (contains match)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by applicationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
                 "members"
               ],
               "variables": [
@@ -4570,19 +5583,64 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get ApplicationMemberExample1",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members/11111111-1111-4111-8111-100000000001",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "11111111-1111-4111-8111-111111111111",
+                "members",
+                "11111111-1111-4111-8111-100000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "memberId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
                 "members",
                 "00000000-0000-0000-0000-000000000000"
               ],
@@ -5328,6 +6386,189 @@
           ]
         },
         {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"memberId\": \"11111111-1111-4111-8111-100000000001\",\n  \"source\": \"earned\",\n  \"amount\": 300,\n  \"frequency\": \"weekly\",\n  \"amountVaries\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new application with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"memberId\": \"11111111-1111-4111-8111-100000000001\",\n  \"source\": \"earned\",\n  \"amount\": 120,\n  \"frequency\": \"weekly\",\n  \"paidInCash\": true,\n  \"amountVaries\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another application with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "members"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"firstName\": \"Rosa\",\n  \"lastName\": \"Diaz\",\n  \"relationship\": \"self\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new application with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Update Application - Multiple Fields",
           "request": {
             "method": "PATCH",
@@ -5382,6 +6623,177 @@
           ]
         },
         {
+          "name": "Update Application - Single Field",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 400\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update a single field of ApplicationIncomeExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Application - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/incomes/11111111-1111-4111-8111-200000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "incomes",
+                "11111111-1111-4111-8111-200000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "incomeId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"memberId\": \"11111111-1111-4111-8111-100000000001\",\n  \"source\": \"earned\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of ApplicationIncomeExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Application - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members/11111111-1111-4111-8111-100000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "members",
+                "11111111-1111-4111-8111-100000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "memberId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"firstName\": \"Rosa\",\n  \"lastName\": \"Diaz\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of ApplicationMemberExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Delete Application",
           "request": {
             "method": "DELETE",
@@ -5401,6 +6813,43 @@
               ]
             },
             "description": "Delete ApplicationExample3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111/members/11111111-1111-4111-8111-100000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111",
+                "members",
+                "11111111-1111-4111-8111-100000000001"
+              ],
+              "variables": [
+                "applicationId",
+                "memberId"
+              ]
+            },
+            "description": "Delete ApplicationMemberExample1"
           },
           "event": [
             {
@@ -5593,6 +7042,104 @@
               }
             }
           ]
+        },
+        {
+          "name": "Start Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews/{{interviewId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "interviews",
+                "{{interviewId}}",
+                "start"
+              ],
+              "variables": [
+                "applicationId",
+                "interviewId"
+              ]
+            },
+            "description": "Trigger the start transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/interviews/{{interviewId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "interviews",
+                "{{interviewId}}",
+                "complete"
+              ],
+              "variables": [
+                "applicationId",
+                "interviewId"
+              ]
+            },
+            "description": "Trigger the complete transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "description": "Intake API"
@@ -5617,6 +7164,11 @@
     {
       "key": "transcriptId",
       "value": "7a1e0c2d-0000-4000-8000-000000000001",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
       "type": "string"
     },
     {

@@ -1,0 +1,122 @@
+{
+  "description": "Payload to propose a change.",
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "description": "Where it came from.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceType",
+              "sourceId"
+            ],
+            "properties": {
+              "sourceType": {
+                "type": "string",
+                "description": "What kind of record it cites, e.g. `transcript_entry`."
+              },
+              "sourceId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The record it cites. `sourceType` says what kind."
+              }
+            }
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Context from other domains, by the cross-domain pass-through\nconvention — `intake.interviewId`, say — so everything proposed\nduring something can be listed together.\n"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it stops applying, if nothing decides it first. One day after it was proposed, when not given."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "call"
+      ],
+      "properties": {
+        "kind": {
+          "const": "operation"
+        },
+        "call": {
+          "type": "object",
+          "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+          "additionalProperties": false,
+          "required": [
+            "operationId"
+          ],
+          "properties": {
+            "operationId": {
+              "type": "string",
+              "description": "The operation's operationId, e.g. `updateApplicationMember`."
+            },
+            "parameters": {
+              "type": "array",
+              "description": "The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.\n",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "in",
+                  "value"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The parameter's name, as the operation declares it."
+                  },
+                  "in": {
+                    "type": "string",
+                    "enum": [
+                      "path",
+                      "query",
+                      "header",
+                      "cookie"
+                    ]
+                  },
+                  "value": {
+                    "description": "The parameter's value."
+                  }
+                }
+              }
+            },
+            "requestBody": {
+              "type": "object",
+              "description": "The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.\n",
+              "additionalProperties": false,
+              "properties": {
+                "contentType": {
+                  "type": "string",
+                  "description": "One of the media types the operation's requestBody lists. Defaults to application/json."
+                },
+                "payload": {
+                  "description": "The request body, in the operation's request schema."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/OperationSuggestionCreate"
+}

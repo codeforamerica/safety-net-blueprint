@@ -141,7 +141,10 @@ export const zApplication = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -241,9 +244,17 @@ export const zApplication = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -444,6 +455,194 @@ export const zIncomeVerificationList = z.object({
     hasNext: z.optional(z.boolean())
 });
 
+export const zApplicationIncomeWritable = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+});
+
+export const zApplicationIncome = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zApplicationIncomeCreate = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+});
+
+export const zApplicationIncomeUpdate = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+});
+
+export const zApplicationIncomeList = z.object({
+    items: z.array(z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+export const zInterviewWritable = z.object({
+    scheduledFor: z.optional(z.iso.date())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zInterview = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zInterviewCreate = z.object({
+    scheduledFor: z.optional(z.iso.date())
+});
+
+export const zInterviewList = z.object({
+    items: z.array(z.object({
+        scheduledFor: z.optional(z.iso.date())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        status: z.enum([
+            'scheduled',
+            'in_progress',
+            'completed'
+        ]),
+        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
 export const zApplicationList = z.object({
     items: z.array(z.object({
         programsAppliedFor: z.array(z.enum([
@@ -543,7 +742,10 @@ export const zApplicationList = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ]),
         submittedAt: z.optional(z.union([
             z.iso.datetime({ offset: true }).readonly(),
@@ -643,9 +845,17 @@ export const zApplicationList = z.object({
                     'submitted',
                     'under_review',
                     'withdrawn',
-                    'closed'
+                    'closed',
+                    'scheduled',
+                    'in_progress',
+                    'completed'
                 ])),
-                programsAppliedFor: z.optional(z.string()),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
                 programCount: z.optional(z.int().readonly())
             })
         })))),
@@ -845,9 +1055,17 @@ export const zApplicationMember = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -1066,9 +1284,17 @@ export const zApplicationMemberList = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     }))),
@@ -1377,7 +1603,12 @@ export const zApplicationWritable2 = z.object({
         ]))
     }).and(z.object({
         application: z.object({
-            programsAppliedFor: z.optional(z.string())
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ])))
         })
     })))),
     proofOfIncomeDocument: z.optional(z.object({
@@ -1496,6 +1727,125 @@ export const zIncomeVerificationListWritable = z.object({
     hasNext: z.optional(z.boolean())
 });
 
+export const zApplicationIncomeWritableWritable = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean())
+});
+
+export const zApplicationIncomeWritable2 = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean())
+});
+
+export const zApplicationIncomeCreateWritable = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean())
+});
+
+export const zApplicationIncomeUpdateWritable = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean())
+});
+
+export const zApplicationIncomeListWritable = z.object({
+    items: z.array(z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean())
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zInterviewWritable2 = z.object({
+    scheduledFor: z.optional(z.iso.date())
+});
+
+export const zInterviewListWritable = z.object({
+    items: z.array(z.object({
+        scheduledFor: z.optional(z.iso.date())
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
 export const zApplicationListWritable = z.object({
     items: z.array(z.object({
         programsAppliedFor: z.array(z.enum([
@@ -1599,7 +1949,12 @@ export const zApplicationListWritable = z.object({
             ]))
         }).and(z.object({
             application: z.object({
-                programsAppliedFor: z.optional(z.string())
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ])))
             })
         })))),
         proofOfIncomeDocument: z.optional(z.object({
@@ -1690,7 +2045,12 @@ export const zApplicationMemberWritable2 = z.object({
     ]))
 }).and(z.object({
     application: z.object({
-        programsAppliedFor: z.optional(z.string())
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])))
     })
 }));
 
@@ -1763,7 +2123,12 @@ export const zApplicationMemberListWritable = z.object({
         ]))
     }).and(z.object({
         application: z.object({
-            programsAppliedFor: z.optional(z.string())
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ])))
         })
     }))),
     total: z.int().gte(0),
@@ -1938,7 +2303,10 @@ export const zListApplicationsResponse = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ]),
         submittedAt: z.optional(z.union([
             z.iso.datetime({ offset: true }).readonly(),
@@ -2038,9 +2406,17 @@ export const zListApplicationsResponse = z.object({
                     'submitted',
                     'under_review',
                     'withdrawn',
-                    'closed'
+                    'closed',
+                    'scheduled',
+                    'in_progress',
+                    'completed'
                 ])),
-                programsAppliedFor: z.optional(z.string()),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
                 programCount: z.optional(z.int().readonly())
             })
         })))),
@@ -2235,7 +2611,10 @@ export const zCreateApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -2335,9 +2714,17 @@ export const zCreateApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -2506,7 +2893,10 @@ export const zGetApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -2606,9 +2996,17 @@ export const zGetApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -2800,7 +3198,10 @@ export const zUpdateApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -2900,9 +3301,17 @@ export const zUpdateApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -3071,6 +3480,327 @@ export const zGetIncomeVerificationResponse = z.object({
     }).readonly())
 }));
 
+export const zListApplicationIncomesData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0)
+    }))
+});
+
+/**
+ * The incomes reported on this application.
+ */
+export const zListApplicationIncomesResponse = z.object({
+    items: z.array(z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+export const zCreateApplicationIncomeData = z.object({
+    body: z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.record(z.string(), z.unknown())),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Income reported.
+ */
+export const zCreateApplicationIncomeResponse = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zGetApplicationIncomeData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        incomeId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Income retrieved.
+ */
+export const zGetApplicationIncomeResponse = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zUpdateApplicationIncomeData = z.object({
+    body: z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.record(z.string(), z.unknown())),
+    path: z.object({
+        applicationId: z.uuid(),
+        incomeId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Income updated.
+ */
+export const zUpdateApplicationIncomeResponse = z.object({
+    memberId: z.optional(z.uuid()),
+    source: z.optional(z.enum([
+        'earned',
+        'self_employment',
+        'unearned'
+    ])),
+    amount: z.optional(z.number().gte(0)),
+    frequency: z.optional(z.enum([
+        'weekly',
+        'biweekly',
+        'semimonthly',
+        'monthly',
+        'irregular'
+    ])),
+    paidInCash: z.optional(z.boolean()),
+    amountVaries: z.optional(z.boolean()),
+    links: z.optional(z.object({
+        member: z.optional(z.string())
+    }).readonly())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zListApplicationInterviewsData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0)
+    }))
+});
+
+/**
+ * The interviews scheduled for this application.
+ */
+export const zListApplicationInterviewsResponse = z.object({
+    items: z.array(z.object({
+        scheduledFor: z.optional(z.iso.date())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        status: z.enum([
+            'scheduled',
+            'in_progress',
+            'completed'
+        ]),
+        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+export const zCreateApplicationInterviewData = z.object({
+    body: z.object({
+        scheduledFor: z.optional(z.iso.date())
+    }),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zCreateApplicationInterviewResponse = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zGetApplicationInterviewData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        interviewId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zGetApplicationInterviewResponse = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
 export const zListApplicationMembersData = z.object({
     body: z.optional(z.never()),
     path: z.object({
@@ -3165,9 +3895,17 @@ export const zListApplicationMembersResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     }))),
@@ -3331,9 +4069,17 @@ export const zCreateApplicationMemberResponse = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3441,9 +4187,17 @@ export const zGetApplicationMemberResponse = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3603,9 +4357,17 @@ export const zUpdateApplicationMemberResponse = z.object({
             'submitted',
             'under_review',
             'withdrawn',
-            'closed'
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
         ])),
-        programsAppliedFor: z.optional(z.string()),
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
         programCount: z.optional(z.int().readonly())
     })
 }));
@@ -3719,7 +4481,10 @@ export const zSubmitApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -3819,9 +4584,17 @@ export const zSubmitApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -3977,7 +4750,10 @@ export const zOpenApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -4077,9 +4853,17 @@ export const zOpenApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4238,7 +5022,10 @@ export const zCloseApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -4338,9 +5125,17 @@ export const zCloseApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4496,7 +5291,10 @@ export const zWithdrawApplicationResponse = z.object({
         'submitted',
         'under_review',
         'withdrawn',
-        'closed'
+        'closed',
+        'scheduled',
+        'in_progress',
+        'completed'
     ]),
     submittedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -4596,9 +5394,17 @@ export const zWithdrawApplicationResponse = z.object({
                 'submitted',
                 'under_review',
                 'withdrawn',
-                'closed'
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
             ])),
-            programsAppliedFor: z.optional(z.string()),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
             programCount: z.optional(z.int().readonly())
         })
     })))),
@@ -4642,6 +5448,102 @@ export const zWithdrawApplicationResponse = z.object({
         applicationReview: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
+    }).readonly())
+}));
+
+export const zStartInterviewData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        interviewId: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zStartInterviewResponse = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zProcessSuggestionsInterviewData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        interviewId: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zProcessSuggestionsInterviewResponse = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zCompleteInterviewData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        interviewId: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An application's interview. While it's in progress, its flags are evaluated as the household's incomes change, and each is put to the worker as a suggestion.
+ *
+ */
+export const zCompleteInterviewResponse = z.object({
+    scheduledFor: z.optional(z.iso.date())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid().readonly(),
+    status: z.enum([
+        'scheduled',
+        'in_progress',
+        'completed'
+    ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    completedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
     }).readonly())
 }));
 

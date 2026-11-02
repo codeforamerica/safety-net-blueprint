@@ -41,9 +41,10 @@ const CONFIG_SCHEMA = {
   'x-event-type-prefix': {
     type: 'string'
   },
-  // Domains the framework provides beyond platform — communication — that a
-  // contract set includes. The names are checked against what the framework
-  // provides when the set is resolved.
+  // Capabilities the framework provides beyond platform — transcripts — that a
+  // contract set includes; each framework file declares the one it belongs to.
+  // The names are checked against what the framework's files declare when the
+  // set is resolved.
   'x-capabilities': {
     type: 'array'
   }

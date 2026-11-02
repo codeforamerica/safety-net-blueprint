@@ -262,3 +262,21 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
     done();
   });
 });
+
+// =============================================================================
+// Ordering by partitionkey
+// =============================================================================
+
+test('reactions with one partitionkey run one at a time, in order; other keys do not wait', async () => {
+  const { inOrder } = await import('../../src/event-subscription.js');
+  const seen = [];
+  let finishFirst;
+  inOrder('app-1', () => { seen.push('first starts'); return new Promise((resolve) => { finishFirst = () => { seen.push('first ends'); resolve(); }; }); });
+  inOrder('app-1', () => { seen.push('second starts'); });
+  inOrder('app-2', () => { seen.push('other key starts'); });
+
+  assert.deepStrictEqual(seen, ['first starts', 'other key starts'], 'the second waits for the first; another key does not');
+  finishFirst();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepStrictEqual(seen, ['first starts', 'other key starts', 'first ends', 'second starts']);
+});

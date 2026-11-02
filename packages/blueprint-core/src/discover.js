@@ -5,10 +5,10 @@
  * downstream operates on the documents the caller loads from these paths.
  */
 
-import { readdirSync, readFileSync, existsSync } from 'fs';
+import { readdirSync, existsSync } from 'fs';
 import { join, relative } from 'path';
-import yaml from 'js-yaml';
 import { detectType, isDeprecated, extractDomain } from './contract-types.js';
+import { readYaml } from './load.js';
 
 /**
  * Walk a directory tree for contract files, reporting each file's type.
@@ -18,9 +18,10 @@ import { detectType, isDeprecated, extractDomain } from './contract-types.js';
  * relative path, so a document that does not know where it sits cannot be
  * projected into its sibling spec.
  *
- * Dot-prefixed directories and node_modules are skipped. Files that fail to
- * parse are skipped rather than throwing — a malformed file is not a contract,
- * and `validate` is where parse failures should surface.
+ * Dot-prefixed directories and node_modules are skipped. A file that does not
+ * parse throws, naming the file. Skipping it instead left the set without it:
+ * validate never saw the file, so nothing reported it, and a state machine
+ * with a typo simply was not there.
  *
  * Deprecated documents are skipped too. They stay in the tree for reference
  * but are not resolved, validated or served, and every caller was filtering
@@ -55,12 +56,7 @@ export function discover(dir, type) {
       }
       if (!entry.isFile() || !entry.name.endsWith('.yaml')) continue;
 
-      let content;
-      try {
-        content = yaml.load(readFileSync(absPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-      } catch {
-        continue;
-      }
+      const content = readYaml(absPath);
       if (isDeprecated(content)) continue;
 
       found.push({

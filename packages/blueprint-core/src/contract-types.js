@@ -89,6 +89,21 @@ export function extractDomain(content) {
 }
 
 /**
+ * The framework capability a document belongs to: `info['x-capability']` on
+ * OpenAPI, AsyncAPI and Arazzo, `capability` on everything else.
+ *
+ * Declared the same way, and for the same reason, as its domain. A set lists
+ * the capabilities it wants, and a framework file comes along only when its
+ * capability is listed; platform's files declare none and always come along.
+ *
+ * @param {object} content - Parsed YAML content
+ * @returns {string|null}
+ */
+export function extractCapability(content) {
+  return content?.info?.['x-capability'] ?? content?.capability ?? null;
+}
+
+/**
  * Whether a document must declare a domain: its type's `domain` is
  * 'required', and it is not a state machine library.
  *

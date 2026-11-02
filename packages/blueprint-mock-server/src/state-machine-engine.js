@@ -424,6 +424,16 @@ export function findOperation(machine, transitionName, resource) {
  * @param {Array} pendingOperations - Accumulator for pending operations
  * @param {Array} pendingAppends - Accumulator for pending appends
  */
+// Calls still sending `body:`, warned about once each.
+const warnedBodies = new Set();
+
+function warnDeprecatedBody(method, rawPath) {
+  const call = `${method} ${rawPath}`;
+  if (warnedBodies.has(call)) return;
+  warnedBodies.add(call);
+  console.warn(`call: ${call} sends body:, which is deprecated — write requestBody: {payload: …}. It is still read, and will be removed in a later release.`);
+}
+
 function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, pendingAppends) {
   const method = 'POST' in spec ? 'POST' : 'PATCH' in spec ? 'PATCH' : 'GET' in spec ? 'GET' : 'DELETE' in spec ? 'DELETE' : null;
   if (!method) {
@@ -433,7 +443,8 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
 
   const rawPath = spec[method];
   const path = interpolatePath(rawPath, context);
-  const body = resolveBody(spec.body, context);
+  if (spec.body !== undefined && spec.requestBody === undefined) warnDeprecatedBody(method, rawPath);
+  const body = resolveBody(spec.requestBody?.payload ?? spec.body, context);
 
   if (method === 'POST') {
     if (rawPath.includes('{') || rawPath.includes('$')) {
@@ -471,6 +482,9 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
  * Path template slots use {alias.field} syntax (OpenAPI path template style).
  * Value expressions use $alias.field syntax (OpenAPI 3.1 Runtime Expression style).
  *
+ * Walked by applySteps, and by applyStepsInOrder for an action, which
+ * performs each call to an operation as the walk reaches it.
+ *
  * @param {Array} steps - Step items from a then: list
  * @param {Object} resource - The resource to modify (mutated in place)
  * @param {Object} context - Context with caller, object, request, this, entities, and now info
@@ -482,14 +496,9 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
  *   pendingEvents: Array<{ action: string, data: Object }>
  * }}
  */
-export function applySteps(steps, resource, context, store) {
-  const pendingCreates = [];
-  const pendingOperations = [];
-  const pendingAppends = [];
-  const pendingProcedures = [];
-  const pendingEvents = [];
-
-  if (!steps) return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
+function* walkSteps(steps, resource, context, store, pending) {
+  const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = pending;
+  if (!steps) return;
 
   for (const step of steps) {
     // if: step — CEL conditional branch
@@ -505,12 +514,7 @@ export function applySteps(steps, resource, context, store) {
       };
       const conditionMet = evaluateCEL(step.if, celData);
       const branchSteps = conditionMet ? (step.then || []) : (step.else || []);
-      const nested = applySteps(branchSteps, resource, context, store);
-      pendingCreates.push(...nested.pendingCreates);
-      pendingOperations.push(...nested.pendingOperations);
-      pendingAppends.push(...nested.pendingAppends);
-      pendingProcedures.push(...nested.pendingProcedures);
-      pendingEvents.push(...nested.pendingEvents);
+      yield* walkSteps(branchSteps, resource, context, store, pending);
       continue;
     }
 
@@ -525,12 +529,7 @@ export function applySteps(steps, resource, context, store) {
       const branches = step.when || {};
       const matchedSteps = branches[matchValue];
       if (matchedSteps) {
-        const nested = applySteps(matchedSteps, resource, context, store);
-        pendingCreates.push(...nested.pendingCreates);
-        pendingOperations.push(...nested.pendingOperations);
-        pendingAppends.push(...nested.pendingAppends);
-        pendingProcedures.push(...nested.pendingProcedures);
-        pendingEvents.push(...nested.pendingEvents);
+        yield* walkSteps(matchedSteps, resource, context, store, pending);
       }
       continue;
     }
@@ -548,12 +547,7 @@ export function applySteps(steps, resource, context, store) {
             // Expose category/item as $params.category equivalent
             params: { ...(context.params || {}), ...(itemAlias ? { [itemAlias]: item } : {}) },
           };
-          const nested = applySteps(step.do || [], resource, itemContext, store);
-          pendingCreates.push(...nested.pendingCreates);
-          pendingOperations.push(...nested.pendingOperations);
-          pendingAppends.push(...nested.pendingAppends);
-          pendingProcedures.push(...nested.pendingProcedures);
-          pendingEvents.push(...nested.pendingEvents);
+          yield* walkSteps(step.do || [], resource, itemContext, store, pending);
         }
         continue;
       }
@@ -604,15 +598,14 @@ export function applySteps(steps, resource, context, store) {
           ...context,
           entities: { ...(context.entities ?? {}), [itemAlias]: item },
         };
-        const nested = applySteps(forEachSteps || [], resource, itemContext, store);
-        pendingCreates.push(...nested.pendingCreates);
-        pendingOperations.push(...nested.pendingOperations);
-        pendingAppends.push(...nested.pendingAppends);
-        pendingProcedures.push(...nested.pendingProcedures);
-        pendingEvents.push(...nested.pendingEvents);
+        yield* walkSteps(forEachSteps || [], resource, itemContext, store, pending);
       }
     } else if (step.set) {
-      resource[step.set.field] = resolveValue(step.set.value, context);
+      // Later steps read $object as this step left it — a timer set for the
+      // expiresAt just defaulted, say.
+      const value = resolveValue(step.set.value, context);
+      resource[step.set.field] = value;
+      if (context.object && context.object !== resource) context.object[step.set.field] = value;
     } else if (step.emit) {
       // An emit declaring no data carries none, rather than an empty object.
       const data = step.emit.data ? {} : undefined;
@@ -626,9 +619,11 @@ export function applySteps(steps, resource, context, store) {
         console.warn(`evaluate: ruleset "${step.evaluate}" not found in rules index — skipping`);
         continue;
       }
+      // An input may be an object of value expressions, resolved as a call's
+      // body is — a household assembled from the records it's read from.
       const inputs = {};
       for (const [key, val] of Object.entries(step.inputs || {})) {
-        inputs[key] = resolveValue(val, context);
+        inputs[key] = resolveBodyValue(val, context);
       }
       const nodes = evaluateRules(graph, inputs);
       if (step.bind) {
@@ -643,10 +638,18 @@ export function applySteps(steps, resource, context, store) {
         }
       }
     } else if (step.call !== undefined) {
+      // A call to an operation by its operationId, or to one held in data
+      // (`$request.call`), is performed where it stands: the walk waits for
+      // its outcome, so a step after it runs after it.
+      if (isOperationCall(step.call)) {
+        yield { step, context };
+        continue;
+      }
       // call: can be a string (procedure name) or an object (HTTP operation, formerly invoke:)
       if (typeof step.call === 'string') {
-        // String form: call a named procedure — handled by the runner, not here
-        pendingProcedures.push({ procedureId: step.call, with: step.with });
+        // String form: call a named procedure — handled by the runner, not here.
+        // Its with: is read where the call stands, inside a forEach its item.
+        pendingProcedures.push({ procedureId: step.call, with: step.with, at: context });
       } else if (step.call && typeof step.call === 'object') {
         // Object form: HTTP operation (formerly invoke:)
         applyCallObjectStep(step.call, context, pendingCreates, pendingOperations, pendingAppends);
@@ -675,7 +678,201 @@ export function applySteps(steps, resource, context, store) {
     }
   }
 
-  return { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents };
+}
+
+function emptyPending() {
+  return { pendingCreates: [], pendingOperations: [], pendingAppends: [], pendingProcedures: [], pendingEvents: [] };
+}
+
+/**
+ * Whether a call names an operation — `{ operationId, parameters, requestBody }` —
+ * or takes one from data, `$request.call`, rather than naming a procedure or a
+ * method and path.
+ *
+ * @param {*} call - A step's `call:`
+ * @returns {boolean}
+ */
+export function isOperationCall(call) {
+  if (typeof call === 'string') return call.startsWith('$');
+  return Boolean(call && typeof call === 'object' && 'operationId' in call);
+}
+
+/**
+ * The operation call a step makes, its value expressions resolved.
+ *
+ * @param {string|Object} call - A step's `call:`
+ * @param {Object} context
+ * @returns {{ operationId: string, parameters?: Array, requestBody?: { contentType?: string, payload?: * } }|null}
+ */
+export function operationCallOf(call, context) {
+  if (typeof call === 'string') {
+    const value = resolveValue(call, context);
+    return value && typeof value === 'object' && value.operationId ? value : null;
+  }
+  const resolved = { operationId: call.operationId };
+  if (call.parameters) {
+    resolved.parameters = call.parameters.map((p) => ({ ...p, value: resolveValue(p.value, context) }));
+  }
+  if (call.requestBody !== undefined) {
+    resolved.requestBody = { ...call.requestBody };
+    if (call.requestBody.payload !== undefined) resolved.requestBody.payload = resolveBody(call.requestBody.payload, context);
+  }
+  return resolved;
+}
+
+/**
+ * Apply a list of steps, collecting what they leave to be done.
+ *
+ * A call to an operation is performed only in an action (applyStepsInOrder),
+ * where its outcome can decide the action's; anywhere else it is skipped,
+ * with a warning naming it.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @returns {{
+ *   pendingCreates: Array<{ entity: string, data: Object }>,
+ *   pendingOperations: Array<{ path: string, rawPath: string, body: Object }>,
+ *   pendingAppends: Array<{ path: string, body: Object }>,
+ *   pendingProcedures: Array<{ procedureId?: string }>,
+ *   pendingEvents: Array<{ action: string, data: Object }>
+ * }}
+ */
+export function applySteps(steps, resource, context, store) {
+  const pending = emptyPending();
+  for (const { step } of walkSteps(steps, resource, context, store, pending)) {
+    const named = typeof step.call === 'string' ? step.call : step.call.operationId;
+    console.warn(`call: ${named} calls an operation, which only a state machine action can do — skipping`);
+  }
+  return pending;
+}
+
+/**
+ * The entities a call's `catch:` steps see: the failure under the name its
+ * `as` gives, `error` by default as in Serverless Workflow — the HTTP status
+ * alongside the error body's code, message and details.
+ *
+ * @param {Object} step - A call step with `catch:`
+ * @param {{ status: number, body: * }} outcome
+ * @param {Object} [entities]
+ * @returns {Object}
+ */
+export function caughtEntities(step, outcome, entities = {}) {
+  const body = outcome.body && typeof outcome.body === 'object' ? outcome.body : {};
+  return { ...entities, [step.catch.as ?? 'error']: { status: outcome.status, ...body } };
+}
+
+/**
+ * Apply an action's steps in order, performing each call to an operation as
+ * it is reached.
+ *
+ * A call that fails stops the walk. What the steps did up to then is
+ * returned under `failed`, with the step and the outcome, for the action to
+ * discard: `catch:` runs instead of them, and with none the action fails.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @param {(call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>} perform
+ * @returns {Promise<ReturnType<typeof applySteps> & { failed?: { step: Object, call: Object, outcome: Object } }>}
+ */
+export async function applyStepsInOrder(steps, resource, context, store, perform) {
+  const pending = emptyPending();
+  const walker = walkSteps(steps, resource, context, store, pending);
+  for (let next = walker.next(); !next.done; next = walker.next()) {
+    const { step, context: at } = next.value;
+    const call = operationCallOf(step.call, at);
+    const outcome = call
+      ? await perform(call, step)
+      : { ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: `call: ${step.call} names no operation call` } };
+    if (!outcome.ok) {
+      walker.return();
+      return { ...pending, failed: { step, call, outcome } };
+    }
+    bindOutcome(step, at, outcome);
+  }
+  return pending;
+}
+
+/**
+ * Bind what a call to an operation answered, for the steps after it: the
+ * whole response body to one name (`bind: $inputs`), or chosen fields of it
+ * to names of their own (`bind: { asOf: interviewDate }`).
+ *
+ * @param {Object} step - The call step
+ * @param {Object} context - The context the steps after it read
+ * @param {{ body?: * }} outcome - The call's successful outcome
+ */
+function bindOutcome(step, context, outcome) {
+  if (!step.bind) return;
+  if (!context.entities) context.entities = {};
+  if (typeof step.bind === 'string') {
+    context.entities[step.bind.replace(/^\$/, '')] = outcome.body ?? null;
+    return;
+  }
+  for (const [alias, field] of Object.entries(step.bind)) {
+    context.entities[alias] = resolveDotPath(outcome.body, field.replace(/^\$/, '')) ?? null;
+  }
+}
+
+/**
+ * Apply steps in order, performing each call to an operation as it is reached
+ * — for a procedure or an event's reaction, which, unlike an action, mostly
+ * make no such call. With none, the steps are applied at once and their
+ * result returned as it is; at the first call, the rest follows the call's
+ * outcome and a promise is returned. A call that fails stops the walk, as in
+ * applyStepsInOrder; without `perform`, a call is skipped with a warning, as
+ * in applySteps.
+ *
+ * @param {Array} steps
+ * @param {Object} resource - Mutated in place
+ * @param {Object} context
+ * @param {Object} store
+ * @param {Function|null} perform - As for applyStepsInOrder
+ * @returns {Object|Promise<Object>} As applyStepsInOrder resolves to
+ */
+export function applyStepsWithCalls(steps, resource, context, store, perform) {
+  const pending = emptyPending();
+  const walker = walkSteps(steps, resource, context, store, pending);
+  const advance = () => {
+    for (let next = walker.next(); !next.done; next = walker.next()) {
+      const { step, context: at } = next.value;
+      if (!perform) {
+        const named = typeof step.call === 'string' ? step.call : step.call.operationId;
+        console.warn(`call: ${named} calls an operation, which nothing here can make — skipping`);
+        continue;
+      }
+      const call = operationCallOf(step.call, at);
+      const outcome = call
+        ? perform(call, step)
+        : Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: `call: ${step.call} names no operation call` } });
+      return outcome.then((result) => {
+        if (result.ok) {
+          bindOutcome(step, at, result);
+          return advance();
+        }
+        walker.return();
+        return { ...pending, failed: { step, call, outcome: result } };
+      });
+    }
+    return pending;
+  };
+  return advance();
+}
+
+/**
+ * Go on with a value now, or once it settles when it is a promise — so what
+ * makes no call stays synchronous.
+ *
+ * @template T, U
+ * @param {T|Promise<T>} value
+ * @param {(value: T) => U} next
+ * @returns {U|Promise<U>}
+ */
+export function whenReady(value, next) {
+  return value && typeof value.then === 'function' ? value.then(next) : next(value);
 }
 
 /**

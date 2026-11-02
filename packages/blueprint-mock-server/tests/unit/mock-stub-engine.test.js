@@ -82,7 +82,7 @@ test('registerStub — throws when response is present but missing type', () => 
 });
 
 test('registerStub — allows stub without response (timer stub format)', () => {
-  const stub = registerStub({ on: 'scheduling.timer.requested' });
+  const stub = registerStub({ on: 'platform.timer.requested' });
   assert.ok(stub.id);
   assert.strictEqual(stub.response, undefined);
 });

@@ -1,0 +1,550 @@
+openapi: 3.1.0
+info:
+  title: Suggestions
+  version: 0.1.0
+  x-domain: decision-support
+  x-capability: suggestions
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    Suggestions put in front of a person, and their decisions on them. A
+    suggestion can come from an assistant, a rule or another person.
+
+    An `operation` suggestion proposes a call to an operation the contracts
+    declare; accepting it makes the call, as the person accepting. An
+    `informing` suggestion points something out about a record, in a category
+    the contract set declares; accepting it means the person took it up.
+
+    Evidence refers to where a suggestion came from — a transcript's lines, a
+    document — without quoting it, so the source's own access rules apply when
+    it is shown.
+servers:
+  - url: https://api.example.com/decision-support
+    description: Production server
+  - url: http://localhost:1080/decision-support
+    description: Local development server
+tags:
+  - name: Suggestions
+    description: Something proposed to a person, and their decision on it.
+paths:
+  /suggestions:
+    get:
+      summary: List suggestions
+      description: |
+        Retrieve a paginated list of suggestions. Search on `metadata` for the
+        ones proposed during something — `q=metadata.intake.interviewId:…` —
+        and on `status` for the ones still open.
+      operationId: listSuggestions
+      tags:
+        - Suggestions
+      x-sortable:
+        fields:
+          - createdAt
+        default: "-createdAt"
+        tieBreaker: id
+      parameters:
+        - $ref: ../../components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../components/parameters.yaml#/LimitParam
+        - $ref: ../../components/parameters.yaml#/OffsetParam
+        - $ref: ../../components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: A paginated collection of suggestions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestionList"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+    post:
+      summary: Propose a suggestion
+      description: |
+        Propose a suggestion. It begins in `proposed`.
+
+        An operation suggestion is refused with `422` when its operation does
+        not exist, or its call doesn't fit the operation: a parameter the
+        operation doesn't declare, a required parameter left out, or a
+        parameter value or request body the operation's schemas refuse.
+        `details` names the field, as `call.requestBody.payload.<field>` for the
+        body.
+
+        An informing suggestion is refused with `422` when its category does
+        not exist, when it has neither a category nor a message, or when its
+        `path` isn't a JSON Pointer.
+
+        One whose fingerprint matches a suggestion still open (`proposed` or
+        `refused`) or `dismissed` is refused with `409`, naming that suggestion
+        in `details`. One matching an `accepted` or `expired` suggestion may be
+        proposed again.
+      operationId: createSuggestion
+      tags:
+        - Suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestionCreate"
+      responses:
+        "201":
+          description: Suggestion proposed.
+          headers:
+            Location:
+              description: URL of the new suggestion.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "409":
+          $ref: ../../components/responses.yaml#/Conflict
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /suggestions/{suggestionId}:
+    parameters:
+      - $ref: "#/components/parameters/SuggestionIdParam"
+    get:
+      summary: Get a suggestion
+      description: Retrieve a single suggestion by identifier.
+      operationId: getSuggestion
+      tags:
+        - Suggestions
+      responses:
+        "200":
+          description: Suggestion retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+              examples:
+                SuggestionExample1:
+                  $ref: "#/components/examples/SuggestionExample1"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /suggestions/{suggestionId}/accept:
+    parameters:
+      - $ref: "#/components/parameters/SuggestionIdParam"
+    post:
+      summary: Accept suggestion
+      description: |-
+        Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: acceptSuggestion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Suggestions
+      x-relationship:
+        type: state-machine-action
+        domain: decision-support
+        id: accept
+  /suggestions/{suggestionId}/dismiss:
+    parameters:
+      - $ref: "#/components/parameters/SuggestionIdParam"
+    post:
+      summary: Dismiss suggestion
+      description: Say no, with a reason.
+      operationId: dismissSuggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DismissRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Suggestions
+      x-relationship:
+        type: state-machine-action
+        domain: decision-support
+        id: dismiss
+  /suggestions/{suggestionId}/expire:
+    parameters:
+      - $ref: "#/components/parameters/SuggestionIdParam"
+    post:
+      summary: Expire suggestion
+      description: Close a suggestion that no longer applies, before anyone decided.
+      operationId: expireSuggestion
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Suggestions
+      x-relationship:
+        type: state-machine-action
+        domain: decision-support
+        id: expire
+components:
+  parameters:
+    SuggestionIdParam:
+      name: suggestionId
+      in: path
+      required: true
+      description: Unique identifier of the suggestion.
+      schema:
+        type: string
+        format: uuid
+      example: 3f6b2a1c-8d4e-4f7a-9b0c-1e2d3c4b5a69
+  schemas:
+    SuggestionKind:
+      type: string
+      enum:
+        - operation
+        - informing
+      description: |
+        `operation`: proposes a change, and accepting makes the call.
+        `informing`: points something out about a record, and accepting means
+        a person took it up.
+    SuggestionCommon:
+      type: object
+      properties:
+        evidence:
+          type: array
+          description: Where it came from.
+          items:
+            $ref: "#/components/schemas/SuggestionEvidence"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+        metadata:
+          type: object
+          description: |
+            Context from other domains, by the cross-domain pass-through
+            convention — `intake.interviewId`, say — so everything proposed
+            during something can be listed together.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+    OperationSuggestionFields:
+      type: object
+      required:
+        - kind
+        - call
+      properties:
+        kind:
+          const: operation
+        call:
+          $ref: ../../schemas/operations.yaml#/$defs/OperationCall
+    InformingSuggestionFields:
+      type: object
+      required:
+        - kind
+        - subjectType
+        - subjectId
+      anyOf:
+        - required:
+            - category
+        - required:
+            - message
+      properties:
+        kind:
+          const: informing
+        subjectType:
+          type: string
+          description: What kind of record it is about, e.g. `application_member`.
+          example: application_member
+        subjectId:
+          type: string
+          format: uuid
+          description: The record it is about. `subjectType` says what kind.
+          x-relationship:
+            resource: Polymorphic
+        path:
+          type: string
+          format: json-pointer
+          description: The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+          example: /income
+        category:
+          type: string
+          description: |
+            What kind of thing it points out — an entry of the
+            `suggestion-categories` registry, which a contract set declares.
+            Its description is what a person reads when there is no message.
+            Absent, it is uncategorized: something no category covers yet,
+            found with `q=kind:informing -category:*`.
+          enum:
+            - cash-or-self-employment-income
+            - earned-income-varies
+            - missing-income
+            - name-mismatch
+        message:
+          type: string
+          minLength: 1
+          description: What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+    SuggestionRead:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        status:
+          type: string
+          readOnly: true
+          description: |
+            `proposed` while it waits for a decision; `accepted` once a person
+            said yes and, for an operation, the call was made; `refused` when
+            a person said yes and the call failed; `dismissed` when a person
+            said no; `expired` once it stopped applying.
+          enum:
+            - proposed
+            - accepted
+            - refused
+            - dismissed
+            - expired
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |
+            What identifies it, for refusing the same one proposed again: an
+            operation suggestion's whole call; an informing one's subject,
+            path and category — or, uncategorized, its message. A keyed hash,
+            so nothing can be read back from it.
+
+            Before hashing, values are made comparable, so two suggestions that
+            differ only in these ways have the same fingerprint: text is
+            trimmed, runs of spaces become one, and case is ignored; a
+            date-time is compared as the instant it names; an object's keys
+            and a call's parameters may come in any order.
+        reason:
+          type: string
+          readOnly: true
+          description: Why it was dismissed.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When it was proposed.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When it last changed.
+    SuggestionEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - sourceType
+        - sourceId
+      properties:
+        sourceType:
+          type: string
+          description: What kind of record it cites, e.g. `transcript_entry`.
+          example: transcript_entry
+        sourceId:
+          type: string
+          format: uuid
+          description: The record it cites. `sourceType` says what kind.
+          x-relationship:
+            resource: Polymorphic
+    SuggestionCreate:
+      oneOf:
+        - $ref: "#/components/schemas/OperationSuggestionCreate"
+        - $ref: "#/components/schemas/InformingSuggestionCreate"
+      discriminator:
+        propertyName: kind
+        mapping:
+          operation: "#/components/schemas/OperationSuggestionCreate"
+          informing: "#/components/schemas/InformingSuggestionCreate"
+    OperationSuggestionCreate:
+      description: Payload to propose a change.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/SuggestionCommon"
+        - $ref: "#/components/schemas/OperationSuggestionFields"
+    InformingSuggestionCreate:
+      description: Payload to point something out.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/SuggestionCommon"
+        - $ref: "#/components/schemas/InformingSuggestionFields"
+    Suggestion:
+      oneOf:
+        - $ref: "#/components/schemas/OperationSuggestion"
+        - $ref: "#/components/schemas/InformingSuggestion"
+      discriminator:
+        propertyName: kind
+        mapping:
+          operation: "#/components/schemas/OperationSuggestion"
+          informing: "#/components/schemas/InformingSuggestion"
+    OperationSuggestion:
+      description: A proposed change, including server-managed fields.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/SuggestionCommon"
+        - $ref: "#/components/schemas/OperationSuggestionFields"
+        - $ref: "#/components/schemas/SuggestionRead"
+        - type: object
+          properties:
+            performed:
+              readOnly: true
+              description: The call as it was accepted, only when the person changed it first.
+              $ref: ../../schemas/operations.yaml#/$defs/OperationCall
+    InformingSuggestion:
+      description: Something pointed out, including server-managed fields.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/SuggestionCommon"
+        - $ref: "#/components/schemas/InformingSuggestionFields"
+        - $ref: "#/components/schemas/SuggestionRead"
+    SuggestionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Suggestion"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of suggestions.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of suggestions requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of suggestions skipped before this page.
+        hasNext:
+          type: boolean
+          description: Whether more suggestions are available beyond this page.
+    AcceptRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        call:
+          $ref: ../../schemas/operations.yaml#/$defs/OperationCall
+          description: The call corrected before accepting, for an operation suggestion. It must name the same operation.
+    DismissRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Why the person said no.
+  examples:
+    SuggestionExample1:
+      summary: A proposed change to a record, citing a transcript line
+      value:
+        id: 3f6b2a1c-8d4e-4f7a-9b0c-1e2d3c4b5a69
+        kind: operation
+        call:
+          operationId: updateApplicationMember
+          parameters:
+            - name: applicationId
+              in: path
+              value: 6a0c3e2b-1f4d-4b8a-9c7e-5d2f1a0b3c84
+            - name: memberId
+              in: path
+              value: 1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26
+          requestBody:
+            payload:
+              firstName: Rosa
+        evidence:
+          - sourceType: transcript_entry
+            sourceId: 9c2e4a10-7b1d-4f3e-8a62-1d5c0b7e9f24
+        confidence: 0.82
+        metadata:
+          intake:
+            interviewId: 5c1f8a2e-0d3b-4e6f-9a7c-2b4d6e8f0a1c
+        expiresAt: "2026-10-12T14:05:00Z"
+        status: proposed
+        createdAt: "2026-10-11T14:05:00Z"
+        updatedAt: "2026-10-11T14:05:00Z"

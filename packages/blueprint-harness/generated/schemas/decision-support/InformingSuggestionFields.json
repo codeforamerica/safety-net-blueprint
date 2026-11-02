@@ -1,0 +1,56 @@
+{
+  "type": "object",
+  "required": [
+    "kind",
+    "subjectType",
+    "subjectId"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "category"
+      ]
+    },
+    {
+      "required": [
+        "message"
+      ]
+    }
+  ],
+  "properties": {
+    "kind": {
+      "const": "informing"
+    },
+    "subjectType": {
+      "type": "string",
+      "description": "What kind of record it is about, e.g. `application_member`."
+    },
+    "subjectId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The record it is about. `subjectType` says what kind."
+    },
+    "path": {
+      "type": "string",
+      "format": "json-pointer",
+      "description": "The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record."
+    },
+    "category": {
+      "type": "string",
+      "description": "What kind of thing it points out — an entry of the\n`suggestion-categories` registry, which a contract set declares.\nIts description is what a person reads when there is no message.\nAbsent, it is uncategorized: something no category covers yet,\nfound with `q=kind:informing -category:*`.\n",
+      "enum": [
+        "cash-or-self-employment-income",
+        "earned-income-varies",
+        "missing-income",
+        "name-mismatch"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What it points out, in words of its own — a model's, about this conversation. Required when there is no category."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InformingSuggestionFields"
+}

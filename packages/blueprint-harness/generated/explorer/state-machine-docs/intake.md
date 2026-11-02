@@ -29,3 +29,32 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 
 - **`intake.review_reminder`**
   - Emits `intake.application.review-reminder` — Notify supervisors that this application needs immediate attention.
+
+---
+
+## Interview
+
+### Actions
+
+- **start** — Starts the interview and puts its flags to the worker.
+  - Transition: `scheduled` → `in_progress`
+  - sets `startedAt`
+  - Emit: `intake.interview.started`
+  - suggestFlags
+- **process-suggestions** — Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.
+  - Transition: `in_progress` → `in_progress`
+  - suggestFlags
+- **complete** — Finishes the interview and expires its suggestions still open.
+  - Transition: `in_progress` → `completed`
+  - sets `completedAt`
+  - Emit: `intake.interview.completed`
+  - expireOpenSuggestions
+
+### Event subscriptions
+
+- **`intake.application_income.created`**
+  - Look up: income (from `event.subject`)
+  - processInterviewSuggestions
+- **`intake.application_income.updated`**
+  - Look up: income (from `event.subject`)
+  - processInterviewSuggestions
