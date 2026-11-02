@@ -27,6 +27,17 @@
     },
     {
       "type": "object",
+      "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The new record's id, a UUID (RFC 9562)."
+        }
+      }
+    },
+    {
+      "type": "object",
       "description": "Payload to start a transcript. What produced it is required — the\nprofile, which says the transcription service; the client; and the\nmodel unless the profile's service is `none` — so every transcript\nsays where its lines came from — and when it started, by the\nclient's clock. id, status, createdAt and updatedAt are set by the\nserver.\n",
       "required": [
         "profileId",

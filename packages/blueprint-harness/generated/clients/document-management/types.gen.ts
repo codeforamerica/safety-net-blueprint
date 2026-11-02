@@ -432,10 +432,23 @@ export type UploadDocumentData = {
 
 export type UploadDocumentErrors = {
     /**
-     * Unprocessable entity — business rule validation failed
+     * The request was well-formed but contained semantic errors.
      */
     422: {
-        message?: string;
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
     };
 };
 
@@ -509,10 +522,23 @@ export type GetDocumentData = {
 
 export type GetDocumentErrors = {
     /**
-     * Resource not found
+     * The requested resource was not found.
      */
     404: {
-        message?: string;
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
     };
 };
 

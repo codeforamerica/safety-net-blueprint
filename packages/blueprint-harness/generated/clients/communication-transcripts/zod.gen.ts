@@ -56,6 +56,8 @@ export const zTranscriptCreate = z.object({
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.object({
     profileId: z.uuid(),
     startedAt: z.iso.datetime({ offset: true })
 }));
@@ -181,6 +183,8 @@ export const zTranscriptEntry = z.object({
 
 export const zTranscriptEntryCreate = z.union([
     z.object({
+        id: z.optional(z.uuid())
+    }).and(z.object({
         kind: z.literal('line'),
         startedAt: z.iso.datetime({ offset: true }),
         endedAt: z.iso.datetime({ offset: true }),
@@ -193,8 +197,10 @@ export const zTranscriptEntryCreate = z.union([
         speakerLabel: z.optional(z.string()),
         confidence: z.optional(z.number().gte(0).lte(1)),
         language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-    }),
+    })),
     z.object({
+        id: z.optional(z.uuid())
+    }).and(z.object({
         kind: z.literal('gap'),
         startedAt: z.iso.datetime({ offset: true }),
         endedAt: z.iso.datetime({ offset: true }),
@@ -204,13 +210,15 @@ export const zTranscriptEntryCreate = z.union([
             'client',
             'unknown'
         ]))
-    })
+    }))
 ]);
 
 /**
  * A finished line, said or typed.
  */
 export const zTranscriptLineCreate = z.object({
+    id: z.optional(z.uuid())
+}).and(z.object({
     kind: z.literal('line'),
     startedAt: z.iso.datetime({ offset: true }),
     endedAt: z.iso.datetime({ offset: true }),
@@ -223,12 +231,14 @@ export const zTranscriptLineCreate = z.object({
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
     language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-});
+}));
 
 /**
  * A stretch where nothing was captured, recorded once transcription works again or the transcript closes.
  */
 export const zTranscriptGapCreate = z.object({
+    id: z.optional(z.uuid())
+}).and(z.object({
     kind: z.literal('gap'),
     startedAt: z.iso.datetime({ offset: true }),
     endedAt: z.iso.datetime({ offset: true }),
@@ -238,7 +248,7 @@ export const zTranscriptGapCreate = z.object({
         'client',
         'unknown'
     ]))
-});
+}));
 
 /**
  * When a pause ended. Written by resuming or closing the transcript.
@@ -333,7 +343,9 @@ export const zTranscriptionProfileCreate = z.object({
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
-}).and(z.record(z.string(), z.unknown()));
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.record(z.string(), z.unknown()));
 
 export const zTranscriptionProfileUpdate = z.object({
     name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
@@ -596,6 +608,8 @@ export const zCreateTranscriptData = z.object({
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.object({
         profileId: z.uuid(),
         startedAt: z.iso.datetime({ offset: true })
     })),
@@ -816,6 +830,8 @@ export const zListTranscriptEntriesResponse = z.object({
 export const zAddTranscriptEntryData = z.object({
     body: z.union([
         z.object({
+            id: z.optional(z.uuid())
+        }).and(z.object({
             kind: z.literal('line'),
             startedAt: z.iso.datetime({ offset: true }),
             endedAt: z.iso.datetime({ offset: true }),
@@ -828,8 +844,10 @@ export const zAddTranscriptEntryData = z.object({
             speakerLabel: z.optional(z.string()),
             confidence: z.optional(z.number().gte(0).lte(1)),
             language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-        }),
+        })),
         z.object({
+            id: z.optional(z.uuid())
+        }).and(z.object({
             kind: z.literal('gap'),
             startedAt: z.iso.datetime({ offset: true }),
             endedAt: z.iso.datetime({ offset: true }),
@@ -839,7 +857,7 @@ export const zAddTranscriptEntryData = z.object({
                 'client',
                 'unknown'
             ]))
-        })
+        }))
     ]),
     path: z.object({
         transcriptId: z.uuid()
@@ -1032,7 +1050,9 @@ export const zCreateTranscriptionProfileData = z.object({
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });

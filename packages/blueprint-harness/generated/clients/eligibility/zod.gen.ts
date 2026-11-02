@@ -34,7 +34,9 @@ export const zDeterminationCreate = z.object({
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zDeterminationUpdate = z.object({
     status: z.optional(z.enum([
@@ -136,7 +138,9 @@ export const zDeterminationWritable2 = z.object({
 
 export const zDeterminationCreateWritable = z.object({
     applicationId: z.optional(z.uuid())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zDeterminationListWritable = z.object({
     items: z.array(z.object({
@@ -250,7 +254,9 @@ export const zCreateDeterminationData = z.object({
         links: z.optional(z.object({
             application: z.optional(z.string())
         }).readonly())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });

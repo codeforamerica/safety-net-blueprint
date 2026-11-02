@@ -85,6 +85,8 @@ export const zSuggestionCreate = z.union([
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.object({
         kind: z.literal('operation'),
         call: z.object({
             operationId: z.string(),
@@ -112,7 +114,9 @@ export const zSuggestionCreate = z.union([
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.intersection(z.unknown(), z.object({
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
         subjectType: z.string(),
         subjectId: z.uuid(),
@@ -139,6 +143,8 @@ export const zOperationSuggestionCreate = z.object({
     metadata: z.optional(z.record(z.string(), z.unknown())),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
 }).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.object({
     kind: z.literal('operation'),
     call: z.object({
         operationId: z.string(),
@@ -170,7 +176,9 @@ export const zInformingSuggestionCreate = z.object({
     confidence: z.optional(z.number().gte(0).lte(1)),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
-}).and(z.intersection(z.unknown(), z.object({
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
     subjectType: z.string(),
     subjectId: z.uuid(),
@@ -785,6 +793,8 @@ export const zCreateSuggestionData = z.object({
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
         }).and(z.object({
+            id: z.optional(z.uuid())
+        })).and(z.object({
             kind: z.literal('operation'),
             call: z.object({
                 operationId: z.string(),
@@ -812,7 +822,9 @@ export const zCreateSuggestionData = z.object({
             confidence: z.optional(z.number().gte(0).lte(1)),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.intersection(z.unknown(), z.object({
+        }).and(z.object({
+            id: z.optional(z.uuid())
+        })).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
             subjectType: z.string(),
             subjectId: z.uuid(),

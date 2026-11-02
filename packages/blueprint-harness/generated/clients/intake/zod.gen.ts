@@ -337,7 +337,9 @@ export const zApplicationCreate = z.object({
     links: z.optional(z.object({
         proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zApplicationUpdate = z.object({
     programsAppliedFor: z.optional(z.array(z.enum([
@@ -425,7 +427,9 @@ export const zIncomeVerificationCreate = z.object({
         'semimonthly',
         'monthly'
     ]))
-}).and(z.record(z.string(), z.unknown()));
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.record(z.string(), z.unknown()));
 
 export const zIncomeVerificationList = z.object({
     items: z.array(z.object({
@@ -527,7 +531,9 @@ export const zApplicationIncomeCreate = z.object({
     links: z.optional(z.object({
         member: z.optional(z.string())
     }).readonly())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zApplicationIncomeUpdate = z.object({
     memberId: z.optional(z.uuid()),
@@ -616,7 +622,9 @@ export const zInterview = z.object({
 
 export const zInterviewCreate = z.object({
     scheduledFor: z.optional(z.iso.date())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zInterviewList = z.object({
     items: z.array(z.object({
@@ -1136,7 +1144,9 @@ export const zApplicationMemberCreate = z.object({
             notes: z.optional(z.string())
         })
     ]))
-}).and(z.record(z.string(), z.unknown()));
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.record(z.string(), z.unknown()));
 
 export const zApplicationMemberUpdate = z.object({
     firstName: z.optional(z.string()),
@@ -1656,7 +1666,9 @@ export const zApplicationCreateWritable = z.object({
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zApplicationUpdateWritable = z.object({
     programsAppliedFor: z.optional(z.array(z.enum([
@@ -1782,7 +1794,9 @@ export const zApplicationIncomeCreateWritable = z.object({
     ])),
     paidInCash: z.optional(z.boolean()),
     amountVaries: z.optional(z.boolean())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zApplicationIncomeUpdateWritable = z.object({
     memberId: z.optional(z.uuid()),
@@ -2505,7 +2519,9 @@ export const zCreateApplicationData = z.object({
         links: z.optional(z.object({
             proofOfIncomeDocument: z.optional(z.string())
         }).readonly())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
@@ -3414,7 +3430,9 @@ export const zCreateIncomeVerificationData = z.object({
             'semimonthly',
             'monthly'
         ]))
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.object({
         applicationId: z.uuid()
     }),
@@ -3552,7 +3570,9 @@ export const zCreateApplicationIncomeData = z.object({
         links: z.optional(z.object({
             member: z.optional(z.string())
         }).readonly())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.object({
         applicationId: z.uuid()
     }),
@@ -3739,7 +3759,9 @@ export const zListApplicationInterviewsResponse = z.object({
 export const zCreateApplicationInterviewData = z.object({
     body: z.object({
         scheduledFor: z.optional(z.iso.date())
-    }),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })),
     path: z.object({
         applicationId: z.uuid()
     }),
@@ -3982,7 +4004,9 @@ export const zCreateApplicationMemberData = z.object({
                 notes: z.optional(z.string())
             })
         ]))
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.object({
         applicationId: z.uuid()
     }),

@@ -47,9 +47,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationList"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Create an application
       operationId: createApplication
@@ -75,11 +75,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -96,9 +98,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update an application
       operationId: updateApplication
@@ -118,13 +120,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     delete:
       summary: Delete a draft application
       operationId: deleteApplication
@@ -134,9 +136,9 @@ paths:
         "204":
           description: Application deleted successfully.
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/income-verifications:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -157,9 +159,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerificationList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Record an income verification
       operationId: createIncomeVerification
@@ -179,13 +181,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerification"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/income-verifications/{incomeVerificationId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -208,9 +212,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerification"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/incomes:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -231,9 +235,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncomeList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Report an income
       operationId: createApplicationIncome
@@ -253,13 +257,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/incomes/{incomeId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -282,9 +288,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update an income
       operationId: updateApplicationIncome
@@ -304,13 +310,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/interviews:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -331,9 +337,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/InterviewList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Schedule an interview
       operationId: createApplicationInterview
@@ -353,13 +359,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Interview"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/interviews/{interviewId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -382,9 +390,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Interview"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/members:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -413,9 +421,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMemberList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Add a household member
       operationId: createApplicationMember
@@ -435,13 +443,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/members/{memberId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -459,9 +469,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update a household member
       operationId: updateApplicationMember
@@ -481,13 +491,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     delete:
       summary: Remove a household member
       operationId: deleteApplicationMember
@@ -497,9 +507,9 @@ paths:
         "204":
           description: Household member removed successfully.
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/submit:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -1127,7 +1137,7 @@ components:
               type: string
               format: uuid
               readOnly: true
-              description: Unique identifier (server-generated).
+              description: Unique identifier, given when the record was created or else generated by the server.
             previousHousehold:
               $ref: ../../common/schemas/household.yaml#/$defs/Household
               readOnly: true
@@ -1240,6 +1250,7 @@ components:
     ApplicationCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - programsAppliedFor
@@ -1323,6 +1334,7 @@ components:
     IncomeVerificationCreate:
       allOf:
         - $ref: "#/components/schemas/IncomeVerificationWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - kind
@@ -1440,6 +1452,7 @@ components:
     ApplicationIncomeCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationIncomeWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - memberId
@@ -1539,7 +1552,9 @@ components:
                   format: uri-reference
                   description: Link to the related Application resource.
     InterviewCreate:
-      $ref: "#/components/schemas/InterviewWritable"
+      allOf:
+        - $ref: "#/components/schemas/InterviewWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
     InterviewList:
       type: object
       required:
@@ -1651,7 +1666,7 @@ components:
               type: string
               format: uuid
               readOnly: true
-              description: Unique identifier (server-generated).
+              description: Unique identifier, given when the record was created or else generated by the server.
             createdAt:
               type: string
               format: date-time
@@ -1670,7 +1685,7 @@ components:
                   type: string
                   format: uuid
                   readOnly: true
-                  description: Unique identifier (server-generated).
+                  description: Unique identifier, given when the record was created or else generated by the server.
                 status:
                   type: string
                   readOnly: true
@@ -1711,6 +1726,7 @@ components:
     ApplicationMemberCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - firstName
