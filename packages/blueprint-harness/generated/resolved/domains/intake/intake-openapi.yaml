@@ -1075,6 +1075,9 @@ paths:
       responses:
         "200":
           description: applicationDetails after the patch.
+          headers:
+            Idempotent-Replayed:
+              $ref: ../../base/components/headers.yaml#/IdempotentReplayed
           content:
             application/json:
               schema:

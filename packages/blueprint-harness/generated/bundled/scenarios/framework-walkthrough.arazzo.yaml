@@ -42,10 +42,10 @@ workflows:
           Create an application
 
           - You sent an `ApplicationCreate` and got back an `Application` — two schemas, not one. The contract declares the shape a client may write separately from the shape the system keeps.
-          - `id`, `confirmationNumber`, `status`, `submittedAt`, `openedAt` are marked `readOnly`, so they are not on the shape you sent at all. The server filled them in because the contract says they exist.
+          - `id`, `confirmationNumber`, `status`, `submittedAt`, `openedAt` are marked readOnly, so they are not on the shape you sent at all. The server filled them in because the contract says they exist.
           - `programCount` is declared as a derived field, with the expression `this.programsAppliedFor.size()`. Nothing stores it: the mock evaluates that expression every time the record is read.
-          - `channel` is an enum in the contract — `online`, `phone`, `in_person`, `mail`. A value outside that list is refused by the schema, and no validation was written for this endpoint to do it.
-          - `slaInfo` already has a running clock: the SLA contract says `snap_standard` assigns itself to every application for SNAP, runs 30 days, warns at 80% of it, and stops while `status` is `withdrawn`. The clock is a declaration, not a cron job somebody remembered to write.
+          - `channel` is an enum in the contract — online, phone, in_person, mail. A value outside that list is refused by the schema, and no validation was written for this endpoint to do it.
+          - `slaInfo` already has a running clock: the SLA contract says `snap_standard` assigns itself to every application for SNAP, runs 30 days, warns at 80% of it, and stops while `status` is withdrawn. The clock is a declaration, not a cron job somebody remembered to write.
           - `201` and `400`, `422`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. None of them are canned.
         operationId: $sourceDescriptions.intake.createApplication
         parameters:
@@ -65,7 +65,7 @@ workflows:
         description: |
           Upload a document
 
-          - This body is `multipart/form-data`, not JSON. The contract declares `file` with `format: binary`, which is how an OpenAPI document says bytes, and `documentTypeId`, `title` alongside it as ordinary fields. One operation in the whole set sends something that is not JSON, and it is the one most mocks fall over on.
+          - This body is `multipart/form-data`, not JSON. The contract declares `file` with format: binary, which is how an OpenAPI document says bytes, and `documentTypeId`, `title` alongside it as ordinary fields. One operation in the whole set sends something that is not JSON, and it is the one most mocks fall over on.
           - What came back describes the upload and does not contain it. The bytes were hashed as they were read and then dropped — `contentHash` and `sizeBytes` are kept on the version this created, which `latestVersionId` names, and the file itself is nowhere. Nothing the mock holds can leak something nobody meant to share.
         operationId: $sourceDescriptions.documents.uploadDocument
         parameters:
@@ -108,7 +108,7 @@ workflows:
           Edit and attach the document
 
           - A third shape: `ApplicationUpdate` is what you may send here, and it is not `Application` either.
-          - `proofOfIncomeDocumentId` is the id of the `Document` you uploaded a moment ago, and `links.proofOfIncomeDocument` is where to read it. The field declares an `x-relationship` to document management's `Document` with `style: links-only`, so the response keeps the id and adds a link to the record, and nothing builds that URL in a client.
+          - `proofOfIncomeDocumentId` is the id of the `Document` you uploaded a moment ago, and `links.proofOfIncomeDocument` is where to read it. The field declares an `x-relationship` to document management's `Document` with style: links-only, so the response keeps the id and adds a link to the record, and nothing builds that URL in a client.
           - `updatedAt` moved on its own. Everything the request did not mention is as it was.
           - `id`, `confirmationNumber`, `status` are not on `ApplicationUpdate` at all, so there is no way to send them and nothing to reject.
           - `200` and `400`, `404`, `422`, `500` are all declared on this operation, and the mock worked out which one applied and returned it. None of them are canned.
@@ -131,7 +131,7 @@ workflows:
           List the applications
 
           - `q`, `sort`, `limit` are in the request above, and `q`, `limit`, `offset`, `sort`, `status`, `channel` are all declared on the operation. Declaring them was the whole of the work — the searching, filtering and paging came with them.
-          - `x-sortable` lists `createdAt`, `updatedAt`, `submittedAt`, `status`, `channel` as the fields that may be sorted, and `-createdAt` as the order when a request does not say. Any other field is refused by name. The allowlist is that declaration — there is no check written for this endpoint.
+          - `x-sortable` lists `createdAt`, `updatedAt`, `submittedAt`, `status`, `channel` as the fields that may be sorted, and -createdAt as the order when a request does not say. Any other field is refused by name. The allowlist is that declaration — there is no check written for this endpoint.
           - `items`, `total`, `limit`, `offset` — the page envelope is the contract's shape, not a convention the mock chose.
         operationId: $sourceDescriptions.intake.listApplications
         parameters:
@@ -162,7 +162,7 @@ workflows:
           Read the application's summary
 
           - `applicationSummary` is a `view`: the application's `programsAppliedFor`, `status` and `channel`, with its `members` alongside. Nothing stores this shape; the mock assembles it from the records when you ask.
-          - Its `fields` choose what each part shows, so a summary carries only what a reader of a summary needs.
+          - Its fields choose what each part shows, so a summary carries only what a reader of a summary needs.
         operationId: $sourceDescriptions.intake.getApplicationSummary
         parameters:
           - reference: $components.parameters.caller
@@ -213,7 +213,7 @@ workflows:
         description: |
           Add a household in one patch
 
-          - Two members and an income, in one request. The caseworker chose each new record's id, so the income can name its member, Maria, before she exists.
+          - Two members and an income, in one request. The client app chose each new record's id, so the income can name its member, Maria, before she exists.
           - The mock created Maria and Luis through `createApplicationMember` and the income through `createApplicationIncome`, Maria first, since the income names her.
           - Each record sent its own created event, and each names this patch as its cause.
         operationId: $sourceDescriptions.intake.updateApplicationDetails
@@ -253,9 +253,9 @@ workflows:
           - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/memberId == '22222222-2222-4222-8222-000000000001'
       - stepId: correctTheIncome
         description: |
-          Correct the income, if it's still what you read
+          Change the income from 1100 to 1250, only if nobody else changed it first
 
-          - A `test` operation changes nothing: it refuses the whole patch unless the amount is still 1100. The `replace` after it runs only if the test passed.
+          - The patch starts with a test: it checks the amount is still 1100, the value the client app read, and changes nothing. If the amount is different, the whole patch is refused. The replace after it runs only if the test passed.
           - The change went through `updateApplicationIncome`, with its checks and its updated event.
         operationId: $sourceDescriptions.intake.updateApplicationDetails
         parameters:
@@ -280,9 +280,9 @@ workflows:
           - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/amount == 1250
       - stepId: sendAStalePatch
         description: |
-          Send the same correction from a stale copy
+          Send the same change again, as a client app that read the income before it changed
 
-          - Refused with `409`: the amount is 1250 now, so the `test` for 1100 fails. A client working from an older copy can't overwrite a change it didn't see.
+          - Refused with `409`: the amount is 1250 now, so the test for 1100 fails. A client app working from an older copy can't overwrite a change it didn't see.
           - Nothing in the patch was kept, not even the change after the failed test.
         operationId: $sourceDescriptions.intake.updateApplicationDetails
         parameters:
@@ -350,9 +350,9 @@ workflows:
           - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/amount == 1250
       - stepId: changeTheStatus
         description: |
-          Change what the state machine owns
+          Try to change what the state machine owns
 
-          - Refused with `422`. `status` is marked `readOnly`: the server sets it, and the application's state machine moves it through its actions. A patch can change only what the record's own update would let the caller change.
+          - Refused with `422`. `status` is marked readOnly: the server sets it, and the application's state machine moves it through its actions. A patch can change only what the record's own update would let the caller change.
         operationId: $sourceDescriptions.intake.updateApplicationDetails
         parameters:
           - reference: $components.parameters.caller
@@ -414,8 +414,8 @@ workflows:
         description: |
           Remove a member
 
-          - One change removes Maria, through `deleteApplicationMember`. Her income goes with her: the income's `memberId` declares `onDelete: cascade`, as OData's `OnDelete` does.
-          - The caseworker didn't have to name the income. The data model says it belongs to her.
+          - One change removes Maria, through `deleteApplicationMember`. Her income goes with her: the income's `memberId` declares onDelete: cascade, as OData's OnDelete does.
+          - The patch didn't have to name the income. The data model says it belongs to her.
         operationId: $sourceDescriptions.intake.updateApplicationDetails
         parameters:
           - reference: $components.parameters.caller
@@ -444,7 +444,7 @@ workflows:
         description: |
           Stand in for the scheduler
 
-          - Nothing in the contract set implements a scheduler, and `submit` asks for one `72 hours` out. That gap is declared, not accidental.
+          - Nothing in the contract set implements a scheduler, and `submit` asks for one 72 hours out. That gap is declared, not accidental.
           - This registers a stand-in for `platform.timer.requested`, so the callback lands the moment it is asked for. The contract did not change — the thing on the other end of it did.
         operationId: $sourceDescriptions.mock.registerEventStub
         requestBody:
@@ -524,9 +524,9 @@ workflows:
           Evaluate expeditedSnap
 
           - The answer is not one expression but a chain of named facts. The last is `isExpeditedEligible = (isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources` — so the system can say which condition carried, not just what it concluded.
-          - `incomeThreshold` is an input with a default of `150`, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
-          - `resourceThreshold` is an input with a default of `100`, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
-          - Every fact comes back as a `state` and a `value` rather than a bare answer. `complete` means everything it needed was given to it; a fact that fell back to a declared default says `placeholder` instead, so a caller can tell a real conclusion from a provisional one.
+          - `incomeThreshold` is an input with a default of 150, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - `resourceThreshold` is an input with a default of 100, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - Every fact comes back as a `state` and a `value` rather than a bare answer. complete means everything it needed was given to it; a fact that fell back to a declared default says placeholder instead, so a caller can tell a real conclusion from a provisional one.
         operationId: $sourceDescriptions.eligibilityRules.evaluateExpeditedSnap
         parameters:
           - reference: $components.parameters.caller

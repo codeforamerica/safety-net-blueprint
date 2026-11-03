@@ -253,6 +253,8 @@ paths:
               schema:
                 type: string
                 format: uri
+            Idempotent-Replayed:
+              $ref: ../../components/headers.yaml#/IdempotentReplayed
           content:
             application/json:
               schema:
