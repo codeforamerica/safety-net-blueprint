@@ -59,22 +59,22 @@ describe('governedResource', () => {
 });
 
 describe('declaredResource', () => {
-  test('the top-level resource whose collection the compositions name', () => {
-    const declared = declaredResource([intake, transcripts], 'intake', ['applications'], 'x');
+  test('the top-level resource the compositions name, by schema', () => {
+    const declared = declaredResource([intake, transcripts], 'intake', ['Application'], 'x');
     assert.equal(declared.resource.name, 'Application');
     assert.equal(declared.api, intake);
   });
 
   test('a nested collection is not a composition root', () => {
-    assert.equal(declaredResource([intake], 'intake', ['verifications'], 'x'), null);
+    assert.equal(declaredResource([intake], 'intake', ['Verification'], 'x'), null);
   });
 
   test('a domain that declares none of them attaches to nothing', () => {
-    assert.equal(declaredResource([intake], 'intake', ['parents'], 'x'), null);
+    assert.equal(declaredResource([intake], 'intake', ['Parent'], 'x'), null);
   });
 
   test('resources in two documents refuse to guess', () => {
-    assert.throws(() => declaredResource([intake, transcripts], 'intake', ['applications', 'transcripts'], 'Compositions in x'),
+    assert.throws(() => declaredResource([intake, transcripts], 'intake', ['Application', 'Transcript'], 'Compositions in x'),
       /Compositions in x names resources in 2 OpenAPI documents/);
   });
 });

@@ -16,6 +16,7 @@ import {
   buildResourceSchemaIndex,
   validateBindFields,
   validateFieldsArrays,
+  validateResourceNames,
   validateSortableConfig,
   buildPathToSchemaMap,
   generateCompositionOverlay,
@@ -52,7 +53,7 @@ const minimalComposition = {
   domain: 'test',
   compositions: {
     memberSummary: {
-      resource: 'application-members',
+      resource: 'ApplicationMember',
       bind: 'applicationId',
       endpoint: {
         path: '/applications/{applicationId}/member-summary'
@@ -68,18 +69,18 @@ const sectionViewComposition = {
   compositions: {
     reviewContext: {
       compositeType: 'sectionView',
-      resource: 'applications',
+      resource: 'Application',
       endpoint: {
         path: '/applications/{applicationId}/review',
         parentLink: true
       },
       sections: {
         income: {
-          resource: 'member-incomes',
+          resource: 'MemberIncome',
           bind: 'applicationId'
         },
         household: {
-          resource: 'household-info',
+          resource: 'HouseholdInfo',
           bind: 'applicationId',
           missing: 'empty'
         }
@@ -87,7 +88,7 @@ const sectionViewComposition = {
       panel: {
         include: {
           notes: {
-            resource: 'application-notes',
+            resource: 'ApplicationNote',
             bind: 'applicationId'
           }
         }
@@ -275,27 +276,27 @@ describe('buildResourceSchemaIndex', () => {
     const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: sampleOpenApiSpec }];
     const index = buildResourceSchemaIndex(yamlFiles);
 
-    assert.ok(index.has('member-incomes'));
-    assert.ok(index.get('member-incomes').has('applicationId'));
-    assert.ok(index.get('member-incomes').has('memberId'));
-    assert.ok(index.get('member-incomes').has('amount'));
+    assert.ok(index.has('MemberIncome'));
+    assert.ok(index.get('MemberIncome').has('applicationId'));
+    assert.ok(index.get('MemberIncome').has('memberId'));
+    assert.ok(index.get('MemberIncome').has('amount'));
   });
 
-  test('indexes household-info (singleton path)', () => {
+  test('indexes HouseholdInfo (singleton path)', () => {
     const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: sampleOpenApiSpec }];
     const index = buildResourceSchemaIndex(yamlFiles);
 
-    assert.ok(index.has('household-info'));
-    assert.ok(index.get('household-info').has('applicationId'));
-    assert.ok(index.get('household-info').has('householdSize'));
+    assert.ok(index.has('HouseholdInfo'));
+    assert.ok(index.get('HouseholdInfo').has('applicationId'));
+    assert.ok(index.get('HouseholdInfo').has('householdSize'));
   });
 
-  test('indexes application-notes', () => {
+  test('indexes ApplicationNote', () => {
     const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: sampleOpenApiSpec }];
     const index = buildResourceSchemaIndex(yamlFiles);
 
-    assert.ok(index.has('notes'));
-    assert.ok(index.get('notes').has('applicationId'));
+    assert.ok(index.has('ApplicationNote'));
+    assert.ok(index.get('ApplicationNote').has('applicationId'));
   });
 
   test('returns empty map for files without paths', () => {
@@ -355,7 +356,7 @@ describe('validateBindFields', () => {
         compositions: {
           ctx: {
             sections: {
-              income: { resource: 'member-incomes', bind: 'applicationId' }
+              income: { resource: 'MemberIncome', bind: 'applicationId' }
             }
           }
         }
@@ -373,7 +374,7 @@ describe('validateBindFields', () => {
         compositions: {
           ctx: {
             sections: {
-              income: { resource: 'member-incomes', bind: 'nonExistentField' }
+              income: { resource: 'MemberIncome', bind: 'nonExistentField' }
             }
           }
         }
@@ -383,7 +384,7 @@ describe('validateBindFields', () => {
     const errors = validateBindFields(compositionDoc, index);
     assert.equal(errors.length, 1);
     assert.ok(errors[0].message.includes('nonExistentField'));
-    assert.ok(errors[0].message.includes('member-incomes'));
+    assert.ok(errors[0].message.includes('MemberIncome'));
   });
 
   test('validates bind fields in include nodes', () => {
@@ -392,9 +393,9 @@ describe('validateBindFields', () => {
       doc: {
         compositions: {
           ctx: {
-            resource: 'applications',
+            resource: 'Application',
             include: {
-              notes: { resource: 'notes', bind: 'badField' }
+              notes: { resource: 'ApplicationNote', bind: 'badField' }
             }
           }
         }
@@ -415,7 +416,7 @@ describe('validateBindFields', () => {
           ctx: {
             panel: {
               include: {
-                notes: { resource: 'notes', bind: 'badField' }
+                notes: { resource: 'ApplicationNote', bind: 'badField' }
               }
             }
           }
@@ -435,7 +436,7 @@ describe('validateBindFields', () => {
         compositions: {
           ctx: {
             sections: {
-              x: { resource: 'unknown-resource', bind: 'anyField' }
+              x: { resource: 'UnknownResource', bind: 'anyField' }
             }
           }
         }
@@ -453,7 +454,7 @@ describe('validateBindFields', () => {
         compositions: {
           ctx: {
             sections: {
-              x: { resource: 'member-incomes', bind: ['applicationId', 'badCompoundField'] }
+              x: { resource: 'MemberIncome', bind: ['applicationId', 'badCompoundField'] }
             }
           }
         }
@@ -472,7 +473,7 @@ describe('validateBindFields', () => {
         compositions: {
           reviewContext: {
             sections: {
-              income: { resource: 'member-incomes', bind: 'badField' }
+              income: { resource: 'MemberIncome', bind: 'badField' }
             }
           }
         }
@@ -501,7 +502,7 @@ describe('validateFieldsArrays', () => {
       domain: 'test',
       doc: {
         compositions: {
-          review: { resource: 'applications', fields: ['id', 'status', 'programsAppliedFor'] },
+          review: { resource: 'Application', fields: ['id', 'status', 'programsAppliedFor'] },
         },
       },
     };
@@ -515,7 +516,7 @@ describe('validateFieldsArrays', () => {
       domain: 'test',
       doc: {
         compositions: {
-          review: { resource: 'applications', fields: ['id', 'nonExistentField'] },
+          review: { resource: 'Application', fields: ['id', 'nonExistentField'] },
         },
       },
     };
@@ -526,7 +527,7 @@ describe('validateFieldsArrays', () => {
   });
 
   test('an aliased field is checked by its source, not its alias', () => {
-    const doc = (fields) => ({ domain: 'test', doc: { compositions: { review: { resource: 'applications', fields } } } });
+    const doc = (fields) => ({ domain: 'test', doc: { compositions: { review: { resource: 'Application', fields } } } });
     const index = buildResourceSchemaIndex(yamlFiles);
     assert.equal(validateFieldsArrays(doc(['status as applicationStatus']), index).length, 0);
     const errors = validateFieldsArrays(doc(['missing as present']), index);
@@ -539,7 +540,7 @@ describe('validateFieldsArrays', () => {
       domain: 'test',
       doc: {
         compositions: {
-          review: { resource: 'unknown-resource', fields: ['anything'] },
+          review: { resource: 'UnknownResource', fields: ['anything'] },
         },
       },
     };
@@ -554,10 +555,10 @@ describe('validateFieldsArrays', () => {
       doc: {
         compositions: {
           review: {
-            resource: 'applications',
+            resource: 'Application',
             fields: ['id'],
             include: {
-              members: { resource: 'applications', fields: ['id', 'badField'] },
+              members: { resource: 'Application', fields: ['id', 'badField'] },
             },
           },
         },
@@ -574,7 +575,7 @@ describe('validateFieldsArrays', () => {
       domain: 'test',
       doc: {
         compositions: {
-          review: { resource: 'applications', bind: 'id' },
+          review: { resource: 'Application', bind: 'id' },
         },
       },
     };
@@ -615,7 +616,7 @@ describe('scenario: field rename in fields: array — overlay renames programsAp
       domain: 'intake',
       doc: {
         compositions: {
-          review: { resource: 'applications', fields: ['id', 'programsAppliedFor'] },
+          review: { resource: 'Application', fields: ['id', 'programsAppliedFor'] },
         },
       },
     };
@@ -629,7 +630,7 @@ describe('scenario: field rename in fields: array — overlay renames programsAp
       domain: 'intake',
       doc: {
         compositions: {
-          review: { resource: 'applications', fields: ['id', 'programs'] },
+          review: { resource: 'Application', fields: ['id', 'programs'] },
         },
       },
     };
@@ -664,7 +665,7 @@ describe('scenario: field rename in bind: map — overlay renames programsApplie
       domain: 'intake',
       doc: {
         compositions: {
-          review: { resource: 'applications', bind: 'programsAppliedFor' },
+          review: { resource: 'Application', bind: 'programsAppliedFor' },
         },
       },
     };
@@ -678,7 +679,7 @@ describe('scenario: field rename in bind: map — overlay renames programsApplie
       domain: 'intake',
       doc: {
         compositions: {
-          review: { resource: 'applications', bind: 'programs' },
+          review: { resource: 'Application', bind: 'programs' },
         },
       },
     };
@@ -698,7 +699,7 @@ describe('validateSortableConfig', () => {
         compositions: {
           reviewContext: {
             sections: {
-              income: { resource: 'member-incomes', bind: 'applicationId', ...sectionOverrides },
+              income: { resource: 'MemberIncome', bind: 'applicationId', ...sectionOverrides },
             },
           },
         },
@@ -751,7 +752,7 @@ describe('generateCompositionOverlay', () => {
       domain: 'test',
       doc: {
         compositions: {
-          noEndpoint: { resource: 'things', bind: 'parentId' }
+          noEndpoint: { resource: 'Thing', bind: 'parentId' }
         }
       }
     };
@@ -765,7 +766,7 @@ describe('generateCompositionOverlay', () => {
       doc: {
         compositions: {
           memberSummary: {
-            resource: 'application-members',
+            resource: 'ApplicationMember',
             bind: 'applicationId',
             endpoint: {
               path: '/applications/{applicationId}/member-summary'
@@ -798,7 +799,7 @@ describe('generateCompositionOverlay', () => {
       doc: {
         compositions: {
           ctx: {
-            resource: 'things',
+            resource: 'Thing',
             endpoint: { path: '/domains/{domainId}/ctx' }
           }
         }
@@ -820,7 +821,7 @@ describe('generateCompositionOverlay', () => {
       doc: {
         compositions: {
           memberSummary: {
-            resource: 'application-members',
+            resource: 'ApplicationMember',
             endpoint: { path: '/applications/{applicationId}/member-summary' }
           }
         }
@@ -838,7 +839,7 @@ describe('generateCompositionOverlay', () => {
       doc: {
         compositions: {
           ctx: {
-            resource: 'applications',
+            resource: 'Application',
             endpoint: { path: '/applications/{applicationId}/ctx' }
           }
         }
@@ -856,7 +857,7 @@ describe('generateCompositionOverlay', () => {
       doc: {
         compositions: {
           global: {
-            resource: 'things',
+            resource: 'Thing',
             endpoint: { path: '/global-summary' }
           }
         }
@@ -906,7 +907,7 @@ describe('generateCompositionOverlays', () => {
       version: '1.0',
       domain: 'test',
       compositions: {
-        ctx: { resource: 'things', bind: 'parentId' }
+        ctx: { resource: 'Thing', bind: 'parentId' }
       }
     }), []);
     assert.equal(overlays.length, 0);
@@ -925,8 +926,8 @@ describe('generateSectionViewPanelEndpoints', () => {
   }
 
   const sections = {
-    income: { resource: 'member-incomes', bind: 'applicationId' },
-    contact: { resource: 'contacts', bind: 'applicationId' },
+    income: { resource: 'MemberIncome', bind: 'applicationId' },
+    contact: { resource: 'Contact', bind: 'applicationId' },
   };
 
   test('returns one path per section (static paths, no {section} param)', () => {
@@ -971,11 +972,11 @@ describe('generateSectionViewPanelEndpoints', () => {
   test('section with sortable config gets x-sortable on its GET operation', () => {
     const sectionsWithSortable = {
       income: {
-        resource: 'member-incomes',
+        resource: 'MemberIncome',
         bind: 'applicationId',
         sortable: { fields: ['amount', 'type'], default: 'amount', tieBreaker: 'id' },
       },
-      contact: { resource: 'contacts', bind: 'applicationId' },
+      contact: { resource: 'Contact', bind: 'applicationId' },
     };
     const result = generateSectionViewPanelEndpoints('reviewContext', '/applications/{applicationId}/review', sectionsWithSortable, makeParamIndex());
     const incomeGet = result.paths['/applications/{applicationId}/review/income'].get;
@@ -991,7 +992,7 @@ describe('generateSectionViewPanelEndpoints', () => {
   test('sortable config without default or tieBreaker omits those fields', () => {
     const sectionsWithMinimalSortable = {
       income: {
-        resource: 'member-incomes',
+        resource: 'MemberIncome',
         bind: 'applicationId',
         sortable: { fields: ['amount'] },
       },
@@ -1042,11 +1043,11 @@ describe('generateCompositionOverlay — sectionView panel', () => {
         compositions: {
           reviewContext: {
             compositeType: 'sectionView',
-            resource: 'applications',
+            resource: 'Application',
             endpoint: { path: '/applications/{applicationId}/review' },
             sections: {
-              income: { resource: 'member-incomes', bind: 'applicationId' },
-              contact: { resource: 'contacts', bind: 'applicationId' },
+              income: { resource: 'MemberIncome', bind: 'applicationId' },
+              contact: { resource: 'Contact', bind: 'applicationId' },
             }
           }
         }
@@ -1066,7 +1067,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
       doc: {
         compositions: {
           memberSummary: {
-            resource: 'application-members',
+            resource: 'ApplicationMember',
             endpoint: { path: '/applications/{applicationId}/member-summary' }
           }
         }
@@ -1086,9 +1087,9 @@ describe('generateCompositionOverlay — sectionView panel', () => {
         compositions: {
           reviewContext: {
             compositeType: 'sectionView',
-            resource: 'applications',
+            resource: 'Application',
             endpoint: { path: '/applications/{applicationId}/review' },
-            sections: { income: { resource: 'member-incomes', bind: 'applicationId' } }
+            sections: { income: { resource: 'MemberIncome', bind: 'applicationId' } }
           }
         }
       }
@@ -1106,7 +1107,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
         compositions: {
           reviewContext: {
             compositeType: 'sectionView',
-            resource: 'applications',
+            resource: 'Application',
             endpoint: { path: '/applications/{applicationId}/review' },
             sections: { demographics: {}, identity: {}, income: {} }
           }
@@ -1128,7 +1129,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
         compositions: {
           reviewContext: {
             compositeType: 'sectionView',
-            resource: 'applications',
+            resource: 'Application',
             endpoint: { path: '/applications/{applicationId}/review' },
             sections: {}
           }
@@ -1146,7 +1147,7 @@ describe('generateCompositionOverlay — sectionView panel', () => {
       doc: {
         compositions: {
           memberSummary: {
-            resource: 'application-members',
+            resource: 'ApplicationMember',
             endpoint: { path: '/applications/{applicationId}/member-summary' }
           }
         }
@@ -1264,12 +1265,12 @@ describe('parentLink overlay injection', () => {
       compositions: {
         reviewContext: {
           compositeType: 'sectionView',
-          resource: 'applications',
+          resource: 'Application',
           endpoint: {
             path: '/applications/{applicationId}/review',
             parentLink: true,
           },
-          sections: { demographics: { resource: 'application-members', bind: 'applicationId' } },
+          sections: { demographics: { resource: 'ApplicationMember', bind: 'applicationId' } },
         }
       }
     }
@@ -1314,7 +1315,7 @@ describe('parentLink overlay injection', () => {
       doc: {
         compositions: {
           thingView: {
-            resource: 'things',
+            resource: 'Thing',
             endpoint: {
               path: '/things/{thingId}/view',
               parentLink: true,
@@ -1428,11 +1429,11 @@ describe('overlay-then-generate: explicit overlay on composition YAML flows into
     compositions: {
       appReview: {
         compositeType: 'sectionView',
-        resource: 'applications',
+        resource: 'Application',
         endpoint: { path: '/applications/{applicationId}/review' },
         sections: {},
         state: {
-          resource: 'application-review-progress',
+          resource: 'ApplicationReviewProgress',
           bind: 'applicationId',
           schema: {
             name: 'ReviewProgress',
@@ -1482,5 +1483,45 @@ describe('overlay-then-generate: explicit overlay on composition YAML flows into
 
     assert.ok(writableSchema?.properties?.status, 'baseline status present');
     assert.ok(!writableSchema?.properties?.notes, 'notes not present without overlay');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Resource names
+// ---------------------------------------------------------------------------
+
+describe('validateResourceNames', () => {
+  const index = buildResourceSchemaIndex([{ relativePath: 'test-openapi.yaml', spec: sampleOpenApiSpec }]);
+  const doc = (resource) => ({
+    domain: 'intake',
+    doc: { compositions: { review: { resource: 'HouseholdInfo', include: { incomes: { resource, bind: 'applicationId' } } } } },
+  });
+
+  test('a resource named by its schema is found', () => {
+    assert.deepEqual(validateResourceNames(doc('MemberIncome'), index), []);
+  });
+
+  test('a path segment or storage name is reported, not skipped', () => {
+    for (const name of ['member-incomes', 'application-member-incomes']) {
+      const errors = validateResourceNames(doc(name), index);
+      assert.equal(errors.length, 1, name);
+      assert.match(errors[0].message, /names no resource/);
+      assert.ok(errors[0].path.endsWith('include.incomes'));
+    }
+  });
+});
+
+describe('buildResourceSchemaIndex and expanded foreign keys', () => {
+  test("binds by the stored key an expand-style x-relationship replaced", () => {
+    const spec = {
+      paths: { '/members/{id}': { get: { responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/Member' } } } } } } } },
+      components: { schemas: { Member: { type: 'object', properties: {
+        id: { type: 'string' },
+        application: { type: 'object', 'x-relationship': { type: 'fk', resource: 'Application', style: 'expand' } },
+      } } } },
+    };
+    const props = buildResourceSchemaIndex([{ relativePath: 'test.yaml', spec }]).get('Member');
+    assert.ok(props.has('application'));
+    assert.ok(props.has('applicationId'));
   });
 });

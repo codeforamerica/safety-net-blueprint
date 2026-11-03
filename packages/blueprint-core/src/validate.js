@@ -18,6 +18,7 @@ import {
   buildResourceSchemaIndex,
   validateBindFields,
   validateFieldsArrays,
+  validateResourceNames,
   validateSortableConfig,
 } from './compositions.js';
 import { validateEvents } from './validator/event-validator.js';
@@ -852,6 +853,7 @@ function validateDoc(doc, context) {
         doc: doc.content,
       };
       errors.push(
+        ...validateResourceNames(compositionDoc, context.resourceSchemaIndex),
         ...validateBindFields(compositionDoc, context.resourceSchemaIndex),
         ...validateFieldsArrays(compositionDoc, context.resourceSchemaIndex),
         ...validateSortableConfig(compositionDoc)

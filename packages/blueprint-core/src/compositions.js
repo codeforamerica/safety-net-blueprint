@@ -101,14 +101,15 @@ export function collectSchemaProperties(schema, specsByFile = new Map()) {
 }
 
 /**
- * Build an index mapping resource slugs to their property names.
+ * Build an index mapping resources, by schema name, to their property names.
  *
- * Algorithm: for each OpenAPI file, scan paths for GET operations that return
- * a local schema ref (`#/components/schemas/Foo`).  Extract the slug from the
- * path and collect properties from the referenced schema.
+ * A composition names a resource as x-relationship and a state machine's
+ * `object:` do: by the schema its endpoints return, such as `ApplicationMember`.
+ * For each OpenAPI file, every GET answering with a local schema ref
+ * (`#/components/schemas/Foo`) indexes that schema's properties under `Foo`.
  *
  * @param {Array<{ relativePath: string, spec: Object }>} yamlFiles
- * @returns {Map<string, Set<string>>} resourceSlug → Set of property names
+ * @returns {Map<string, Set<string>>} schema name → Set of property names
  */
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
@@ -119,40 +120,69 @@ export function buildResourceSchemaIndex(yamlFiles) {
 
     const schemas = spec.components?.schemas || {};
 
-    for (const [path, pathItem] of Object.entries(spec.paths)) {
+    for (const pathItem of Object.values(spec.paths)) {
       if (!pathItem || typeof pathItem !== 'object') continue;
 
-      const slug = extractResourceSlug(path);
-      if (!slug) continue;
-
-      // Item endpoints (path ends with a param like /{id}) carry the resource's
-      // own fields and always win over collection endpoints.  Skip a collection
-      // path only if the slug is already represented by an item endpoint.
-      const endsWithParam = path.endsWith('}');
-      if (!endsWithParam && index.has(slug)) continue;
-
-      const getOp = pathItem.get;
-      if (!getOp) continue;
-
       const schemaRef =
-        getOp.responses?.['200']?.content?.['application/json']?.schema?.$ref;
-      if (!schemaRef) continue;
+        pathItem.get?.responses?.['200']?.content?.['application/json']?.schema?.$ref;
+      const name = schemaRef?.match(/^#\/components\/schemas\/(.+)$/)?.[1];
+      if (!name || index.has(name) || !schemas[name]) continue;
 
-      const match = schemaRef.match(/^#\/components\/schemas\/(.+)$/);
-      if (!match) continue;
-
-      const rawSchema = schemas[match[1]];
-      if (!rawSchema) continue;
-
-      const schema = resolveSchemaRefs(rawSchema, { spec, byRelativePath, fromPath: relativePath });
+      const schema = resolveSchemaRefs(schemas[name], { spec, byRelativePath, fromPath: relativePath });
       const propMap = collectTopLevelProperties(spec, schema);
       if (propMap.size > 0) {
-        index.set(slug, new Set(propMap.keys()));
+        index.set(name, new Set([...propMap.keys(), ...storedForeignKeys(schema)]));
       }
     }
   }
 
   return index;
+}
+
+/**
+ * The stored foreign keys an expand-style x-relationship replaced in a resolved
+ * schema. Resolve renames `applicationId` to `application` and inlines the
+ * record, but records are still stored, and bound, by `applicationId`.
+ *
+ * @param {Object} schema - A resolved schema, before its properties' refs are followed
+ * @returns {string[]}
+ */
+function storedForeignKeys(schema) {
+  if (!schema || typeof schema !== 'object') return [];
+  const fromProperties = Object.entries(schema.properties ?? {})
+    .filter(([, property]) => property?.['x-relationship']?.style === 'expand')
+    .map(([key]) => `${key}Id`);
+  return [...fromProperties, ...(schema.allOf ?? []).flatMap(storedForeignKeys)];
+}
+
+/**
+ * Report every composition node whose `resource:` names no resource's schema.
+ *
+ * @param {Object} compositionDoc - { domain, doc: { compositions } }
+ * @param {Map<string, Set<string>>} resourceSchemaIndex
+ * @returns {Array<{ message: string, path: string }>}
+ */
+export function validateResourceNames(compositionDoc, resourceSchemaIndex) {
+  const errors = [];
+
+  function checkNode(node, nodePath) {
+    if (!node || typeof node !== 'object') return;
+    if (typeof node.resource === 'string' && !resourceSchemaIndex.has(node.resource)) {
+      errors.push({
+        message: `resource "${node.resource}" names no resource. Name it by the schema its endpoints return, such as ApplicationMember.`,
+        path: nodePath,
+      });
+    }
+    for (const [key, child] of Object.entries(node.include ?? {})) checkNode(child, `${nodePath}.include.${key}`);
+    for (const [key, child] of Object.entries(node.sections ?? {})) checkNode(child, `${nodePath}.sections.${key}`);
+    for (const [key, child] of Object.entries(node.panel?.include ?? {})) checkNode(child, `${nodePath}.panel.include.${key}`);
+  }
+
+  const { domain, doc } = compositionDoc;
+  for (const [name, composition] of Object.entries(doc.compositions || {})) {
+    checkNode(composition, `${domain}.compositions.${name}`);
+  }
+  return errors;
 }
 
 // =============================================================================

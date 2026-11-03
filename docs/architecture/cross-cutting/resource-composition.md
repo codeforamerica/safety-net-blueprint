@@ -36,7 +36,7 @@ A composition definition:
 compositions:
   {compositionId}:
     compositeType: sectionView     # optional; omit for a plain composition
-    resource: {resource-name}      # required; collection → array, singleton → object
+    resource: {SchemaName}         # required; by schema name, e.g. ApplicationMember; collection → array, singleton → object
     bind: {fieldName}              # optional; field on child matching parent ID; list for compound joins
     filter: "..."                  # optional; CEL expression, always applied
     fields: [field, field as alias]  # optional; field projection; omit for all fields
@@ -74,7 +74,7 @@ For compound joins (e.g., a resource keyed by both `memberId` and `programId`), 
 ```yaml
 include:
   benefits:
-    resource: member-benefits
+    resource: MemberBenefit
     bind: [memberId, programId]
 ```
 
@@ -130,7 +130,7 @@ For singleton resources, the object's fields are spread into the parent. For col
 # Config
 include:
   primaryAddress:
-    resource: application-addresses
+    resource: ApplicationAddress
     bind: applicationId
     filter: "type == 'primary'"
     flatten: true
@@ -185,7 +185,7 @@ derives:
 
 compositions:
   memberSummary:
-    resource: application-members
+    resource: ApplicationMember
     bind: applicationId
     derive:
       complete: { $ref: '#/derives/memberComplete' }  # reuse from derives map
@@ -237,7 +237,7 @@ The `sectionView` composite type models the named-section navigation pattern: a 
 compositions:
   applicationReview:
     compositeType: sectionView
-    resource: applications
+    resource: Application
     endpoint:
       path: /applications/{applicationId}/review
       parentLink: true
@@ -251,23 +251,23 @@ compositions:
       methods: [put, patch]
     sections:
       identity:
-        resource: members
+        resource: ApplicationMember
         bind: applicationId
         index:
           filter: "roles.contains('primary_applicant')"
           fields: [name, dateOfBirth]
       household:
-        resource: household-info
+        resource: ApplicationHousehold
         bind: applicationId
       income:
-        resource: members
+        resource: ApplicationMember
         bind: applicationId
         index:
           fields: [*]
     panel:
       include:
         verifications:
-          resource: verifications
+          resource: Verification
           bind: applicationId
           filter: "category == $section.name"
 ```
@@ -298,7 +298,7 @@ actions:
   - target: $.compositions.fosterCareHistory
     description: Add a California-specific foster care history composition
     add:
-      resource: foster-care-records
+      resource: FosterCareRecord
       bind: applicationId
       endpoint:
         path: /applications/{applicationId}/foster-care-history

@@ -9,18 +9,18 @@
 #   compositions:
 #     applicationReview:
 #       compositeType: sectionView
-#       resource: applications
+#       resource: Application
 #       sections:
 #         identity:
-#           resource: members
+#           resource: ApplicationMember
 #           bind: applicationId
 #           index:
 #             fields: [name, dateOfBirth]
-#         household: { resource: household-info, bind: applicationId }
+#         household: { resource: ApplicationHousehold, bind: applicationId }
 #       panel:
 #         include:
 #           verifications:
-#             resource: verifications
+#             resource: Verification
 #             bind: applicationId
 #             filter: "category == $section.name"
 #       endpoint:
@@ -108,8 +108,7 @@ $defs:
         default: view
         description: Which type of composition this is. Each type's schema says what it is and allows.
       resource:
-        type: string
-        description: The backing REST resource name (kebab-case, matches the resource endpoint slug).
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       links:
@@ -146,7 +145,7 @@ $defs:
   CompositionView:
     # Example:
     #   members:
-    #     resource: application-members
+    #     resource: ApplicationMember
     #     bind: applicationId
     #     filter: "status == 'active'"
     #     fields: [firstName, lastName]
@@ -166,9 +165,9 @@ $defs:
     # Example:
     #   reviewContext:
     #     compositeType: sectionView
-    #     resource: applications
+    #     resource: Application
     #     sections:
-    #       identity: { resource: members, bind: applicationId }
+    #       identity: { resource: ApplicationMember, bind: applicationId }
     #     endpoint:
     #       path: /applications/{applicationId}/review
     description: >
@@ -205,10 +204,10 @@ $defs:
     # Example:
     #   applicationDetails:
     #     compositeType: editable
-    #     resource: applications
+    #     resource: Application
     #     include:
-    #       members: { resource: application-members, bind: applicationId }
-    #       incomes: { resource: incomes, bind: applicationId }
+    #       members: { resource: ApplicationMember, bind: applicationId }
+    #       incomes: { resource: Income, bind: applicationId }
     #     endpoint:
     #       path: /applications/{applicationId}/details
     description: >
@@ -254,6 +253,14 @@ $defs:
           Mutually exclusive with links. Default false.
         default: false
 
+  ResourceName:
+    type: string
+    pattern: '^[A-Z][A-Za-z0-9]*$'
+    description: >
+      A resource, named by the schema its endpoints return, as x-relationship
+      and a state machine's object name one: ApplicationMember, not the path's
+      members.
+
   Filter:
     type: string
     description: >
@@ -287,7 +294,7 @@ $defs:
       - resource
     properties:
       resource:
-        type: string
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       links:
@@ -305,7 +312,7 @@ $defs:
   Include:
     # Example — with bind and field selection:
     #   income:
-    #     resource: member-incomes
+    #     resource: Income
     #     bind: memberId
     #     fields: [amount, type]
     description: An include in a view or sectionView.
@@ -334,21 +341,21 @@ $defs:
   Section:
     # Example — section with index config:
     #   income:
-    #     resource: member-incomes
+    #     resource: Income
     #     bind: applicationId
     #     index:
     #       fields: [id, memberId, type, amount]
     #
     # Example — section with index filter:
     #   demographics:
-    #     resource: application-members
+    #     resource: ApplicationMember
     #     bind: applicationId
     #     index:
     #       filter: "roles.contains('primary_applicant')"
     #       fields: [id, firstName, lastName]
     #
     # Example — link-only section (no index config):
-    #   household: { resource: household-info, bind: applicationId }
+    #   household: { resource: ApplicationHousehold, bind: applicationId }
     type: object
     description: A section in a sectionView composition.
     required:
@@ -356,7 +363,7 @@ $defs:
     additionalProperties: false
     properties:
       resource:
-        type: string
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       fields:

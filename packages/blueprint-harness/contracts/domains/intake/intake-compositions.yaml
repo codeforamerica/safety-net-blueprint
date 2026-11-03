@@ -8,7 +8,7 @@ compositions:
   # Used by eligibility to get a structured view of the application and household
   # before running eligibility determination rules.
   applicationSummary:
-    resource: applications
+    resource: Application
     # programCount is deliberately absent. It is x-derived, and a composition
     # projects fields off the stored record without applying read-time
     # transformations — so naming it here produced a response missing a field
@@ -19,7 +19,7 @@ compositions:
       parentLink: true
     include:
       members:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         fields: [id, firstName, lastName, dateOfBirth, relationship, incomeSource]
 
@@ -31,19 +31,19 @@ compositions:
   # /applications/evaluate-interview-flags.
   # Produces: GET /applications/{applicationId}/interview-flags-inputs
   interviewFlagsInputs:
-    resource: applications
+    resource: Application
     fields: [interviewDate as asOf, previousHousehold as previous, programsAppliedFor]
     endpoint:
       path: /applications/{applicationId}/interview-flags-inputs
     include:
       verified:
-        resource: income-verifications
+        resource: IncomeVerification
         bind: applicationId
         fields: [kind, memberId, incomeId, period, amount, frequency]
       # The incomes reported so far, as records — what an interview's state
       # machine reads as `current.incomes` (intake-state-machine.yaml).
       incomes:
-        resource: incomes
+        resource: ApplicationIncome
         bind: applicationId
         fields: [id, memberId, source, amount, frequency, paidInCash, amountVaries]
 
@@ -58,11 +58,11 @@ compositions:
   # fewest that still exercises both shapes.
   applicationReview:
     compositeType: sectionView
-    resource: applications
+    resource: Application
     fields: [programsAppliedFor, status]
     include:
       members:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         fields: [id, firstName, lastName]
     endpoint:
@@ -71,14 +71,14 @@ compositions:
     sections:
       # Member-scoped — one review-progress entry per member.
       demographics:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         links: true
         index:
           fields: [id, firstName, lastName, dateOfBirth]
       # Household-level — a single review-progress entry.
       contact:
-        resource: applications
+        resource: Application
         fields: [contactInfo]
     state:
       schema:

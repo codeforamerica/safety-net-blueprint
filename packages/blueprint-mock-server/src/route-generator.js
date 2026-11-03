@@ -710,14 +710,14 @@ function buildResourceItemPathMap(apiSpecs) {
 }
 
 /**
- * Build a map from resource name (path segment) to DB collection name.
- * Scans collection endpoints (no path params) and calls deriveCollectionName
- * on each, using the same logic as the route generator for CRUD routes.
+ * Build a map from a resource's schema name to its DB collection name.
  *
- * e.g. "children" → "childrens", "applications" → "applications"
+ * A composition names a resource by the schema its endpoints return
+ * (`ApplicationMember`), as x-relationship does. Each endpoint answering with
+ * a record names its schema; the collection is the one the route generator
+ * stores that path's records in.
  *
- * Used by the composition assembler so resource names in composition YAML
- * resolve to the same collection names that CRUD routes write to.
+ * e.g. "Child" → "childrens", "Application" → "applications"
  *
  * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
  * @returns {Map<string, string>}
@@ -726,19 +726,10 @@ function buildResourceCollectionNameMap(apiSpecs) {
   const map = new Map();
   for (const spec of apiSpecs) {
     for (const endpoint of (spec.endpoints || [])) {
-      // Skip item endpoints (e.g. /resources/{id}) — those end with a path param.
-      // Include collection endpoints (e.g. /resources, /parents/{id}/children).
-      if (endpoint.path.trimEnd().endsWith('}')) continue;
+      const name = endpoint.responseSchemaRef?.match(/^#\/components\/schemas\/(.+)$/)?.[1];
+      if (!name || map.has(name)) continue;
       const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
-      if (!collectionName) continue;
-      const basePath = spec.serverBasePath || '';
-      const relativePath = basePath && endpoint.path.startsWith(basePath)
-        ? endpoint.path.slice(basePath.length)
-        : endpoint.path;
-      const resourceName = relativePath.split('/').filter(Boolean).pop();
-      if (resourceName && !map.has(resourceName)) {
-        map.set(resourceName, collectionName);
-      }
+      if (collectionName) map.set(name, collectionName);
     }
   }
   return map;
@@ -887,7 +878,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
             routes, composition, compositionName, stateInfo, stateDefaults,
-            endpointPath, fullPath, basePath, deps
+            endpointPath, fullPath, basePath, { ...deps, rootCollectionName }
           );
           registeredEndpoints.push(...stateEndpoints);
         }
@@ -947,7 +938,7 @@ function loadStateDefaults(stateConfig, apiSpec) {
  * @returns {Array} Registered endpoint descriptors
  */
 function registerStateRoutes(routes, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath, deps = {}) {
-  const { store } = deps;
+  const { store, rootCollectionName } = deps;
   const bindParam = extractPrimaryParam(endpointPath);
   if (!bindParam) return [];
 
@@ -965,7 +956,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
 
   // GET /{section} — paginated list of state records for that section
   addRoute(routes, 'GET', sectionPath, (request, { params }) => {
-    const parent = store.findById(composition.resource, params[bindParam]);
+    const parent = store.findById(rootCollectionName, params[bindParam]);
     if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
 
     const query = queryOf(request);
@@ -984,7 +975,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
   // PUT/PATCH /{section} — singleton write
   for (const method of ['put', 'patch']) {
     addRoute(routes, method.toUpperCase(), sectionPath, async (request, { params }) => {
-      const parent = store.findById(composition.resource, params[bindParam]);
+      const parent = store.findById(rootCollectionName, params[bindParam]);
       if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
       const sent = await jsonBody(request);
       const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;
@@ -995,7 +986,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
   // PUT/PATCH /{section}/{itemId} — collection item write
   for (const method of ['put', 'patch']) {
     addRoute(routes, method.toUpperCase(), itemPath, async (request, { params }) => {
-      const parent = store.findById(composition.resource, params[bindParam]);
+      const parent = store.findById(rootCollectionName, params[bindParam]);
       if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
       const sent = await jsonBody(request);
       const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;
