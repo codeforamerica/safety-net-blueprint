@@ -110,3 +110,4 @@ compositions:
         bind: applicationId
     endpoint:
       path: /applications/{applicationId}/details
+      parentLink: true

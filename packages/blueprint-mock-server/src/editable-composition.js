@@ -19,6 +19,7 @@
 import { applyPatch } from 'rfc6902';
 import { eventBus } from './event-bus.js';
 import { openUndoLog } from './undo-log.js';
+import { parentLinkRegistry } from './composition-assembler.js';
 import { operationsOf } from './operation-calls.js';
 import { validate } from './validator.js';
 import { extractAuthContext, extractCallerRoles, callerHeader } from './auth-context.js';
@@ -52,6 +53,7 @@ export function editableResources(apiSpecs, collectionOf) {
           singleton: resource.singleton,
           collection: collectionOf.get(resource.name) ?? null,
           itemParameter: resource.item.parameter,
+          itemPath: itemPath ?? collectionPath,
           schema: api.doc.content?.components?.schemas?.[resource.name] ?? null,
           create: byRoute.get(`POST ${collectionPath}`) ?? null,
           update: byRoute.get(`PATCH ${resource.singleton ? collectionPath : itemPath}`) ?? null,
@@ -80,6 +82,13 @@ function present(record, info, store) {
   let out = expand.length > 0 ? applyExpand(record, expand, lookup) : record;
   if (links.length > 0) out = applyLinks(out, links, lookup);
   if (derived.length > 0) out = applyDerivedFields(out, derived);
+  // Links to the compositions built around this record (parentLink), as its
+  // own read adds them, the path's parameters filled from the record.
+  const parentLinks = parentLinkRegistry.get(info.itemPath);
+  if (parentLinks) {
+    const fill = (href) => href.replace(/\{([^}]+)\}/g, (_, name) => (name === info.itemParameter ? record.id : record[name]) ?? `{${name}}`);
+    out = { ...out, _links: Object.fromEntries(Object.entries(parentLinks).map(([key, link]) => [key, { href: fill(link.href) }])) };
+  }
   return out;
 }
 

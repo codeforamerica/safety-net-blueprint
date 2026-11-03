@@ -51,6 +51,13 @@ test('the document is the root under its key, and includes keyed by id', async (
   assert.strictEqual(body.incomes[SALARY].amount, 1100);
 });
 
+test('each record reads as its own read returns it, with the links to the compositions built around it', async () => {
+  const own = (await send('GET', `/intake/applications/${APPLICATION}`)).body;
+  const { body } = await send('GET', DETAILS);
+  assert.deepStrictEqual(body.application._links, own._links);
+  assert.strictEqual(body.application._links.applicationDetails.href, DETAILS);
+});
+
 test('a new member and their income are added in one patch, with the ids the caller chose', async () => {
   const before = (await events()).length;
   const { status, body } = await patch(addMaria);
