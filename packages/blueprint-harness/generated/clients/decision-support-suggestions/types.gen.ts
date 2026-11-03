@@ -28,7 +28,7 @@ export type SuggestionCommon = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -101,7 +101,7 @@ export type InformingSuggestionFields = unknown & {
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -170,7 +170,7 @@ export type SuggestionEvidence = {
     /**
      * What kind of record it cites, e.g. `transcript_entry`.
      */
-    sourceType: string;
+    sourceType: 'transcript_entry';
     /**
      * The record it cites. `sourceType` says what kind.
      */
@@ -185,7 +185,7 @@ export type SuggestionCreate = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -262,7 +262,7 @@ export type SuggestionCreate = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -295,7 +295,7 @@ export type SuggestionCreate = ({
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -330,7 +330,7 @@ export type OperationSuggestionCreate = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -412,7 +412,7 @@ export type InformingSuggestionCreate = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -445,7 +445,7 @@ export type InformingSuggestionCreate = {
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -477,7 +477,7 @@ export type Suggestion = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -619,7 +619,7 @@ export type Suggestion = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -638,7 +638,7 @@ export type Suggestion = ({
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -712,7 +712,7 @@ export type OperationSuggestion = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -859,7 +859,7 @@ export type InformingSuggestion = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -878,7 +878,7 @@ export type InformingSuggestion = {
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -950,7 +950,7 @@ export type SuggestionList = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -1092,7 +1092,7 @@ export type SuggestionList = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -1111,7 +1111,7 @@ export type SuggestionList = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -1248,7 +1248,7 @@ export type SuggestionWritable = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -1311,7 +1311,7 @@ export type SuggestionWritable = ({
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -1330,7 +1330,7 @@ export type SuggestionWritable = ({
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -1365,7 +1365,7 @@ export type OperationSuggestionWritable = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -1433,7 +1433,7 @@ export type InformingSuggestionWritable = {
         /**
          * What kind of record it cites, e.g. `transcript_entry`.
          */
-        sourceType: string;
+        sourceType: 'transcript_entry';
         /**
          * The record it cites. `sourceType` says what kind.
          */
@@ -1452,7 +1452,7 @@ export type InformingSuggestionWritable = {
     /**
      * What kind of record it is about, e.g. `application_member`.
      */
-    subjectType: string;
+    subjectType: 'application_member' | 'application_income';
     /**
      * The record it is about. `subjectType` says what kind.
      */
@@ -1485,7 +1485,7 @@ export type SuggestionListWritable = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -1548,7 +1548,7 @@ export type SuggestionListWritable = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -1567,7 +1567,7 @@ export type SuggestionListWritable = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -1800,7 +1800,7 @@ export type ListSuggestionsResponses = {
                 /**
                  * What kind of record it cites, e.g. `transcript_entry`.
                  */
-                sourceType: string;
+                sourceType: 'transcript_entry';
                 /**
                  * The record it cites. `sourceType` says what kind.
                  */
@@ -1951,7 +1951,7 @@ export type ListSuggestionsResponses = {
                 /**
                  * What kind of record it cites, e.g. `transcript_entry`.
                  */
-                sourceType: string;
+                sourceType: 'transcript_entry';
                 /**
                  * The record it cites. `sourceType` says what kind.
                  */
@@ -1979,7 +1979,7 @@ export type ListSuggestionsResponses = {
             /**
              * What kind of record it is about, e.g. `application_member`.
              */
-            subjectType: string;
+            subjectType: 'application_member' | 'application_income';
             /**
              * The record it is about. `subjectType` says what kind.
              */
@@ -2071,7 +2071,7 @@ export type CreateSuggestionData = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2148,7 +2148,7 @@ export type CreateSuggestionData = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2181,7 +2181,7 @@ export type CreateSuggestionData = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -2302,7 +2302,7 @@ export type CreateSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2453,7 +2453,7 @@ export type CreateSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2481,7 +2481,7 @@ export type CreateSuggestionResponses = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -2614,7 +2614,7 @@ export type GetSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2765,7 +2765,7 @@ export type GetSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -2793,7 +2793,7 @@ export type GetSuggestionResponses = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -3042,7 +3042,7 @@ export type AcceptSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3193,7 +3193,7 @@ export type AcceptSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3221,7 +3221,7 @@ export type AcceptSuggestionResponses = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -3435,7 +3435,7 @@ export type DismissSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3586,7 +3586,7 @@ export type DismissSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3614,7 +3614,7 @@ export type DismissSuggestionResponses = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */
@@ -3804,7 +3804,7 @@ export type ExpireSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3955,7 +3955,7 @@ export type ExpireSuggestionResponses = {
             /**
              * What kind of record it cites, e.g. `transcript_entry`.
              */
-            sourceType: string;
+            sourceType: 'transcript_entry';
             /**
              * The record it cites. `sourceType` says what kind.
              */
@@ -3983,7 +3983,7 @@ export type ExpireSuggestionResponses = {
         /**
          * What kind of record it is about, e.g. `application_member`.
          */
-        subjectType: string;
+        subjectType: 'application_member' | 'application_income';
         /**
          * The record it is about. `subjectType` says what kind.
          */

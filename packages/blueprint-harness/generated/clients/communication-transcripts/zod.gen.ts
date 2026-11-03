@@ -6,7 +6,7 @@ import { z } from 'zod';
  * Client-writable fields of a transcript.
  */
 export const zTranscriptWritable = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -16,7 +16,7 @@ export const zTranscriptWritable = z.object({
  * A transcript, including server-managed fields.
  */
 export const zTranscript = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -51,7 +51,7 @@ export const zTranscript = z.object({
 }));
 
 export const zTranscriptCreate = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -63,7 +63,7 @@ export const zTranscriptCreate = z.object({
 }));
 
 export const zTranscriptUpdate = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -71,7 +71,7 @@ export const zTranscriptUpdate = z.object({
 
 export const zTranscriptList = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -390,7 +390,7 @@ export const zAtRequest = z.object({
  * A transcript, including server-managed fields.
  */
 export const zTranscriptWritable2 = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -411,7 +411,7 @@ export const zTranscriptWritable2 = z.object({
 
 export const zTranscriptListWritable = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -564,7 +564,7 @@ export const zListTranscriptsData = z.object({
  */
 export const zListTranscriptsResponse = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -605,7 +605,7 @@ export const zListTranscriptsResponse = z.object({
 
 export const zCreateTranscriptData = z.object({
     body: z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -623,7 +623,7 @@ export const zCreateTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zCreateTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -682,7 +682,7 @@ export const zGetTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zGetTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -718,7 +718,7 @@ export const zGetTranscriptResponse = z.object({
 
 export const zUpdateTranscriptData = z.object({
     body: z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -733,7 +733,7 @@ export const zUpdateTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zUpdateTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1159,7 +1159,7 @@ export const zPauseTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zPauseTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1207,7 +1207,7 @@ export const zResumeTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zResumeTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1255,7 +1255,7 @@ export const zCloseTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zCloseTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))

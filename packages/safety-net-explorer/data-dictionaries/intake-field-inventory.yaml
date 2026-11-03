@@ -533,7 +533,7 @@ application.reviewProgress[].items[].status: { type: enum, values: [not_started,
 application.reviewProgress[].items[].notes: { type: object }
 application.reviewProgress[].items[].notes.text: { type: string }
 application.reviewProgress[].items[].notes.textFormat: { type: enum, values: [plain, markdown, html] }
-application.reviewProgress[].items[].section: { type: string }
+application.reviewProgress[].items[].section: { type: enum, values: [demographics, identity, income, employment, health-coverage, assets, contact, expenses, household] }
 application.reviewProgress[].total: { type: integer }
 application.reviewProgress[].limit: { type: integer }
 application.reviewProgress[].offset: { type: integer }

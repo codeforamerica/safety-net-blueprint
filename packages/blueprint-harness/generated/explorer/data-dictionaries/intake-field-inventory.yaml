@@ -119,7 +119,7 @@ application.reviewProgress[].items[]: { type: list(ReviewProgress) }
 application.reviewProgress[].items[].id: { type: uuid }
 application.reviewProgress[].items[].itemId: { type: uuid, relationship: Polymorphic }
 application.reviewProgress[].items[].status: { type: enum, values: [not_started, in_progress, complete, flagged] }
-application.reviewProgress[].items[].section: { type: string }
+application.reviewProgress[].items[].section: { type: enum, values: [demographics, contact] }
 application.reviewProgress[].total: { type: integer }
 application.reviewProgress[].limit: { type: integer }
 application.reviewProgress[].offset: { type: integer }

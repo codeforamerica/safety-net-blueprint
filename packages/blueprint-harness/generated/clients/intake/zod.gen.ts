@@ -1400,7 +1400,7 @@ export const zReviewProgress = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()
@@ -1422,7 +1422,7 @@ export const zReviewProgressListResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        section: z.string().readonly(),
+        section: z.enum(['demographics', 'contact']),
         itemId: z.optional(z.union([
             z.uuid().readonly(),
             z.null()
@@ -6277,7 +6277,7 @@ export const zListReviewProgressBySectionResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        section: z.string().readonly(),
+        section: z.enum(['demographics', 'contact']),
         itemId: z.optional(z.union([
             z.uuid().readonly(),
             z.null()
@@ -6319,7 +6319,7 @@ export const zUpdateReviewProgressBySectionResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()
@@ -6356,7 +6356,7 @@ export const zReplaceReviewProgressBySectionResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()
@@ -6387,7 +6387,7 @@ export const zGetReviewProgressByItemResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()
@@ -6425,7 +6425,7 @@ export const zUpdateReviewProgressByItemResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()
@@ -6463,7 +6463,7 @@ export const zReplaceReviewProgressByItemResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    section: z.string().readonly(),
+    section: z.enum(['demographics', 'contact']),
     itemId: z.optional(z.union([
         z.uuid().readonly(),
         z.null()

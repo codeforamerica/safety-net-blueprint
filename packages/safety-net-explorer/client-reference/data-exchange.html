@@ -101,11 +101,11 @@
     </div>
     <div class="nav-section">
         <div class="nav-section-label">Constants</div>
-        <a href="#const-CallMode" class="nav-link">CallMode</a><a href="#const-ConfigSource" class="nav-link">ConfigSource</a><a href="#const-Domain" class="nav-link">Domain</a><a href="#const-ExternalServiceCallStatus" class="nav-link">ExternalServiceCallStatus</a><a href="#const-Frequency" class="nav-link">Frequency</a><a href="#const-MetricCollection" class="nav-link">MetricCollection</a><a href="#const-RoleType" class="nav-link">RoleType</a><a href="#const-ServiceType" class="nav-link">ServiceType</a>
+        <a href="#const-CallMode" class="nav-link">CallMode</a><a href="#const-ConfigSource" class="nav-link">ConfigSource</a><a href="#const-Domain" class="nav-link">Domain</a><a href="#const-ExternalServiceCallStatus" class="nav-link">ExternalServiceCallStatus</a><a href="#const-Frequency" class="nav-link">Frequency</a><a href="#const-MetricCollection" class="nav-link">MetricCollection</a><a href="#const-RequestingResourceType" class="nav-link">RequestingResourceType</a><a href="#const-RoleType" class="nav-link">RoleType</a><a href="#const-ServiceType" class="nav-link">ServiceType</a>
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-ExternalService" class="nav-link">ExternalService</a><a href="#type-ExternalServiceList" class="nav-link">ExternalServiceList</a><a href="#type-ExternalServiceCall" class="nav-link">ExternalServiceCall</a><a href="#type-ExternalServiceCallList" class="nav-link">ExternalServiceCallList</a><a href="#type-ExternalServiceWritable" class="nav-link">ExternalServiceWritable</a><a href="#type-ExternalServiceListWritable" class="nav-link">ExternalServiceListWritable</a>
+        <a href="#type-ExternalService" class="nav-link">ExternalService</a><a href="#type-ExternalServiceList" class="nav-link">ExternalServiceList</a><a href="#type-ExternalServiceCall" class="nav-link">ExternalServiceCall</a><a href="#type-ExternalServiceCallCreate" class="nav-link">ExternalServiceCallCreate</a><a href="#type-ExternalServiceCallList" class="nav-link">ExternalServiceCallList</a><a href="#type-ExternalServiceWritable" class="nav-link">ExternalServiceWritable</a><a href="#type-ExternalServiceListWritable" class="nav-link">ExternalServiceListWritable</a>
       </div>
       </div>
     </nav>
@@ -355,7 +355,7 @@
   </details>
 </div>
       </section><section id="section-constants" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (8)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (9)</h2>
         <div id="const-CallMode" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -416,6 +416,16 @@
     </summary>
     <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'events'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tasks'</span></div></div></div>
   </details>
+</div><div id="const-RequestingResourceType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RequestingResourceType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-RequestingResourceType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'member'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'income'</span></div></div></div>
+  </details>
 </div><div id="const-RoleType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -438,7 +448,7 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (6)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (7)</h2>
         <div id="type-ExternalService" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -477,7 +487,21 @@
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCall</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (12 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceType</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">callMode</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;async&quot;, &quot;sync&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;completed&quot;, &quot;failed&quot;, &quot;timed_out&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">data</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">updatedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (12 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceType</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;member&quot;, &quot;income&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">callMode</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;async&quot;, &quot;sync&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;completed&quot;, &quot;failed&quot;, &quot;timed_out&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">data</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">updatedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ExternalServiceCallCreate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCallCreate</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ExternalServiceCallCreate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCallCreate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

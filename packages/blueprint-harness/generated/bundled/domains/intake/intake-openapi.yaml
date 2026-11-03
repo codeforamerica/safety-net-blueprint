@@ -13257,6 +13257,9 @@ paths:
                             section:
                               type: string
                               readOnly: true
+                              enum:
+                                - demographics
+                                - contact
                             itemId:
                               type:
                                 - string
@@ -13265,6 +13268,12 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Polymorphic
+                                discriminator:
+                                  propertyName: section
+                                  mapping:
+                                    demographics: ApplicationMember
+                                    contact: Application
+                                onDelete: cascade
                             createdAt:
                               type: string
                               format: date-time
@@ -13387,6 +13396,9 @@ paths:
                       section:
                         type: string
                         readOnly: true
+                        enum:
+                          - demographics
+                          - contact
                       itemId:
                         type:
                           - string
@@ -13395,6 +13407,12 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
+                          discriminator:
+                            propertyName: section
+                            mapping:
+                              demographics: ApplicationMember
+                              contact: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -13549,6 +13567,9 @@ paths:
                       section:
                         type: string
                         readOnly: true
+                        enum:
+                          - demographics
+                          - contact
                       itemId:
                         type:
                           - string
@@ -13557,6 +13578,12 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
+                          discriminator:
+                            propertyName: section
+                            mapping:
+                              demographics: ApplicationMember
+                              contact: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -13717,6 +13744,9 @@ paths:
                       section:
                         type: string
                         readOnly: true
+                        enum:
+                          - demographics
+                          - contact
                       itemId:
                         type:
                           - string
@@ -13725,6 +13755,12 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
+                          discriminator:
+                            propertyName: section
+                            mapping:
+                              demographics: ApplicationMember
+                              contact: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -13833,6 +13869,9 @@ paths:
                       section:
                         type: string
                         readOnly: true
+                        enum:
+                          - demographics
+                          - contact
                       itemId:
                         type:
                           - string
@@ -13841,6 +13880,12 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
+                          discriminator:
+                            propertyName: section
+                            mapping:
+                              demographics: ApplicationMember
+                              contact: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -13995,6 +14040,9 @@ paths:
                       section:
                         type: string
                         readOnly: true
+                        enum:
+                          - demographics
+                          - contact
                       itemId:
                         type:
                           - string
@@ -14003,6 +14051,12 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
+                          discriminator:
+                            propertyName: section
+                            mapping:
+                              demographics: ApplicationMember
+                              contact: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -20464,6 +20518,9 @@ components:
             section:
               type: string
               readOnly: true
+              enum:
+                - demographics
+                - contact
             itemId:
               type:
                 - string
@@ -20472,6 +20529,12 @@ components:
               readOnly: true
               x-relationship:
                 resource: Polymorphic
+                discriminator:
+                  propertyName: section
+                  mapping:
+                    demographics: ApplicationMember
+                    contact: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -20516,6 +20579,9 @@ components:
                   section:
                     type: string
                     readOnly: true
+                    enum:
+                      - demographics
+                      - contact
                   itemId:
                     type:
                       - string
@@ -20524,6 +20590,12 @@ components:
                     readOnly: true
                     x-relationship:
                       resource: Polymorphic
+                      discriminator:
+                        propertyName: section
+                        mapping:
+                          demographics: ApplicationMember
+                          contact: Application
+                      onDelete: cascade
                   createdAt:
                     type: string
                     format: date-time

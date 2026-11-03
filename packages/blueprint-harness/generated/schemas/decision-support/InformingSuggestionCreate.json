@@ -18,7 +18,10 @@
             "properties": {
               "sourceType": {
                 "type": "string",
-                "description": "What kind of record it cites, e.g. `transcript_entry`."
+                "description": "What kind of record it cites, e.g. `transcript_entry`.",
+                "enum": [
+                  "transcript_entry"
+                ]
               },
               "sourceId": {
                 "type": "string",
@@ -81,7 +84,11 @@
         },
         "subjectType": {
           "type": "string",
-          "description": "What kind of record it is about, e.g. `application_member`."
+          "description": "What kind of record it is about, e.g. `application_member`.",
+          "enum": [
+            "application_member",
+            "application_income"
+          ]
         },
         "subjectId": {
           "type": "string",

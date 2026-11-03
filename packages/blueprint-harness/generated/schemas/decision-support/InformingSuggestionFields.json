@@ -23,7 +23,11 @@
     },
     "subjectType": {
       "type": "string",
-      "description": "What kind of record it is about, e.g. `application_member`."
+      "description": "What kind of record it is about, e.g. `application_member`.",
+      "enum": [
+        "application_member",
+        "application_income"
+      ]
     },
     "subjectId": {
       "type": "string",

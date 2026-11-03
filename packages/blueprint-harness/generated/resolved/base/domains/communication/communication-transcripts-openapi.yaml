@@ -622,12 +622,20 @@ components:
           type: string
           description: What kind of thing the transcript records, e.g. `interview` or `call`.
           example: interview
+          enum:
+            - interview
+            - chat
         subjectId:
           type: string
           format: uuid
           description: The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
+              mapping:
+                chat: External
+            onDelete: cascade
         model:
           type: string
           description: |
@@ -817,6 +825,7 @@ components:
           description: The transcript it belongs to.
           x-relationship:
             resource: Transcript
+            onDelete: cascade
         kind:
           $ref: "#/components/schemas/TranscriptEntryKind"
         startedAt:

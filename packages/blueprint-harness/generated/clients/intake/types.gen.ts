@@ -2476,7 +2476,7 @@ export type ReviewProgress = {
     status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
 } & {
     readonly id: string;
-    readonly section: string;
+    section: 'demographics' | 'contact';
     readonly itemId?: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
@@ -2496,7 +2496,7 @@ export type ReviewProgressListResponse = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
@@ -14062,7 +14062,7 @@ export type ListReviewProgressBySectionResponses = {
             status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
         } & {
             readonly id: string;
-            readonly section: string;
+            section: 'demographics' | 'contact';
             readonly itemId?: string | null;
             readonly createdAt: string;
             readonly updatedAt: string;
@@ -14192,7 +14192,7 @@ export type UpdateReviewProgressBySectionResponses = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
@@ -14317,7 +14317,7 @@ export type ReplaceReviewProgressBySectionResponses = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
@@ -14400,7 +14400,7 @@ export type GetReviewProgressByItemResponses = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
@@ -14529,7 +14529,7 @@ export type UpdateReviewProgressByItemResponses = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
@@ -14658,7 +14658,7 @@ export type ReplaceReviewProgressByItemResponses = {
         status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
     } & {
         readonly id: string;
-        readonly section: string;
+        section: 'demographics' | 'contact';
         readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;

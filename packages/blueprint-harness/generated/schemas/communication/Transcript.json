@@ -14,7 +14,11 @@
       "properties": {
         "subjectType": {
           "type": "string",
-          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`.",
+          "enum": [
+            "interview",
+            "chat"
+          ]
         },
         "subjectId": {
           "type": "string",

@@ -22,7 +22,7 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Store optional completion notes from the request (sets `completionNotes`)
   - Emit: `workflow.task.completed` — Emit a domain event recording the completion and its outcome
   - If `has(request.createFollowUp) and request.createFollowUp is true`:
-    - Create a follow-up task when caller requests one
+    - Create a follow-up task when the caller asks for one: the same work, for the same subject, in the same queue. It carries none of the finished task's id, timestamps, outcome or assignment, so it starts pending and unassigned.
 - **release** — Returns an in-progress task to the queue, clearing the assignment
   - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `pending`

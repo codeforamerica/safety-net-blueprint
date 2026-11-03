@@ -11,7 +11,7 @@ export type TranscriptWritable = {
     /**
      * What kind of thing the transcript records, e.g. `interview` or `call`.
      */
-    subjectType?: string;
+    subjectType?: 'interview' | 'chat';
     /**
      * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
      */
@@ -39,7 +39,7 @@ export type Transcript = {
     /**
      * What kind of thing the transcript records, e.g. `interview` or `call`.
      */
-    subjectType?: string;
+    subjectType?: 'interview' | 'chat';
     /**
      * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
      */
@@ -152,7 +152,7 @@ export type TranscriptCreate = {
     /**
      * What kind of thing the transcript records, e.g. `interview` or `call`.
      */
-    subjectType?: string;
+    subjectType?: 'interview' | 'chat';
     /**
      * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
      */
@@ -191,7 +191,7 @@ export type TranscriptUpdate = {
     /**
      * What kind of thing the transcript records, e.g. `interview` or `call`.
      */
-    subjectType?: string;
+    subjectType?: 'interview' | 'chat';
     /**
      * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
      */
@@ -222,7 +222,7 @@ export type TranscriptList = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -927,7 +927,7 @@ export type TranscriptWritable2 = {
     /**
      * What kind of thing the transcript records, e.g. `interview` or `call`.
      */
-    subjectType?: string;
+    subjectType?: 'interview' | 'chat';
     /**
      * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
      */
@@ -1000,7 +1000,7 @@ export type TranscriptListWritable = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -1485,7 +1485,7 @@ export type ListTranscriptsResponses = {
             /**
              * What kind of thing the transcript records, e.g. `interview` or `call`.
              */
-            subjectType?: string;
+            subjectType?: 'interview' | 'chat';
             /**
              * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
              */
@@ -1619,7 +1619,7 @@ export type CreateTranscriptData = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -1750,7 +1750,7 @@ export type CreateTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -2008,7 +2008,7 @@ export type GetTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -2125,7 +2125,7 @@ export type UpdateTranscriptData = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -2246,7 +2246,7 @@ export type UpdateTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -4132,7 +4132,7 @@ export type PauseTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -4388,7 +4388,7 @@ export type ResumeTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
@@ -4644,7 +4644,7 @@ export type CloseTranscriptResponses = {
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
          */
-        subjectType?: string;
+        subjectType?: 'interview' | 'chat';
         /**
          * The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
          */
