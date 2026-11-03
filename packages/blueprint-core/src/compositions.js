@@ -858,6 +858,7 @@ function editableUpdateOperation(compositionName, schemaName) {
     responses: {
       '200': {
         description: `${compositionName} after the patch.`,
+        headers: { 'Idempotent-Replayed': { $ref: './components/headers.yaml#/IdempotentReplayed' } },
         content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaName}` } } },
       },
       '400': {

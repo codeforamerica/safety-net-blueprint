@@ -266,6 +266,8 @@ paths:
               schema:
                 type: string
                 format: uri
+            Idempotent-Replayed:
+              $ref: "https://blueprint.codeforamerica.org/base/components/headers.yaml#/IdempotentReplayed"
           content:
             application/json:
               schema:
