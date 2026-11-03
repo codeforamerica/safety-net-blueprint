@@ -699,7 +699,9 @@ paths:
                                                   - sms
                                               phone:
                                                 type: string
-                                                description: Phone number for SMS benefit notices (E.164 format).
+                                                description: Phone number for SMS benefit notices, in E.164 format.
+                                                pattern: ^\+[1-9][0-9]{1,14}$
+                                                example: "+15551234567"
                                           - type: object
                                             required:
                                               - channel
@@ -1638,7 +1640,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -2491,7 +2495,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -3398,7 +3404,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -6468,7 +6476,9 @@ paths:
                                         - sms
                                     phone:
                                       type: string
-                                      description: Phone number for SMS benefit notices (E.164 format).
+                                      description: Phone number for SMS benefit notices, in E.164 format.
+                                      pattern: ^\+[1-9][0-9]{1,14}$
+                                      example: "+15551234567"
                                 - type: object
                                   required:
                                     - channel
@@ -6791,7 +6801,9 @@ paths:
                                 - sms
                             phone:
                               type: string
-                              description: Phone number for SMS benefit notices (E.164 format).
+                              description: Phone number for SMS benefit notices, in E.164 format.
+                              pattern: ^\+[1-9][0-9]{1,14}$
+                              example: "+15551234567"
                         - type: object
                           required:
                             - channel
@@ -7007,7 +7019,9 @@ paths:
                                   - sms
                               phone:
                                 type: string
-                                description: Phone number for SMS benefit notices (E.164 format).
+                                description: Phone number for SMS benefit notices, in E.164 format.
+                                pattern: ^\+[1-9][0-9]{1,14}$
+                                example: "+15551234567"
                           - type: object
                             required:
                               - channel
@@ -7412,7 +7426,9 @@ paths:
                                   - sms
                               phone:
                                 type: string
-                                description: Phone number for SMS benefit notices (E.164 format).
+                                description: Phone number for SMS benefit notices, in E.164 format.
+                                pattern: ^\+[1-9][0-9]{1,14}$
+                                example: "+15551234567"
                           - type: object
                             required:
                               - channel
@@ -7719,7 +7735,9 @@ paths:
                                 - sms
                             phone:
                               type: string
-                              description: Phone number for SMS benefit notices (E.164 format).
+                              description: Phone number for SMS benefit notices, in E.164 format.
+                              pattern: ^\+[1-9][0-9]{1,14}$
+                              example: "+15551234567"
                         - type: object
                           required:
                             - channel
@@ -7924,7 +7942,9 @@ paths:
                                   - sms
                               phone:
                                 type: string
-                                description: Phone number for SMS benefit notices (E.164 format).
+                                description: Phone number for SMS benefit notices, in E.164 format.
+                                pattern: ^\+[1-9][0-9]{1,14}$
+                                example: "+15551234567"
                           - type: object
                             required:
                               - channel
@@ -8711,7 +8731,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -9592,7 +9614,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -10491,7 +10515,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -11395,7 +11421,9 @@ paths:
                                             - sms
                                         phone:
                                           type: string
-                                          description: Phone number for SMS benefit notices (E.164 format).
+                                          description: Phone number for SMS benefit notices, in E.164 format.
+                                          pattern: ^\+[1-9][0-9]{1,14}$
+                                          example: "+15551234567"
                                     - type: object
                                       required:
                                         - channel
@@ -14773,7 +14801,9 @@ paths:
                                                 - sms
                                             phone:
                                               type: string
-                                              description: Phone number for SMS benefit notices (E.164 format).
+                                              description: Phone number for SMS benefit notices, in E.164 format.
+                                              pattern: ^\+[1-9][0-9]{1,14}$
+                                              example: "+15551234567"
                                         - type: object
                                           required:
                                             - channel
@@ -15182,7 +15212,9 @@ paths:
                                         - sms
                                     phone:
                                       type: string
-                                      description: Phone number for SMS benefit notices (E.164 format).
+                                      description: Phone number for SMS benefit notices, in E.164 format.
+                                      pattern: ^\+[1-9][0-9]{1,14}$
+                                      example: "+15551234567"
                                 - type: object
                                   required:
                                     - channel
@@ -16031,7 +16063,9 @@ paths:
                                                 - sms
                                             phone:
                                               type: string
-                                              description: Phone number for SMS benefit notices (E.164 format).
+                                              description: Phone number for SMS benefit notices, in E.164 format.
+                                              pattern: ^\+[1-9][0-9]{1,14}$
+                                              example: "+15551234567"
                                         - type: object
                                           required:
                                             - channel
@@ -16440,7 +16474,9 @@ paths:
                                         - sms
                                     phone:
                                       type: string
-                                      description: Phone number for SMS benefit notices (E.164 format).
+                                      description: Phone number for SMS benefit notices, in E.164 format.
+                                      pattern: ^\+[1-9][0-9]{1,14}$
+                                      example: "+15551234567"
                                 - type: object
                                   required:
                                     - channel
@@ -17399,7 +17435,9 @@ components:
                                   - sms
                               phone:
                                 type: string
-                                description: Phone number for SMS benefit notices (E.164 format).
+                                description: Phone number for SMS benefit notices, in E.164 format.
+                                pattern: ^\+[1-9][0-9]{1,14}$
+                                example: "+15551234567"
                           - type: object
                             required:
                               - channel
@@ -19125,7 +19163,9 @@ components:
                                         - sms
                                     phone:
                                       type: string
-                                      description: Phone number for SMS benefit notices (E.164 format).
+                                      description: Phone number for SMS benefit notices, in E.164 format.
+                                      pattern: ^\+[1-9][0-9]{1,14}$
+                                      example: "+15551234567"
                                 - type: object
                                   required:
                                     - channel
@@ -19534,7 +19574,9 @@ components:
                     - sms
                 phone:
                   type: string
-                  description: Phone number for SMS benefit notices (E.164 format).
+                  description: Phone number for SMS benefit notices, in E.164 format.
+                  pattern: ^\+[1-9][0-9]{1,14}$
+                  example: "+15551234567"
             - type: object
               required:
                 - channel
@@ -19732,7 +19774,9 @@ components:
                         - sms
                     phone:
                       type: string
-                      description: Phone number for SMS benefit notices (E.164 format).
+                      description: Phone number for SMS benefit notices, in E.164 format.
+                      pattern: ^\+[1-9][0-9]{1,14}$
+                      example: "+15551234567"
                 - type: object
                   required:
                     - channel
@@ -19984,7 +20028,9 @@ components:
                         - sms
                     phone:
                       type: string
-                      description: Phone number for SMS benefit notices (E.164 format).
+                      description: Phone number for SMS benefit notices, in E.164 format.
+                      pattern: ^\+[1-9][0-9]{1,14}$
+                      example: "+15551234567"
                 - type: object
                   required:
                     - channel
@@ -20185,7 +20231,9 @@ components:
                         - sms
                     phone:
                       type: string
-                      description: Phone number for SMS benefit notices (E.164 format).
+                      description: Phone number for SMS benefit notices, in E.164 format.
+                      pattern: ^\+[1-9][0-9]{1,14}$
+                      example: "+15551234567"
                 - type: object
                   required:
                     - channel
@@ -20396,7 +20444,9 @@ components:
                               - sms
                           phone:
                             type: string
-                            description: Phone number for SMS benefit notices (E.164 format).
+                            description: Phone number for SMS benefit notices, in E.164 format.
+                            pattern: ^\+[1-9][0-9]{1,14}$
+                            example: "+15551234567"
                       - type: object
                         required:
                           - channel
@@ -20640,7 +20690,9 @@ components:
             - sms
         phone:
           type: string
-          description: Phone number for SMS benefit notices (E.164 format).
+          description: Phone number for SMS benefit notices, in E.164 format.
+          pattern: ^\+[1-9][0-9]{1,14}$
+          example: "+15551234567"
     CloseRequest:
       type: object
       required:
@@ -21290,7 +21342,9 @@ components:
                                       - sms
                                   phone:
                                     type: string
-                                    description: Phone number for SMS benefit notices (E.164 format).
+                                    description: Phone number for SMS benefit notices, in E.164 format.
+                                    pattern: ^\+[1-9][0-9]{1,14}$
+                                    example: "+15551234567"
                               - type: object
                                 required:
                                   - channel
@@ -21699,7 +21753,9 @@ components:
                               - sms
                           phone:
                             type: string
-                            description: Phone number for SMS benefit notices (E.164 format).
+                            description: Phone number for SMS benefit notices, in E.164 format.
+                            pattern: ^\+[1-9][0-9]{1,14}$
+                            example: "+15551234567"
                       - type: object
                         required:
                           - channel

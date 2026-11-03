@@ -51,6 +51,12 @@ machines:
       - id: sameOperation
         description: a corrected call names the suggestion's own operation
         condition: "!has(request.call) || object.kind != \"operation\" || request.call.operationId == object.call.operationId"
+      - id: samePatchExceptValues
+        description: a corrected patch changes only the values of the suggestion's own patch
+        condition: |-
+          !has(request.call) || object.kind != "operation" || !has(object.call.requestBody) || !has(object.call.requestBody.contentType) || object.call.requestBody.contentType != "application/json-patch+json" || (request.call.parameters == object.call.parameters
+              && request.call.requestBody.payload.map(c, c.op == "test" ? [c.op, c.path, c.value] : [c.op, c.path])
+                 == object.call.requestBody.payload.map(c, c.op == "test" ? [c.op, c.path, c.value] : [c.op, c.path]))
     actions:
       - id: accept
         description: Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
@@ -66,6 +72,7 @@ machines:
           - conditions:
               - callOnlyForAnOperation
               - sameOperation
+              - samePatchExceptValues
         steps:
           - if: object.kind == "operation" && has(request.call)
             then:

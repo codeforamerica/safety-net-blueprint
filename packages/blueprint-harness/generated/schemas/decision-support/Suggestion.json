@@ -29,6 +29,11 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "The record it cites. `sourceType` says what kind."
+                  },
+                  "path": {
+                    "type": "string",
+                    "format": "json-pointer",
+                    "description": "For a suggestion whose call carries a JSON Patch, the change this\nbacks up: the `path` of one of the patch's changes, such as\n`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.\nA path no change in the patch has is refused with `422`.\n"
                   }
                 }
               }
@@ -62,7 +67,7 @@
             },
             "call": {
               "type": "object",
-              "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+              "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.\n",
               "additionalProperties": false,
               "required": [
                 "operationId"
@@ -151,7 +156,7 @@
             "fingerprint": {
               "type": "string",
               "readOnly": true,
-              "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n\nBefore hashing, values are made comparable, so two suggestions that\ndiffer only in these ways have the same fingerprint: text is\ntrimmed, runs of spaces become one, and case is ignored; a\ndate-time is compared as the instant it names; an object's keys\nand a call's parameters may come in any order.\n"
+              "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's call (its operation, path and query\nparameters, and body, but not headers or cookies, which are about\nhow a request is sent); an informing one's subject, path and\ncategory — or, uncategorized, its message. A keyed hash, so\nnothing can be read back from it.\n\nBefore hashing, values are made comparable, so two suggestions that\ndiffer only in these ways have the same fingerprint: text is\ntrimmed, runs of spaces become one, and case is ignored; a\ndate-time is compared as the instant it names; an object's keys\nand a call's parameters may come in any order.\n\nIn a JSON Patch, the id of each record the patch creates (one an\n`add` puts a record under, which no record has yet) is replaced by\nits order of appearance, wherever the patch names it. So the same\nnew member proposed again under a freshly chosen id has the same\nfingerprint. Ids of existing records are kept.\n"
             },
             "reason": {
               "type": "string",
@@ -177,7 +182,7 @@
           "properties": {
             "performed": {
               "type": "object",
-              "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+              "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.\n",
               "additionalProperties": false,
               "required": [
                 "operationId"
@@ -268,6 +273,11 @@
                     "type": "string",
                     "format": "uuid",
                     "description": "The record it cites. `sourceType` says what kind."
+                  },
+                  "path": {
+                    "type": "string",
+                    "format": "json-pointer",
+                    "description": "For a suggestion whose call carries a JSON Patch, the change this\nbacks up: the `path` of one of the patch's changes, such as\n`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.\nA path no change in the patch has is refused with `422`.\n"
                   }
                 }
               }
@@ -377,7 +387,7 @@
             "fingerprint": {
               "type": "string",
               "readOnly": true,
-              "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's whole call; an informing one's subject,\npath and category — or, uncategorized, its message. A keyed hash,\nso nothing can be read back from it.\n\nBefore hashing, values are made comparable, so two suggestions that\ndiffer only in these ways have the same fingerprint: text is\ntrimmed, runs of spaces become one, and case is ignored; a\ndate-time is compared as the instant it names; an object's keys\nand a call's parameters may come in any order.\n"
+              "description": "What identifies it, for refusing the same one proposed again: an\noperation suggestion's call (its operation, path and query\nparameters, and body, but not headers or cookies, which are about\nhow a request is sent); an informing one's subject, path and\ncategory — or, uncategorized, its message. A keyed hash, so\nnothing can be read back from it.\n\nBefore hashing, values are made comparable, so two suggestions that\ndiffer only in these ways have the same fingerprint: text is\ntrimmed, runs of spaces become one, and case is ignored; a\ndate-time is compared as the instant it names; an object's keys\nand a call's parameters may come in any order.\n\nIn a JSON Patch, the id of each record the patch creates (one an\n`add` puts a record under, which no record has yet) is replaced by\nits order of appearance, wherever the patch names it. So the same\nnew member proposed again under a freshly chosen id has the same\nfingerprint. Ids of existing records are kept.\n"
             },
             "reason": {
               "type": "string",

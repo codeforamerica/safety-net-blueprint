@@ -369,7 +369,7 @@ export type Application = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -1439,7 +1439,7 @@ export type ApplicationList = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -1707,7 +1707,7 @@ export type ApplicationMemberWritable = {
     } | {
         channel: 'sms';
         /**
-         * Phone number for SMS benefit notices (E.164 format).
+         * Phone number for SMS benefit notices, in E.164 format.
          */
         phone: string;
     } | {
@@ -1833,7 +1833,7 @@ export type ApplicationMember = {
     } | {
         channel: 'sms';
         /**
-         * Phone number for SMS benefit notices (E.164 format).
+         * Phone number for SMS benefit notices, in E.164 format.
          */
         phone: string;
     } | {
@@ -1990,7 +1990,7 @@ export type ApplicationMemberCreate = {
     } | {
         channel: 'sms';
         /**
-         * Phone number for SMS benefit notices (E.164 format).
+         * Phone number for SMS benefit notices, in E.164 format.
          */
         phone: string;
     } | {
@@ -2120,7 +2120,7 @@ export type ApplicationMemberUpdate = {
     } | {
         channel: 'sms';
         /**
-         * Phone number for SMS benefit notices (E.164 format).
+         * Phone number for SMS benefit notices, in E.164 format.
          */
         phone: string;
     } | {
@@ -2249,7 +2249,7 @@ export type ApplicationMemberList = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -2426,7 +2426,7 @@ export type ManualVerification = {
 export type SmsNotification = {
     channel: 'sms';
     /**
-     * Phone number for SMS benefit notices (E.164 format).
+     * Phone number for SMS benefit notices, in E.164 format.
      */
     phone: string;
 };
@@ -2818,7 +2818,7 @@ export type ApplicationDetailsResponse = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -3072,7 +3072,7 @@ export type ApplicationDetailsResponse = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -3495,7 +3495,7 @@ export type ApplicationWritable2 = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -4082,7 +4082,7 @@ export type ApplicationListWritable = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -4257,7 +4257,7 @@ export type ApplicationMemberWritable2 = {
     } | {
         channel: 'sms';
         /**
-         * Phone number for SMS benefit notices (E.164 format).
+         * Phone number for SMS benefit notices, in E.164 format.
          */
         phone: string;
     } | {
@@ -4394,7 +4394,7 @@ export type ApplicationMemberListWritable = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -4652,7 +4652,7 @@ export type ApplicationDetailsResponseWritable = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -4810,7 +4810,7 @@ export type ApplicationDetailsResponseWritable = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -5409,7 +5409,7 @@ export type ListApplicationsResponses = {
                 } | {
                     channel: 'sms';
                     /**
-                     * Phone number for SMS benefit notices (E.164 format).
+                     * Phone number for SMS benefit notices, in E.164 format.
                      */
                     phone: string;
                 } | {
@@ -6076,7 +6076,7 @@ export type CreateApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -6689,7 +6689,7 @@ export type GetApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -7339,7 +7339,7 @@ export type UpdateApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -9386,7 +9386,7 @@ export type ListApplicationMembersResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -9564,7 +9564,7 @@ export type CreateApplicationMemberData = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -9807,7 +9807,7 @@ export type CreateApplicationMemberResponses = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -10117,7 +10117,7 @@ export type GetApplicationMemberResponses = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -10278,7 +10278,7 @@ export type UpdateApplicationMemberData = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -10501,7 +10501,7 @@ export type UpdateApplicationMemberResponses = {
         } | {
             channel: 'sms';
             /**
-             * Phone number for SMS benefit notices (E.164 format).
+             * Phone number for SMS benefit notices, in E.164 format.
              */
             phone: string;
         } | {
@@ -10994,7 +10994,7 @@ export type SubmitApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -11581,7 +11581,7 @@ export type OpenApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -12196,7 +12196,7 @@ export type CloseApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -12783,7 +12783,7 @@ export type WithdrawApplicationResponses = {
             } | {
                 channel: 'sms';
                 /**
-                 * Phone number for SMS benefit notices (E.164 format).
+                 * Phone number for SMS benefit notices, in E.164 format.
                  */
                 phone: string;
             } | {
@@ -15142,7 +15142,7 @@ export type GetApplicationDetailsResponses = {
                 } | {
                     channel: 'sms';
                     /**
-                     * Phone number for SMS benefit notices (E.164 format).
+                     * Phone number for SMS benefit notices, in E.164 format.
                      */
                     phone: string;
                 } | {
@@ -15396,7 +15396,7 @@ export type GetApplicationDetailsResponses = {
                 } | {
                     channel: 'sms';
                     /**
-                     * Phone number for SMS benefit notices (E.164 format).
+                     * Phone number for SMS benefit notices, in E.164 format.
                      */
                     phone: string;
                 } | {
@@ -16003,7 +16003,7 @@ export type UpdateApplicationDetailsResponses = {
                 } | {
                     channel: 'sms';
                     /**
-                     * Phone number for SMS benefit notices (E.164 format).
+                     * Phone number for SMS benefit notices, in E.164 format.
                      */
                     phone: string;
                 } | {
@@ -16257,7 +16257,7 @@ export type UpdateApplicationDetailsResponses = {
                 } | {
                     channel: 'sms';
                     /**
-                     * Phone number for SMS benefit notices (E.164 format).
+                     * Phone number for SMS benefit notices, in E.164 format.
                      */
                     phone: string;
                 } | {

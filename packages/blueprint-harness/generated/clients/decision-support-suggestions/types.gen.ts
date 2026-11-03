@@ -33,6 +33,14 @@ export type SuggestionCommon = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -56,7 +64,7 @@ export type SuggestionCommon = {
 export type OperationSuggestionFields = {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -140,15 +148,23 @@ export type SuggestionRead = {
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
      * What identifies it, for refusing the same one proposed again: an
-     * operation suggestion's whole call; an informing one's subject,
-     * path and category — or, uncategorized, its message. A keyed hash,
-     * so nothing can be read back from it.
+     * operation suggestion's call (its operation, path and query
+     * parameters, and body, but not headers or cookies, which are about
+     * how a request is sent); an informing one's subject, path and
+     * category — or, uncategorized, its message. A keyed hash, so
+     * nothing can be read back from it.
      *
      * Before hashing, values are made comparable, so two suggestions that
      * differ only in these ways have the same fingerprint: text is
      * trimmed, runs of spaces become one, and case is ignored; a
      * date-time is compared as the instant it names; an object's keys
      * and a call's parameters may come in any order.
+     *
+     * In a JSON Patch, the id of each record the patch creates (one an
+     * `add` puts a record under, which no record has yet) is replaced by
+     * its order of appearance, wherever the patch names it. So the same
+     * new member proposed again under a freshly chosen id has the same
+     * fingerprint. Ids of existing records are kept.
      *
      */
     readonly fingerprint?: string;
@@ -175,6 +191,14 @@ export type SuggestionEvidence = {
      * The record it cites. `sourceType` says what kind.
      */
     sourceId: string;
+    /**
+     * For a suggestion whose call carries a JSON Patch, the change this
+     * backs up: the `path` of one of the patch's changes, such as
+     * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+     * A path no change in the patch has is refused with `422`.
+     *
+     */
+    path?: string;
 };
 
 export type SuggestionCreate = ({
@@ -190,6 +214,14 @@ export type SuggestionCreate = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -216,7 +248,7 @@ export type SuggestionCreate = ({
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -267,6 +299,14 @@ export type SuggestionCreate = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -335,6 +375,14 @@ export type OperationSuggestionCreate = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -361,7 +409,7 @@ export type OperationSuggestionCreate = {
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -417,6 +465,14 @@ export type InformingSuggestionCreate = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -482,6 +538,14 @@ export type Suggestion = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -494,7 +558,7 @@ export type Suggestion = ({
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -547,15 +611,23 @@ export type Suggestion = ({
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
      * What identifies it, for refusing the same one proposed again: an
-     * operation suggestion's whole call; an informing one's subject,
-     * path and category — or, uncategorized, its message. A keyed hash,
-     * so nothing can be read back from it.
+     * operation suggestion's call (its operation, path and query
+     * parameters, and body, but not headers or cookies, which are about
+     * how a request is sent); an informing one's subject, path and
+     * category — or, uncategorized, its message. A keyed hash, so
+     * nothing can be read back from it.
      *
      * Before hashing, values are made comparable, so two suggestions that
      * differ only in these ways have the same fingerprint: text is
      * trimmed, runs of spaces become one, and case is ignored; a
      * date-time is compared as the instant it names; an object's keys
      * and a call's parameters may come in any order.
+     *
+     * In a JSON Patch, the id of each record the patch creates (one an
+     * `add` puts a record under, which no record has yet) is replaced by
+     * its order of appearance, wherever the patch names it. So the same
+     * new member proposed again under a freshly chosen id has the same
+     * fingerprint. Ids of existing records are kept.
      *
      */
     readonly fingerprint?: string;
@@ -573,7 +645,7 @@ export type Suggestion = ({
     readonly updatedAt: string;
 } & {
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     readonly performed?: {
@@ -624,6 +696,14 @@ export type Suggestion = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -675,15 +755,23 @@ export type Suggestion = ({
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
      * What identifies it, for refusing the same one proposed again: an
-     * operation suggestion's whole call; an informing one's subject,
-     * path and category — or, uncategorized, its message. A keyed hash,
-     * so nothing can be read back from it.
+     * operation suggestion's call (its operation, path and query
+     * parameters, and body, but not headers or cookies, which are about
+     * how a request is sent); an informing one's subject, path and
+     * category — or, uncategorized, its message. A keyed hash, so
+     * nothing can be read back from it.
      *
      * Before hashing, values are made comparable, so two suggestions that
      * differ only in these ways have the same fingerprint: text is
      * trimmed, runs of spaces become one, and case is ignored; a
      * date-time is compared as the instant it names; an object's keys
      * and a call's parameters may come in any order.
+     *
+     * In a JSON Patch, the id of each record the patch creates (one an
+     * `add` puts a record under, which no record has yet) is replaced by
+     * its order of appearance, wherever the patch names it. So the same
+     * new member proposed again under a freshly chosen id has the same
+     * fingerprint. Ids of existing records are kept.
      *
      */
     readonly fingerprint?: string;
@@ -717,6 +805,14 @@ export type OperationSuggestion = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -729,7 +825,7 @@ export type OperationSuggestion = {
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -782,15 +878,23 @@ export type OperationSuggestion = {
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
      * What identifies it, for refusing the same one proposed again: an
-     * operation suggestion's whole call; an informing one's subject,
-     * path and category — or, uncategorized, its message. A keyed hash,
-     * so nothing can be read back from it.
+     * operation suggestion's call (its operation, path and query
+     * parameters, and body, but not headers or cookies, which are about
+     * how a request is sent); an informing one's subject, path and
+     * category — or, uncategorized, its message. A keyed hash, so
+     * nothing can be read back from it.
      *
      * Before hashing, values are made comparable, so two suggestions that
      * differ only in these ways have the same fingerprint: text is
      * trimmed, runs of spaces become one, and case is ignored; a
      * date-time is compared as the instant it names; an object's keys
      * and a call's parameters may come in any order.
+     *
+     * In a JSON Patch, the id of each record the patch creates (one an
+     * `add` puts a record under, which no record has yet) is replaced by
+     * its order of appearance, wherever the patch names it. So the same
+     * new member proposed again under a freshly chosen id has the same
+     * fingerprint. Ids of existing records are kept.
      *
      */
     readonly fingerprint?: string;
@@ -808,7 +912,7 @@ export type OperationSuggestion = {
     readonly updatedAt: string;
 } & {
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     readonly performed?: {
@@ -864,6 +968,14 @@ export type InformingSuggestion = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -915,15 +1027,23 @@ export type InformingSuggestion = {
     status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
     /**
      * What identifies it, for refusing the same one proposed again: an
-     * operation suggestion's whole call; an informing one's subject,
-     * path and category — or, uncategorized, its message. A keyed hash,
-     * so nothing can be read back from it.
+     * operation suggestion's call (its operation, path and query
+     * parameters, and body, but not headers or cookies, which are about
+     * how a request is sent); an informing one's subject, path and
+     * category — or, uncategorized, its message. A keyed hash, so
+     * nothing can be read back from it.
      *
      * Before hashing, values are made comparable, so two suggestions that
      * differ only in these ways have the same fingerprint: text is
      * trimmed, runs of spaces become one, and case is ignored; a
      * date-time is compared as the instant it names; an object's keys
      * and a call's parameters may come in any order.
+     *
+     * In a JSON Patch, the id of each record the patch creates (one an
+     * `add` puts a record under, which no record has yet) is replaced by
+     * its order of appearance, wherever the patch names it. So the same
+     * new member proposed again under a freshly chosen id has the same
+     * fingerprint. Ids of existing records are kept.
      *
      */
     readonly fingerprint?: string;
@@ -955,6 +1075,14 @@ export type SuggestionList = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -967,7 +1095,7 @@ export type SuggestionList = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -1020,15 +1148,23 @@ export type SuggestionList = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -1046,7 +1182,7 @@ export type SuggestionList = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -1097,6 +1233,14 @@ export type SuggestionList = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1148,15 +1292,23 @@ export type SuggestionList = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -1193,7 +1345,7 @@ export type SuggestionList = {
 
 export type AcceptRequest = {
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call?: {
@@ -1253,6 +1405,14 @@ export type SuggestionWritable = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1265,7 +1425,7 @@ export type SuggestionWritable = ({
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -1316,6 +1476,14 @@ export type SuggestionWritable = ({
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1370,6 +1538,14 @@ export type OperationSuggestionWritable = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1382,7 +1558,7 @@ export type OperationSuggestionWritable = {
 } & {
     kind: 'operation';
     /**
-     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
      *
      */
     call: {
@@ -1438,6 +1614,14 @@ export type InformingSuggestionWritable = {
          * The record it cites. `sourceType` says what kind.
          */
         sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1490,6 +1674,14 @@ export type SuggestionListWritable = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1502,7 +1694,7 @@ export type SuggestionListWritable = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -1553,6 +1745,14 @@ export type SuggestionListWritable = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1805,6 +2005,14 @@ export type ListSuggestionsResponses = {
                  * The record it cites. `sourceType` says what kind.
                  */
                 sourceId: string;
+                /**
+                 * For a suggestion whose call carries a JSON Patch, the change this
+                 * backs up: the `path` of one of the patch's changes, such as
+                 * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+                 * A path no change in the patch has is refused with `422`.
+                 *
+                 */
+                path?: string;
             }>;
             /**
              * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1826,7 +2034,7 @@ export type ListSuggestionsResponses = {
         } & {
             kind: 'operation';
             /**
-             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
              *
              */
             call: {
@@ -1879,15 +2087,23 @@ export type ListSuggestionsResponses = {
             status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
             /**
              * What identifies it, for refusing the same one proposed again: an
-             * operation suggestion's whole call; an informing one's subject,
-             * path and category — or, uncategorized, its message. A keyed hash,
-             * so nothing can be read back from it.
+             * operation suggestion's call (its operation, path and query
+             * parameters, and body, but not headers or cookies, which are about
+             * how a request is sent); an informing one's subject, path and
+             * category — or, uncategorized, its message. A keyed hash, so
+             * nothing can be read back from it.
              *
              * Before hashing, values are made comparable, so two suggestions that
              * differ only in these ways have the same fingerprint: text is
              * trimmed, runs of spaces become one, and case is ignored; a
              * date-time is compared as the instant it names; an object's keys
              * and a call's parameters may come in any order.
+             *
+             * In a JSON Patch, the id of each record the patch creates (one an
+             * `add` puts a record under, which no record has yet) is replaced by
+             * its order of appearance, wherever the patch names it. So the same
+             * new member proposed again under a freshly chosen id has the same
+             * fingerprint. Ids of existing records are kept.
              *
              */
             readonly fingerprint?: string;
@@ -1905,7 +2121,7 @@ export type ListSuggestionsResponses = {
             readonly updatedAt: string;
         } & {
             /**
-             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+             * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
              *
              */
             readonly performed?: {
@@ -1956,6 +2172,14 @@ export type ListSuggestionsResponses = {
                  * The record it cites. `sourceType` says what kind.
                  */
                 sourceId: string;
+                /**
+                 * For a suggestion whose call carries a JSON Patch, the change this
+                 * backs up: the `path` of one of the patch's changes, such as
+                 * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+                 * A path no change in the patch has is refused with `422`.
+                 *
+                 */
+                path?: string;
             }>;
             /**
              * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2016,15 +2240,23 @@ export type ListSuggestionsResponses = {
             status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
             /**
              * What identifies it, for refusing the same one proposed again: an
-             * operation suggestion's whole call; an informing one's subject,
-             * path and category — or, uncategorized, its message. A keyed hash,
-             * so nothing can be read back from it.
+             * operation suggestion's call (its operation, path and query
+             * parameters, and body, but not headers or cookies, which are about
+             * how a request is sent); an informing one's subject, path and
+             * category — or, uncategorized, its message. A keyed hash, so
+             * nothing can be read back from it.
              *
              * Before hashing, values are made comparable, so two suggestions that
              * differ only in these ways have the same fingerprint: text is
              * trimmed, runs of spaces become one, and case is ignored; a
              * date-time is compared as the instant it names; an object's keys
              * and a call's parameters may come in any order.
+             *
+             * In a JSON Patch, the id of each record the patch creates (one an
+             * `add` puts a record under, which no record has yet) is replaced by
+             * its order of appearance, wherever the patch names it. So the same
+             * new member proposed again under a freshly chosen id has the same
+             * fingerprint. Ids of existing records are kept.
              *
              */
             readonly fingerprint?: string;
@@ -2076,6 +2308,14 @@ export type CreateSuggestionData = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2102,7 +2342,7 @@ export type CreateSuggestionData = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -2153,6 +2393,14 @@ export type CreateSuggestionData = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2307,6 +2555,14 @@ export type CreateSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2328,7 +2584,7 @@ export type CreateSuggestionResponses = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -2381,15 +2637,23 @@ export type CreateSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -2407,7 +2671,7 @@ export type CreateSuggestionResponses = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -2458,6 +2722,14 @@ export type CreateSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2518,15 +2790,23 @@ export type CreateSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -2619,6 +2899,14 @@ export type GetSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2640,7 +2928,7 @@ export type GetSuggestionResponses = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -2693,15 +2981,23 @@ export type GetSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -2719,7 +3015,7 @@ export type GetSuggestionResponses = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -2770,6 +3066,14 @@ export type GetSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2830,15 +3134,23 @@ export type GetSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -2862,7 +3174,7 @@ export type GetSuggestionResponse = GetSuggestionResponses[keyof GetSuggestionRe
 export type AcceptSuggestionData = {
     body?: {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call?: {
@@ -3047,6 +3359,14 @@ export type AcceptSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3068,7 +3388,7 @@ export type AcceptSuggestionResponses = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -3121,15 +3441,23 @@ export type AcceptSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -3147,7 +3475,7 @@ export type AcceptSuggestionResponses = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -3198,6 +3526,14 @@ export type AcceptSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3258,15 +3594,23 @@ export type AcceptSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -3440,6 +3784,14 @@ export type DismissSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3461,7 +3813,7 @@ export type DismissSuggestionResponses = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -3514,15 +3866,23 @@ export type DismissSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -3540,7 +3900,7 @@ export type DismissSuggestionResponses = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -3591,6 +3951,14 @@ export type DismissSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3651,15 +4019,23 @@ export type DismissSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -3809,6 +4185,14 @@ export type ExpireSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3830,7 +4214,7 @@ export type ExpireSuggestionResponses = {
     } & {
         kind: 'operation';
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         call: {
@@ -3883,15 +4267,23 @@ export type ExpireSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;
@@ -3909,7 +4301,7 @@ export type ExpireSuggestionResponses = {
         readonly updatedAt: string;
     } & {
         /**
-         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+         * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
          *
          */
         readonly performed?: {
@@ -3960,6 +4352,14 @@ export type ExpireSuggestionResponses = {
              * The record it cites. `sourceType` says what kind.
              */
             sourceId: string;
+            /**
+             * For a suggestion whose call carries a JSON Patch, the change this
+             * backs up: the `path` of one of the patch's changes, such as
+             * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+             * A path no change in the patch has is refused with `422`.
+             *
+             */
+            path?: string;
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -4020,15 +4420,23 @@ export type ExpireSuggestionResponses = {
         status: 'proposed' | 'accepted' | 'refused' | 'dismissed' | 'expired';
         /**
          * What identifies it, for refusing the same one proposed again: an
-         * operation suggestion's whole call; an informing one's subject,
-         * path and category — or, uncategorized, its message. A keyed hash,
-         * so nothing can be read back from it.
+         * operation suggestion's call (its operation, path and query
+         * parameters, and body, but not headers or cookies, which are about
+         * how a request is sent); an informing one's subject, path and
+         * category — or, uncategorized, its message. A keyed hash, so
+         * nothing can be read back from it.
          *
          * Before hashing, values are made comparable, so two suggestions that
          * differ only in these ways have the same fingerprint: text is
          * trimmed, runs of spaces become one, and case is ignored; a
          * date-time is compared as the instant it names; an object's keys
          * and a call's parameters may come in any order.
+         *
+         * In a JSON Patch, the id of each record the patch creates (one an
+         * `add` puts a record under, which no record has yet) is replaced by
+         * its order of appearance, wherever the patch names it. So the same
+         * new member proposed again under a freshly chosen id has the same
+         * fingerprint. Ids of existing records are kept.
          *
          */
         readonly fingerprint?: string;

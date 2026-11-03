@@ -45,7 +45,22 @@ export const listSuggestions = <ThrowOnError extends boolean = false>(options?: 
  * operation doesn't declare, a required parameter left out, or a
  * parameter value or request body the operation's schemas refuse.
  * `details` names the field, as `call.requestBody.payload.<field>` for the
- * body.
+ * body. A call leaves out an `Idempotency-Key` header its operation
+ * requires: the accept supplies one, the suggestion's id.
+ *
+ * A call whose body is a JSON Patch (`contentType:
+ * application/json-patch+json`) is applied, in memory, to what its
+ * operation would change as it is now; nothing is saved. It is refused
+ * with `422` when a `replace`, or a `remove` of a field, doesn't come
+ * right after a `test` of the same path with the value the proposer
+ * read, or when a change names a record that neither exists nor is
+ * created earlier in the same patch, or when an `evidence` entry's `path`
+ * is no change's path. Each record the patch creates, changes or removes
+ * becomes a call to that record's own operation, and each call is checked
+ * as an operation suggestion's call is, refused with `422` when it
+ * doesn't fit. It is refused with `409` when a `test` fails: the data
+ * changed after the proposer read it. The operations themselves aren't
+ * run until the suggestion is accepted.
  *
  * An informing suggestion is refused with `422` when its category does
  * not exist, when it has neither a category nor a message, or when its
