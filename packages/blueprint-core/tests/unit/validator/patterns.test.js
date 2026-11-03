@@ -792,6 +792,22 @@ test('Pattern Validator Tests', async (t) => {
   // validateForeignKeys
   // ===========================================================================
 
+  await t.test('validateForeignKeys - onDelete may be cascade, and nothing else', () => {
+    const spec = (onDelete, resource = 'Case') => ({
+      components: { schemas: {
+        Case: { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } },
+        Task: { type: 'object', properties: {
+          caseId: { type: 'string', format: 'uuid', 'x-relationship': { resource, onDelete } },
+        } },
+      } },
+    });
+    const run = (s) => { const errors = []; validateForeignKeys(s, errors); return errors.filter((e) => e.rule === 'fk-on-delete-unknown'); };
+    assert.deepStrictEqual(run(spec('cascade')), []);
+    assert.strictEqual(run(spec('setNull')).length, 1);
+    assert.strictEqual(run(spec('restrict')).length, 1);
+    assert.strictEqual(run(spec('cascade', 'External')).length, 1);
+  });
+
   await t.test('validateForeignKeys - no error when x-relationship is present', () => {
     const errors = [];
     validateForeignKeys({

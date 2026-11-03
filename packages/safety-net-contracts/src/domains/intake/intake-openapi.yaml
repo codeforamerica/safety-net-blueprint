@@ -203,6 +203,8 @@ paths:
           description: Application deleted successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -342,6 +344,8 @@ paths:
           description: Member removed successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -514,6 +518,8 @@ paths:
           description: Tax filer record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -633,6 +639,8 @@ paths:
           description: Health plan record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -753,6 +761,8 @@ paths:
           description: Health enrollment record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -920,6 +930,8 @@ paths:
           description: Contact record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1039,6 +1051,8 @@ paths:
           description: Organization record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1158,6 +1172,8 @@ paths:
           description: Person relationship record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1276,6 +1292,8 @@ paths:
           description: Authorized representative record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1395,6 +1413,8 @@ paths:
           description: Signature record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1519,6 +1539,8 @@ paths:
           description: Sponsor record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1639,6 +1661,8 @@ paths:
           description: Job record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1759,6 +1783,8 @@ paths:
           description: Income record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1879,6 +1905,8 @@ paths:
           description: Asset record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -1999,6 +2027,8 @@ paths:
           description: Asset disposal record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -2119,6 +2149,8 @@ paths:
           description: Expense record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -2239,6 +2271,8 @@ paths:
           description: Disability benefit record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -2359,6 +2393,8 @@ paths:
           description: Deduction record deleted.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -2494,6 +2530,8 @@ paths:
           description: Verification deleted successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 

@@ -133,6 +133,8 @@ paths:
           description: Application deleted successfully.
         '404':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '409':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         '500':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -496,6 +498,8 @@ paths:
           description: Household member removed successfully.
         '404':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '409':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         '500':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -745,6 +749,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -794,6 +799,7 @@ components:
           x-relationship:
             type: fk
             resource: ApplicationMember
+            onDelete: cascade
             style: links-only
         source:
           type: string
@@ -828,6 +834,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -899,6 +906,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             status:
               type: string
               readOnly: true
@@ -1041,6 +1049,7 @@ components:
               x-relationship:
                 type: fk
                 resource: Application
+                onDelete: cascade
                 style: expand
                 # Bounded, because this points back at the parent and the
                 # parent lists its members: expanding everything would chase

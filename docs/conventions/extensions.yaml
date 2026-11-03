@@ -183,6 +183,13 @@ x_extensions:
         FK only. Controls how the resolver transforms the FK field. "expand" inlines
         the related resource; "links-only" adds a links navigation object. Omitting
         style leaves the field untouched — x-relationship is metadata only.
+      onDelete: >
+        FK only. What deleting the named record does to this one, as OData's
+        OnDelete. Write cascade when this record can't outlive the one it names,
+        such as a member's income or an application's members: deleting the
+        named record deletes this one too. Leave it out to refuse that delete
+        with 409 while this record names it (OData's None). cascade is the only
+        value; External and Polymorphic references take none.
       id: >
         Non-FK only. The identifier of the artifact within its domain contract.
         For state-machine-action: the action id. For ruleset: the ruleset name.

@@ -160,6 +160,27 @@ export function validateForeignKeys(spec, errors, sameDomainSchemas = new Set())
         continue;
       }
 
+      // onDelete says what deleting the named record does to this one, as
+      // OData's OnDelete does. Only cascade is declared; leaving it out means
+      // the delete is refused while this record names it (OData's None).
+      if (rel.onDelete !== undefined) {
+        if (rel.onDelete !== 'cascade') {
+          errors.push({
+            path: `components/schemas/${schemaName}/${propPath}`,
+            rule: 'fk-on-delete-unknown',
+            message: `Schema "${schemaName}": "${propName}" declares onDelete: ${JSON.stringify(rel.onDelete)}. The only value is cascade; leave it out to refuse deleting a record this one names.`,
+            severity: 'error'
+          });
+        } else if (reservedResources.has(rel.resource)) {
+          errors.push({
+            path: `components/schemas/${schemaName}/${propPath}`,
+            rule: 'fk-on-delete-unknown',
+            message: `Schema "${schemaName}": "${propName}" names resource ${rel.resource}, which has no records here to delete, so onDelete has nothing to act on.`,
+            severity: 'error'
+          });
+        }
+      }
+
       // Path-style resources (e.g. "document-management/document-types") are already
       // domain-qualified by their prefix — no additional domain: annotation needed.
       const isPathStyleResource = rel.resource.includes('/');

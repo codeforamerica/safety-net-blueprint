@@ -170,3 +170,82 @@ function otherParent(record, resource, follow, { parents = {}, resources = [], s
   }
   return null;
 }
+
+/**
+ * Every field that names a record of another resource, by the resource it
+ * names: which resource holds the field, where its records are kept, the
+ * field the id is kept in, and what deleting the named record does to them —
+ * x-relationship's onDelete, OData's OnDelete. Without one, a delete is
+ * refused while any record names it (OData's None); with `cascade`, the
+ * records naming it are deleted with it.
+ *
+ * @param {object[]} apiSpecs
+ * @returns {Map<string, Array<{ resource: object, api: object, collection: string, field: string, onDelete: string|null }>>}
+ */
+export function referencesByTarget(apiSpecs) {
+  const byTarget = new Map();
+  const seen = new Set();
+  for (const api of apiSpecs) {
+    const follow = api.resolve?.schema ?? ((x) => x);
+    const model = api.doc?.model?.();
+    if (!model) continue;
+    for (const top of model.resources) {
+      for (const resource of [top, ...top.singletons]) {
+        const schema = resource.name ? api.doc.content?.components?.schemas?.[resource.name] : null;
+        if (!schema) continue;
+        // An expanded relationship is read under another name; its id is kept under the original.
+        const stored = new Map(extractExpandFields(schema, follow).map((f) => [f.fieldName, f.fkField]));
+        for (const props of propertiesOf(schema, follow)) {
+          for (const [name, definition] of Object.entries(props)) {
+            const relationship = definition?.['x-relationship'] ?? follow(definition)?.['x-relationship'];
+            const named = target({ 'x-relationship': relationship });
+            if (!named) continue;
+            const field = stored.get(name) ?? name;
+            const key = `${resource.name}.${field}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            if (!byTarget.has(named)) byTarget.set(named, []);
+            byTarget.get(named).push({
+              resource, api, collection: resourceToCollection(resource.name), field, onDelete: relationship.onDelete ?? null,
+            });
+          }
+        }
+      }
+    }
+  }
+  return byTarget;
+}
+
+/**
+ * What deleting a record takes with it: the record, every record a
+ * `cascade` reaches from it, and the records that name one of them without
+ * one, which refuse the delete. Nothing is deleted here.
+ *
+ * @param {{ name: string, collection: string, id: string }} record
+ * @param {Map} referencesTo - From referencesByTarget
+ * @param {object} store
+ * @returns {{ deleted: Array<{ name: string, collection: string, id: string, reference: object|null }>, refusedBy: Array<{ name: string, id: string, field: string }> }}
+ */
+export function deletionOf(record, referencesTo, store) {
+  const deleted = [];
+  const naming = [];
+  const keyOf = (collection, id) => `${collection}:${id}`;
+  const doomed = new Set();
+  const visit = (name, collection, id, reference) => {
+    if (doomed.has(keyOf(collection, id))) return;
+    doomed.add(keyOf(collection, id));
+    deleted.push({ name, collection, id, reference });
+    for (const ref of referencesTo?.get(name) ?? []) {
+      const { items } = store.findAll(ref.collection, { [ref.field]: id }, { limit: null });
+      for (const item of items) {
+        if (ref.onDelete === 'cascade') visit(ref.resource.name, ref.collection, item.id, ref);
+        else naming.push({ name: ref.resource.name, collection: ref.collection, id: item.id, field: ref.field });
+      }
+    }
+  };
+  visit(record.name, record.collection, record.id, null);
+  // A record that names one being deleted is no obstacle if it's being deleted too.
+  const refusedBy = naming.filter((n) => !doomed.has(keyOf(n.collection, n.id)))
+    .map(({ name, id, field }) => ({ name, id, field }));
+  return { deleted, refusedBy };
+}

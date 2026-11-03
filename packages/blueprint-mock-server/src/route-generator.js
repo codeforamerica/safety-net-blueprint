@@ -8,7 +8,7 @@ import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expa
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
 import { addRoute, routesFrom, tagRoutesAddedBy, routeKey, templateOf } from './http/route-table.js';
-import { registerReadRoute, clearReadRoutes, heldHere } from './references.js';
+import { registerReadRoute, clearReadRoutes, heldHere, referencesByTarget } from './references.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -651,8 +651,9 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   // collection only that server held isn't checked here.
   clearReadRoutes();
 
-  // Every operation in the set, for checking a call a write carries.
-  deps = { ...deps, operations: operationsOf(apiSpecs) };
+  // Every operation in the set, for checking a call a write carries, and
+  // every field naming a record of each resource, for what a delete does.
+  deps = { ...deps, operations: operationsOf(apiSpecs), referencesTo: referencesByTarget(apiSpecs) };
 
   const allEndpoints = [];
 

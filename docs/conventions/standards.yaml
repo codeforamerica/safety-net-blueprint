@@ -109,6 +109,21 @@ adopted:
       evidence; the RFC says they're ignored.
     details: blueprint-core/schemas/compositions-schema.yaml (CompositionEditable), docs/conventions/resources.yaml (editable_composition)
 
+  - name: OData referential actions
+    version: OData 4.01 CSDL, section 8.6 (OnDelete)
+    url: https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html
+    use: >
+      Use x-relationship's onDelete to say what deleting the named record does
+      to the record holding the field, with OData's names. cascade deletes it
+      too. Leaving onDelete out is OData's None: the delete is refused while any
+      record names it. SQL's ON DELETE actions are the origin; OData is the API
+      description standard that declares them.
+    exception: >
+      Only cascade is declared; SetNull and SetDefault aren't, until a contract
+      needs them. OData leaves the action unspecified when OnDelete is absent;
+      here, absent means None, so a contract always says what a delete does.
+    details: docs/architecture/x-extensions.md (x-relationship), docs/conventions/extensions.yaml (x-relationship)
+
   - name: UUID
     version: RFC 9562
     url: https://www.rfc-editor.org/rfc/rfc9562

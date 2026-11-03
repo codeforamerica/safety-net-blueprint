@@ -145,6 +145,8 @@ paths:
           description: Appointment deleted successfully.
         '404':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '409':
+          "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         '500':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 components:

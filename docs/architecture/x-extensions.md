@@ -260,6 +260,8 @@ Declares a relationship between a spec element and another contract artifact. Us
 
 Omitting `type` is equivalent to `type: fk` for backward compatibility.
 
+**What deleting the named record does** (`onDelete`, FK fields only). Each FK field says what happens to its record when the record it names is deleted, as SQL's referential actions and OData's `OnDelete` do. With `onDelete: cascade`, the record is deleted too, and so are the records a cascade reaches from it. Without `onDelete`, the delete is refused with `409` while any record names it, which is OData's `None`. A record with several FK fields declares each separately: an income deleted with its member is also deleted with its application, because its `applicationId` and its `memberId` each say `cascade`. `External` and `Polymorphic` references have no `onDelete`.
+
 ```yaml
 # FK — same-domain reference (type omitted, defaults to fk)
 queueId:
@@ -269,6 +271,14 @@ queueId:
   x-relationship:
     resource: Queue
     style: expand
+
+# FK — deleted with the member it names
+memberId:
+  type: string
+  format: uuid
+  x-relationship:
+    resource: ApplicationMember
+    onDelete: cascade
 
 # FK — cross-domain reference
 applicationId:
