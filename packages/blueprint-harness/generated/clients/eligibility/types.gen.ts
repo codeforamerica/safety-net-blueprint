@@ -32,7 +32,7 @@ export type Determination = {
     /**
      * Current status of the eligibility determination.
      */
-    status: 'pending' | 'in_progress' | 'complete';
+    status: 'pending' | 'completed';
     /**
      * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
      */
@@ -82,7 +82,19 @@ export type DeterminationCreate = {
 };
 
 export type DeterminationUpdate = {
-    status?: 'pending' | 'in_progress' | 'complete';
+    /**
+     * The intake application this determination is for.
+     */
+    applicationId?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Application resource.
+         */
+        application?: string;
+    };
 };
 
 export type DeterminationList = {
@@ -98,7 +110,7 @@ export type DeterminationList = {
         /**
          * Current status of the eligibility determination.
          */
-        status: 'pending' | 'in_progress' | 'complete';
+        status: 'pending' | 'completed';
         /**
          * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
          */
@@ -237,6 +249,13 @@ export type DeterminationCreateWritable = {
      * The new record's id, a UUID (RFC 9562).
      */
     id?: string;
+};
+
+export type DeterminationUpdateWritable = {
+    /**
+     * The intake application this determination is for.
+     */
+    applicationId?: string;
 };
 
 export type DeterminationListWritable = {
@@ -513,7 +532,7 @@ export type ListDeterminationsResponses = {
             /**
              * Current status of the eligibility determination.
              */
-            status: 'pending' | 'in_progress' | 'complete';
+            status: 'pending' | 'completed';
             /**
              * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
              */
@@ -674,7 +693,7 @@ export type CreateDeterminationResponses = {
         /**
          * Current status of the eligibility determination.
          */
-        status: 'pending' | 'in_progress' | 'complete';
+        status: 'pending' | 'completed';
         /**
          * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
          */
@@ -776,7 +795,7 @@ export type GetDeterminationResponses = {
         /**
          * Current status of the eligibility determination.
          */
-        status: 'pending' | 'in_progress' | 'complete';
+        status: 'pending' | 'completed';
         /**
          * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
          */
@@ -809,7 +828,19 @@ export type GetDeterminationResponse = GetDeterminationResponses[keyof GetDeterm
 
 export type UpdateDeterminationData = {
     body: {
-        status?: 'pending' | 'in_progress' | 'complete';
+        /**
+         * The intake application this determination is for.
+         */
+        applicationId?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
     };
     path: {
         /**
@@ -918,7 +949,7 @@ export type UpdateDeterminationResponses = {
         /**
          * Current status of the eligibility determination.
          */
-        status: 'pending' | 'in_progress' | 'complete';
+        status: 'pending' | 'completed';
         /**
          * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
          */
@@ -1373,7 +1404,7 @@ export type CompleteDeterminationResponses = {
         /**
          * Current status of the eligibility determination.
          */
-        status: 'pending' | 'in_progress' | 'complete';
+        status: 'pending' | 'completed';
         /**
          * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
          */

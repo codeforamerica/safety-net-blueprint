@@ -101,3 +101,15 @@ compositions:
               - complete
               - flagged
             default: not_started
+  applicationDetails:
+    compositeType: editable
+    resource: Application
+    include:
+      members:
+        resource: ApplicationMember
+        bind: applicationId
+      incomes:
+        resource: ApplicationIncome
+        bind: applicationId
+    endpoint:
+      path: /applications/{applicationId}/details

@@ -149,8 +149,7 @@ channels:
                       type: string
                       enum:
                         - pending
-                        - in_progress
-                        - complete
+                        - completed
                       readOnly: true
                       description: Current status of the eligibility determination.
                     expedited:
@@ -590,8 +589,7 @@ components:
                     type: string
                     enum:
                       - pending
-                      - in_progress
-                      - complete
+                      - completed
                     readOnly: true
                     description: Current status of the eligibility determination.
                   expedited:
@@ -1021,8 +1019,7 @@ components:
                   type: string
                   enum:
                     - pending
-                    - in_progress
-                    - complete
+                    - completed
                   readOnly: true
                   description: Current status of the eligibility determination.
                 expedited:

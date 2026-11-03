@@ -261,8 +261,7 @@ paths:
                           type: string
                           enum:
                             - pending
-                            - in_progress
-                            - complete
+                            - completed
                           readOnly: true
                           description: Current status of the eligibility determination.
                         expedited:
@@ -434,8 +433,7 @@ paths:
                     type: string
                     enum:
                       - pending
-                      - in_progress
-                      - complete
+                      - completed
                     readOnly: true
                     description: Current status of the eligibility determination.
                   expedited:
@@ -608,8 +606,7 @@ paths:
                     type: string
                     enum:
                       - pending
-                      - in_progress
-                      - complete
+                      - completed
                     readOnly: true
                     description: Current status of the eligibility determination.
                   expedited:
@@ -698,15 +695,28 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              allOf:
+                - type: object
+                  properties:
+                    applicationId:
+                      type: string
+                      format: uuid
+                      description: The intake application this determination is for.
+                      x-relationship:
+                        type: fk
+                        domain: intake
+                        resource: Application
+                        style: links-only
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        application:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related Application resource.
               minProperties: 1
-              properties:
-                status:
-                  type: string
-                  enum:
-                    - pending
-                    - in_progress
-                    - complete
       responses:
         "200":
           description: Determination updated successfully.
@@ -740,8 +750,7 @@ paths:
                     type: string
                     enum:
                       - pending
-                      - in_progress
-                      - complete
+                      - completed
                     readOnly: true
                     description: Current status of the eligibility determination.
                   expedited:
@@ -1331,8 +1340,7 @@ paths:
                     type: string
                     enum:
                       - pending
-                      - in_progress
-                      - complete
+                      - completed
                     readOnly: true
                     description: Current status of the eligibility determination.
                   expedited:
@@ -1556,8 +1564,7 @@ components:
           type: string
           enum:
             - pending
-            - in_progress
-            - complete
+            - completed
           readOnly: true
           description: Current status of the eligibility determination.
         expedited:
@@ -1624,15 +1631,28 @@ components:
           required:
             - applicationId
     DeterminationUpdate:
-      type: object
+      allOf:
+        - type: object
+          properties:
+            applicationId:
+              type: string
+              format: uuid
+              description: The intake application this determination is for.
+              x-relationship:
+                type: fk
+                domain: intake
+                resource: Application
+                style: links-only
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
       minProperties: 1
-      properties:
-        status:
-          type: string
-          enum:
-            - pending
-            - in_progress
-            - complete
     DeterminationList:
       type: object
       required:
@@ -1671,8 +1691,7 @@ components:
                 type: string
                 enum:
                   - pending
-                  - in_progress
-                  - complete
+                  - completed
                 readOnly: true
                 description: Current status of the eligibility determination.
               expedited:

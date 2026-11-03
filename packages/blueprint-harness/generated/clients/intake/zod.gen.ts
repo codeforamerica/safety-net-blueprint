@@ -1436,6 +1436,389 @@ export const zReviewProgressListResponse = z.object({
     hasNext: z.boolean()
 });
 
+/**
+ * The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path.
+ */
+export const zApplicationDetailsResponse = z.object({
+    application: z.object({
+        programsAppliedFor: z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])),
+        channel: z.optional(z.enum([
+            'online',
+            'phone',
+            'in_person',
+            'mail'
+        ])),
+        address: z.optional(z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().length(2),
+            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+        })),
+        contactInfo: z.optional(z.object({
+            phone: z.optional(z.string()),
+            email: z.optional(z.email()),
+            preferredContact: z.optional(z.enum([
+                'phone',
+                'email',
+                'mail'
+            ]))
+        })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
+        type: z.optional(z.enum(['new', 'renewal'])),
+        interviewDate: z.optional(z.iso.date()),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        previousHousehold: z.optional(z.object({
+            size: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
+            members: z.optional(z.array(z.object({
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                jobId: z.optional(z.string()),
+                source: z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                type: z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
+            })))
+        }).readonly()),
+        programCount: z.int().readonly(),
+        confirmationNumber: z.optional(z.string().readonly()),
+        status: z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
+        ]),
+        submittedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        openedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        slaInfo: z.optional(z.array(z.object({
+            slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+            status: z.enum([
+                'active',
+                'warning',
+                'paused',
+                'breached',
+                'completed'
+            ]),
+            clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+            deadline: z.iso.datetime({ offset: true }).readonly()
+        })).readonly()),
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            application: z.object({
+                id: z.optional(z.uuid().readonly()),
+                status: z.optional(z.enum([
+                    'draft',
+                    'submitted',
+                    'under_review',
+                    'withdrawn',
+                    'closed',
+                    'scheduled',
+                    'in_progress',
+                    'completed'
+                ])),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
+                programCount: z.optional(z.int().readonly())
+            })
+        })))),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            lifecycleState: z.enum([
+                'active',
+                'superseded',
+                'disposed'
+            ]),
+            legalHold: z.optional(z.boolean().readonly()),
+            latestVersionId: z.uuid().readonly(),
+            retentionDeadline: z.optional(z.union([
+                z.iso.datetime({ offset: true }).readonly(),
+                z.null()
+            ]).readonly()),
+            metadata: z.optional(z.record(z.string(), z.unknown())),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                latestVersion: z.optional(z.string())
+            }).readonly())
+        })))
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationSummary: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })),
+    members: z.record(z.string(), z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
+            ])),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
+            programCount: z.optional(z.int().readonly())
+        })
+    }))),
+    incomes: z.record(z.string(), z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))
+});
+
 export const zDocument = z.object({
     documentTypeId: z.string(),
     title: z.string(),
@@ -2179,6 +2562,227 @@ export const zReviewProgressListResponseWritable = z.object({
     limit: z.int(),
     offset: z.int(),
     hasNext: z.boolean()
+});
+
+/**
+ * The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path.
+ */
+export const zApplicationDetailsResponseWritable = z.object({
+    application: z.object({
+        programsAppliedFor: z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])),
+        channel: z.optional(z.enum([
+            'online',
+            'phone',
+            'in_person',
+            'mail'
+        ])),
+        address: z.optional(z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().length(2),
+            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+        })),
+        contactInfo: z.optional(z.object({
+            phone: z.optional(z.string()),
+            email: z.optional(z.email()),
+            preferredContact: z.optional(z.enum([
+                'phone',
+                'email',
+                'mail'
+            ]))
+        })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
+        type: z.optional(z.enum(['new', 'renewal'])),
+        interviewDate: z.optional(z.iso.date()),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
+    }).and(z.object({
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            application: z.object({
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ])))
+            })
+        })))),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
+        }).and(z.object({
+            metadata: z.optional(z.record(z.string(), z.unknown()))
+        })))
+    })),
+    members: z.record(z.string(), z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        application: z.object({
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ])))
+        })
+    }))),
+    incomes: z.record(z.string(), z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean())
+    }))
 });
 
 export const zDocumentWritable2 = z.object({
@@ -5867,3 +6471,800 @@ export const zReplaceReviewProgressByItemResponse = z.object({
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
+
+export const zGetApplicationDetailsData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path.
+ */
+export const zGetApplicationDetailsResponse = z.object({
+    application: z.object({
+        programsAppliedFor: z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])),
+        channel: z.optional(z.enum([
+            'online',
+            'phone',
+            'in_person',
+            'mail'
+        ])),
+        address: z.optional(z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().length(2),
+            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+        })),
+        contactInfo: z.optional(z.object({
+            phone: z.optional(z.string()),
+            email: z.optional(z.email()),
+            preferredContact: z.optional(z.enum([
+                'phone',
+                'email',
+                'mail'
+            ]))
+        })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
+        type: z.optional(z.enum(['new', 'renewal'])),
+        interviewDate: z.optional(z.iso.date()),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        previousHousehold: z.optional(z.object({
+            size: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
+            members: z.optional(z.array(z.object({
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                jobId: z.optional(z.string()),
+                source: z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                type: z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
+            })))
+        }).readonly()),
+        programCount: z.int().readonly(),
+        confirmationNumber: z.optional(z.string().readonly()),
+        status: z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
+        ]),
+        submittedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        openedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        slaInfo: z.optional(z.array(z.object({
+            slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+            status: z.enum([
+                'active',
+                'warning',
+                'paused',
+                'breached',
+                'completed'
+            ]),
+            clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+            deadline: z.iso.datetime({ offset: true }).readonly()
+        })).readonly()),
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            application: z.object({
+                id: z.optional(z.uuid().readonly()),
+                status: z.optional(z.enum([
+                    'draft',
+                    'submitted',
+                    'under_review',
+                    'withdrawn',
+                    'closed',
+                    'scheduled',
+                    'in_progress',
+                    'completed'
+                ])),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
+                programCount: z.optional(z.int().readonly())
+            })
+        })))),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            lifecycleState: z.enum([
+                'active',
+                'superseded',
+                'disposed'
+            ]),
+            legalHold: z.optional(z.boolean().readonly()),
+            latestVersionId: z.uuid().readonly(),
+            retentionDeadline: z.optional(z.union([
+                z.iso.datetime({ offset: true }).readonly(),
+                z.null()
+            ]).readonly()),
+            metadata: z.optional(z.record(z.string(), z.unknown())),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                latestVersion: z.optional(z.string())
+            }).readonly())
+        })))
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationSummary: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })),
+    members: z.record(z.string(), z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
+            ])),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
+            programCount: z.optional(z.int().readonly())
+        })
+    }))),
+    incomes: z.record(z.string(), z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))
+});
+
+export const zUpdateApplicationDetailsData = z.object({
+    body: z.array(z.intersection(z.unknown(), z.object({
+        op: z.enum([
+            'add',
+            'remove',
+            'replace',
+            'move',
+            'copy',
+            'test'
+        ]),
+        path: z.string(),
+        value: z.optional(z.unknown()),
+        from: z.optional(z.string())
+    }))),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        'Idempotency-Key': z.string().min(1).max(255)
+    })
+});
+
+/**
+ * The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path.
+ */
+export const zUpdateApplicationDetailsResponse = z.object({
+    application: z.object({
+        programsAppliedFor: z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ])),
+        channel: z.optional(z.enum([
+            'online',
+            'phone',
+            'in_person',
+            'mail'
+        ])),
+        address: z.optional(z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().length(2),
+            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+        })),
+        contactInfo: z.optional(z.object({
+            phone: z.optional(z.string()),
+            email: z.optional(z.email()),
+            preferredContact: z.optional(z.enum([
+                'phone',
+                'email',
+                'mail'
+            ]))
+        })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
+        type: z.optional(z.enum(['new', 'renewal'])),
+        interviewDate: z.optional(z.iso.date()),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        previousHousehold: z.optional(z.object({
+            size: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
+            members: z.optional(z.array(z.object({
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                jobId: z.optional(z.string()),
+                source: z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                type: z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
+            })))
+        }).readonly()),
+        programCount: z.int().readonly(),
+        confirmationNumber: z.optional(z.string().readonly()),
+        status: z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed',
+            'scheduled',
+            'in_progress',
+            'completed'
+        ]),
+        submittedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        openedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        slaInfo: z.optional(z.array(z.object({
+            slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+            status: z.enum([
+                'active',
+                'warning',
+                'paused',
+                'breached',
+                'completed'
+            ]),
+            clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+            deadline: z.iso.datetime({ offset: true }).readonly()
+        })).readonly()),
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            application: z.object({
+                id: z.optional(z.uuid().readonly()),
+                status: z.optional(z.enum([
+                    'draft',
+                    'submitted',
+                    'under_review',
+                    'withdrawn',
+                    'closed',
+                    'scheduled',
+                    'in_progress',
+                    'completed'
+                ])),
+                programsAppliedFor: z.optional(z.array(z.enum([
+                    'snap',
+                    'medicaid',
+                    'chip',
+                    'tanf'
+                ]))),
+                programCount: z.optional(z.int().readonly())
+            })
+        })))),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            lifecycleState: z.enum([
+                'active',
+                'superseded',
+                'disposed'
+            ]),
+            legalHold: z.optional(z.boolean().readonly()),
+            latestVersionId: z.uuid().readonly(),
+            retentionDeadline: z.optional(z.union([
+                z.iso.datetime({ offset: true }).readonly(),
+                z.null()
+            ]).readonly()),
+            metadata: z.optional(z.record(z.string(), z.unknown())),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                latestVersion: z.optional(z.string())
+            }).readonly())
+        })))
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationSummary: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })),
+    members: z.record(z.string(), z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed',
+                'scheduled',
+                'in_progress',
+                'completed'
+            ])),
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'chip',
+                'tanf'
+            ]))),
+            programCount: z.optional(z.int().readonly())
+        })
+    }))),
+    incomes: z.record(z.string(), z.object({
+        memberId: z.optional(z.uuid()),
+        source: z.optional(z.enum([
+            'earned',
+            'self_employment',
+            'unearned'
+        ])),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly',
+            'irregular'
+        ])),
+        paidInCash: z.optional(z.boolean()),
+        amountVaries: z.optional(z.boolean()),
+        links: z.optional(z.object({
+            member: z.optional(z.string())
+        }).readonly())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid().readonly(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))
+});

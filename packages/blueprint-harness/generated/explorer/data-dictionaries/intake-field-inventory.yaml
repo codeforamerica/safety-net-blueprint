@@ -124,3 +124,74 @@ application.reviewProgress[].total: { type: integer }
 application.reviewProgress[].limit: { type: integer }
 application.reviewProgress[].offset: { type: integer }
 application.reviewProgress[].hasNext: { type: boolean }
+
+# ── ApplicationDetailsResponse ──────────────────────────────────────────────────
+
+application.details.application: { type: Application }
+application.details.application.proofOfIncomeDocumentId: { type: uuid, relationship: Document }
+application.details.application.id: { type: uuid }
+application.details.application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
+application.details.application.channel: { type: enum, values: [online, phone, in_person, mail] }
+application.details.application.address: { type: object }
+application.details.application.address.street: { type: string }
+application.details.application.address.city: { type: string }
+application.details.application.address.state: { type: string }
+application.details.application.address.zip: { type: string }
+application.details.application.contactInfo: { type: object }
+application.details.application.contactInfo.phone: { type: string }
+application.details.application.contactInfo.email: { type: email }
+application.details.application.contactInfo.preferredContact: { type: enum, values: [phone, email, mail] }
+application.details.application.type: { type: enum, values: [new, renewal] }
+application.details.application.interviewDate: { type: date }
+application.details.application.labels: { type: object }
+application.details.application.countyCode: { type: string }
+application.details.application.links: { type: object }
+application.details.application.links.proofOfIncomeDocument: { type: string }
+application.details.application.previousHousehold: { type: object }
+application.details.application.previousHousehold.size: { type: integer }
+application.details.application.previousHousehold.utilitiesIncludedInRent: { type: boolean }
+application.details.application.previousHousehold.monthlyIncome: { type: number }
+application.details.application.previousHousehold.monthlyExpenses: { type: number }
+application.details.application.previousHousehold.members[]: { type: list }
+application.details.application.previousHousehold.members[].id: { type: string }
+application.details.application.previousHousehold.members[].dateOfBirth: { type: date }
+application.details.application.previousHousehold.members[].isDisabled: { type: boolean }
+application.details.application.previousHousehold.jobs[]: { type: list }
+application.details.application.previousHousehold.jobs[].id: { type: string }
+application.details.application.previousHousehold.jobs[].memberId: { type: string }
+application.details.application.previousHousehold.jobs[].employer: { type: string }
+application.details.application.previousHousehold.incomes[]: { type: list }
+application.details.application.previousHousehold.incomes[].id: { type: string }
+application.details.application.previousHousehold.incomes[].memberId: { type: string }
+application.details.application.previousHousehold.incomes[].jobId: { type: string }
+application.details.application.previousHousehold.incomes[].source: { type: enum, values: [earned, self_employment, unearned] }
+application.details.application.previousHousehold.incomes[].amount: { type: number }
+application.details.application.previousHousehold.incomes[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly, irregular] }
+application.details.application.previousHousehold.incomes[].paidInCash: { type: boolean }
+application.details.application.previousHousehold.incomes[].amountVaries: { type: boolean }
+application.details.application.previousHousehold.expenses[]: { type: list }
+application.details.application.previousHousehold.expenses[].type: { type: enum, values: [rent, mortgage, utilities, dependent_care, medical, child_support] }
+application.details.application.previousHousehold.expenses[].amount: { type: number }
+application.details.application.previousHousehold.expenses[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
+application.details.application.programCount: { type: integer }
+application.details.application.confirmationNumber: { type: string }
+application.details.application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed, scheduled, in_progress, completed] }
+application.details.application.submittedAt: { type: datetime }
+application.details.application.openedAt: { type: datetime }
+application.details.application.slaTypeCode: { type: enum, values: [snap_standard, medicaid_standard] }
+application.details.application.slaInfo[]: { type: list }
+application.details.application.slaInfo[].slaTypeCode: { type: enum, values: [snap_standard, medicaid_standard] }
+application.details.application.slaInfo[].status: { type: enum, values: [active, warning, paused, breached, completed] }
+application.details.application.slaInfo[].clockStartedAt: { type: datetime }
+application.details.application.slaInfo[].deadline: { type: datetime }
+application.details.application.members[]: { type: list(ApplicationMember) }
+application.details.application.members[].id: { type: uuid }
+application.details.application.members[].firstName: { type: string }
+application.details.application.members[].lastName: { type: string }
+application.details.application.members[].dateOfBirth: { type: date }
+application.details.application.members[].relationship: { type: enum, values: [self, spouse, child, parent, sibling, other] }
+application.details.application.members[].verificationEvidence: { type: string }
+application.details.application.members[].application: { type: object, relationship: Application }
+application.details.application.proofOfIncomeDocument: { type: string, relationship: Document }
+application.details.members: { type: object }
+application.details.incomes: { type: object }

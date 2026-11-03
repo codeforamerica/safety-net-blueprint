@@ -5,7 +5,7 @@
 
 determination.id: { type: uuid }
 determination.applicationId: { type: uuid, relationship: Application }
-determination.status: { type: enum, values: [pending, in_progress, complete] }
+determination.status: { type: enum, values: [pending, completed] }
 determination.expedited: { type: boolean }
 determination.determinedAt: { type: datetime }
 determination.links: { type: object }

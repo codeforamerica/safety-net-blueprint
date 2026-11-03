@@ -273,8 +273,7 @@ components:
           type: string
           enum:
             - pending
-            - in_progress
-            - complete
+            - completed
           readOnly: true
           description: Current status of the eligibility determination.
         expedited:
@@ -315,15 +314,9 @@ components:
           required:
             - applicationId
     DeterminationUpdate:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/DeterminationWritable"
       minProperties: 1
-      properties:
-        status:
-          type: string
-          enum:
-            - pending
-            - in_progress
-            - complete
     DeterminationList:
       type: object
       required:

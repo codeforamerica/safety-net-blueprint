@@ -66,8 +66,7 @@
               "startedAt": {
                 "type": "string",
                 "format": "date-time",
-                "readOnly": true,
-                "description": "When the conversation began, by the client's clock — the clock every time on its entries is on."
+                "description": "When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.\n"
               },
               "closedAt": {
                 "type": "string",

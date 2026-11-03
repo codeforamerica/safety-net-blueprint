@@ -27,7 +27,7 @@ export const zTranscript = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -82,7 +82,7 @@ export const zTranscriptList = z.object({
             'paused',
             'closed'
         ]),
-        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -395,6 +395,7 @@ export const zTranscriptWritable2 = z.object({
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     profile: z.optional(z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
@@ -415,6 +416,7 @@ export const zTranscriptListWritable = z.object({
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         profile: z.optional(z.object({
             name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
             description: z.optional(z.string()),
@@ -573,7 +575,7 @@ export const zListTranscriptsResponse = z.object({
             'paused',
             'closed'
         ]),
-        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -632,7 +634,7 @@ export const zCreateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -691,7 +693,7 @@ export const zGetTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -742,7 +744,7 @@ export const zUpdateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1168,7 +1170,7 @@ export const zPauseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1216,7 +1218,7 @@ export const zResumeTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1264,7 +1266,7 @@ export const zCloseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),

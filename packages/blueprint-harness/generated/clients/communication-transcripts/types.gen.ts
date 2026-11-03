@@ -70,9 +70,10 @@ export type Transcript = {
      */
     status: 'recording' | 'paused' | 'closed';
     /**
-     * When the conversation began, by the client's clock — the clock every time on its entries is on.
+     * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+     *
      */
-    readonly startedAt?: string;
+    startedAt?: string;
     /**
      * When the transcript was closed, by the client's clock.
      */
@@ -252,9 +253,10 @@ export type TranscriptList = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -946,6 +948,11 @@ export type TranscriptWritable2 = {
     client?: string;
 } & {
     /**
+     * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+     *
+     */
+    startedAt?: string;
+    /**
      * Client-writable fields of a profile.
      */
     profile?: {
@@ -1013,6 +1020,11 @@ export type TranscriptListWritable = {
          */
         client?: string;
     } & {
+        /**
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
+         */
+        startedAt?: string;
         /**
          * Client-writable fields of a profile.
          */
@@ -1504,9 +1516,10 @@ export type ListTranscriptsResponses = {
              */
             status: 'recording' | 'paused' | 'closed';
             /**
-             * When the conversation began, by the client's clock — the clock every time on its entries is on.
+             * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+             *
              */
-            readonly startedAt?: string;
+            startedAt?: string;
             /**
              * When the transcript was closed, by the client's clock.
              */
@@ -1768,9 +1781,10 @@ export type CreateTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -2006,9 +2020,10 @@ export type GetTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -2243,9 +2258,10 @@ export type UpdateTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -4132,9 +4148,10 @@ export type PauseTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -4387,9 +4404,10 @@ export type ResumeTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */
@@ -4642,9 +4660,10 @@ export type CloseTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on. The client sets it when it creates the transcript; it can't change afterward, since an update doesn't take it.
+         *
          */
-        readonly startedAt?: string;
+        startedAt?: string;
         /**
          * When the transcript was closed, by the client's clock.
          */

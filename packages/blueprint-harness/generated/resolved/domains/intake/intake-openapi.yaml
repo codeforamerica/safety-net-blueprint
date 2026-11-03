@@ -1033,6 +1033,72 @@ paths:
           $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/details:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationDetails
+      operationId: getApplicationDetails
+      responses:
+        "200":
+          description: applicationDetails retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailsResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: intake
+        id: applicationDetails
+    patch:
+      summary: Change applicationDetails
+      operationId: updateApplicationDetails
+      description: Applies a JSON Patch (RFC 6902) all or nothing. Each change is made through its record's own operation, as the caller, with that operation's permissions, guards and events; if any change is refused, nothing is saved and no events are sent. A change may add a record under an id the caller chooses, and another change in the same patch may name it.
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: ../../base/schemas/operations.yaml#/$defs/JsonPatch
+      responses:
+        "200":
+          description: applicationDetails after the patch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailsResponse"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+          description: "The body is not a JSON Patch: not JSON, an unknown op, or an op missing what it needs."
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
+          description: A change's own operation doesn't let the caller make it. Nothing was saved.
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+          description: "The data changed since it was read: a test operation failed, a path names a record or field that isn't there, or a record is in a state its change can't start from. Nothing was saved."
+        "415":
+          description: The request body is not application/json-patch+json.
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+          description: A change is refused because its record's own operation refuses it, such as one to a field marked readOnly, or because it moves a record to another root. Nothing was saved.
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: intake
+        id: applicationDetails
 components:
   parameters:
     ApplicationIdParam:
@@ -1941,6 +2007,31 @@ components:
         - limit
         - offset
         - hasNext
+    ApplicationDetailsResponse:
+      type: object
+      description: "The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path."
+      required:
+        - application
+        - members
+        - incomes
+      additionalProperties: false
+      properties:
+        application:
+          $ref: "#/components/schemas/Application"
+        members:
+          type: object
+          description: The ApplicationMember records, keyed by id.
+          propertyNames:
+            format: uuid
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationMember"
+        incomes:
+          type: object
+          description: The ApplicationIncome records, keyed by id.
+          propertyNames:
+            format: uuid
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationIncome"
     Document:
       allOf:
         - $ref: "#/components/schemas/DocumentWritable"
