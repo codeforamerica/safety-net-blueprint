@@ -165,8 +165,12 @@ export async function executeTransition({
   // The id of the first event this action sends, chosen now so a call it
   // makes can name it as the cause of the call's own events.
   const actionEventId = crypto.randomUUID();
+  // A call to an operation that requires an Idempotency-Key is made with this
+  // record's id as the key: accepting a suggestion calls once, and only a call
+  // that succeeds is kept under the key.
   const perform = performerFor({
     callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
+    idempotencyKey: resource?.id ?? null,
   });
 
   const fresh = () => {
@@ -341,7 +345,7 @@ export function performerFor(options) {
   return perform;
 }
 
-function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls }) {
+function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls, idempotencyKey = null }) {
   if (!stepCalls) {
     return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
   }
@@ -350,6 +354,7 @@ function performCall(call, step, { callerId, callerRoles, timestamp, traceparent
     caller: { id: callerId, roles: callerRoles },
     traceparent,
     causationid,
+    idempotencyKey,
     now: timestamp,
     runAction: ({ entry, collection, id, action, body }) => executeTransition({
       resourceName: collection,

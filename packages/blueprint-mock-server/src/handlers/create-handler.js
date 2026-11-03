@@ -14,6 +14,7 @@ import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 import { callsIn, callProblems } from '../operation-calls.js';
 import { makesSuggestions, fingerprintOf, repeated } from '../suggestion-fingerprints.js';
+import { checkProposedPatch } from '../suggestion-patches.js';
 
 
 /**
@@ -123,7 +124,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // A suggestion repeating one still open, or dismissed, is refused.
       let fingerprint;
       if (makesSuggestions(apiMetadata, endpoint)) {
-        fingerprint = await fingerprintOf(requestBody);
+        // A patch it carries is tried against the composition as it is now.
+        const { refused, created } = await checkProposedPatch(requestBody, operations ?? new Map());
+        if (refused) return Response.json(refused.body, { status: refused.status });
+        fingerprint = await fingerprintOf(requestBody, { created });
         const existing = repeated(store, endpoint.collectionName, fingerprint);
         if (existing) {
           return Response.json({

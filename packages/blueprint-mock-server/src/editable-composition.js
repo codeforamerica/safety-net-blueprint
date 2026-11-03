@@ -238,6 +238,69 @@ function plan(composition, before, after, { resources, params, primaryParam }) {
   return { steps: [...ordered, ...steps.filter((s) => s.kind === 'update'), ...steps.filter((s) => s.kind === 'remove')] };
 }
 
+// Each editable composition by its update's operationId, for checking a
+// suggestion whose call is a patch to one.
+const byOperation = new Map();
+
+/** Forget the compositions a previous server registered. */
+export function clearEditableOperations() {
+  byOperation.clear();
+}
+
+/**
+ * Remember an editable composition under its update's operationId.
+ *
+ * @param {string} operationId
+ * @param {object} composition
+ * @param {object} options - As createEditablePatchHandler takes them
+ */
+export function registerEditableOperation(operationId, composition, options) {
+  byOperation.set(operationId, { composition, options });
+}
+
+/**
+ * What a patch would do to an editable composition as it is now, saving
+ * nothing: the document before and after, and the calls the patch becomes.
+ * Refused as the composition's PATCH refuses it, except that a failed `test`
+ * is told apart (409) from a path that names nothing (422).
+ *
+ * @param {string} operationId - The composition's update
+ * @param {object} params - Its path parameters, by name
+ * @param {object[]} patch
+ * @returns {Promise<{ before: object, after: object, steps: object[], store: object } | { refused: { status: number, body: object } } | null>}
+ *   Null when no editable composition has that update.
+ */
+export async function previewPatch(operationId, params, patch) {
+  const registered = byOperation.get(operationId);
+  if (!registered) return null;
+  const { composition, options } = registered;
+  const no = (status, code, message, details) => ({ refused: { status, body: { code, message, ...(details ? { details } : {}) } } });
+
+  const before = assembleEditable(composition, params, options);
+  if (!before) return no(422, 'VALIDATION_ERROR', `No ${composition.resource} has the id "${params[options.primaryParam]}".`);
+
+  const after = structuredClone(before);
+  const results = applyPatch(after, patch);
+  const i = results.findIndex(Boolean);
+  if (i >= 0) {
+    const error = results[i];
+    // A test of a path that isn't there names nothing; one of a value that
+    // changed is a conflict.
+    const tested = patch[i].path.split('/').slice(1).map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+      .reduce((node, key) => (node && typeof node === 'object' ? node[key] : undefined), after);
+    return error.name === 'TestError' && tested !== undefined
+      ? no(409, 'CONFLICT', `A test failed: the data changed since it was read. ${error.message}`, [{ index: i, field: patch[i].path, message: error.message }])
+      : no(422, 'VALIDATION_ERROR', `The patch names something the composition doesn't have: ${error.message}`, [{ index: i, field: patch[i].path, message: error.message }]);
+  }
+
+  const planned = plan(composition, before, after, { ...options, params });
+  if (planned.refused) return { refused: { status: planned.refused.status, body: await planned.refused.json() } };
+  // Each step as the ordinary call it becomes, so it's checked the way any
+  // suggestion's call is.
+  const steps = planned.steps.map((step) => ({ ...step, call: callFor(step, params) }));
+  return { before, after, steps, store: options.store };
+}
+
 /** The OperationCall a step makes, its path parameters filled in. */
 function callFor(step, params) {
   const values = { ...params, ...step.ids };
