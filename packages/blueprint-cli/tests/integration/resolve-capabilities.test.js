@@ -40,6 +40,29 @@ function contractSet(capabilities) {
       `  x-capabilities: [${capabilities.join(', ')}]`,
       '',
     ].join('\n'));
+    // A set including a capability says what its polymorphic references may
+    // name. This one has no resources, so each names something outside it.
+    const outside = (file, schema, typeField, idField) => [
+      `  - target: $.components.schemas.${schema}.properties.${typeField}`,
+      `    files: ${file}`,
+      '    update: { enum: [outside] }',
+      `  - target: $.components.schemas.${schema}.properties.${idField}.x-relationship.discriminator`,
+      `    files: ${file}`,
+      '    update: { mapping: { outside: External } }',
+    ];
+    const transcripts = 'base/domains/communication/communication-transcripts-openapi.yaml';
+    const suggestions = 'base/domains/decision-support/decision-support-suggestions-openapi.yaml';
+    writeFileSync(join(dir, 'overlays/subject-types.yaml'), [
+      "overlay: '1.0.0'",
+      'info: { title: Subject types, version: 1.0.0 }',
+      'actions:',
+      ...(capabilities.includes('transcripts') ? outside(transcripts, 'TranscriptWritable', 'subjectType', 'subjectId') : []),
+      ...(capabilities.includes('suggestions') ? [
+        ...outside(suggestions, 'InformingSuggestionFields', 'subjectType', 'subjectId'),
+        ...outside(suggestions, 'SuggestionEvidence', 'sourceType', 'sourceId'),
+      ] : []),
+      '',
+    ].join('\n'));
   }
   return dir;
 }

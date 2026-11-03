@@ -171,11 +171,11 @@ export function validateForeignKeys(spec, errors, sameDomainSchemas = new Set())
             message: `Schema "${schemaName}": "${propName}" declares onDelete: ${JSON.stringify(rel.onDelete)}. The only value is cascade; leave it out to refuse deleting a record this one names.`,
             severity: 'error'
           });
-        } else if (reservedResources.has(rel.resource)) {
+        } else if (rel.resource === 'External') {
           errors.push({
             path: `components/schemas/${schemaName}/${propPath}`,
             rule: 'fk-on-delete-unknown',
-            message: `Schema "${schemaName}": "${propName}" names resource ${rel.resource}, which has no records here to delete, so onDelete has nothing to act on.`,
+            message: `Schema "${schemaName}": "${propName}" names resource External, which has no records here to delete, so onDelete has nothing to act on.`,
             severity: 'error'
           });
         }

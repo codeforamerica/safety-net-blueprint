@@ -167,6 +167,15 @@ borrowed:
       where one fits. Don't adopt it wholesale.
     details: docs/architecture/cross-cutting/behavioral-contract-dsl.md (Decision 2)
 
+  - name: OpenAPI discriminator
+    url: https://spec.openapis.org/oas/v3.1.0#discriminator-object
+    use: >
+      A polymorphic reference names its type field and maps type values to
+      resources with x-relationship's discriminator, borrowing OpenAPI's
+      propertyName and mapping. As in OpenAPI, a value without a mapping is
+      taken as a name; here a resource's, in snake_case.
+    details: docs/architecture/x-extensions.md (x-relationship)
+
   - name: JSON:API client-generated ids
     url: https://jsonapi.org/format/#crud-creating-client-ids
     use: >

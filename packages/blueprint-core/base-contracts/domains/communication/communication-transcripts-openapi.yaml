@@ -507,6 +507,9 @@ components:
           description: The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
+            onDelete: cascade
         model:
           type: string
           description: |
@@ -684,6 +687,7 @@ components:
           description: The transcript it belongs to.
           x-relationship:
             resource: Transcript
+            onDelete: cascade
         kind:
           $ref: "#/components/schemas/TranscriptEntryKind"
         startedAt:

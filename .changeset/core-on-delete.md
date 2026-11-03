@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-core": minor
 ---
 
-`x-relationship` now takes `onDelete: cascade`, following OData's `OnDelete`, to say a record is deleted with the record its field names; any other value fails validation. (#516)
+Before, a contract couldn't say what deleting a record does to the records that name it. Now `x-relationship` takes `onDelete: cascade`, following OData's `OnDelete`, to delete them with it. (#516)

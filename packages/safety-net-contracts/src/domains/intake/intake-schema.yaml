@@ -1296,6 +1296,10 @@ $defs:
           household-level obligations (e.g., proof of residency).
         x-relationship:
           resource: Polymorphic
+          discriminator:
+            propertyName: sourceType
+            mapping:
+              member: ApplicationMember
       sourceType:
         type:
           - string

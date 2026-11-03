@@ -921,6 +921,8 @@ components:
           description: ID of the linked record.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
         linkedBy:
           type: string
           description: Identity of who created the link. Required for HIPAA chain-of-custody (45 CFR § 164.312).
@@ -958,6 +960,8 @@ components:
           format: uuid
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
 
     DocumentLinkList:
       type: object

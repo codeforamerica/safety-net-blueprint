@@ -68,6 +68,8 @@ $defs:
           consumers must resolve by type; no automatic expansion is performed.
         x-relationship:
           resource: Polymorphic
+          discriminator:
+            propertyName: subjectType
       programType:
         $ref: "../../common/components/common.yaml#/Program"
         description: >

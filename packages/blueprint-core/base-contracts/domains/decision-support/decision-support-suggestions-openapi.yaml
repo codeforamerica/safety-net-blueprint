@@ -214,6 +214,9 @@ components:
           description: The record it is about. `subjectType` says what kind.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
+            onDelete: cascade
         path:
           type: string
           format: json-pointer
@@ -299,6 +302,9 @@ components:
           description: The record it cites. `sourceType` says what kind.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: sourceType
+            onDelete: cascade
 
     SuggestionCreate:
       oneOf:

@@ -183,13 +183,21 @@ x_extensions:
         FK only. Controls how the resolver transforms the FK field. "expand" inlines
         the related resource; "links-only" adds a links navigation object. Omitting
         style leaves the field untouched — x-relationship is metadata only.
+      discriminator: >
+        Polymorphic only (resource: Polymorphic), and required there. Name the
+        field beside the id that says its type in propertyName, as OpenAPI's
+        discriminator does; make that field an enum. Each value names a
+        resource in snake_case (application_member → ApplicationMember); write
+        mapping for a value that doesn't (member: ApplicationMember), or map it
+        to External for something outside the contracts. A framework field
+        leaves the enum to the contract set, which adds it by overlay.
       onDelete: >
         FK only. What deleting the named record does to this one, as OData's
         OnDelete. Write cascade when this record can't outlive the one it names,
         such as a member's income or an application's members: deleting the
         named record deletes this one too. Leave it out to refuse that delete
         with 409 while this record names it (OData's None). cascade is the only
-        value; External and Polymorphic references take none.
+        value; External references take none.
       id: >
         Non-FK only. The identifier of the artifact within its domain contract.
         For state-machine-action: the action id. For ruleset: the ruleset name.

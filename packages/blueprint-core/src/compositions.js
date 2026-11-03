@@ -635,7 +635,7 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex) {
     },
   };
 
-  const schemaEntries = generateStateSchemas(composition.state);
+  const schemaEntries = generateStateSchemas(composition.state, composition.sections);
 
   return { pathEntries, schemaEntries };
 }
@@ -649,9 +649,10 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex) {
  * so loadStateDefaults can read defaults from the resolved spec).
  *
  * @param {Object} stateConfig - composition.state
+ * @param {Object} [sections] - composition.sections, which a state record's section names
  * @returns {Object} Map of schema name → schema entry (empty object if no state config)
  */
-export function generateStateSchemas(stateConfig) {
+export function generateStateSchemas(stateConfig, sections = {}) {
   const stateNameInfo = deriveStateResourceName(stateConfig);
   if (!stateNameInfo) return {};
 
@@ -664,17 +665,25 @@ export function generateStateSchemas(stateConfig) {
   const resourceSchemaName = defsKey;
   const listSchemaName     = `${defsKey}ListResponse`;
 
+  const sectionNames = Object.keys(sections ?? {});
   const frameworkProperties = {
     id:            { type: 'string', format: 'uuid', readOnly: true },
-    section:       { type: 'string', readOnly: true },
-    // Which record this identifies is selected by `section`, so the target
-    // cannot be declared statically. Without the annotation it reads as an
-    // undeclared foreign key and fails pattern validation.
+    section:       { type: 'string', readOnly: true, ...(sectionNames.length > 0 ? { enum: sectionNames } : {}) },
+    // The record this is about, for a section of records: of the resource
+    // its section shows, so section is its type and each section maps to
+    // that resource. A record's progress goes when the record does.
     itemId: {
       type: ['string', 'null'],
       format: 'uuid',
       readOnly: true,
-      'x-relationship': { resource: 'Polymorphic' },
+      'x-relationship': {
+        resource: 'Polymorphic',
+        discriminator: {
+          propertyName: 'section',
+          mapping: Object.fromEntries(Object.entries(sections ?? {}).map(([name, section]) => [name, section.resource])),
+        },
+        onDelete: 'cascade',
+      },
     },
     createdAt:     { type: 'string', format: 'date-time', readOnly: true },
     updatedAt:     { type: 'string', format: 'date-time', readOnly: true },

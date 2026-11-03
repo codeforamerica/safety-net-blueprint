@@ -62,6 +62,31 @@ function target(definition) {
 }
 
 /**
+ * The resource a polymorphic reference's type value names: its discriminator's
+ * mapping, or else the value as a resource name in snake_case
+ * (application_member → ApplicationMember), as core's validation reads it.
+ * Null for External, or a value that names nothing.
+ *
+ * @param {object} relationship - The reference's x-relationship
+ * @param {*} value - The type field's value
+ * @returns {string|null}
+ */
+function typeTarget(relationship, value) {
+  if (value === undefined || value === null) return null;
+  const named = relationship.discriminator?.mapping?.[value]
+    ?? String(value).split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+  return named === 'External' ? null : named;
+}
+
+/** The resource a field in a record points at: by its relationship, or for a polymorphic one, by the record's type field. */
+function targetIn(definition, record) {
+  const relationship = definition?.['x-relationship'];
+  if (relationship?.resource !== 'Polymorphic') return target(definition);
+  const typeField = relationship.discriminator?.propertyName;
+  return typeField ? typeTarget(relationship, record?.[typeField]) : null;
+}
+
+/**
  * The records a write is made under, by resource name.
  *
  * Read from the API model's parent links and the route's parameters, so a
@@ -117,12 +142,12 @@ export function missingReferences(body, schema, follow = (x) => x, store, contex
   }
 
   const missing = [];
-  for (const props of propertiesOf(schema, follow)) {
+  for (const props of writtenProperties(schema, follow)) {
     for (const [name, definition] of Object.entries(props)) {
       const value = body[name];
       if (value === undefined || value === null) continue;
       const field = at ? `${at}.${name}` : name;
-      const resource = target(definition);
+      const resource = targetIn(definition, body);
       if (!resource) {
         missing.push(...missingReferences(value, definition, follow, store, { ...context, at: field }));
         continue;
@@ -139,6 +164,17 @@ export function missingReferences(body, schema, follow = (x) => x, store, contex
     }
   }
   return missing;
+}
+
+/**
+ * The property maps a body may be written against: its own and its allOf's,
+ * and each oneOf or anyOf branch's, such as a suggestion's two kinds. A field
+ * the body doesn't hold is skipped, so a branch it isn't adds nothing.
+ */
+function writtenProperties(schema, follow) {
+  const node = follow(schema);
+  const branches = [...(node?.oneOf ?? []), ...(node?.anyOf ?? [])];
+  return [...propertiesOf(schema, follow), ...branches.flatMap((branch) => writtenProperties(branch, follow))];
 }
 
 /**
@@ -173,18 +209,26 @@ function otherParent(record, resource, follow, { parents = {}, resources = [], s
 
 /**
  * Every field that names a record of another resource, by the resource it
- * names: which resource holds the field, where its records are kept, the
- * field the id is kept in, and what deleting the named record does to them —
+ * names: which resource holds the field, where its records are kept, the path
+ * to the field — through nested objects and lists, such as a suggestion's
+ * evidence[].sourceId — and what deleting the named record does to them:
  * x-relationship's onDelete, OData's OnDelete. Without one, a delete is
  * refused while any record names it (OData's None); with `cascade`, the
  * records naming it are deleted with it.
  *
+ * A polymorphic reference names a resource per value of its type field, so
+ * it's indexed once for each, matched on that value too.
+ *
  * @param {object[]} apiSpecs
- * @returns {Map<string, Array<{ resource: object, api: object, collection: string, field: string, onDelete: string|null }>>}
+ * @returns {Map<string, Array<{ resource: object, api: object, collection: string, path: string[], typeField: string|null, typeValue: *, onDelete: string|null }>>}
  */
 export function referencesByTarget(apiSpecs) {
   const byTarget = new Map();
   const seen = new Set();
+  const add = (named, entry) => {
+    if (!byTarget.has(named)) byTarget.set(named, []);
+    byTarget.get(named).push(entry);
+  };
   for (const api of apiSpecs) {
     const follow = api.resolve?.schema ?? ((x) => x);
     const model = api.doc?.model?.();
@@ -193,27 +237,65 @@ export function referencesByTarget(apiSpecs) {
       for (const resource of [top, ...top.singletons]) {
         const schema = resource.name ? api.doc.content?.components?.schemas?.[resource.name] : null;
         if (!schema) continue;
+        const collection = resourceToCollection(resource.name);
         // An expanded relationship is read under another name; its id is kept under the original.
         const stored = new Map(extractExpandFields(schema, follow).map((f) => [f.fieldName, f.fkField]));
-        for (const props of propertiesOf(schema, follow)) {
-          for (const [name, definition] of Object.entries(props)) {
-            const relationship = definition?.['x-relationship'] ?? follow(definition)?.['x-relationship'];
-            const named = target({ 'x-relationship': relationship });
-            if (!named) continue;
-            const field = stored.get(name) ?? name;
-            const key = `${resource.name}.${field}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            if (!byTarget.has(named)) byTarget.set(named, []);
-            byTarget.get(named).push({
-              resource, api, collection: resourceToCollection(resource.name), field, onDelete: relationship.onDelete ?? null,
-            });
+        for (const { path, definition, siblings } of referenceFields(schema, follow)) {
+          const relationship = definition?.['x-relationship'] ?? follow(definition)?.['x-relationship'];
+          const fieldPath = path.length === 1 ? [stored.get(path[0]) ?? path[0]] : path;
+          const key = `${resource.name}.${fieldPath.join('.')}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const typeField = relationship.resource === 'Polymorphic' ? relationship.discriminator?.propertyName : null;
+          const values = typeField ? (follow(siblings[typeField])?.enum ?? []) : [null];
+          for (const value of values) {
+            const named = typeField ? typeTarget(relationship, value) : target({ 'x-relationship': relationship });
+            if (named) {
+              add(named, { resource, api, collection, path: fieldPath, typeField, typeValue: value, onDelete: relationship.onDelete ?? null });
+            }
           }
         }
       }
     }
   }
   return byTarget;
+}
+
+/**
+ * The fields in a schema that declare a relationship to a record, at any
+ * depth: through allOf, oneOf and anyOf, nested objects, and lists. A list is
+ * marked [] in the path.
+ */
+function* referenceFields(schema, follow, path = [], depth = 0) {
+  const node = follow(schema);
+  if (!node || typeof node !== 'object' || depth > 8) return;
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    for (const part of node[key] ?? []) yield* referenceFields(part, follow, path, depth + 1);
+  }
+  if (node.items) yield* referenceFields(node.items, follow, [...path, '[]'], depth + 1);
+  for (const [name, definition] of Object.entries(node.properties ?? {})) {
+    const relationship = definition?.['x-relationship'] ?? follow(definition)?.['x-relationship'];
+    if (relationship?.resource && (!relationship.type || relationship.type === 'fk')) {
+      yield { path: [...path, name], definition, siblings: node.properties };
+    } else {
+      yield* referenceFields(definition, follow, [...path, name], depth + 1);
+    }
+  }
+}
+
+/** Whether a record names an id along a reference's path, with its type value beside it. */
+function names(record, { path, typeField, typeValue }, id) {
+  const walk = (node, rest) => {
+    if (node === null || node === undefined) return false;
+    if (rest.length === 0) return false;
+    const [step, ...more] = rest;
+    if (step === '[]') return Array.isArray(node) && node.some((item) => walk(item, more));
+    if (more.length === 0) {
+      return node[step] === id && (!typeField || node[typeField] === typeValue);
+    }
+    return walk(node[step], more);
+  };
+  return walk(record, path);
 }
 
 /**
@@ -236,10 +318,10 @@ export function deletionOf(record, referencesTo, store) {
     doomed.add(keyOf(collection, id));
     deleted.push({ name, collection, id, reference });
     for (const ref of referencesTo?.get(name) ?? []) {
-      const { items } = store.findAll(ref.collection, { [ref.field]: id }, { limit: null });
-      for (const item of items) {
+      const { items } = store.findAll(ref.collection, {}, { limit: null });
+      for (const item of items.filter((record) => names(record, ref, id))) {
         if (ref.onDelete === 'cascade') visit(ref.resource.name, ref.collection, item.id, ref);
-        else naming.push({ name: ref.resource.name, collection: ref.collection, id: item.id, field: ref.field });
+        else naming.push({ name: ref.resource.name, collection: ref.collection, id: item.id, field: ref.path.join('.').replace(/\.\[\]/g, '[]') });
       }
     }
   };
