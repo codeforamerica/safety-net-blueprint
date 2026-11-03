@@ -961,6 +961,21 @@ paths:
                                       type: string
                                       format: uri-reference
                                       readOnly: true
+                        - type: object
+                          properties:
+                            _links:
+                              type: object
+                              readOnly: true
+                              description: Generated composition links.
+                              properties:
+                                applicationDetails:
+                                  type: object
+                                  description: Link to the applicationDetails composition.
+                                  properties:
+                                    href:
+                                      type: string
+                                      format: uri-reference
+                                      readOnly: true
                   total:
                     type: integer
                     minimum: 0
@@ -1885,6 +1900,21 @@ paths:
                                 type: string
                                 format: uri-reference
                                 readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
         "400":
           description: The request is malformed or contains invalid parameters.
           content:
@@ -2718,6 +2748,21 @@ paths:
                           applicationReview:
                             type: object
                             description: Link to the applicationReview composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
                             properties:
                               href:
                                 type: string
@@ -3610,6 +3655,21 @@ paths:
                           applicationReview:
                             type: object
                             description: Link to the applicationReview composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
                             properties:
                               href:
                                 type: string
@@ -8913,6 +8973,21 @@ paths:
                                 type: string
                                 format: uri-reference
                                 readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
         "400":
           description: The request is malformed or contains invalid parameters.
           content:
@@ -9774,6 +9849,21 @@ paths:
                           applicationReview:
                             type: object
                             description: Link to the applicationReview composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
                             properties:
                               href:
                                 type: string
@@ -10663,6 +10753,21 @@ paths:
                                 type: string
                                 format: uri-reference
                                 readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
         "400":
           description: The request is malformed or contains invalid parameters.
           content:
@@ -11547,6 +11652,21 @@ paths:
                           applicationReview:
                             type: object
                             description: Link to the applicationReview composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
                             properties:
                               href:
                                 type: string
@@ -14915,6 +15035,21 @@ paths:
                                     type: string
                                     format: uri-reference
                                     readOnly: true
+                      - type: object
+                        properties:
+                          _links:
+                            type: object
+                            readOnly: true
+                            description: Generated composition links.
+                            properties:
+                              applicationDetails:
+                                type: object
+                                description: Link to the applicationDetails composition.
+                                properties:
+                                  href:
+                                    type: string
+                                    format: uri-reference
+                                    readOnly: true
                   members:
                     type: object
                     description: The ApplicationMember records, keyed by id.
@@ -16139,6 +16274,21 @@ paths:
                               applicationReview:
                                 type: object
                                 description: Link to the applicationReview composition.
+                                properties:
+                                  href:
+                                    type: string
+                                    format: uri-reference
+                                    readOnly: true
+                      - type: object
+                        properties:
+                          _links:
+                            type: object
+                            readOnly: true
+                            description: Generated composition links.
+                            properties:
+                              applicationDetails:
+                                type: object
+                                description: Link to the applicationDetails composition.
                                 properties:
                                   href:
                                     type: string
@@ -17492,6 +17642,21 @@ components:
                 applicationReview:
                   type: object
                   description: Link to the applicationReview composition.
+                  properties:
+                    href:
+                      type: string
+                      format: uri-reference
+                      readOnly: true
+        - type: object
+          properties:
+            _links:
+              type: object
+              readOnly: true
+              description: Generated composition links.
+              properties:
+                applicationDetails:
+                  type: object
+                  description: Link to the applicationDetails composition.
                   properties:
                     href:
                       type: string
@@ -19203,6 +19368,21 @@ components:
                       applicationReview:
                         type: object
                         description: Link to the applicationReview composition.
+                        properties:
+                          href:
+                            type: string
+                            format: uri-reference
+                            readOnly: true
+              - type: object
+                properties:
+                  _links:
+                    type: object
+                    readOnly: true
+                    description: Generated composition links.
+                    properties:
+                      applicationDetails:
+                        type: object
+                        description: Link to the applicationDetails composition.
                         properties:
                           href:
                             type: string
@@ -21353,6 +21533,21 @@ components:
                     applicationReview:
                       type: object
                       description: Link to the applicationReview composition.
+                      properties:
+                        href:
+                          type: string
+                          format: uri-reference
+                          readOnly: true
+            - type: object
+              properties:
+                _links:
+                  type: object
+                  readOnly: true
+                  description: Generated composition links.
+                  properties:
+                    applicationDetails:
+                      type: object
+                      description: Link to the applicationDetails composition.
                       properties:
                         href:
                           type: string

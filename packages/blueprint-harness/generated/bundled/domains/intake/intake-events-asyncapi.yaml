@@ -847,6 +847,21 @@ channels:
                                   type: string
                                   format: uri-reference
                                   readOnly: true
+                    - type: object
+                      properties:
+                        _links:
+                          type: object
+                          readOnly: true
+                          description: Generated composition links.
+                          properties:
+                            applicationDetails:
+                              type: object
+                              description: Link to the applicationDetails composition.
+                              properties:
+                                href:
+                                  type: string
+                                  format: uri-reference
+                                  readOnly: true
   intake.application.updated:
     address: intake.application.updated
     messages:
@@ -4167,6 +4182,21 @@ components:
                                 type: string
                                 format: uri-reference
                                 readOnly: true
+                  - type: object
+                    properties:
+                      _links:
+                        type: object
+                        readOnly: true
+                        description: Generated composition links.
+                        properties:
+                          applicationDetails:
+                            type: object
+                            description: Link to the applicationDetails composition.
+                            properties:
+                              href:
+                                type: string
+                                format: uri-reference
+                                readOnly: true
     IntakeApplicationUpdated:
       name: intake.application.updated
       summary: A Application was changed. Carries each changed field, before and after.
@@ -7430,6 +7460,21 @@ components:
                         applicationReview:
                           type: object
                           description: Link to the applicationReview composition.
+                          properties:
+                            href:
+                              type: string
+                              format: uri-reference
+                              readOnly: true
+                - type: object
+                  properties:
+                    _links:
+                      type: object
+                      readOnly: true
+                      description: Generated composition links.
+                      properties:
+                        applicationDetails:
+                          type: object
+                          description: Link to the applicationDetails composition.
                           properties:
                             href:
                               type: string

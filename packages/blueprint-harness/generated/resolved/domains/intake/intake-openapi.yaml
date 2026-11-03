@@ -1317,6 +1317,21 @@ components:
                       type: string
                       format: uri-reference
                       readOnly: true
+        - type: object
+          properties:
+            _links:
+              type: object
+              readOnly: true
+              description: Generated composition links.
+              properties:
+                applicationDetails:
+                  type: object
+                  description: Link to the applicationDetails composition.
+                  properties:
+                    href:
+                      type: string
+                      format: uri-reference
+                      readOnly: true
     ApplicationCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationWritable"

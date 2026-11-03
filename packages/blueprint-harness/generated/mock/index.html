@@ -147,6 +147,10 @@
     line-height: 1.35;
   }
   .steps .section:first-child { margin-top: .2rem; }
+  .steps .section-link {
+    all: unset; cursor: pointer; font: inherit; color: inherit;
+  }
+  .steps .section-link:hover, .steps .section-link:focus-visible { text-decoration: underline; }
   #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
   #stage > .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
   #stage > ul.note { padding-left: 1.1rem; }
@@ -339,7 +343,7 @@
   <main id="stage"></main>
 </div>
 
-<script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts","firstTour":"scenarios/application-walkthrough.arazzo.yaml"}</script>
+<script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts","firstTour":"scenarios/framework-walkthrough.arazzo.yaml"}</script>
 <script type="module">
 const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations } =
   globalThis.BlueprintMock ?? await import('./mock.js');
@@ -1382,7 +1386,21 @@ const renderTourNav = (nav, doc) => {
   const sectioned = (doc.content.workflows ?? []).length > 1;
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
     if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-      list.append(el('li', sectionOf(entry.workflow), 'section'));
+      // A section's name goes to where its description is: its first step,
+      // or its heading when the whole walk is on one page.
+      const section = el('li', '', 'section');
+      const go = el('button', sectionOf(entry.workflow), 'section-link');
+      go.onclick = () => {
+        tourStep = index;
+        renderGroups();
+        if (tourWhole) {
+          document.getElementById(`tour-section-${entry.workflow.workflowId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        renderStage();
+      };
+      section.append(go);
+      list.append(section);
     }
     const item = el('li');
     const button = el('button', '', 'op step');
@@ -1656,7 +1674,9 @@ const renderTourStage = (stage, doc) => {
     for (const [index, entry] of entries.entries()) {
       if (!tourResults.has(entry.key)) continue;
       if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-        stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+        const heading = el('h2', sectionOf(entry.workflow), 'section-heading');
+        heading.id = `tour-section-${entry.workflow.workflowId}`;
+        stage.append(heading);
         for (const part of sectionIntroOf(entry.workflow)) stage.append(part);
       }
       stage.append(tourStepPanel(doc, entries, index, { live: false }));

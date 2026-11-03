@@ -543,6 +543,18 @@ export type Application = {
             readonly href?: string;
         };
     };
+} & {
+    /**
+     * Generated composition links.
+     */
+    readonly _links?: {
+        /**
+         * Link to the applicationDetails composition.
+         */
+        applicationDetails?: {
+            readonly href?: string;
+        };
+    };
 };
 
 export type ApplicationCreate = {
@@ -1598,6 +1610,18 @@ export type ApplicationList = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -2965,6 +2989,18 @@ export type ApplicationDetailsResponse = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -5547,6 +5583,18 @@ export type ListApplicationsResponses = {
                     readonly href?: string;
                 };
             };
+        } & {
+            /**
+             * Generated composition links.
+             */
+            readonly _links?: {
+                /**
+                 * Link to the applicationDetails composition.
+                 */
+                applicationDetails?: {
+                    readonly href?: string;
+                };
+            };
         }>;
         /**
          * Total number of matching applications.
@@ -6202,6 +6250,18 @@ export type CreateApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -6800,6 +6860,18 @@ export type GetApplicationResponses = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -7438,6 +7510,18 @@ export type UpdateApplicationResponses = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -11084,6 +11168,18 @@ export type SubmitApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -11656,6 +11752,18 @@ export type OpenApplicationResponses = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -12262,6 +12370,18 @@ export type CloseApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -12834,6 +12954,18 @@ export type WithdrawApplicationResponses = {
              * Link to the applicationReview composition.
              */
             applicationReview?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationDetails composition.
+             */
+            applicationDetails?: {
                 readonly href?: string;
             };
         };
@@ -15184,6 +15316,18 @@ export type GetApplicationDetailsResponses = {
                     readonly href?: string;
                 };
             };
+        } & {
+            /**
+             * Generated composition links.
+             */
+            readonly _links?: {
+                /**
+                 * Link to the applicationDetails composition.
+                 */
+                applicationDetails?: {
+                    readonly href?: string;
+                };
+            };
         };
         /**
          * The ApplicationMember records, keyed by id.
@@ -16030,6 +16174,18 @@ export type UpdateApplicationDetailsResponses = {
                  * Link to the applicationReview composition.
                  */
                 applicationReview?: {
+                    readonly href?: string;
+                };
+            };
+        } & {
+            /**
+             * Generated composition links.
+             */
+            readonly _links?: {
+                /**
+                 * Link to the applicationDetails composition.
+                 */
+                applicationDetails?: {
                     readonly href?: string;
                 };
             };

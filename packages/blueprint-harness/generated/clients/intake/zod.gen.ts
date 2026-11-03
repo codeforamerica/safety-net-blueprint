@@ -299,6 +299,12 @@ export const zApplication = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zApplicationCreate = z.object({
@@ -905,6 +911,12 @@ export const zApplicationList = z.object({
     })).and(z.object({
         _links: z.optional(z.object({
             applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationDetails: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
@@ -1693,6 +1705,12 @@ export const zApplicationDetailsResponse = z.object({
     })).and(z.object({
         _links: z.optional(z.object({
             applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationDetails: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
@@ -3079,6 +3097,12 @@ export const zListApplicationsResponse = z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationDetails: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -3389,6 +3413,12 @@ export const zCreateApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zDeleteApplicationData = z.object({
@@ -3668,6 +3698,12 @@ export const zGetApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -3973,6 +4009,12 @@ export const zUpdateApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -5267,6 +5309,12 @@ export const zSubmitApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zOpenApplicationData = z.object({
@@ -5533,6 +5581,12 @@ export const zOpenApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -5808,6 +5862,12 @@ export const zCloseApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zWithdrawApplicationData = z.object({
@@ -6074,6 +6134,12 @@ export const zWithdrawApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationDetails: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -6740,6 +6806,12 @@ export const zGetApplicationDetailsResponse = z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationDetails: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
     })),
     members: z.record(z.string(), z.object({
         firstName: z.string(),
@@ -7143,6 +7215,12 @@ export const zUpdateApplicationDetailsResponse = z.object({
     })).and(z.object({
         _links: z.optional(z.object({
             applicationReview: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationDetails: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
