@@ -346,11 +346,12 @@ workflows:
           - condition: $response.body#/reason == 'Her pay stubs explain the changes.'
 
   - workflowId: assistantSuggestsAPatch
-    summary: The assistant suggests a new household member as a JSON Patch
+    summary: The assistant suggests a new household member through an editable composition
     description: |
-      - JSON Patch: a new member and her income depend on each other, so the assistant proposes them together, as one patch to the application's details. The suggestion is still `kind: operation`: its `call` is `updateApplicationDetails`, with `contentType: application/json-patch+json`.
+      - Editable composition: `applicationDetails` is the application with its members and incomes, as one document a caller changes with a JSON Patch. A new member and her income depend on each other, so the assistant proposes them together, as one change to that composition.
+      - The suggestion is still `kind: operation`: its `call` is the composition's update, `updateApplicationDetails`, with the patch as its body.
       - Rosa mentions her daughter Maria, who works part time. The caseworker corrects Maria's income and accepts.
-      - A correction the assistant read from old data is refused when it's accepted, because a `test` in the patch no longer holds.
+      - If the data changes after the assistant reads it, accepting its suggestion fails. The patch first checks the old value with a `test`, and that check no longer passes.
     dependsOn: [beforeInterview, caseworkerDecides]
     steps:
       - stepId: proposeTheHousehold
@@ -358,9 +359,9 @@ workflows:
           The assistant suggests Maria and her income in one patch
 
           - Rosa says "It's me and my two kids". One of them, Maria, works part time for 600 a month.
-          - The patch adds Maria under an id the assistant chose, then an income whose `memberId` is that id. The income can name Maria before she exists.
-          - Its `evidence` entry cites the transcript line, and its `path` names the change it backs up: Maria.
-          - `201`. The suggestions API applied the patch to the details as they are now, in memory, and saved nothing. An evidence `path` that named no change in the patch would be refused with `422`.
+          - The assistant makes up an id for Maria and puts it in the patch. The income in the same patch uses that id as its `memberId`, so it points at Maria even though she isn't saved yet.
+          - The suggestion cites the transcript line as evidence. The evidence's `path` is Maria's path in the patch, which says this line supports adding Maria.
+          - `201`. The suggestions API checked the patch against the application's current details without saving anything. If the evidence `path` didn't match a change in the patch, it would get `422`.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -387,10 +388,10 @@ workflows:
 
       - stepId: proposeItUnderNewIds
         description: |
-          The same suggestion under new ids is a duplicate
+          The same suggestion with different ids is rejected as a duplicate
 
-          - The assistant hears it again and proposes Maria and her income under ids it just chose.
-          - `409`, naming the first suggestion. Before comparing, the fingerprint replaces the ids of records a patch creates with their order, so the two patches read the same.
+          - The assistant proposes Maria and her income again. This time it makes up different ids for them.
+          - `409`: it's a duplicate of the first suggestion, which `details` names. The fingerprint, which is how duplicates are detected, ignores the made-up ids of new records, so both suggestions have the same fingerprint.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -414,8 +415,8 @@ workflows:
         description: |
           An income for a member who doesn't exist is refused
 
-          - The patch adds only the income, naming a member that isn't on the application and isn't added by the patch.
-          - `422`. Changes that depend on each other go in one patch.
+          - The patch adds an income for a member who isn't on the application and isn't added in the same patch.
+          - `422`. To add a member and her income, put both in one patch.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -435,10 +436,10 @@ workflows:
 
       - stepId: previewAgainstTheDetails
         description: |
-          The caseworker's app reads what the patch would change
+          The caseworker's app shows what the suggestion would change
 
-          - The app reads the application's details and applies the patch to its own copy, to show Maria and her income as they would be. Nothing is saved.
-          - Rosa is under `members`, keyed by her id, and Maria isn't there yet.
+          - The app reads the application's details, applies the patch to its own copy, and shows the caseworker the result. Nothing is saved.
+          - Rosa is in `members`. Maria isn't, yet.
         operationId: $sourceDescriptions.intake.getApplicationDetails
         parameters:
           - reference: $components.parameters.worker
@@ -451,8 +452,8 @@ workflows:
         description: |
           The caseworker corrects Maria's income and accepts
 
-          - Rosa says Maria makes 650 a month, not 600. The caseworker changes that value and accepts. A correction may change only values: the same changes, to the same paths, in the same order.
-          - `200`. One call made both changes, as the caseworker, with the suggestion's id as its `Idempotency-Key`. `performed` is the corrected call, and `call` still says 600.
+          - Rosa says Maria makes 650 a month, not 600. The caseworker changes 600 to 650 and accepts. A correction can change values, but not which records or fields the patch changes.
+          - `200`. Maria and her income were created in one request, made as the caseworker. `performed` has the corrected patch, and `call` still has the assistant's 600.
         operationId: $sourceDescriptions.suggestions.acceptSuggestion
         parameters:
           - reference: $components.parameters.worker
@@ -480,7 +481,7 @@ workflows:
         description: |
           Maria and her income are on the application
 
-          - Maria is under `members`, and her income of 650 under `incomes`, naming her.
+          - Maria is in `members`, and her income of 650 is in `incomes`, with Maria's id as its `memberId`.
         operationId: $sourceDescriptions.intake.getApplicationDetails
         parameters:
           - reference: $components.parameters.worker
@@ -494,7 +495,7 @@ workflows:
         description: |
           The event log records Maria as created by the caseworker
 
-          - `authid` is `worker-1`: the caseworker who accepted, not the assistant who proposed. Maria was created through `createApplicationMember`, with its own checks and events.
+          - `authid` is `worker-1`, the caseworker who accepted, not the assistant who proposed. Maria was created by `createApplicationMember`, so its checks ran and its event was sent, as if the caseworker had added her by hand.
         operationId: $sourceDescriptions.events.listEvents
         parameters:
           - reference: $components.parameters.worker
@@ -512,8 +513,8 @@ workflows:
         description: |
           The assistant suggests correcting Rosa's tips
 
-          - The assistant read Rosa's tips as 120 a week and heard her say 135. The patch tests the amount it read, then replaces it.
-          - A `replace` must come right after a `test` of the same path. The `test` records what the assistant read.
+          - The assistant read Rosa's tips as 120 a week, and heard her say 135. Its patch first checks that the tips are still 120 (`test`), then changes them to 135 (`replace`).
+          - Every `replace` must have a `test` right before it, checking the value the assistant read.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -555,8 +556,8 @@ workflows:
         description: |
           Accepting the stale correction is refused
 
-          - `409`: the `test` expected 120 and found 130, so the whole patch was refused and the tips stay 130.
-          - `details` holds the suggestion. Its `status` is now `refused`.
+          - `409`: the patch checks for 120, but the tips are now 130, so nothing in the patch was saved. The tips stay 130.
+          - The suggestion's `status` is now `refused`. `details` holds the suggestion.
         operationId: $sourceDescriptions.suggestions.acceptSuggestion
         parameters:
           - reference: $components.parameters.worker
