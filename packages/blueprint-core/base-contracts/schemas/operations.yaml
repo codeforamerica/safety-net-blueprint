@@ -15,7 +15,9 @@ $defs:
     description: >
       An operation and its arguments. The operationId is one the contracts
       declare, as overlays leave them; the arguments are checked against that
-      operation's parameters and request schema.
+      operation's parameters and request schema. A stored call leaves out the
+      `Idempotency-Key` header even where its operation requires one: a key
+      guards one request, so whatever makes the call supplies it.
     additionalProperties: false
     required: [operationId]
     properties:
