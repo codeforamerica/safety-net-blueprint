@@ -679,6 +679,58 @@ export function validatePatchEndpoint(path, operation, errors) {
 }
 
 /**
+ * A schema's top-level properties as written, through allOf and refs into
+ * this document; refs to other documents aren't followed.
+ */
+function localProperties(spec, schema, depth = 0) {
+  const props = new Map();
+  if (!schema || typeof schema !== 'object' || depth > 8) return props;
+  if (typeof schema.$ref === 'string') {
+    return localProperties(spec, resolveLocalRef(spec, schema.$ref), depth + 1);
+  }
+  for (const part of schema.allOf ?? []) {
+    for (const [name, prop] of localProperties(spec, part, depth + 1)) props.set(name, prop);
+  }
+  for (const [name, prop] of Object.entries(schema.properties ?? {})) props.set(name, prop);
+  return props;
+}
+
+/**
+ * An update may not take a field the record it returns marks readOnly:
+ * OpenAPI's readOnly means the server sets it — a state machine's status, a
+ * timestamp — so changing it after create would go around whatever sets it.
+ * A create may take such a field when its schema declares it, as a value set
+ * once (an id the caller chooses, when a conversation started). A field the
+ * update's own schema marks readOnly isn't taken: it's one a client doesn't
+ * send.
+ *
+ * @param {Object} spec
+ * @param {string} path
+ * @param {Object} operation - A PATCH
+ * @param {Array} errors
+ */
+export function validateUpdateReadOnlyFields(spec, path, operation, errors) {
+  if (operation?.['x-relationship']?.type || isActionPath(path)) return;
+  const request = operation?.requestBody?.content?.['application/json']?.schema;
+  const record = operation?.responses?.['200']?.content?.['application/json']?.schema;
+  if (!request || !record) return;
+  const readOnlyIn = (schema) => new Set([...localProperties(spec, schema)]
+    .filter(([, prop]) => prop?.readOnly === true || resolveLocalRef(spec, prop?.$ref)?.readOnly === true)
+    .map(([name]) => name));
+  const serverSet = readOnlyIn(record);
+  const notSent = readOnlyIn(request);
+  for (const name of localProperties(spec, request).keys()) {
+    if (!serverSet.has(name) || notSent.has(name)) continue;
+    errors.push({
+      path,
+      rule: 'update-takes-read-only-field',
+      message: `PATCH ${path} takes ${name}, which the record it returns marks readOnly: the server sets it. Take it off the update's schema; if a state machine sets it, change it through an action.`,
+      severity: 'error',
+    });
+  }
+}
+
+/**
  * Validates that single-resource GET endpoints have proper error handling
  * @param {string} path - The endpoint path
  * @param {Object} operation - The OpenAPI operation object
@@ -900,6 +952,7 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
     if (methods.patch) {
       validatePatchEndpoint(path, methods.patch, errors);
       validateSharedErrorResponses(path, 'patch', methods.patch, errors);
+      validateUpdateReadOnlyFields(spec, path, methods.patch, errors);
     }
 
     // Validate DELETE endpoints
