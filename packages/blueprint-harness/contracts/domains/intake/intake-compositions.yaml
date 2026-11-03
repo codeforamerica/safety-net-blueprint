@@ -91,3 +91,22 @@ compositions:
             description: Caseworker review status for this section.
             enum: [not_started, in_progress, complete, flagged]
             default: not_started
+
+  # applicationDetails — editable: the application, its members and their
+  # incomes as one document a caller changes with a JSON Patch. An assistant's
+  # proposed changes are previewed against a copy of it, and accepting them
+  # sends the patch here. Each change runs through its record's own operation
+  # (createApplicationMember, updateApplicationIncome, …), all or nothing.
+  # Produces: GET and PATCH /applications/{applicationId}/details
+  applicationDetails:
+    compositeType: editable
+    resource: Application
+    include:
+      members:
+        resource: ApplicationMember
+        bind: applicationId
+      incomes:
+        resource: ApplicationIncome
+        bind: applicationId
+    endpoint:
+      path: /applications/{applicationId}/details

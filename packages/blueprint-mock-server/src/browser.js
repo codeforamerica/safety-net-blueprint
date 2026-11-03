@@ -118,7 +118,7 @@ export async function createMockServer({
     configs,
     seeded: seed,
   });
-  if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store });
+  if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store, stepCalls });
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
   const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
   registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });

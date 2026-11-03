@@ -221,10 +221,14 @@ $defs:
       permissions, guards and events, and if any change is refused, nothing is
       saved and no events are sent. A change may add a record under an id the
       caller chooses, and another change in the same patch may name it.
-      Changes to fields the server sets, to fields a state machine owns, and to
-      derived fields are refused with 422. The update operation requires an Idempotency-Key, answers
-      200 with the document after the patch, 409 when a test fails or a
-      record's state refuses its change, and 415 for another media type.
+      A change that record's own operation would refuse, such as one to a
+      field marked readOnly, or to the field binding a record to the root, is
+      refused with 422. The update operation requires an Idempotency-Key, and
+      answers
+      200 with the document after the patch, 400 for a body that isn't a JSON
+      Patch, 409 when the data changed since it was read (a test fails, a path
+      names nothing, or a record's state refuses its change), and 415 for
+      another media type, as RFC 5789 sets out.
     allOf:
       - $ref: "#/$defs/CompositionBase"
     required: [compositeType]

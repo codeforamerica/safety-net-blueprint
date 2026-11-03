@@ -41,6 +41,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { operationsOf } from './operation-calls.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
+import { editableResources, assembleEditable, createEditablePatchHandler } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
@@ -748,10 +749,11 @@ function buildResourceCollectionNameMap(apiSpecs) {
  * @returns {Array} Registered endpoint info
  */
 export function registerCompositionRoutes(routes, compositionFiles = [], apiSpecs = [], deps = {}) {
-  const { store } = deps;
+  const { store, stepCalls } = deps;
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
+  const editables = editableResources(apiSpecs, resourceCollectionNameMap);
 
   for (const { domain, doc, filePath, relativePath, api } of compositionFiles) {
     const table = routesFrom(routes, relativePath ?? filePath);
@@ -803,7 +805,36 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
       const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
-      if (composition.compositeType === 'sectionView') {
+      if (composition.compositeType === 'editable') {
+        // Editable — the root under its key, includes keyed by id; changed
+        // with a JSON Patch through each record's own operations.
+        const patchBodyRef = apiSpec?.doc?.content?.paths?.[endpointPath]?.patch
+          ?.requestBody?.content?.['application/json-patch+json']?.schema?.$ref;
+        const requestSchema = { relativePath: apiSpec?.doc?.relativePath, ref: patchBodyRef, schema: { $ref: patchBodyRef } };
+        const editableOpts = { resources: editables, store, stepCalls, primaryParam, requestSchema };
+        addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
+          const result = assembleEditable(composition, params, editableOpts);
+          if (!result) {
+            return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} not found` }, { status: 404 });
+          }
+          return Response.json(result);
+        });
+        addRoute(table, 'PATCH', indexExpressPath,
+          withIdempotency(createEditablePatchHandler(composition, editableOpts), { required: true }, { store }));
+        for (const writeMethod of ['post', 'put', 'delete']) {
+          addRoute(table, writeMethod.toUpperCase(), indexExpressPath, () =>
+            Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'Change this composition with PATCH' },
+              { status: 405, headers: { Allow: 'GET, PATCH' } })
+          );
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} editable composition`);
+        console.log(`    PATCH  ${indexExpressPath} - ${compositionName} editable composition`);
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} editable composition` },
+          { method: 'PATCH', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} editable composition` }
+        );
+      } else if (composition.compositeType === 'sectionView') {
         // Section index
         addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
           const parentId = primaryParam ? params[primaryParam] : null;

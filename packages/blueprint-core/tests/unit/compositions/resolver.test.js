@@ -1576,7 +1576,7 @@ describe('editable composition generation', () => {
     assert.deepEqual(Object.keys(patch.requestBody.content), ['application/json-patch+json']);
     assert.match(patch.requestBody.content['application/json-patch+json'].schema.$ref, /operations\.yaml#\/\$defs\/JsonPatch$/);
     assert.ok(patch.parameters.some((p) => p.$ref?.endsWith('#/IdempotencyKeyParam')));
-    assert.deepEqual(Object.keys(patch.responses), ['200', '404', '409', '415', '422', '500']);
+    assert.deepEqual(Object.keys(patch.responses), ['200', '400', '403', '404', '409', '415', '422', '500']);
     assert.equal(patch['x-relationship'].type, 'composition');
   });
 

@@ -851,15 +851,23 @@ function editableUpdateOperation(compositionName, schemaName) {
         description: `${compositionName} after the patch.`,
         content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaName}` } } },
       },
+      '400': {
+        $ref: './components/responses.yaml#/BadRequest',
+        description: 'The body is not a JSON Patch: not JSON, an unknown op, or an op missing what it needs.',
+      },
+      '403': {
+        $ref: './components/responses.yaml#/Forbidden',
+        description: 'A change\'s own operation doesn\'t let the caller make it. Nothing was saved.',
+      },
       '404': { $ref: './components/responses.yaml#/NotFound' },
       '409': {
         $ref: './components/responses.yaml#/Conflict',
-        description: 'A test operation failed, or a record is in a state its change can\'t start from.',
+        description: 'The data changed since it was read: a test operation failed, a path names a record or field that isn\'t there, or a record is in a state its change can\'t start from. Nothing was saved.',
       },
       '415': { description: 'The request body is not application/json-patch+json.' },
       '422': {
         $ref: './components/responses.yaml#/UnprocessableEntity',
-        description: 'A change is refused, such as one to a field the server sets or a state machine owns. Nothing was saved.',
+        description: 'A change is refused because its record\'s own operation refuses it, such as one to a field marked readOnly, or because it moves a record to another root. Nothing was saved.',
       },
       '500': { $ref: './components/responses.yaml#/InternalError' },
     },
