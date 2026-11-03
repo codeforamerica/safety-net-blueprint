@@ -8,8 +8,8 @@ import { eventDomainOf } from '../collection-utils.js';
 import { startSlaClocks } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf, actsAsSystem } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields, writableFieldsOf } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 import { callsIn, callProblems } from '../operation-calls.js';
@@ -22,6 +22,8 @@ import { makesSuggestions, fingerprintOf, repeated } from '../suggestion-fingerp
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
+ * @param {Object} [options]
+ * @param {Object} [options.defaults] - The values the server sets on create: required defaults and a machine's initial state
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, operations } = {}, options = {}) {
@@ -72,6 +74,24 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
         if (!valid) {
           return Response.json(createErrorResponse(errors, 422), { status: 422 });
+        }
+      }
+
+      // A client may not set a field the server sets (readOnly), beyond the
+      // value the server sets anyway, unless this create's schema takes it as a
+      // value set once; the system — a state machine's own call — may.
+      if (!actsAsSystem(extractCallerRoles(request))) {
+        // What the server sets anyway: its defaults — a state machine's
+        // initial state, an empty list for a required one — and the path's values.
+        const known = { ...(options.defaults ?? {}), ...(enrichmentData ?? {}) };
+        const fixed = changedReadOnlyFields(requestBody, endpoint.responseSchema, apiMetadata.resolve?.schema,
+          known, writableFieldsOf(endpoint.requestSchema, apiMetadata.resolve?.schema));
+        if (fixed.length > 0) {
+          return Response.json({
+            code: 'VALIDATION_ERROR',
+            message: `${fixed.join(', ')} ${fixed.length === 1 ? 'is' : 'are'} read-only: the server sets ${fixed.length === 1 ? 'it' : 'them'}.`,
+            details: fixed.map((field) => ({ field, message: 'read-only' })),
+          }, { status: 422 });
         }
       }
 

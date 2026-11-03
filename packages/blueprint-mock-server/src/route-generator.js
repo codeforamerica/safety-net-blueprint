@@ -389,7 +389,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
       if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
       if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
-      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
+      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps, { defaults: requiredDefaults });
       // A machine may guard the creation of its own object. There is no record
       // yet, so its guards see only the body and the caller.
       const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
@@ -495,7 +495,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps, { defaults: subRequiredDefaults });
           // The machines guarding this create, matched on the path as the API
           // document writes it, without the server's base.
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);

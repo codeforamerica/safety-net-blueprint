@@ -764,6 +764,7 @@ async function testWorkflowEventEmission() {
 // ---------------------------------------------------------------------------
 
 async function testWorkflowTimerBehavior() {
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
   section('Workflow — Timer-triggered behavior');
 
   const TASK = '/workflow/tasks';
@@ -854,7 +855,8 @@ async function testWorkflowTimerBehavior() {
       match: { 'data.callback.event': 'workflow.sla_warning' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
+      // The SLA engine sets slaDeadline (readOnly); the test stands in for it.
+      method: 'PATCH', headers: SYSTEM,
       body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
     });
 
@@ -878,7 +880,8 @@ async function testWorkflowTimerBehavior() {
       match: { 'data.callback.event': 'workflow.sla_breach' },
     });
     await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
+      // The SLA engine sets slaDeadline (readOnly); the test stands in for it.
+      method: 'PATCH', headers: SYSTEM,
       body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
     });
 
@@ -900,6 +903,7 @@ async function testWorkflowTimerBehavior() {
 // ---------------------------------------------------------------------------
 
 async function testWorkflowEventSubscriptions() {
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
   section('Workflow — Event subscriptions');
 
   const TASK = '/workflow/tasks';
@@ -973,7 +977,8 @@ async function testWorkflowEventSubscriptions() {
     await registerStub({ on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.sla_breach' } });
 
     await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
+      // The SLA engine sets slaDeadline (readOnly); the test stands in for it.
+      method: 'PATCH', headers: SYSTEM,
       body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
     });
 

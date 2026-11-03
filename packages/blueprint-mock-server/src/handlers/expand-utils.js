@@ -355,3 +355,42 @@ export function applyDerivedFields(record, derivedFields) {
   }
   return result;
 }
+
+/**
+ * The readOnly fields a client's request would change. readOnly means the
+ * server sets the field (OpenAPI) — a state machine's status, a timestamp, a
+ * record's parent from its path — so a client may send one only with the
+ * value the server has or sets anyway, as when it sends a record back
+ * unchanged. A create may also take one its schema declares writable, as a
+ * value set once: an id the caller chooses, when a conversation started.
+ *
+ * @param {object} body - The request body
+ * @param {object} schema - The record's read schema
+ * @param {(s: object) => object} [follow]
+ * @param {object} [known] - The values the server has or sets: the stored record for an update, the path's for a create
+ * @param {string[]} [allowed] - Fields the operation takes anyway: a create schema's writable fields
+ * @returns {string[]}
+ */
+export function changedReadOnlyFields(body, schema, follow = (x) => x, known = {}, allowed = []) {
+  if (!body || typeof body !== 'object' || !schema) return [];
+  const readOnly = new Set(propertiesOf(schema, follow).flatMap((props) => Object.entries(props)
+    .filter(([, prop]) => prop?.readOnly === true || follow(prop)?.readOnly === true)
+    .map(([name]) => name)));
+  return Object.keys(body).filter((name) => readOnly.has(name) && !allowed.includes(name)
+    && JSON.stringify(known?.[name]) !== JSON.stringify(body[name]));
+}
+
+/**
+ * The fields a request schema takes from a client: declared, and not marked
+ * readOnly there.
+ *
+ * @param {object|null} schema - An operation's request schema
+ * @param {(s: object) => object} [follow]
+ * @returns {string[]}
+ */
+export function writableFieldsOf(schema, follow = (x) => x) {
+  if (!schema) return [];
+  return propertiesOf(schema, follow).flatMap((props) => Object.entries(props)
+    .filter(([, prop]) => prop?.readOnly !== true && follow(prop)?.readOnly !== true)
+    .map(([name]) => name));
+}

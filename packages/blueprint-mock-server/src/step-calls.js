@@ -198,7 +198,9 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * system`, the default, makes it as the system: role matching is skipped,
    * and its events name the system as who acted, `causationid` linking them
    * to the event that caused the call. The request is marked as the system's
-   * beside it (asSystem), never by a header a client could send.
+   * beside it (asSystem), which is what skips role matching. A caller whose
+   * headers name the system's role acts as the system too, as a guard's actors
+   * match it, but its roles are still matched.
    *
    * @param {{ operationId: string, parameters?: Array<{ name: string, in: string, value: * }>, requestBody?: { contentType?: string, payload?: * } }} call
    * @param {Object} options

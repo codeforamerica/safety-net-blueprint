@@ -6,8 +6,8 @@ import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf, actsAsSystem } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 
@@ -114,6 +114,19 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           message: 'Request body must contain at least one field to update',
           details: [{ field: 'body', message: 'minProperties: 1' }]
         }, { status: 400 });
+      }
+
+      // A client may not change a field the server sets (readOnly); the
+      // system — a state machine's own call — may.
+      if (!actsAsSystem(extractCallerRoles(request))) {
+        const fixed = changedReadOnlyFields(requestBody, endpoint.responseSchema, apiMetadata.resolve?.schema, existing);
+        if (fixed.length > 0) {
+          return Response.json({
+            code: 'VALIDATION_ERROR',
+            message: `${fixed.join(', ')} ${fixed.length === 1 ? 'is' : 'are'} read-only: the server sets ${fixed.length === 1 ? 'it' : 'them'}.`,
+            details: fixed.map((field) => ({ field, message: 'read-only' })),
+          }, { status: 422 });
+        }
       }
 
       // For PATCH, merge with existing data first, then validate the complete merged object.

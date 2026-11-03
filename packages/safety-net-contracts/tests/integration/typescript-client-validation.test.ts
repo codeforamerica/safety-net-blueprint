@@ -784,7 +784,8 @@ describe('Zod sweep — intake CRUD: applications & members', () => {
     const res = await updateApplicationVerification({
       client: intakeClient,
       path: { applicationId: crudAppId, verificationId: crudVerificationId },
-      body: { status: 'satisfied' } as any,
+      // status is the verification's state machine's to change, so update a field a client writes.
+      body: { category: 'income' } as any,
     });
     assert.equal(res.status, 200);
     assert.equal((res.data as { id: string }).id, crudVerificationId);

@@ -79,9 +79,12 @@ export function extractCallerRoles(req) {
 const systemRequests = new WeakSet();
 const systemRoleLists = new WeakSet();
 
+/** The role the system plays, as a contract's guards name it in actors. */
+const SYSTEM_ROLE = 'system';
+
 /** The roles of the system: `['system']`, marked as the system's. */
 function systemRoles() {
-  const roles = ['system'];
+  const roles = [SYSTEM_ROLE];
   systemRoleLists.add(roles);
   return roles;
 }
@@ -125,6 +128,18 @@ export function playsAnyOf(roles, actors) {
  */
 export function areSystemRoles(roles) {
   return systemRoleLists.has(roles);
+}
+
+/**
+ * Whether a caller acts as the system: a request the mock sent itself
+ * (asSystem), or one whose caller plays the system's role — the same role a
+ * guard's actors name, read from the headers as every caller's roles are.
+ *
+ * @param {string[]} roles - As extractCallerRoles gave them
+ * @returns {boolean}
+ */
+export function actsAsSystem(roles) {
+  return systemRoleLists.has(roles) || (roles ?? []).includes(SYSTEM_ROLE);
 }
 
 /**
