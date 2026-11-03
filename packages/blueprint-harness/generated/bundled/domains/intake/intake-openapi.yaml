@@ -827,6 +827,7 @@ paths:
                                         x-relationship:
                                           type: fk
                                           resource: Application
+                                          onDelete: cascade
                                           style: expand
                                           fields:
                                             - id
@@ -1750,6 +1751,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -2587,6 +2589,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -3478,6 +3481,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -3713,6 +3717,29 @@ paths:
           description: Application deleted successfully.
         "404":
           description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "409":
+          description: A conflict occurred with the current state of the resource.
           content:
             application/json:
               schema:
@@ -3971,6 +3998,7 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Application
+                                onDelete: cascade
                             createdAt:
                               type: string
                               format: date-time
@@ -4157,6 +4185,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -4367,6 +4396,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -4603,6 +4633,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: ApplicationMember
+                                onDelete: cascade
                                 style: links-only
                             source:
                               type: string
@@ -4658,6 +4689,7 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Application
+                                onDelete: cascade
                             createdAt:
                               type: string
                               format: date-time
@@ -4753,6 +4785,7 @@ paths:
                       x-relationship:
                         type: fk
                         resource: ApplicationMember
+                        onDelete: cascade
                         style: links-only
                     source:
                       type: string
@@ -4817,6 +4850,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: ApplicationMember
+                          onDelete: cascade
                           style: links-only
                       source:
                         type: string
@@ -4872,6 +4906,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -5041,6 +5076,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: ApplicationMember
+                          onDelete: cascade
                           style: links-only
                       source:
                         type: string
@@ -5096,6 +5132,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -5179,6 +5216,7 @@ paths:
                       x-relationship:
                         type: fk
                         resource: ApplicationMember
+                        onDelete: cascade
                         style: links-only
                     source:
                       type: string
@@ -5231,6 +5269,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: ApplicationMember
+                          onDelete: cascade
                           style: links-only
                       source:
                         type: string
@@ -5286,6 +5325,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       createdAt:
                         type: string
                         format: date-time
@@ -5585,6 +5625,7 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Application
+                                onDelete: cascade
                             status:
                               type: string
                               readOnly: true
@@ -5734,6 +5775,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       status:
                         type: string
                         readOnly: true
@@ -5936,6 +5978,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       status:
                         type: string
                         readOnly: true
@@ -6493,6 +6536,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: Application
+                                onDelete: cascade
                                 style: expand
                                 fields:
                                   - id
@@ -7031,6 +7075,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: Application
+                          onDelete: cascade
                           style: expand
                           fields:
                             - id
@@ -7435,6 +7480,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: Application
+                          onDelete: cascade
                           style: expand
                           fields:
                             - id
@@ -7946,6 +7992,7 @@ paths:
                         x-relationship:
                           type: fk
                           resource: Application
+                          onDelete: cascade
                           style: expand
                           fields:
                             - id
@@ -8054,6 +8101,29 @@ paths:
           description: Household member removed successfully.
         "404":
           description: The requested resource was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "409":
+          description: A conflict occurred with the current state of the resource.
           content:
             application/json:
               schema:
@@ -8709,6 +8779,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -9574,6 +9645,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -10457,6 +10529,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -11345,6 +11418,7 @@ paths:
                                   x-relationship:
                                     type: fk
                                     resource: Application
+                                    onDelete: cascade
                                     style: expand
                                     fields:
                                       - id
@@ -11651,6 +11725,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       status:
                         type: string
                         readOnly: true
@@ -11858,6 +11933,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       status:
                         type: string
                         readOnly: true
@@ -12064,6 +12140,7 @@ paths:
                         readOnly: true
                         x-relationship:
                           resource: Application
+                          onDelete: cascade
                       status:
                         type: string
                         readOnly: true
@@ -14650,6 +14727,7 @@ paths:
                                       x-relationship:
                                         type: fk
                                         resource: Application
+                                        onDelete: cascade
                                         style: expand
                                         fields:
                                           - id
@@ -15043,6 +15121,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: Application
+                                onDelete: cascade
                                 style: expand
                                 fields:
                                   - id
@@ -15065,6 +15144,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: ApplicationMember
+                                onDelete: cascade
                                 style: links-only
                             source:
                               type: string
@@ -15120,6 +15200,7 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Application
+                                onDelete: cascade
                             createdAt:
                               type: string
                               format: date-time
@@ -15875,6 +15956,7 @@ paths:
                                       x-relationship:
                                         type: fk
                                         resource: Application
+                                        onDelete: cascade
                                         style: expand
                                         fields:
                                           - id
@@ -16268,6 +16350,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: Application
+                                onDelete: cascade
                                 style: expand
                                 fields:
                                   - id
@@ -16290,6 +16373,7 @@ paths:
                               x-relationship:
                                 type: fk
                                 resource: ApplicationMember
+                                onDelete: cascade
                                 style: links-only
                             source:
                               type: string
@@ -16345,6 +16429,7 @@ paths:
                               readOnly: true
                               x-relationship:
                                 resource: Application
+                                onDelete: cascade
                             createdAt:
                               type: string
                               format: date-time
@@ -17224,6 +17309,7 @@ components:
                         x-relationship:
                           type: fk
                           resource: Application
+                          onDelete: cascade
                           style: expand
                           fields:
                             - id
@@ -17662,6 +17748,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -17786,6 +17873,7 @@ components:
                     readOnly: true
                     x-relationship:
                       resource: Application
+                      onDelete: cascade
                   createdAt:
                     type: string
                     format: date-time
@@ -17825,6 +17913,7 @@ components:
           x-relationship:
             type: fk
             resource: ApplicationMember
+            onDelete: cascade
             style: links-only
         source:
           type: string
@@ -17870,6 +17959,7 @@ components:
               x-relationship:
                 type: fk
                 resource: ApplicationMember
+                onDelete: cascade
                 style: links-only
             source:
               type: string
@@ -17925,6 +18015,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -17953,6 +18044,7 @@ components:
               x-relationship:
                 type: fk
                 resource: ApplicationMember
+                onDelete: cascade
                 style: links-only
             source:
               type: string
@@ -18012,6 +18104,7 @@ components:
               x-relationship:
                 type: fk
                 resource: ApplicationMember
+                onDelete: cascade
                 style: links-only
             source:
               type: string
@@ -18069,6 +18162,7 @@ components:
                     x-relationship:
                       type: fk
                       resource: ApplicationMember
+                      onDelete: cascade
                       style: links-only
                   source:
                     type: string
@@ -18124,6 +18218,7 @@ components:
                     readOnly: true
                     x-relationship:
                       resource: Application
+                      onDelete: cascade
                   createdAt:
                     type: string
                     format: date-time
@@ -18188,6 +18283,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             status:
               type: string
               readOnly: true
@@ -18275,6 +18371,7 @@ components:
                     readOnly: true
                     x-relationship:
                       resource: Application
+                      onDelete: cascade
                   status:
                     type: string
                     readOnly: true
@@ -18923,6 +19020,7 @@ components:
                               x-relationship:
                                 type: fk
                                 resource: Application
+                                onDelete: cascade
                                 style: expand
                                 fields:
                                   - id
@@ -19514,6 +19612,7 @@ components:
               x-relationship:
                 type: fk
                 resource: Application
+                onDelete: cascade
                 style: expand
                 fields:
                   - id
@@ -20177,6 +20276,7 @@ components:
                     x-relationship:
                       type: fk
                       resource: Application
+                      onDelete: cascade
                       style: expand
                       fields:
                         - id
@@ -21052,6 +21152,7 @@ components:
                             x-relationship:
                               type: fk
                               resource: Application
+                              onDelete: cascade
                               style: expand
                               fields:
                                 - id
@@ -21445,6 +21546,7 @@ components:
                     x-relationship:
                       type: fk
                       resource: Application
+                      onDelete: cascade
                       style: expand
                       fields:
                         - id
@@ -21467,6 +21569,7 @@ components:
                     x-relationship:
                       type: fk
                       resource: ApplicationMember
+                      onDelete: cascade
                       style: links-only
                   source:
                     type: string
@@ -21522,6 +21625,7 @@ components:
                     readOnly: true
                     x-relationship:
                       resource: Application
+                      onDelete: cascade
                   createdAt:
                     type: string
                     format: date-time

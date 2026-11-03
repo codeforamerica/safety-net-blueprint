@@ -2071,6 +2071,48 @@ heard from. Absent, a transcript never closes for being idle.
       </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">409</span>
+        <span style="font-size:11px;color:#555;">A conflict occurred with the current state of the resource.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Conflict</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
@@ -4625,11 +4667,7 @@ safety-net-contracts might say `worker` and `applicant`.
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">409</span>
-        <span style="font-size:11px;color:#555;">The transcript refuses the entry: it started while the transcript
-was paused or after it closed, it ends before it starts, it is a
-gap overlapping a pause, or another record already has the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>
-given.
-</span>
+        <span style="font-size:11px;color:#555;">A conflict occurred with the current state of the resource.</span>
       </div>
       <details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">

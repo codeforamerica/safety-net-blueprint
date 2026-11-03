@@ -173,6 +173,8 @@ paths:
           description: Transcript deleted.
         "404":
           $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../components/responses.yaml#/Conflict
         "500":
           $ref: ../../components/responses.yaml#/InternalError
   /transcripts/{transcriptId}/entries:

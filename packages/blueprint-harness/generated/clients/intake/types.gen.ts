@@ -6240,6 +6240,25 @@ export type DeleteApplicationErrors = {
         }>;
     };
     /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * An unexpected error occurred on the server.
      */
     500: {
@@ -9822,6 +9841,25 @@ export type DeleteApplicationMemberErrors = {
      * The requested resource was not found.
      */
     404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
         /**
          * Machine-readable error code.
          */

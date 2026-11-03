@@ -1895,6 +1895,25 @@ export type DeleteTranscriptErrors = {
         }>;
     };
     /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
      * An unexpected error occurred on the server.
      */
     500: {
@@ -2766,11 +2785,7 @@ export type AddTranscriptEntryErrors = {
         }>;
     };
     /**
-     * The transcript refuses the entry: it started while the transcript
-     * was paused or after it closed, it ends before it starts, it is a
-     * gap overlapping a pause, or another record already has the `id`
-     * given.
-     *
+     * A conflict occurred with the current state of the resource.
      */
     409: {
         /**
