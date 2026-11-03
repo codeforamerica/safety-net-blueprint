@@ -19,6 +19,9 @@
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
 import { indexByRelativePath } from './ref-lookup.js';
 import { extractPathParams, buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
+import { buildApiModel } from './openapi/model.js';
+
+const JSON_PATCH_SCHEMA = 'https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/JsonPatch';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -153,6 +156,24 @@ function storedForeignKeys(schema) {
     .filter(([, property]) => property?.['x-relationship']?.style === 'expand')
     .map(([key]) => `${key}Id`);
   return [...fromProperties, ...(schema.allOf ?? []).flatMap(storedForeignKeys)];
+}
+
+/**
+ * Report an editable composition with an include under its root's key: the
+ * root record sits under its resource name with a lowercase first letter, so
+ * an include there would take its place.
+ *
+ * @param {Object} compositionDoc - { domain, doc: { compositions } }
+ * @returns {Array<{ message: string, path: string }>}
+ */
+export function validateEditableKeys(compositionDoc) {
+  const { domain, doc } = compositionDoc;
+  return Object.entries(doc.compositions || {})
+    .filter(([, composition]) => composition?.compositeType === 'editable' && composition.include?.[rootKeyOf(composition)])
+    .map(([name, composition]) => ({
+      message: `include "${rootKeyOf(composition)}" has the key ${name}'s ${composition.resource} sits under. Name the include something else.`,
+      path: `${domain}.compositions.${name}.include.${rootKeyOf(composition)}`,
+    }));
 }
 
 /**
@@ -732,6 +753,120 @@ export function buildPathToSchemaMap(yamlFiles) {
 }
 
 /**
+ * Every resource a set's OpenAPI documents serve, by schema name: the
+ * document that declares it, and whether it's one of a parent's singletons.
+ *
+ * @param {Array<{ relativePath: string, spec: Object }>} yamlFiles
+ * @returns {Map<string, { relativePath: string, singleton: boolean }>}
+ */
+export function indexResourcesByName(yamlFiles) {
+  const byName = new Map();
+  for (const { relativePath, spec } of yamlFiles) {
+    if (!spec?.paths) continue;
+    for (const resource of buildApiModel(spec).resources) {
+      for (const each of [resource, ...resource.singletons]) {
+        if (each.name && !byName.has(each.name)) byName.set(each.name, { relativePath, singleton: each.singleton });
+      }
+    }
+  }
+  return byName;
+}
+
+/**
+ * The key an editable composition's root record sits under: its resource
+ * name with a lowercase first letter, `application` for `Application`.
+ *
+ * @param {Object} composition
+ * @returns {string}
+ */
+export function rootKeyOf(composition) {
+  const name = composition.resource ?? '';
+  return name.charAt(0).toLowerCase() + name.slice(1);
+}
+
+/**
+ * A ref, from the document at `fromPath`, to the schema a resource's records
+ * follow: local when the resource is declared there, relative otherwise.
+ */
+function recordRef(name, resources, fromPath) {
+  const pointer = `#/components/schemas/${name}`;
+  const declaredIn = resources.get(name)?.relativePath;
+  if (!declaredIn || !fromPath || declaredIn === fromPath) return { $ref: pointer };
+  const fromDir = fromPath.split('/').slice(0, -1);
+  const to = declaredIn.split('/');
+  let shared = 0;
+  while (shared < fromDir.length && shared < to.length - 1 && fromDir[shared] === to[shared]) shared++;
+  const up = fromDir.slice(shared).map(() => '..');
+  return { $ref: `${up.length ? `${up.join('/')}/` : './'}${to.slice(shared).join('/')}${pointer}` };
+}
+
+/**
+ * The response schema of an editable composition: the root record under its
+ * own key, and each include beside it, keyed by record id, or a singleton as
+ * one record or null. Every record is a ref to its resource's own schema.
+ */
+function editableResponseSchema(compositionName, composition, resources, fromPath) {
+  const rootKey = rootKeyOf(composition);
+  const properties = { [rootKey]: recordRef(composition.resource, resources, fromPath) };
+  for (const [key, include] of Object.entries(composition.include ?? {})) {
+    const record = recordRef(include.resource, resources, fromPath);
+    properties[key] = resources.get(include.resource)?.singleton
+      ? { description: `The ${include.resource}, or null when there isn't one.`, anyOf: [record, { type: 'null' }] }
+      : {
+        type: 'object',
+        description: `The ${include.resource} records, keyed by id.`,
+        propertyNames: { format: 'uuid' },
+        additionalProperties: record,
+      };
+  }
+  return {
+    type: 'object',
+    description: `The ${compositionName} composition: the ${composition.resource} under ${rootKey}, and the records it includes, whole. Change it with a JSON Patch to the same path.`,
+    required: Object.keys(properties),
+    additionalProperties: false,
+    properties,
+  };
+}
+
+/**
+ * The update operation an editable composition serves: a JSON Patch applied
+ * all or nothing, each change through its record's own operation.
+ */
+function editableUpdateOperation(compositionName, schemaName) {
+  return {
+    summary: `Change ${compositionName}`,
+    operationId: `update${toPascalCase(compositionName)}`,
+    description:
+      'Applies a JSON Patch (RFC 6902) all or nothing. Each change is made through its record\'s own ' +
+      'operation, as the caller, with that operation\'s permissions, guards and events; if any change ' +
+      'is refused, nothing is saved and no events are sent. A change may add a record under an id the ' +
+      'caller chooses, and another change in the same patch may name it.',
+    parameters: [{ $ref: './components/parameters.yaml#/IdempotencyKeyParam' }],
+    requestBody: {
+      required: true,
+      content: { 'application/json-patch+json': { schema: { $ref: JSON_PATCH_SCHEMA } } },
+    },
+    responses: {
+      '200': {
+        description: `${compositionName} after the patch.`,
+        content: { 'application/json': { schema: { $ref: `#/components/schemas/${schemaName}` } } },
+      },
+      '404': { $ref: './components/responses.yaml#/NotFound' },
+      '409': {
+        $ref: './components/responses.yaml#/Conflict',
+        description: 'A test operation failed, or a record is in a state its change can\'t start from.',
+      },
+      '415': { description: 'The request body is not application/json-patch+json.' },
+      '422': {
+        $ref: './components/responses.yaml#/UnprocessableEntity',
+        description: 'A change is refused, such as one to a field the server sets or a state machine owns. Nothing was saved.',
+      },
+      '500': { $ref: './components/responses.yaml#/InternalError' },
+    },
+  };
+}
+
+/**
  * Generate an OpenAPI overlay for a single composition file.
  *
  * Emits one path entry per composition that declares an `endpoint:`.
@@ -751,7 +886,7 @@ export function buildPathToSchemaMap(yamlFiles) {
  * @param {Map<string, string>} paramIndex - from buildParameterIndex
  * @returns {Object|null} Overlay document, or null if no endpoints were declared
  */
-export function generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap = null) {
+export function generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap = null, resources = new Map()) {
   const { domain, doc, filePath } = compositionFile;
   const apiSpecFile = compositionFile.apiSpecFile ?? `${domain}-openapi.yaml`;
 
@@ -790,6 +925,13 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
       description: `Generated composition response for ${compositionName}.`,
     };
     schemasUpdate[schemaName] = schemaEntry;
+
+    // editable compositions: a real response schema, and the PATCH that changes it
+    if (composition.compositeType === 'editable') {
+      schemasUpdate[schemaName] = editableResponseSchema(compositionName, composition, resources, compositionFile.apiSpecFile ?? null);
+      const marker = { type: 'composition', domain, id: compositionName };
+      pathsUpdate[endpointPath].patch = buildPathEntry(endpointPath, 'patch', editableUpdateOperation(compositionName, schemaName), paramIndex, marker).patch;
+    }
 
     // sectionView compositions: also generate static per-section panel endpoints and section enum
     if (composition.compositeType === 'sectionView') {
@@ -922,10 +1064,11 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
 export function generateCompositionOverlays(compositionFiles, yamlFiles) {
   const paramIndex = buildParameterIndex(yamlFiles);
   const parentSchemaMap = buildPathToSchemaMap(yamlFiles);
+  const resources = indexResourcesByName(yamlFiles);
   const result = [];
 
   for (const compositionFile of compositionFiles) {
-    const overlay = generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap);
+    const overlay = generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap, resources);
     if (overlay) {
       result.push({ overlay, domain: compositionFile.domain, target: compositionFile.apiSpecFile ?? null });
     }

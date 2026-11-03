@@ -17,6 +17,7 @@ import {
   validateBindFields,
   validateFieldsArrays,
   validateResourceNames,
+  validateEditableKeys,
   validateSortableConfig,
   buildPathToSchemaMap,
   generateCompositionOverlay,
@@ -1523,5 +1524,83 @@ describe('buildResourceSchemaIndex and expanded foreign keys', () => {
     const props = buildResourceSchemaIndex([{ relativePath: 'test.yaml', spec }]).get('Member');
     assert.ok(props.has('application'));
     assert.ok(props.has('applicationId'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Editable compositions
+// ---------------------------------------------------------------------------
+
+describe('editable composition generation', () => {
+  const ok = (name) => ({ '200': { content: { 'application/json': { schema: { $ref: `#/components/schemas/${name}` } } } } });
+  const spec = {
+    paths: {
+      '/applications/{applicationId}': { get: { responses: ok('Application') } },
+      '/applications/{applicationId}/members': { get: { responses: ok('ApplicationMemberList') }, post: { responses: {} } },
+      '/applications/{applicationId}/members/{memberId}': { get: { responses: ok('ApplicationMember') } },
+      '/applications/{applicationId}/household-info': { get: { responses: ok('HouseholdInfo') }, patch: { responses: ok('HouseholdInfo') } },
+    },
+    components: { schemas: { Application: { type: 'object' }, ApplicationMember: { type: 'object' }, HouseholdInfo: { type: 'object' } } },
+  };
+  const yamlFiles = [{ relativePath: 'domains/intake/intake-openapi.yaml', spec }];
+  const compositions = {
+    applicationDetails: {
+      compositeType: 'editable',
+      resource: 'Application',
+      include: {
+        members: { resource: 'ApplicationMember', bind: 'applicationId' },
+        household: { resource: 'HouseholdInfo', bind: 'applicationId' },
+      },
+      endpoint: { path: '/applications/{applicationId}/details' },
+    },
+    applicationSummary: { resource: 'Application', endpoint: { path: '/applications/{applicationId}/summary' } },
+  };
+  const [{ overlay }] = generateCompositionOverlays(
+    [{ domain: 'intake', doc: { compositions }, apiSpecFile: 'domains/intake/intake-openapi.yaml' }], yamlFiles);
+  const paths = overlay.actions.find((a) => a.target === '$.paths').update;
+  const schemas = overlay.actions.find((a) => a.target === '$.components.schemas').update;
+
+  test('the root sits under its key, includes keyed by id, a singleton as one record or null', () => {
+    const response = schemas.ApplicationDetailsResponse;
+    assert.deepEqual(response.required, ['application', 'members', 'household']);
+    assert.equal(response.additionalProperties, false);
+    assert.deepEqual(response.properties.application, { $ref: '#/components/schemas/Application' });
+    assert.deepEqual(response.properties.members.propertyNames, { format: 'uuid' });
+    assert.deepEqual(response.properties.members.additionalProperties, { $ref: '#/components/schemas/ApplicationMember' });
+    assert.deepEqual(response.properties.household.anyOf, [{ $ref: '#/components/schemas/HouseholdInfo' }, { type: 'null' }]);
+  });
+
+  test('it serves a PATCH taking a JSON Patch, with an Idempotency-Key', () => {
+    const patch = paths['/applications/{applicationId}/details'].patch;
+    assert.equal(patch.operationId, 'updateApplicationDetails');
+    assert.deepEqual(Object.keys(patch.requestBody.content), ['application/json-patch+json']);
+    assert.match(patch.requestBody.content['application/json-patch+json'].schema.$ref, /operations\.yaml#\/\$defs\/JsonPatch$/);
+    assert.ok(patch.parameters.some((p) => p.$ref?.endsWith('#/IdempotencyKeyParam')));
+    assert.deepEqual(Object.keys(patch.responses), ['200', '404', '409', '415', '422', '500']);
+    assert.equal(patch['x-relationship'].type, 'composition');
+  });
+
+  test('a view keeps its GET only', () => {
+    assert.equal(paths['/applications/{applicationId}/summary'].patch, undefined);
+    assert.ok(paths['/applications/{applicationId}/summary'].get);
+  });
+
+  test('a record declared in another document is referenced relatively', () => {
+    const other = { relativePath: 'domains/intake/members-openapi.yaml', spec: {
+      paths: { '/people/{personId}': { get: { responses: ok('Person') } } },
+      components: { schemas: { Person: { type: 'object' } } },
+    } };
+    const withPerson = { applicationDetails: { ...compositions.applicationDetails, include: { people: { resource: 'Person', bind: 'applicationId' } } } };
+    const [{ overlay: o }] = generateCompositionOverlays(
+      [{ domain: 'intake', doc: { compositions: withPerson }, apiSpecFile: 'domains/intake/intake-openapi.yaml' }], [...yamlFiles, other]);
+    const response = o.actions.find((a) => a.target === '$.components.schemas').update.ApplicationDetailsResponse;
+    assert.deepEqual(response.properties.people.additionalProperties, { $ref: './members-openapi.yaml#/components/schemas/Person' });
+  });
+
+  test('an include under the root key is reported', () => {
+    const doc = { domain: 'intake', doc: { compositions: { d: { ...compositions.applicationDetails, include: { application: { resource: 'ApplicationMember' } } } } } };
+    const errors = validateEditableKeys(doc);
+    assert.equal(errors.length, 1);
+    assert.ok(errors[0].path.endsWith('include.application'));
   });
 });

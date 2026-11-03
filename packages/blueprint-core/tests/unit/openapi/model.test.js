@@ -106,3 +106,33 @@ describe('Doc.model() for an OpenAPI document', () => {
     assert.equal(toDoc({ path: '/x/s.yaml', type: 'schema', content: { $defs: {} } }).model(), null);
   });
 });
+
+describe('singletons', () => {
+  const doc = {
+    paths: {
+      '/applications/{applicationId}': returns('Application'),
+      '/applications/{applicationId}/household-info': { ...returns('HouseholdInfo'), patch: returns('HouseholdInfo').get },
+      '/applications/{applicationId}/members': { get: {}, post: {} },
+      '/applications/{applicationId}/members/{memberId}': returns('ApplicationMember'),
+      '/applications/{applicationId}/notes': { get: {} },
+      '/applications/{applicationId}/notes/{noteId}': returns('Note'),
+      '/applications/{applicationId}/summary': { get: { ...returns('ApplicationSummaryResponse').get, 'x-relationship': { type: 'composition' } } },
+      '/applications/{applicationId}/submit': { post: {} },
+    },
+  };
+  const application = byName(buildApiModel(doc), 'Application');
+
+  test('a path with no id of its own, read but never created, is its parent\'s singleton', () => {
+    assert.deepEqual(application.singletons.map((s) => [s.name, s.singleton, s.path('collection')]),
+      [['HouseholdInfo', true, '/applications/{applicationId}/household-info']]);
+  });
+
+  test('a list, a list with an item path, an action and a generated composition are not singletons', () => {
+    const names = application.singletons.map((s) => s.collection.segment);
+    for (const segment of ['members', 'notes', 'submit', 'summary']) assert.ok(!names.includes(segment), segment);
+  });
+
+  test('singletons are not top-level resources', () => {
+    assert.equal(byName(buildApiModel(doc), 'HouseholdInfo'), undefined);
+  });
+});

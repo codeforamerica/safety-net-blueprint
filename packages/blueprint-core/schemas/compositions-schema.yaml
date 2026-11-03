@@ -122,8 +122,6 @@ $defs:
         description: >
           Singleton resources only. Default is null when not found;
           'empty' returns {} instead.
-      fields:
-        $ref: "#/$defs/Fields"
       endpoint:
         description: >
           Where the composition is served. Every composition is reachable at the
@@ -216,7 +214,7 @@ $defs:
       its generated update operation. It's the records a change touches
       together, what domain-driven design calls an aggregate. Each include is
       keyed by record id, so a path like /incomes/{incomeId}/amount names one
-      record, and must keep id in its fields; there's no filter, flatten,
+      record. Records come whole: there's no fields, filter, flatten,
       sections or panel, since a patch has to see every record and know whose
       field it names. A patch applies all or nothing: each change is made
       through its record's own operation, as the caller, with that operation's
@@ -224,8 +222,7 @@ $defs:
       saved and no events are sent. A change may add a record under an id the
       caller chooses, and another change in the same patch may name it.
       Changes to fields the server sets, to fields a state machine owns, and to
-      derived fields are refused with 422; a renamed field is written under its
-      original name. The update operation requires an Idempotency-Key, answers
+      derived fields are refused with 422. The update operation requires an Idempotency-Key, answers
       200 with the document after the patch, 409 when a test fails or a
       record's state refuses its change, and 415 for another media type.
     allOf:
@@ -240,12 +237,15 @@ $defs:
 
   ResponseShaping:
     description: >
-      How a view or sectionView, or one of its includes, shapes its response.
-      An editable composition has neither: a patch has to see every record and
-      know whose field it names.
+      How a view or sectionView, or one of its includes, shapes its response:
+      which records it returns, which of their fields, and where they sit. An
+      editable composition has none of these: a patch has to see every record,
+      whole, and know whose field it names.
     properties:
       filter:
         $ref: "#/$defs/Filter"
+      fields:
+        $ref: "#/$defs/Fields"
       flatten:
         type: boolean
         description: >
@@ -306,8 +306,6 @@ $defs:
         description: >
           Singleton resources only. Default is null when not found;
           'empty' returns {} instead.
-      fields:
-        $ref: "#/$defs/Fields"
 
   Include:
     # Example — with bind and field selection:
@@ -326,16 +324,12 @@ $defs:
 
   IncludeEditable:
     description: >
-      An include in an editable composition: no filter or flatten, and id kept
-      in its fields, so every record is there and a patch can name it.
+      An include in an editable composition: every record, whole, so a patch
+      can name any of them. Includes don't nest: every one sits directly under
+      the root, bound to it, so a patch path is always /{include}/{id}/{field},
+      and records refer to each other by id, as they're stored.
     allOf:
       - $ref: "#/$defs/IncludeBase"
-    properties:
-      fields:
-        contains:
-          enum: [id, "*"]
-      include:
-        $ref: "#/$defs/IncludeMapEditable"
     unevaluatedProperties: false
 
   Section:

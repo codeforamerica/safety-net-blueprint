@@ -566,22 +566,26 @@ test('compositions-schema editable', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('an include may select fields that keep id, or all of them', () => {
-    for (const fields of [['id', 'firstName'], ['*']]) {
-      const { valid, errors } = validate(editable({}, { fields }));
-      assert.ok(valid, `${fields}: ${errorPaths(errors).join('\n')}`);
-    }
+  await t.test('records come whole: fields is refused on the composition and its includes', () => {
+    assert.ok(!validate(editable({ fields: ['id', 'status'] })).valid);
+    assert.ok(!validate(editable({}, { fields: ['id', 'firstName'] })).valid);
   });
 
-  await t.test('an include whose fields leave out id is refused', () => {
-    assert.ok(!validate(editable({}, { fields: ['firstName'] })).valid);
+  await t.test('a view may still select fields', () => {
+    const doc = editable({ fields: ['id'] }, { fields: ['firstName'] });
+    doc.compositions.applicationDetails.compositeType = 'view';
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('filter and flatten are refused on an include, at any depth', () => {
+  await t.test('filter and flatten are refused on an include', () => {
     assert.ok(!validate(editable({}, { filter: "status == 'active'" })).valid);
     assert.ok(!validate(editable({}, { flatten: true })).valid);
+  });
+
+  await t.test('includes do not nest', () => {
     assert.ok(!validate(editable({}, {
-      include: { incomes: { resource: 'Income', bind: 'memberId', filter: 'true' } },
+      include: { incomes: { resource: 'Income', bind: 'memberId' } },
     })).valid);
   });
 
