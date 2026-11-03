@@ -467,11 +467,13 @@ conversation, or returning a patch or flags would travel the same path.
    `fact_extraction` service call, with the turn's text and the schema of what
    it is filling in.
 4. **The mock makes the call** to the model, from the catalog entry, and
-   completes it. A declared step turns the result into suggestions — four
-   household members, each proposing "add household member", citing the lines
-   each came from.
-5. **The worker accepts them.** Each performs its operation, with the guards and
-   audit trail of any request.
+   completes it. A declared step turns the result into suggestions — one per
+   household member, each a JSON Patch to the application's editable
+   composition that adds the member and their income together, citing the
+   lines each change came from.
+5. **The worker accepts them,** correcting a value first where the model heard
+   it wrong. Each patch makes its changes through each record's own operation,
+   with the guards and audit trail of any request, all or nothing.
 6. **The application changed, so the interview re-runs its guidance.** Partial
    evaluation of the eligibility ruleset reports names and birth dates missing;
    the risk ruleset flags income below expenses. Each becomes a suggestion that
