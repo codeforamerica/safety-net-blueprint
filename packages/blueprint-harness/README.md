@@ -113,6 +113,10 @@ So when you add a feature to a tooling package, adding a contract here that exer
 - Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
 - Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
 
+**[`contracts/scenarios/interview-suggestions.arazzo.yaml`](contracts/scenarios/interview-suggestions.arazzo.yaml)**
+- Rosa's interview, recorded as a transcript, with suggestions from the backend's rules and from an AI assistant, including one that changes her household through the `applicationDetails` editable composition
+- Declares its actors in `info.x-actors` and names them on each step's `x-actors` (see `docs/conventions/extensions.yaml`); the demo page shows them as badges above each step's title
+
 ### Overlays
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**

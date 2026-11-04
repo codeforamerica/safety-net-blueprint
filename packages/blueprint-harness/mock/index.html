@@ -177,6 +177,25 @@
   .panel .watch li:last-child { margin-bottom: 0; }
   .panel .watch code { background: #e4efe4; padding: .08em .3em; border-radius: 3px; }
   li:has(> .ref) { position: relative; }
+  .actors { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: .1rem 0 .55rem; }
+  .actors .who {
+    font-size: .68rem; letter-spacing: .05em; text-transform: uppercase; font-weight: 700;
+    color: var(--muted); margin-right: .25rem;
+  }
+  .actors .then { color: var(--faint); font-size: .85rem; }
+  .actors .ref > .actor {
+    display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .8rem; font-weight: 600;
+    background: var(--actor-bg); color: var(--actor-ink); border: 1px solid var(--actor-line);
+    cursor: help; outline: none;
+  }
+  .actors .ref > .actor:hover, .actors .ref > .actor:focus { box-shadow: 0 0 0 2px var(--actor-line); }
+  .actors .ref .card { max-width: 26rem; right: auto; font-size: .82rem; color: var(--ink); }
+  .actor-0 { --actor-bg: #e6f0fb; --actor-ink: #1f4f86; --actor-line: #b9d2ef; }
+  .actor-1 { --actor-bg: #e7f4ea; --actor-ink: #24613a; --actor-line: #bcdcc5; }
+  .actor-2 { --actor-bg: #f6ecdf; --actor-ink: #7a4f17; --actor-line: #e6cfac; }
+  .actor-3 { --actor-bg: #f1e8f6; --actor-ink: #5d2f7a; --actor-line: #d7c2e4; }
+  .actor-4 { --actor-bg: #fbe9e9; --actor-ink: #8a2a2a; --actor-line: #efc4c4; }
+  .actor-5 { --actor-bg: #e9f3f4; --actor-ink: #205a60; --actor-line: #bddadd; }
   .ref > code {
     border-bottom: 1px dotted var(--ok); cursor: help; outline: none;
   }
@@ -1314,6 +1333,36 @@ const operationFor = (step) => {
 };
 
 /**
+ * Who acts in a scenario, from its `info.x-actors`: each an id, a name and a
+ * description. A step names its own in `x-actors`, the one who sends its
+ * request first, and the page shows them in that order, A → B, each name
+ * hovering its description.
+ */
+const actorsOf = (doc) => new Map((doc.content.info?.['x-actors'] ?? []).map((actor) => [actor.id, actor]));
+
+const actorLine = (doc, ids, { label = 'Who', join = '→' } = {}) => {
+  const known = actorsOf(doc);
+  const order = [...known.keys()];
+  const named = (ids ?? []).filter((id) => known.has(id));
+  if (named.length === 0) return null;
+  const line = el('p', '', 'actors');
+  line.append(el('span', label, 'who'));
+  named.forEach((id, i) => {
+    if (i > 0) line.append(el('span', join, 'then'));
+    const actor = known.get(id);
+    // One color per actor, by its place in the list, so it looks the same on every step.
+    const chipped = el('span', '', `ref actor-${order.indexOf(id) % 6}`);
+    const name = el('span', actor.name, 'actor');
+    name.tabIndex = 0;
+    const card = el('span', '', 'card');
+    card.append(el('span', actor.description ?? ''));
+    chipped.append(name, card);
+    line.append(chipped);
+  });
+  return line;
+};
+
+/**
  * A scenario's introduction, from its description: the first paragraph, and
  * the bullets after it — what the tour demonstrates.
  */
@@ -1321,6 +1370,8 @@ const introOf = (doc) => {
   const panelParts = [];
   const { title, points } = describe({ description: doc.content.info?.description, stepId: '' });
   if (title) panelParts.push(el('p', title, 'note'));
+  const everyone = actorLine(doc, [...actorsOf(doc).keys()], { label: "Who's involved", join: '' });
+  if (everyone) panelParts.push(everyone);
   if (points.length > 0) {
     // Read as part of the introduction, so set like the sentence above them.
     const list = noticeList(points, null);
@@ -1591,6 +1642,8 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   // whole tour shows it under the section's heading instead.
   if (sectioned && live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
   if (group) panel.append(el('p', group.title, 'kindline'));
+  const acting = actorLine(doc, step['x-actors']);
+  if (acting) panel.append(acting);
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
   panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
