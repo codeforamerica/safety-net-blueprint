@@ -7,7 +7,7 @@
 > so are accepting, dismissing and expiring them, and refusing a proposal that
 > repeats one open or dismissed. The harness's interview puts its flags to the
 > worker as suggestions, end to end, walked through in
-> `blueprint-harness/contracts/scenarios/interview-suggestions.arazzo.yaml`.
+> `blueprint-harness/contracts/scenarios/suggestion-lifecycle.arazzo.yaml`.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)

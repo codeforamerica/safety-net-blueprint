@@ -30,7 +30,9 @@ export type SuggestionCommon = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -41,20 +43,20 @@ export type SuggestionCommon = {
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
      */
     confidence?: number;
-    /**
-     * Context from other domains, by the cross-domain pass-through
-     * convention — `intake.interviewId`, say — so everything proposed
-     * during something can be listed together.
-     *
-     */
-    metadata?: {
-        [key: string]: unknown;
-    };
     /**
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
@@ -188,7 +190,9 @@ export type SuggestionEvidence = {
      */
     sourceType: 'transcript_entry';
     /**
-     * The record it cites. `sourceType` says what kind.
+     * The record it cites. `sourceType` says what kind, and
+     * `links.source` is where to read it.
+     *
      */
     sourceId: string;
     /**
@@ -199,6 +203,15 @@ export type SuggestionEvidence = {
      *
      */
     path?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related record, of the kind sourceType names.
+         */
+        source?: string;
+    };
 };
 
 export type SuggestionCreate = ({
@@ -211,7 +224,9 @@ export type SuggestionCreate = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -222,20 +237,20 @@ export type SuggestionCreate = ({
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
      */
     confidence?: number;
-    /**
-     * Context from other domains, by the cross-domain pass-through
-     * convention — `intake.interviewId`, say — so everything proposed
-     * during something can be listed together.
-     *
-     */
-    metadata?: {
-        [key: string]: unknown;
-    };
     /**
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
@@ -296,7 +311,9 @@ export type SuggestionCreate = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -307,20 +324,20 @@ export type SuggestionCreate = ({
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
      */
     confidence?: number;
-    /**
-     * Context from other domains, by the cross-domain pass-through
-     * convention — `intake.interviewId`, say — so everything proposed
-     * during something can be listed together.
-     *
-     */
-    metadata?: {
-        [key: string]: unknown;
-    };
     /**
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
@@ -372,7 +389,9 @@ export type OperationSuggestionCreate = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -383,20 +402,20 @@ export type OperationSuggestionCreate = {
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
      */
     confidence?: number;
-    /**
-     * Context from other domains, by the cross-domain pass-through
-     * convention — `intake.interviewId`, say — so everything proposed
-     * during something can be listed together.
-     *
-     */
-    metadata?: {
-        [key: string]: unknown;
-    };
     /**
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
@@ -462,7 +481,9 @@ export type InformingSuggestionCreate = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -473,20 +494,20 @@ export type InformingSuggestionCreate = {
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
      */
     confidence?: number;
-    /**
-     * Context from other domains, by the cross-domain pass-through
-     * convention — `intake.interviewId`, say — so everything proposed
-     * during something can be listed together.
-     *
-     */
-    metadata?: {
-        [key: string]: unknown;
-    };
     /**
      * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
      */
@@ -535,7 +556,9 @@ export type Suggestion = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -546,6 +569,15 @@ export type Suggestion = ({
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -693,7 +725,9 @@ export type Suggestion = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -704,6 +738,15 @@ export type Suggestion = ({
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -802,7 +845,9 @@ export type OperationSuggestion = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -813,6 +858,15 @@ export type OperationSuggestion = {
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -965,7 +1019,9 @@ export type InformingSuggestion = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -976,6 +1032,15 @@ export type InformingSuggestion = {
          *
          */
         path?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related record, of the kind sourceType names.
+             */
+            source?: string;
+        };
     }>;
     /**
      * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1072,7 +1137,9 @@ export type SuggestionList = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -1083,6 +1150,15 @@ export type SuggestionList = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1230,7 +1306,9 @@ export type SuggestionList = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -1241,6 +1319,15 @@ export type SuggestionList = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -1392,6 +1479,357 @@ export type DismissRequest = {
     reason: string;
 };
 
+export type SuggestionCommonWritable = {
+    /**
+     * Where it came from.
+     */
+    evidence?: Array<{
+        /**
+         * What kind of record it cites, e.g. `transcript_entry`.
+         */
+        sourceType: 'transcript_entry';
+        /**
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
+         */
+        sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
+    }>;
+    /**
+     * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+     */
+    confidence?: number;
+    /**
+     * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+     */
+    expiresAt?: string;
+};
+
+export type SuggestionEvidenceWritable = {
+    /**
+     * What kind of record it cites, e.g. `transcript_entry`.
+     */
+    sourceType: 'transcript_entry';
+    /**
+     * The record it cites. `sourceType` says what kind, and
+     * `links.source` is where to read it.
+     *
+     */
+    sourceId: string;
+    /**
+     * For a suggestion whose call carries a JSON Patch, the change this
+     * backs up: the `path` of one of the patch's changes, such as
+     * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+     * A path no change in the patch has is refused with `422`.
+     *
+     */
+    path?: string;
+};
+
+export type SuggestionCreateWritable = ({
+    /**
+     * Where it came from.
+     */
+    evidence?: Array<{
+        /**
+         * What kind of record it cites, e.g. `transcript_entry`.
+         */
+        sourceType: 'transcript_entry';
+        /**
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
+         */
+        sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
+    }>;
+    /**
+     * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+     */
+    confidence?: number;
+    /**
+     * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+     */
+    expiresAt?: string;
+} & {
+    /**
+     * The new record's id, a UUID (RFC 9562).
+     */
+    id?: string;
+} & {
+    kind: 'operation';
+    /**
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
+     *
+     */
+    call: {
+        /**
+         * The operation's operationId, e.g. `updateApplicationMember`.
+         */
+        operationId: string;
+        /**
+         * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+         *
+         */
+        parameters?: Array<{
+            /**
+             * The parameter's name, as the operation declares it.
+             */
+            name: string;
+            in: 'path' | 'query' | 'header' | 'cookie';
+            /**
+             * The parameter's value.
+             */
+            value: unknown;
+        }>;
+        /**
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
+         */
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
+    };
+}) | ({
+    /**
+     * Where it came from.
+     */
+    evidence?: Array<{
+        /**
+         * What kind of record it cites, e.g. `transcript_entry`.
+         */
+        sourceType: 'transcript_entry';
+        /**
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
+         */
+        sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
+    }>;
+    /**
+     * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+     */
+    confidence?: number;
+    /**
+     * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+     */
+    expiresAt?: string;
+} & {
+    /**
+     * The new record's id, a UUID (RFC 9562).
+     */
+    id?: string;
+} & unknown & {
+    kind: 'informing';
+    /**
+     * What kind of record it is about, e.g. `application_member`.
+     */
+    subjectType: 'application_member' | 'application_income';
+    /**
+     * The record it is about. `subjectType` says what kind.
+     */
+    subjectId: string;
+    /**
+     * The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+     */
+    path?: string;
+    /**
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
+     */
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
+    /**
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+     */
+    message?: string;
+});
+
+/**
+ * Payload to propose a change.
+ */
+export type OperationSuggestionCreateWritable = {
+    /**
+     * Where it came from.
+     */
+    evidence?: Array<{
+        /**
+         * What kind of record it cites, e.g. `transcript_entry`.
+         */
+        sourceType: 'transcript_entry';
+        /**
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
+         */
+        sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
+    }>;
+    /**
+     * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+     */
+    confidence?: number;
+    /**
+     * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+     */
+    expiresAt?: string;
+} & {
+    /**
+     * The new record's id, a UUID (RFC 9562).
+     */
+    id?: string;
+} & {
+    kind: 'operation';
+    /**
+     * An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
+     *
+     */
+    call: {
+        /**
+         * The operation's operationId, e.g. `updateApplicationMember`.
+         */
+        operationId: string;
+        /**
+         * The operation's path, query, header and cookie parameters, as an Arazzo step or an OpenAPI operation lists them.
+         *
+         */
+        parameters?: Array<{
+            /**
+             * The parameter's name, as the operation declares it.
+             */
+            name: string;
+            in: 'path' | 'query' | 'header' | 'cookie';
+            /**
+             * The parameter's value.
+             */
+            value: unknown;
+        }>;
+        /**
+         * The request body a call sends, as an Arazzo step's requestBody: the body itself in `payload`, and the media type in `contentType` when the operation accepts more than one.
+         *
+         */
+        requestBody?: {
+            /**
+             * One of the media types the operation's requestBody lists. Defaults to application/json.
+             */
+            contentType?: string;
+            /**
+             * The request body, in the operation's request schema.
+             */
+            payload?: unknown;
+        };
+    };
+};
+
+/**
+ * Payload to point something out.
+ */
+export type InformingSuggestionCreateWritable = {
+    /**
+     * Where it came from.
+     */
+    evidence?: Array<{
+        /**
+         * What kind of record it cites, e.g. `transcript_entry`.
+         */
+        sourceType: 'transcript_entry';
+        /**
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
+         */
+        sourceId: string;
+        /**
+         * For a suggestion whose call carries a JSON Patch, the change this
+         * backs up: the `path` of one of the patch's changes, such as
+         * `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+         * A path no change in the patch has is refused with `422`.
+         *
+         */
+        path?: string;
+    }>;
+    /**
+     * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
+     */
+    confidence?: number;
+    /**
+     * When it stops applying, if nothing decides it first. One day after it was proposed, when not given.
+     */
+    expiresAt?: string;
+} & {
+    /**
+     * The new record's id, a UUID (RFC 9562).
+     */
+    id?: string;
+} & unknown & {
+    kind: 'informing';
+    /**
+     * What kind of record it is about, e.g. `application_member`.
+     */
+    subjectType: 'application_member' | 'application_income';
+    /**
+     * The record it is about. `subjectType` says what kind.
+     */
+    subjectId: string;
+    /**
+     * The field within the record it is about, as a JSON Pointer — `/income`. Absent, it is about the whole record.
+     */
+    path?: string;
+    /**
+     * What kind of thing it points out — an entry of the
+     * `suggestion-categories` registry, which a contract set declares.
+     * Its description is what a person reads when there is no message.
+     * Absent, it is uncategorized: something no category covers yet,
+     * found with `q=kind:informing -category:*`.
+     *
+     */
+    category?: 'cash-or-self-employment-income' | 'earned-income-varies' | 'missing-income' | 'name-mismatch';
+    /**
+     * What it points out, in words of its own — a model's, about this conversation. Required when there is no category.
+     */
+    message?: string;
+};
+
 export type SuggestionWritable = ({
     /**
      * Where it came from.
@@ -1402,7 +1840,9 @@ export type SuggestionWritable = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -1473,7 +1913,9 @@ export type SuggestionWritable = ({
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -1535,7 +1977,9 @@ export type OperationSuggestionWritable = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -1611,7 +2055,9 @@ export type InformingSuggestionWritable = {
          */
         sourceType: 'transcript_entry';
         /**
-         * The record it cites. `sourceType` says what kind.
+         * The record it cites. `sourceType` says what kind, and
+         * `links.source` is where to read it.
+         *
          */
         sourceId: string;
         /**
@@ -1671,7 +2117,9 @@ export type SuggestionListWritable = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -1742,7 +2190,9 @@ export type SuggestionListWritable = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2002,7 +2452,9 @@ export type ListSuggestionsResponses = {
                  */
                 sourceType: 'transcript_entry';
                 /**
-                 * The record it cites. `sourceType` says what kind.
+                 * The record it cites. `sourceType` says what kind, and
+                 * `links.source` is where to read it.
+                 *
                  */
                 sourceId: string;
                 /**
@@ -2013,6 +2465,15 @@ export type ListSuggestionsResponses = {
                  *
                  */
                 path?: string;
+                /**
+                 * Related resource links.
+                 */
+                readonly links?: {
+                    /**
+                     * Link to the related record, of the kind sourceType names.
+                     */
+                    source?: string;
+                };
             }>;
             /**
              * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2169,7 +2630,9 @@ export type ListSuggestionsResponses = {
                  */
                 sourceType: 'transcript_entry';
                 /**
-                 * The record it cites. `sourceType` says what kind.
+                 * The record it cites. `sourceType` says what kind, and
+                 * `links.source` is where to read it.
+                 *
                  */
                 sourceId: string;
                 /**
@@ -2180,6 +2643,15 @@ export type ListSuggestionsResponses = {
                  *
                  */
                 path?: string;
+                /**
+                 * Related resource links.
+                 */
+                readonly links?: {
+                    /**
+                     * Link to the related record, of the kind sourceType names.
+                     */
+                    source?: string;
+                };
             }>;
             /**
              * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2305,7 +2777,9 @@ export type CreateSuggestionData = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2316,6 +2790,15 @@ export type CreateSuggestionData = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2390,7 +2873,9 @@ export type CreateSuggestionData = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2401,6 +2886,15 @@ export type CreateSuggestionData = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2552,7 +3046,9 @@ export type CreateSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2563,6 +3059,15 @@ export type CreateSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2719,7 +3224,9 @@ export type CreateSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2730,6 +3237,15 @@ export type CreateSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -2896,7 +3412,9 @@ export type GetSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -2907,6 +3425,15 @@ export type GetSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3063,7 +3590,9 @@ export type GetSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -3074,6 +3603,15 @@ export type GetSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3356,7 +3894,9 @@ export type AcceptSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -3367,6 +3907,15 @@ export type AcceptSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3523,7 +4072,9 @@ export type AcceptSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -3534,6 +4085,15 @@ export type AcceptSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3781,7 +4341,9 @@ export type DismissSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -3792,6 +4354,15 @@ export type DismissSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -3948,7 +4519,9 @@ export type DismissSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -3959,6 +4532,15 @@ export type DismissSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -4182,7 +4764,9 @@ export type ExpireSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -4193,6 +4777,15 @@ export type ExpireSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.
@@ -4349,7 +4942,9 @@ export type ExpireSuggestionResponses = {
              */
             sourceType: 'transcript_entry';
             /**
-             * The record it cites. `sourceType` says what kind.
+             * The record it cites. `sourceType` says what kind, and
+             * `links.source` is where to read it.
+             *
              */
             sourceId: string;
             /**
@@ -4360,6 +4955,15 @@ export type ExpireSuggestionResponses = {
              *
              */
             path?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related record, of the kind sourceType names.
+                 */
+                source?: string;
+            };
         }>;
         /**
          * How sure a model was. Absent for rules and people. For display and review only; nothing in the lifecycle reads it.

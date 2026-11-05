@@ -72,10 +72,11 @@ x_extensions:
     description: >
       Names who takes part in an Arazzo scenario, and who acts in each step.
       Arazzo allows x- extensions but has no field for this, so the name and
-      shape are ours. List every actor once under info, with an id, the name
+      shape are ours. It is optional. When a scenario uses it, list every actor once under info, with an id, the name
       the scenario's text uses for them, and a one-sentence description. On a
-      step, list the ids of the actors involved, the one who sends the request
-      first. Leave it off a step that only checks what happened. Use exactly
+      step, list the ids of the actors involved in the order they act, starting
+      with the one who starts the step (a caseworker who clicks record, then
+      the software that sends the request). Leave it off a step that only checks what happened. Use exactly
       the listed name for an actor everywhere in the scenario's text, never a
       second name for the same actor. A scenario is not an actor. The demo
       page shows each step's actors as colored badges joined by arrows above
@@ -93,14 +94,14 @@ x_extensions:
           - id: caseworker
             name: The caseworker
             description: Interviews Rosa, and accepts or dismisses suggestions.
-          - id: backend
-            name: The backend
+          - id: server
+            name: The server
             description: Runs the contracts.
       workflows:
         - workflowId: beforeInterview
           steps:
             - stepId: scheduleInterview
-              x-actors: [caseworker, backend]
+              x-actors: [caseworker, server]
 
   x-domain:
     description: >
@@ -217,6 +218,11 @@ x_extensions:
         FK only. Controls how the resolver transforms the FK field. "expand" inlines
         the related resource; "links-only" adds a links navigation object. Omitting
         style leaves the field untouched — x-relationship is metadata only.
+        A Polymorphic reference takes only "links-only", written on the field
+        itself; the set's style doesn't reach it. Its link goes to the record its
+        type field names, record by record, and is left out when that type maps
+        to External. Don't expand one: its record's shape changes with its type,
+        so no one schema describes it.
       discriminator: >
         Polymorphic only (resource: Polymorphic), and required there. Name the
         field beside the id that says its type in propertyName, as OpenAPI's

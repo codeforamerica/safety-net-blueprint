@@ -103,8 +103,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 ### Scenarios
 
-**[`contracts/scenarios/framework-walkthrough.arazzo.yaml`](contracts/scenarios/framework-walkthrough.arazzo.yaml)**
-- The demo page's walk-through of the framework's core features, one workflow per feature — resources, composite views, an editable composition, state machines, rules, events and the mock's own controls — with one SNAP application as the example throughout
+**[`contracts/scenarios/framework-features.arazzo.yaml`](contracts/scenarios/framework-features.arazzo.yaml)**
+- The demo page's walkthrough of the framework's core features, one workflow per feature — resources, composite views, an editable composition, state machines, rules, events and the mock's own controls — with one SNAP application as the example throughout
 - The tour Show me around opens with (`--first-tour` in `scripts/regenerate.js`). Each step's first line is its title in the page, and its bullets are what to notice
 - Written down, not worked out from the contracts, so it reads the same however the set changes
 
@@ -113,8 +113,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 - Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
 - Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
 
-**[`contracts/scenarios/interview-suggestions.arazzo.yaml`](contracts/scenarios/interview-suggestions.arazzo.yaml)**
-- Rosa's interview, recorded as a transcript, with suggestions from the backend's rules and from an AI assistant, including one that changes her household through the `applicationDetails` editable composition
+**[`contracts/scenarios/suggestion-lifecycle.arazzo.yaml`](contracts/scenarios/suggestion-lifecycle.arazzo.yaml)**
+- Rosa's interview, recorded as a transcript, with suggestions from the server's rules and from an AI assistant, including one that changes her household through the `applicationDetails` editable composition
 - Declares its actors in `info.x-actors` and names them on each step's `x-actors` (see `docs/conventions/extensions.yaml`); the demo page shows them as badges above each step's title
 
 ### Overlays

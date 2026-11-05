@@ -322,12 +322,15 @@ components:
         sourceId:
           type: string
           format: uuid
-          description: The record it cites. `sourceType` says what kind.
+          description: |
+            The record it cites. `sourceType` says what kind, and
+            `links.source` is where to read it.
           x-relationship:
             resource: Polymorphic
             discriminator:
               propertyName: sourceType
             onDelete: cascade
+            style: links-only
         path:
           type: string
           format: json-pointer

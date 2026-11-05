@@ -363,7 +363,7 @@
   <main id="stage"></main>
 </div>
 
-<script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts","firstTour":"scenarios/framework-walkthrough.arazzo.yaml"}</script>
+<script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts","firstTour":"scenarios/framework-features.arazzo.yaml"}</script>
 <script type="module">
 const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations } =
   globalThis.BlueprintMock ?? await import('./mock.js');
@@ -1335,8 +1335,8 @@ const operationFor = (step) => {
 
 /**
  * Who acts in a scenario, from its `info.x-actors`: each an id, a name and a
- * description. A step names its own in `x-actors`, the one who sends its
- * request first, and the page shows them in that order, A → B, each name
+ * description. A step names its own in `x-actors` in the order they act,
+ * and the page shows them in that order, A → B, each name
  * hovering its description.
  */
 const actorsOf = (doc) => new Map((doc.content.info?.['x-actors'] ?? []).map((actor) => [actor.id, actor]));

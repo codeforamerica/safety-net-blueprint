@@ -451,12 +451,15 @@ components:
         sourceId:
           type: string
           format: uuid
-          description: The record it cites. `sourceType` says what kind.
+          description: |
+            The record it cites. `sourceType` says what kind, and
+            `links.source` is where to read it.
           x-relationship:
             resource: Polymorphic
             discriminator:
               propertyName: sourceType
             onDelete: cascade
+            style: links-only
         path:
           type: string
           format: json-pointer
@@ -466,6 +469,15 @@ components:
             `/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
             A path no change in the patch has is refused with `422`.
           example: /members/40bd2c1e-5a3f-4b7d-9e1c-6f8a0b2d4c71
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            source:
+              type: string
+              format: uri-reference
+              description: Link to the related record, of the kind sourceType names.
     SuggestionCreate:
       oneOf:
         - $ref: "#/components/schemas/OperationSuggestionCreate"

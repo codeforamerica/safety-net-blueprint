@@ -55,6 +55,25 @@ test('a step naming two targets, and a repeated stepId', () => {
   assert.deepEqual(rules(errors), ['arazzo-shape', 'arazzo-shape']);
 });
 
+test('a step names only actors info.x-actors lists, and each is listed once with an id and a name', () => {
+  const withActors = (actors, steps) => {
+    const doc = scenario(steps);
+    doc.content.info['x-actors'] = actors;
+    return doc;
+  };
+  const ops = new Set(['createThing']);
+  const caseworker = { id: 'caseworker', name: 'The caseworker', description: 'Reviews the application.' };
+  const server = { id: 'server', name: 'The server' };
+  assert.deepEqual(rules(validateArazzo(withActors([caseworker, server], [
+    { stepId: 'a', 'x-actors': ['caseworker', 'server'], operationId: 'createThing' },
+    { stepId: 'b', operationId: 'createThing' },
+  ]), ops)), []);
+  assert.deepEqual(rules(validateArazzo(withActors([caseworker], [{ stepId: 'a', 'x-actors': ['assistant'], operationId: 'createThing' }]), ops)), ['unknown-actor']);
+  assert.deepEqual(rules(validateArazzo(scenario([{ stepId: 'a', 'x-actors': ['caseworker'], operationId: 'createThing' }]), ops)), ['unknown-actor']);
+  assert.deepEqual(rules(validateArazzo(withActors([caseworker], [{ stepId: 'a', 'x-actors': 'caseworker', operationId: 'createThing' }]), ops)), ['arazzo-shape']);
+  assert.deepEqual(rules(validateArazzo(withActors([caseworker, caseworker, { id: 'x' }], []), ops).filter((e) => e.path.includes('x-actors'))), ['arazzo-shape', 'arazzo-shape']);
+});
+
 test('a sound scenario', () => {
   assert.deepEqual(validateArazzo(scenario([{ stepId: 'a', operationId: 'createThing' }]), new Set(['createThing'])), []);
 });

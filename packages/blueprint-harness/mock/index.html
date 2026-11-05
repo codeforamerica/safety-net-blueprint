@@ -1334,8 +1334,8 @@ const operationFor = (step) => {
 
 /**
  * Who acts in a scenario, from its `info.x-actors`: each an id, a name and a
- * description. A step names its own in `x-actors`, the one who sends its
- * request first, and the page shows them in that order, A → B, each name
+ * description. A step names its own in `x-actors` in the order they act,
+ * and the page shows them in that order, A → B, each name
  * hovering its description.
  */
 const actorsOf = (doc) => new Map((doc.content.info?.['x-actors'] ?? []).map((actor) => [actor.id, actor]));
