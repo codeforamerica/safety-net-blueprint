@@ -22,7 +22,7 @@ import { openUndoLog } from './undo-log.js';
 import { parentLinkRegistry } from './composition-assembler.js';
 import { operationsOf } from './operation-calls.js';
 import { validate } from './validator.js';
-import { extractAuthContext, extractCallerRoles, callerHeader } from './auth-context.js';
+import { extractAuthContext, extractCallerRoles, callerHeader, causationOf } from './auth-context.js';
 import {
   extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields,
 } from './handlers/expand-utils.js';
@@ -360,7 +360,9 @@ export function createEditablePatchHandler(composition, { resources, store, step
     if (planned.refused) return planned.refused;
 
     const caller = { id: extractAuthContext(request).userId ?? null, roles: extractCallerRoles(request) };
-    const patchId = crypto.randomUUID();
+    // The patch's events name what caused it, such as the acceptance of a
+    // suggestion that carried it, or the patch itself when nothing did.
+    const patchId = causationOf(request) ?? crypto.randomUUID();
     const events = eventBus.hold((event) => event?.causationid === patchId);
     const undo = openUndoLog(store);
     for (const step of planned.steps) {

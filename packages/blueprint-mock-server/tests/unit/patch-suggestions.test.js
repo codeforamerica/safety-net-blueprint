@@ -122,7 +122,7 @@ test('evidence names the change it backs up by its path, and a path no change ha
   assert.strictEqual(stray.body.details[0].field, 'evidence[0].path');
 });
 
-test('accepting saves every change in one call, as the person accepting, with the suggestion\'s id as its key', async () => {
+test('accepting saves every change in one call, as the person accepting, caused by the acceptance, with the suggestion\'s id as its key', async () => {
   const memberId = crypto.randomUUID();
   const incomeId = crypto.randomUUID();
   const { body: suggestion } = await propose(newMember(memberId, incomeId));
@@ -134,10 +134,12 @@ test('accepting saves every change in one call, as the person accepting, with th
   assert.strictEqual(after.members[memberId].firstName, 'Maria');
   assert.strictEqual(after.incomes[incomeId].memberId, memberId);
 
-  const created = (await send('GET', '/platform/events?limit=200')).body.items
-    .filter((e) => e.type === 'intake.application_member.created' && e.subject === memberId);
+  const events = (await send('GET', '/platform/events?limit=200')).body.items;
+  const created = events.filter((e) => e.type === 'intake.application_member.created' && e.subject === memberId);
   assert.strictEqual(created.length, 1);
   assert.strictEqual(created[0].authid, 'worker-1');
+  const acceptance = events.find((e) => e.type === 'decision-support.suggestion.accepted' && e.subject === suggestion.id);
+  assert.strictEqual(created[0].causationid, acceptance.id);
 
   // Kept under the accepting caller and the suggestion's id.
   assert.ok(mock.store.findById('idempotency-keys', `worker-1:${suggestion.id}`));
