@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   x-domain: intake
   description: |
-    A caseworker interviews Rosa about her household's income. During the interview, the server proposes suggestions about things to ask, and the assistant proposes changes to her application. The caseworker accepts or dismisses each suggestion.
+    A suggestion is a record that proposes something to a person: something to look into, or a change to make. It waits as `proposed` until the person accepts or dismisses it, and expires if nobody does. Here a caseworker interviews Rosa about her household's income. During the interview, the server proposes suggestions about things to ask, and the assistant proposes changes to her application. The caseworker accepts or dismisses each one.
   x-actors:
     - id: caseworker
       name: The caseworker
@@ -24,9 +24,6 @@ sourceDescriptions:
     type: openapi
   - name: suggestions
     url: ../base/domains/decision-support/decision-support-suggestions-openapi.yaml
-    type: openapi
-  - name: registries
-    url: ../base/domains/platform/platform-registries-openapi.yaml
     type: openapi
   - name: events
     url: ../base/domains/platform/platform-events-openapi.yaml
@@ -52,35 +49,23 @@ workflows:
   - workflowId: beforeInterview
     summary: "Setup: Rosa's application before the interview"
     description: |
-      - Where things stand before the interview: Rosa applied for SNAP and reported four incomes, wages, tips, self-employment income and a salary.
+      - Rosa applied for SNAP and reported four incomes: wages, tips, self-employment income and a salary.
       - A pay stub on file shows a higher salary than she reported.
-      - The caseworker schedules her interview.
     steps:
-      - stepId: household
+      - stepId: readTheApplication
         description: |
-          List Rosa's household members
+          Read Rosa's application details
 
-          - Rosa applied for SNAP, and she is the only member of her household on the application.
-        operationId: $sourceDescriptions.intake.listApplicationMembers
+          - `applicationDetails` is a composition: one document the server assembles from several records, here the application with its members and incomes, each keyed by its id. It's editable: a client can change it in one request with a JSON Patch (RFC 6902), a list of changes, each an `op` such as `add` or `replace` at a `path` in the document. The assistant does that later.
+          - Rosa is the only member. Her incomes are weekly wages that change from week to week, weekly tips of 120 paid in cash, monthly self-employment income, and a monthly salary of 1,100.
+        operationId: $sourceDescriptions.intake.getApplicationDetails
         parameters:
           - reference: $components.parameters.worker
           - reference: $components.parameters.application
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/total == 1
-          - condition: $response.body#/items/0/firstName == 'Rosa'
-      - stepId: incomes
-        description: |
-          List Rosa's incomes
-
-          - Weekly wages that change from week to week, weekly tips paid in cash, monthly self-employment income, and a monthly salary of 1,100.
-        operationId: $sourceDescriptions.intake.listApplicationIncomes
-        parameters:
-          - reference: $components.parameters.worker
-          - reference: $components.parameters.application
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/total == 4
+          - condition: $response.body#/members/11111111-1111-4111-8111-100000000001/firstName == 'Rosa'
+          - condition: $response.body#/incomes/11111111-1111-4111-8111-200000000004/amount == 1100
       - stepId: scheduleInterview
         x-actors:
           - caseworker
@@ -88,7 +73,8 @@ workflows:
         description: |
           Schedule Rosa's interview
 
-          - `status` is `scheduled`. The server sets a new interview to its initial state.
+          - An interview's lifecycle is a state machine in the contracts: the states its `status` can have, and the actions that move it between them.
+          - `status` is `scheduled`, the state the server gives a new interview.
         operationId: $sourceDescriptions.intake.createApplicationInterview
         parameters:
           - reference: $components.parameters.worker
@@ -102,12 +88,11 @@ workflows:
         outputs:
           id: $response.body#/id
     outputs:
-      scheduleInterview: $steps.scheduleInterview.outputs.id
+      interview: $steps.scheduleInterview.outputs.id
   - workflowId: interviewStarts
     summary: The interview starts
     description: |
-      - When the caseworker starts the interview, the server checks Rosa's incomes and flags the kinds that are often reported wrong: wages that change from week to week, tips paid in cash, and self-employment income. Each flag is a suggestion for the caseworker.
-      - Because the pay stub shows a higher salary, the server also suggests correcting it.
+      - When the caseworker starts the interview, the server checks Rosa's incomes against rules and proposes suggestions for the caseworker: things to ask about, and a correction where a pay stub disagrees with what she reported.
     dependsOn:
       - beforeInterview
     steps:
@@ -119,75 +104,37 @@ workflows:
           Start the interview
 
           - The server moves it to `in_progress` and sets `startedAt`.
-          - Its `start` action calls the `suggestFlags` procedure. That reads Rosa's incomes and pay stubs through the `interviewFlagsInputs` composition, and evaluates the `interviewFlags` rules.
-          - The rules return the incomes behind each flag: `flagged.earnedIncomeVaries`, `flagged.cashOrSelfEmploymentIncome` and `flagged.incomeDiffersFromPayStub`. `suggestFlags` proposes a suggestion for each one.
+          - `start` is one of the state machine's actions. Besides changing the status, it runs steps, and one calls `suggestFlags`, a procedure: a named list of steps in the contracts that other steps can call.
+          - `suggestFlags` reads Rosa's incomes and pay stubs through `interviewFlagsInputs`, a composition shaped as the input the `interviewFlags` ruleset expects, and evaluates the ruleset. A ruleset is a contract of named facts, each worked out from the input. Some facts list incomes to flag, and `suggestFlags` proposes a suggestion for each.
         operationId: $sourceDescriptions.intake.startInterview
         parameters:
           - reference: $components.parameters.worker
           - reference: $components.parameters.application
           - name: interviewId
             in: path
-            value: $workflows.beforeInterview.outputs.scheduleInterview
+            value: $workflows.beforeInterview.outputs.interview
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'in_progress'
-      - stepId: startTheTranscript
-        x-actors:
-          - caseworker
-          - software
-        description: |
-          Start recording the interview
-
-          - When the caseworker starts recording, the interview software starts a transcript of the interview and saves what's said to it, line by line.
-          - `subjectType: interview` and `subjectId`, the interview's id, say which conversation the transcript records.
-          - It uses the seeded `english` profile, which transcribes with a speech-to-text service, so `model` says which model writes the lines.
-        operationId: $sourceDescriptions.transcripts.createTranscript
-        parameters:
-          - reference: $components.parameters.worker
-        requestBody:
-          payload:
-            subjectType: interview
-            subjectId: $workflows.beforeInterview.outputs.scheduleInterview
-            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
-            model: standard
-            client: interview-assistant/0.1.0
-            startedAt: "2026-11-03T10:00:00Z"
-        successCriteria:
-          - condition: $statusCode == 201
-          - condition: $response.body#/status == 'recording'
-        outputs:
-          id: $response.body#/id
-      - stepId: findTheTranscript
-        description: |
-          List the transcripts of Rosa's interview
-
-          - `q` filters transcripts by `subjectId`, the interview's id. `total` is 1: the transcript started a moment ago.
-        operationId: $sourceDescriptions.transcripts.listTranscripts
-        parameters:
-          - reference: $components.parameters.worker
-          - name: q
-            in: query
-            value: subjectId:{$workflows.beforeInterview.outputs.scheduleInterview}
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/total == 1
-          - condition: $response.body#/items/0/id == $steps.startTheTranscript.outputs.id
       - stepId: interviewSuggestions
         description: |
           List the suggestions the server proposed
 
-          - `total` is 5. Each suggestion's `metadata.intake` holds the interview's id, the flag, and the id of the income it's about (`recordId`).
-          - Wages: they have `amountVaries: true`, so they're flagged `earned-income-varies`. This suggestion is `kind: informing`: it has a `category` and names the record it's about (`subjectType`, `subjectId`). There's no change to make.
-          - Tips: they have `amountVaries: true` and `paidInCash: true`, so they get two suggestions, one under `earned-income-varies` and one under `cash-or-self-employment-income`. Each category on a record is a separate suggestion.
-          - Self-employment income: it has `source: self_employment`, so it's flagged `cash-or-self-employment-income`.
-          - Salary: Rosa reported 1,100 a month, and a pay stub shows 1,250. This suggestion is `kind: operation`. Its `call` is `updateApplicationIncome` with `amount: 1250`, which runs if the caseworker accepts it. It has no `subjectId`, because the call identifies the record it changes.
-          - `expiresAt` is one day after `createdAt`. The server didn't set one, so the default applies.
+          - `q` searches by field: `metadata.intake.interviewId:<id>` finds this interview's suggestions. `metadata` holds whatever the proposer needs to find its suggestions again, under its domain's name; `suggestFlags` keeps the interview's id, the flag, and the income's id (`recordId`).
+          - `total` is 5.
+          - There are two kinds. An `informing` suggestion points something out about a record, in a `category` the contract set declares, and names the record (`subjectType`, `subjectId`). Accepting it means the caseworker took it up; nothing changes. An `operation` suggestion carries a `call` to an operation; accepting it makes the call.
+          - These are deterministic: they come from rules applied to Rosa's data, so the same data always gives the same suggestions. The assistant's suggestions, later, come from an AI model reading the transcript. Either can propose either kind: `kind` says what accepting does, not who proposed it.
+          - Wages: the amount changes from week to week, so they're flagged `earned-income-varies`, an informing suggestion.
+          - Tips: the amount changes and they're paid in cash, so they get two suggestions, one under `earned-income-varies` and one under `cash-or-self-employment-income`. Each category on a record is a separate suggestion.
+          - Self-employment income: it's flagged `cash-or-self-employment-income`.
+          - Salary: Rosa reported 1,100 a month, and a pay stub shows 1,250. This is an operation suggestion whose `call` is `updateApplicationIncome`, setting the amount to 1,250.
+          - `expiresAt` is when an undecided suggestion expires: one day after `createdAt`, the default, since `suggestFlags` didn't set one.
         operationId: $sourceDescriptions.suggestions.listSuggestions
         parameters:
           - reference: $components.parameters.worker
           - name: q
             in: query
-            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.interview}
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/total == 5
@@ -206,6 +153,32 @@ workflows:
             context: $response.body
             selector: $.items[?@.metadata.intake.recordId == '11111111-1111-4111-8111-200000000004'].id
             type: jsonpath
+      - stepId: startTheTranscript
+        x-actors:
+          - caseworker
+          - software
+        description: |
+          Start recording the interview
+
+          - A transcript is the record of a conversation. Each thing said is saved to it as an entry, a line.
+          - When the caseworker starts recording, the interview software starts a transcript of the interview.
+          - `subjectType: interview` and `subjectId`, the interview's id, say which conversation the transcript records.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.worker
+        requestBody:
+          payload:
+            subjectType: interview
+            subjectId: $workflows.beforeInterview.outputs.interview
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: "2026-11-03T10:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'recording'
+        outputs:
+          id: $response.body#/id
     outputs:
       transcript: $steps.startTheTranscript.outputs.id
       salaryCorrection:
@@ -217,22 +190,24 @@ workflows:
         selector: /0
         type: jsonpointer
   - workflowId: assistantSuggests
-    summary: The assistant suggests a change
+    summary: The assistant suggests changes
     description: |
-      - Rosa mentions child support that isn't on her application. The interview software saves her line to the transcript, and the assistant suggests adding the income, citing that line as evidence.
-      - When it suggests the same change again, the second is rejected as a duplicate.
+      - Rosa mentions child support she didn't report, a daughter who works, and tips higher than she reported. The assistant reads the line from the transcript and suggests three changes, each citing the line as evidence.
+      - A suggestion is `kind: operation`, and its `call` is the change. A change to one record calls that record's own operation. Changes that depend on each other, like a new member and her income, go together in one JSON Patch to the `applicationDetails` editable composition, through its update, `updateApplicationDetails`.
+      - Proposing saves nothing but the suggestion. The server checks the call as if it were made now, and rejects a suggestion that repeats one or couldn't succeed.
     dependsOn:
       - beforeInterview
       - interviewStarts
     steps:
-      - stepId: rosaMentionsChildSupport
+      - stepId: rosaAnswers
         x-actors:
           - software
         description: |
-          Save what Rosa says about child support
+          Save what Rosa says about her household
 
-          - Rosa says "I get child support too, two fifty a month." It isn't on her application.
+          - Rosa says "I get child support, two fifty a month. My oldest, Maria, lives with us and works part time, about 600 a month. And my tips are more like 135 a week."
           - The interview software saves the line as an entry in the interview's transcript, and the assistant reads it from there.
+          - `Idempotency-Key` makes the request safe to retry: if the software loses the response and sends the line again with the same key, the server answers with the entry it already saved instead of saving a second one.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.worker
@@ -241,28 +216,27 @@ workflows:
             value: $workflows.interviewStarts.outputs.transcript
           - name: Idempotency-Key
             in: header
-            value: rosa-mentions-child-support
+            value: rosa-answers
         requestBody:
           payload:
             kind: line
             startedAt: "2026-11-03T10:02:00Z"
-            endedAt: "2026-11-03T10:02:04Z"
-            text: I get child support too, two fifty a month.
+            endedAt: "2026-11-03T10:02:12Z"
+            text: I get child support, two fifty a month. My oldest, Maria, lives with us and works part time, about 600 a month. And my tips are more like 135 a week.
             speaker: client
         successCriteria:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
-      - stepId: proposeChange
+      - stepId: proposeChildSupport
         x-actors:
           - assistant
         description: |
-          Suggest adding child support Rosa didn't report
+          Suggest adding the child support
 
-          - From Rosa's line, the assistant suggests adding the income. The `call` is `createApplicationIncome` with `source: unearned`, `amount: 250` and `frequency: monthly`.
+          - A `call` is a request written down to be made later: an operation's `operationId`, with the `parameters` and `requestBody` it would send. Here it's a change to one record: `createApplicationIncome`, adding unearned income of 250 a month.
           - `evidence` cites Rosa's line: `sourceType: transcript_entry` and the entry's id as `sourceId`. The server adds `links.source`, where the line is read. Evidence doesn't quote the line, so whoever reads it goes through the transcripts API and its access rules.
-          - `201`, with `status: proposed`.
-          - `fingerprint` is a hash of the change, used to detect duplicates. The values can't be recovered from it.
+          - `201`, with `status: proposed`. `fingerprint` is a hash of the change, used to detect duplicates.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -283,7 +257,7 @@ workflows:
                   frequency: monthly
             evidence:
               - sourceType: transcript_entry
-                sourceId: $steps.rosaMentionsChildSupport.outputs.id
+                sourceId: $steps.rosaAnswers.outputs.id
         successCriteria:
           - condition: $statusCode == 201
           - condition: $response.body#/status == 'proposed'
@@ -293,252 +267,15 @@ workflows:
         outputs:
           id: $response.body#/id
           citedLine: $response.body#/evidence/0/sourceId
-      - stepId: proposeItAgain
-        x-actors:
-          - assistant
-        description: |
-          Suggest the same change again
-
-          - This time the suggestion cites no evidence.
-          - `409`: an open suggestion already proposes this change. `details` gives that suggestion's id. The fingerprint, which is how duplicates are detected, covers only the change, not the evidence, so the same change is a duplicate whatever it cites.
-        operationId: $sourceDescriptions.suggestions.createSuggestion
-        parameters:
-          - reference: $components.parameters.assistant
-        requestBody:
-          payload:
-            kind: operation
-            call:
-              operationId: createApplicationIncome
-              parameters:
-                - name: applicationId
-                  in: path
-                  value: 11111111-1111-4111-8111-111111111111
-              requestBody:
-                payload:
-                  memberId: 11111111-1111-4111-8111-100000000001
-                  source: unearned
-                  amount: 250
-                  frequency: monthly
-        successCriteria:
-          - condition: $statusCode == 409
-          - condition: $response.body#/details/0/id == $steps.proposeChange.outputs.id
-    outputs:
-      proposeChange: $steps.proposeChange.outputs.id
-      citedLine: $steps.proposeChange.outputs.citedLine
-  - workflowId: caseworkerDecides
-    summary: The caseworker decides on suggestions
-    description: |
-      - The caseworker accepts the salary correction.
-      - The caseworker reads the line the child support suggestion cites. Rosa then says the amount is 200, not 250. The caseworker's first attempt to accept it with the correct amount fails, because the edit leaves the amount empty by mistake. The second attempt, with 200 a month, succeeds.
-      - The caseworker dismisses the wages flag and gives a reason.
-    dependsOn:
-      - beforeInterview
-      - interviewStarts
-      - assistantSuggests
-    steps:
-      - stepId: acceptTheCorrection
-        x-actors:
-          - caseworker
-        description: |
-          Accept the salary correction
-
-          - The request has no body, so the proposed call runs unchanged.
-          - `status` is `accepted`, and `performed` shows the call that ran: Rosa's salary is now 1,250, the amount on the pay stub.
-        operationId: $sourceDescriptions.suggestions.acceptSuggestion
-        parameters:
-          - reference: $components.parameters.worker
-          - name: suggestionId
-            in: path
-            value: $workflows.interviewStarts.outputs.salaryCorrection
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'accepted'
-      - stepId: readTheCitedLine
-        description: |
-          Read the line the child support suggestion cites
-
-          - To see why the assistant suggested the income, the caseworker reads the line the suggestion's `evidence` cites, at its `links.source`.
-          - The server builds that link from the entry, so it includes the transcript the line is in. The suggestion alone is enough to find the line.
-        operationId: $sourceDescriptions.transcripts.getTranscriptEntry
-        parameters:
-          - reference: $components.parameters.worker
-          - name: transcriptId
-            in: path
-            value: $workflows.interviewStarts.outputs.transcript
-          - name: entryId
-            in: path
-            value: $workflows.assistantSuggests.outputs.citedLine
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/text == 'I get child support too, two fifty a month.'
-      - stepId: acceptWithABadEdit
-        x-actors:
-          - caseworker
-        description: |
-          Accept the child support, clearing the amount by mistake
-
-          - Rosa says the child support is actually 200 a month, not 250. The caseworker edits the amount before accepting, and clears the field by mistake: `amount` is empty.
-          - `422`: `createApplicationIncome` rejects an income with no amount, and Rosa's application doesn't change.
-          - `details` holds the suggestion. Its `status` is now `refused`.
-        operationId: $sourceDescriptions.suggestions.acceptSuggestion
-        parameters:
-          - reference: $components.parameters.worker
-          - name: suggestionId
-            in: path
-            value: $workflows.assistantSuggests.outputs.proposeChange
-        requestBody:
-          payload:
-            call:
-              operationId: createApplicationIncome
-              parameters:
-                - name: applicationId
-                  in: path
-                  value: 11111111-1111-4111-8111-111111111111
-              requestBody:
-                payload:
-                  memberId: 11111111-1111-4111-8111-100000000001
-                  source: unearned
-                  amount: null
-                  frequency: monthly
-        successCriteria:
-          - condition: $statusCode == 422
-          - condition: $response.body#/details/0/status == 'refused'
-      - stepId: acceptWithAnEdit
-        x-actors:
-          - caseworker
-        description: |
-          Accept the child support with the amount corrected
-
-          - The request's `call` has `amount: 200`, the amount Rosa gave.
-          - `status` changes from `refused` to `accepted`. `performed` is the call that ran. `call` still holds what the assistant proposed, `amount: 250`.
-        operationId: $sourceDescriptions.suggestions.acceptSuggestion
-        parameters:
-          - reference: $components.parameters.worker
-          - name: suggestionId
-            in: path
-            value: $workflows.assistantSuggests.outputs.proposeChange
-        requestBody:
-          payload:
-            call:
-              operationId: createApplicationIncome
-              parameters:
-                - name: applicationId
-                  in: path
-                  value: 11111111-1111-4111-8111-111111111111
-              requestBody:
-                payload:
-                  memberId: 11111111-1111-4111-8111-100000000001
-                  source: unearned
-                  amount: 200
-                  frequency: monthly
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'accepted'
-          - condition: $response.body#/performed/requestBody/payload/amount == 200
-          - condition: $response.body#/call/requestBody/payload/amount == 250
-      - stepId: incomeAdded
-        description: |
-          List Rosa's incomes again
-
-          - `total` is 5. The new one is child support: `source: unearned`, `amount: 200`, `frequency: monthly`.
-        operationId: $sourceDescriptions.intake.listApplicationIncomes
-        parameters:
-          - reference: $components.parameters.worker
-          - reference: $components.parameters.application
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/total == 5
-          - context: $response.body
-            condition: $.items[?@.source == 'unearned' && @.amount == 200 && @.frequency == 'monthly']
-            type: jsonpath
-      - stepId: acceptedEvent
-        description: |
-          List the events for the accepted suggestion
-
-          - `authid` is `worker-1`, the caseworker who accepted it. The suggestion itself doesn't store who decided it.
-        operationId: $sourceDescriptions.events.listEvents
-        parameters:
-          - reference: $components.parameters.worker
-          - name: subject
-            in: query
-            value: $workflows.assistantSuggests.outputs.proposeChange
-          - name: type
-            in: query
-            value: decision-support.suggestion.accepted
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/items/0/authid == 'worker-1'
-      - stepId: dismissTheWagesFlag
-        x-actors:
-          - caseworker
-        description: |
-          Dismiss the wages flag with a reason
-
-          - The caseworker asked Rosa about her wages, and her pay stubs explain why they change.
-          - `status` is `dismissed`, and the suggestion keeps the `reason`.
-        operationId: $sourceDescriptions.suggestions.dismissSuggestion
-        parameters:
-          - reference: $components.parameters.worker
-          - name: suggestionId
-            in: path
-            value: $workflows.interviewStarts.outputs.wagesFlag
-        requestBody:
-          payload:
-            reason: Her pay stubs explain the changes.
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'dismissed'
-          - condition: $response.body#/reason == 'Her pay stubs explain the changes.'
-  - workflowId: assistantSuggestsAPatch
-    summary: The assistant suggests a new household member through an editable composition
-    description: |
-      - Editable composition: `applicationDetails` is the application with its members and incomes, as one document that a JSON Patch changes. A new member and her income depend on each other, so the assistant proposes them together, as one change to that composition.
-      - The suggestion is still `kind: operation`: its `call` is the composition's update, `updateApplicationDetails`, with the patch as its body.
-      - Rosa mentions her daughter Maria, who works part time, and the interview software saves the line to the interview's transcript. The suggestion cites that line as evidence. The caseworker corrects Maria's income and accepts.
-      - If the data changes after the assistant reads it, accepting its suggestion fails. The patch first checks the old value with a `test`, and that check no longer passes.
-    dependsOn:
-      - beforeInterview
-      - interviewStarts
-      - caseworkerDecides
-    steps:
-      - stepId: rosaMentionsMaria
-        x-actors:
-          - software
-        description: |
-          Save what Rosa says about Maria, who works part time
-
-          - Rosa says "It's me and my two kids, and my oldest, Maria, works part time. She makes about 600 a month."
-          - The interview software saves the line as an entry in the interview's transcript, and the assistant reads it from there.
-        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
-        parameters:
-          - reference: $components.parameters.worker
-          - name: transcriptId
-            in: path
-            value: $workflows.interviewStarts.outputs.transcript
-          - name: Idempotency-Key
-            in: header
-            value: rosa-mentions-maria
-        requestBody:
-          payload:
-            kind: line
-            startedAt: "2026-11-03T10:04:10Z"
-            endedAt: "2026-11-03T10:04:16Z"
-            text: It's me and my two kids, and my oldest, Maria, works part time. She makes about 600 a month.
-            speaker: client
-        successCriteria:
-          - condition: $statusCode == 201
-        outputs:
-          id: $response.body#/id
-      - stepId: proposeTheHousehold
+      - stepId: proposeMaria
         x-actors:
           - assistant
         description: |
           Suggest adding Maria and her income in one change
 
-          - From Rosa's line, the assistant learns that Maria lives with her and makes 600 a month.
-          - The assistant makes up an id for Maria and puts it in the patch. The income in the same patch uses that id as its `memberId`, so it points at Maria even though she isn't saved yet.
-          - The suggestion cites Rosa's line as evidence, twice: once with Maria's path in the patch, and once with her income's path, to say the line supports both changes.
-          - `201`. The patch was checked against the application's current details, and nothing was saved. If the evidence `path` didn't match a change in the patch, it would get `422`.
+          - Maria's income names her as its member, so the two go in one patch. The assistant makes up an id for Maria, and the income uses it as its `memberId`, so it points at Maria before she's saved.
+          - The suggestion cites Rosa's line twice: once with Maria's path in the patch, and once with her income's, to say the line supports both changes. A `path` that matches no change in the patch would get `422`.
+          - `201`. The server tried the patch on a copy of the application's details, checking each change against its record's own operation.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -569,25 +306,61 @@ workflows:
                       frequency: monthly
             evidence:
               - sourceType: transcript_entry
-                sourceId: $steps.rosaMentionsMaria.outputs.id
+                sourceId: $steps.rosaAnswers.outputs.id
                 path: /members/44444444-4444-4444-8444-000000000001
               - sourceType: transcript_entry
-                sourceId: $steps.rosaMentionsMaria.outputs.id
+                sourceId: $steps.rosaAnswers.outputs.id
                 path: /incomes/44444444-4444-4444-8444-000000000002
         successCriteria:
           - condition: $statusCode == 201
           - condition: $response.body#/status == 'proposed'
-          - condition: $response.body#/evidence/0/path == '/members/44444444-4444-4444-8444-000000000001'
         outputs:
           id: $response.body#/id
-      - stepId: proposeItUnderNewIds
+      - stepId: proposeTips
         x-actors:
           - assistant
         description: |
-          Suggest Maria again, under different ids
+          Suggest correcting Rosa's tips
 
-          - The assistant proposes Maria and her income again. This time it makes up different ids for them.
-          - `409`: it's a duplicate of the first suggestion, which `details` names. The fingerprint, which is how duplicates are detected, ignores the made-up ids of new records, so both suggestions have the same fingerprint.
+          - The details say 120 a week, and Rosa says 135. The patch first checks that the tips are still 120 (`test`), then changes them to 135 (`replace`). Every `replace` needs a `test` right before it, checking the value the assistant read.
+          - The evidence's `path` is the changed amount.
+        operationId: $sourceDescriptions.suggestions.createSuggestion
+        parameters:
+          - reference: $components.parameters.assistant
+        requestBody:
+          payload:
+            kind: operation
+            call:
+              operationId: updateApplicationDetails
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                contentType: application/json-patch+json
+                payload:
+                  - op: test
+                    path: /incomes/11111111-1111-4111-8111-200000000002/amount
+                    value: 120
+                  - op: replace
+                    path: /incomes/11111111-1111-4111-8111-200000000002/amount
+                    value: 135
+            evidence:
+              - sourceType: transcript_entry
+                sourceId: $steps.rosaAnswers.outputs.id
+                path: /incomes/11111111-1111-4111-8111-200000000002/amount
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: proposeMariaAgain
+        x-actors:
+          - assistant
+        description: |
+          Suggest Maria again, under different ids and with no evidence
+
+          - `409`: it repeats the open suggestion, which `details` names.
+          - The fingerprint covers the change, but not the ids made up for new records, and not the evidence. So this has the same fingerprint as the first.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -618,15 +391,14 @@ workflows:
                       frequency: monthly
         successCriteria:
           - condition: $statusCode == 409
-          - condition: $response.body#/details/0/id == $steps.proposeTheHousehold.outputs.id
+          - condition: $response.body#/details/0/id == $steps.proposeMaria.outputs.id
       - stepId: proposeTheIncomeAlone
         x-actors:
           - assistant
         description: |
           Suggest Maria's income without Maria
 
-          - The patch adds an income for a member who isn't on the application and isn't added in the same patch.
-          - `422`. To add a member and her income, put both in one patch.
+          - `422`: the income names a member who isn't on the application and isn't added in the same patch. A new member and her income go in one patch.
         operationId: $sourceDescriptions.suggestions.createSuggestion
         parameters:
           - reference: $components.parameters.assistant
@@ -651,32 +423,122 @@ workflows:
                       frequency: monthly
         successCriteria:
           - condition: $statusCode == 422
-      - stepId: previewAgainstTheDetails
-        description: |
-          Read the application's details before accepting
-
-          - Rosa is in `members`. Maria isn't: proposing the suggestion saved nothing, and nothing is saved until someone accepts it.
-        operationId: $sourceDescriptions.intake.getApplicationDetails
-        parameters:
-          - reference: $components.parameters.worker
-          - reference: $components.parameters.application
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/members/11111111-1111-4111-8111-100000000001/firstName == 'Rosa'
-      - stepId: acceptWithACorrectedIncome
+    outputs:
+      childSupport: $steps.proposeChildSupport.outputs.id
+      citedLine: $steps.proposeChildSupport.outputs.citedLine
+      maria: $steps.proposeMaria.outputs.id
+      tips: $steps.proposeTips.outputs.id
+  - workflowId: caseworkerDecides
+    summary: The caseworker decides
+    description: |
+      - Every request carries who makes it, in `X-Caller-Id`: `worker-1` for the caseworker, `assistant-1` for the assistant. Accepting makes the suggestion's call as the person accepting, so the operation's checks and permissions apply to the caseworker, not the assistant.
+      - The caseworker can correct values first, but not what the call changes.
+      - Rosa corrects two amounts, and the caseworker changes the tips by hand, so the assistant's tips correction no longer applies when it's accepted.
+    dependsOn:
+      - beforeInterview
+      - interviewStarts
+      - assistantSuggests
+    steps:
+      - stepId: acceptTheSalaryCorrection
         x-actors:
           - caseworker
         description: |
-          Correct Maria's income and accept
+          Accept the salary correction
 
-          - Rosa says Maria makes 650 a month, not 600. The caseworker changes 600 to 650 and accepts. A correction can change values, but not which records or fields the patch changes.
-          - `200`. Maria and her income were created in one request, made as the caseworker. `performed` has the corrected patch, and `call` still has the assistant's 600.
+          - The request has no body, so the proposed call runs unchanged.
+          - `status` is `accepted`, and `performed` shows the call that ran, setting Rosa's salary to 1,250, the amount on the pay stub.
         operationId: $sourceDescriptions.suggestions.acceptSuggestion
         parameters:
           - reference: $components.parameters.worker
           - name: suggestionId
             in: path
-            value: $steps.proposeTheHousehold.outputs.id
+            value: $workflows.interviewStarts.outputs.salaryCorrection
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+      - stepId: dismissTheWagesFlag
+        x-actors:
+          - caseworker
+        description: |
+          Dismiss the wages flag with a reason
+
+          - The caseworker asked Rosa about her wages, and her pay stubs explain why they change.
+          - `status` is `dismissed`, and the suggestion keeps the `reason`.
+        operationId: $sourceDescriptions.suggestions.dismissSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.interviewStarts.outputs.wagesFlag
+        requestBody:
+          payload:
+            reason: Her pay stubs explain the changes.
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'dismissed'
+      - stepId: readTheCitedLine
+        description: |
+          Read the line the child support suggestion cites
+
+          - The caseworker reads the line at the evidence's `links.source`. The server builds that link from the entry, so it includes the transcript the line is in, and the suggestion alone is enough to find it.
+        operationId: $sourceDescriptions.transcripts.getTranscriptEntry
+        parameters:
+          - reference: $components.parameters.worker
+          - name: transcriptId
+            in: path
+            value: $workflows.interviewStarts.outputs.transcript
+          - name: entryId
+            in: path
+            value: $workflows.assistantSuggests.outputs.citedLine
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: acceptTheChildSupportCorrected
+        x-actors:
+          - caseworker
+        description: |
+          Accept the child support with the amount corrected
+
+          - Rosa says it's actually 200 a month, not 250. The caseworker sends the `call` with the amount changed to 200.
+          - `status` is `accepted`. `performed` is the call that ran, and `call` still holds what the assistant proposed, 250.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.childSupport
+        requestBody:
+          payload:
+            call:
+              operationId: createApplicationIncome
+              parameters:
+                - name: applicationId
+                  in: path
+                  value: 11111111-1111-4111-8111-111111111111
+              requestBody:
+                payload:
+                  memberId: 11111111-1111-4111-8111-100000000001
+                  source: unearned
+                  amount: 200
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'accepted'
+          - condition: $response.body#/performed/requestBody/payload/amount == 200
+          - condition: $response.body#/call/requestBody/payload/amount == 250
+      - stepId: acceptMariaCorrected
+        x-actors:
+          - caseworker
+        description: |
+          Accept Maria with her income corrected
+
+          - Rosa says Maria makes 650 a month, not 600. The caseworker changes 600 to 650 in the patch. A correction can change values, but not which records or fields the patch changes: that would be refused with `409`.
+          - `200`, and `performed` holds the corrected patch.
+        operationId: $sourceDescriptions.suggestions.acceptSuggestion
+        parameters:
+          - reference: $components.parameters.worker
+          - name: suggestionId
+            in: path
+            value: $workflows.assistantSuggests.outputs.maria
         requestBody:
           payload:
             call:
@@ -705,110 +567,14 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'accepted'
           - condition: $response.body#/performed/requestBody/payload/1/value/amount == 650
-          - condition: $response.body#/call/requestBody/payload/1/value/amount == 600
-      - stepId: mariaAdded
-        description: |
-          Read the application's details again
-
-          - Maria is in `members`, and her income of 650 is in `incomes`, with Maria's id as its `memberId`.
-        operationId: $sourceDescriptions.intake.getApplicationDetails
-        parameters:
-          - reference: $components.parameters.worker
-          - reference: $components.parameters.application
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/members/44444444-4444-4444-8444-000000000001/firstName == 'Maria'
-          - condition: $response.body#/incomes/44444444-4444-4444-8444-000000000002/amount == 650
-      - stepId: mariaCreatedByTheCaseworker
-        description: |
-          List the events for Maria's creation
-
-          - `authid` is `worker-1`, the caseworker who accepted, not the assistant who proposed. Maria was created by `createApplicationMember`, so its checks ran and its event was sent, as if the caseworker had added her by hand.
-        operationId: $sourceDescriptions.events.listEvents
-        parameters:
-          - reference: $components.parameters.worker
-          - name: subject
-            in: query
-            value: 44444444-4444-4444-8444-000000000001
-          - name: type
-            in: query
-            value: intake.application_member.created
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/items/0/authid == 'worker-1'
-      - stepId: rosaGivesHerTips
-        x-actors:
-          - software
-        description: |
-          Save what Rosa says about her tips
-
-          - Rosa says "My tips are more like 135 a week."
-        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
-        parameters:
-          - reference: $components.parameters.worker
-          - name: transcriptId
-            in: path
-            value: $workflows.interviewStarts.outputs.transcript
-          - name: Idempotency-Key
-            in: header
-            value: rosa-gives-her-tips
-        requestBody:
-          payload:
-            kind: line
-            startedAt: "2026-11-03T10:05:00Z"
-            endedAt: "2026-11-03T10:05:03Z"
-            text: My tips are more like 135 a week.
-            speaker: client
-        successCriteria:
-          - condition: $statusCode == 201
-        outputs:
-          id: $response.body#/id
-      - stepId: proposeATipsCorrection
-        x-actors:
-          - assistant
-        description: |
-          Suggest correcting Rosa's tips
-
-          - The application's details have Rosa's tips as 120 a week, and her line says 135. The assistant's patch first checks that the tips are still 120 (`test`), then changes them to 135 (`replace`).
-          - The suggestion cites Rosa's line as evidence, with the `path` of the change it supports.
-          - Every `replace` must have a `test` right before it, checking the value the assistant read.
-        operationId: $sourceDescriptions.suggestions.createSuggestion
-        parameters:
-          - reference: $components.parameters.assistant
-        requestBody:
-          payload:
-            kind: operation
-            call:
-              operationId: updateApplicationDetails
-              parameters:
-                - name: applicationId
-                  in: path
-                  value: 11111111-1111-4111-8111-111111111111
-              requestBody:
-                contentType: application/json-patch+json
-                payload:
-                  - op: test
-                    path: /incomes/11111111-1111-4111-8111-200000000002/amount
-                    value: 120
-                  - op: replace
-                    path: /incomes/11111111-1111-4111-8111-200000000002/amount
-                    value: 135
-            evidence:
-              - sourceType: transcript_entry
-                sourceId: $steps.rosaGivesHerTips.outputs.id
-                path: /incomes/11111111-1111-4111-8111-200000000002/amount
-        successCriteria:
-          - condition: $statusCode == 201
-        outputs:
-          id: $response.body#/id
       - stepId: changeTheTipsByHand
         x-actors:
           - caseworker
           - server
         description: |
-          Change Rosa's tips before deciding on the suggestion
+          Change Rosa's tips before deciding on the tips suggestion
 
-          - Before anyone decides on the suggestion, the caseworker sets the tips to 130 a week.
+          - Rosa checks her pay stubs: her tips are 130 a week. The caseworker sets them to 130 by hand, before deciding on the assistant's suggestion.
         operationId: $sourceDescriptions.intake.updateApplicationIncome
         parameters:
           - reference: $components.parameters.worker
@@ -821,32 +587,62 @@ workflows:
             amount: 130
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: acceptTheStaleCorrection
+      - stepId: acceptTheStaleTips
         x-actors:
           - caseworker
         description: |
           Accept the tips correction
 
-          - `409`: the patch checks for 120, but the tips are now 130, so nothing in the patch was saved. The tips stay 130.
-          - The suggestion's `status` is now `refused`. `details` holds the suggestion.
+          - `409`: the patch checks for 120, but the tips are now 130, so nothing in the patch was saved.
+          - The suggestion's `status` is now `refused`, and `details` holds it. A refused suggestion can be accepted again with a corrected call, or dismissed.
         operationId: $sourceDescriptions.suggestions.acceptSuggestion
         parameters:
           - reference: $components.parameters.worker
           - name: suggestionId
             in: path
-            value: $steps.proposeATipsCorrection.outputs.id
+            value: $workflows.assistantSuggests.outputs.tips
         successCriteria:
           - condition: $statusCode == 409
           - condition: $response.body#/details/0/status == 'refused'
+      - stepId: readTheDetailsAfter
+        description: |
+          Read the application's details again
+
+          - The salary is 1,250, the child support is 200, Maria is a member with her income of 650, and the tips are 130.
+        operationId: $sourceDescriptions.intake.getApplicationDetails
+        parameters:
+          - reference: $components.parameters.worker
+          - reference: $components.parameters.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/incomes/11111111-1111-4111-8111-200000000004/amount == 1250
+          - condition: $response.body#/members/44444444-4444-4444-8444-000000000001/firstName == 'Maria'
+          - condition: $response.body#/incomes/44444444-4444-4444-8444-000000000002/amount == 650
+          - condition: $response.body#/incomes/11111111-1111-4111-8111-200000000002/amount == 130
+      - stepId: mariaCreatedByTheCaseworker
+        description: |
+          List the events for Maria's creation
+
+          - Every change sends an event to one log shared by every domain, and `authid` is who made the change. Here it's `worker-1`, the caseworker who accepted, not the assistant who proposed. Maria was created by `createApplicationMember`, so its checks ran and its event was sent, as if the caseworker had added her by hand.
+          - The suggestion doesn't store who decided it. Its `decision-support.suggestion.accepted` event does, the same way.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.worker
+          - name: subject
+            in: query
+            value: 44444444-4444-4444-8444-000000000001
+          - name: type
+            in: query
+            value: intake.application_member.created
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/authid == 'worker-1'
   - workflowId: answersChange
-    summary: The caseworker records Rosa's answers
+    summary: The server reacts to Rosa's answers
     description: |
-      - Rosa says her wages are different, and the caseworker updates them. The wages flag still applies, so the server proposes it again, and it's rejected because the caseworker dismissed it.
-      - Rosa explains that her self-employment income is a gift, and the caseworker changes its source. The server expires the flag on that income.
+      - When an income changes, the server sends the event `intake.application_income.updated`. While the interview is in progress, its state machine listens for that event and runs `suggestFlags` again. A flag that still applies is proposed again, and a flag that no longer applies expires.
     dependsOn:
       - beforeInterview
-      - interviewStarts
-      - assistantSuggests
       - caseworkerDecides
     steps:
       - stepId: changeWagesAgain
@@ -856,7 +652,7 @@ workflows:
         description: |
           Update Rosa's wages
 
-          - Rosa says her wages are closer to 320 a week, and the caseworker sets `amount` to 320. Her wages still change from week to week.
+          - Rosa says her wages are closer to 320 a week, and the caseworker sets `amount` to 320. They still change from week to week.
         operationId: $sourceDescriptions.intake.updateApplicationIncome
         parameters:
           - reference: $components.parameters.worker
@@ -877,7 +673,6 @@ workflows:
           Record that Rosa's side income is a gift
 
           - Rosa explains that the 400 a month is help from her sister, not self-employment, and the caseworker sets `source` to `unearned`.
-          - The change starts the interview's reaction to `intake.application_income.updated`, which calls `suggestFlags` again. `flagged.cashOrSelfEmploymentIncome` no longer lists this income.
         operationId: $sourceDescriptions.intake.updateApplicationIncome
         parameters:
           - reference: $components.parameters.worker
@@ -890,45 +685,33 @@ workflows:
             source: unearned
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: clearedFlagExpired
+      - stepId: suggestionsAfterTheAnswers
         description: |
-          List the expired suggestions about that income
+          List the interview's suggestions
 
-          - `q` finds the suggestion about this income with `status:expired`.
-          - The income isn't self-employment anymore, so the flag no longer applies, and the server expired the suggestion.
+          - `total` is still 5. After the wages changed, the server proposed the wages flag again, and that was rejected with `409`, because the caseworker dismissed the same suggestion.
+          - The flag on the side income is `expired`. It isn't self-employment anymore, so the flag no longer applies.
         operationId: $sourceDescriptions.suggestions.listSuggestions
         parameters:
           - reference: $components.parameters.worker
           - name: q
             in: query
-            value: metadata.intake.recordId:11111111-1111-4111-8111-200000000003 status:expired
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.interview}
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/total == 1
+          - condition: $response.body#/total == 5
+          - context: $response.body
+            condition: $.items[?@.metadata.intake.recordId == '11111111-1111-4111-8111-200000000003' && @.status == 'expired']
+            type: jsonpath
         onFailure:
           - name: waitForTheInterview
             type: retry
             retryAfter: 0.05
             retryLimit: 20
-      - stepId: nothingNew
-        description: |
-          List the interview's suggestions
-
-          - `total` is still 5. Her wages still change from week to week, so the server proposes the wages flag again. That proposal is rejected with 409, because the caseworker dismissed the same suggestion.
-        operationId: $sourceDescriptions.suggestions.listSuggestions
-        parameters:
-          - reference: $components.parameters.worker
-          - name: q
-            in: query
-            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/total == 5
   - workflowId: interviewEnds
     summary: The caseworker completes the interview
     description: |
-      - When the caseworker completes the interview, the server expires the suggestions nobody decided on.
-      - Changes to Rosa's incomes after that create no suggestions.
+      - When the caseworker completes the interview, the server expires the suggestions nobody decided on, and stops reacting to Rosa's income changes for it.
     dependsOn:
       - beforeInterview
       - answersChange
@@ -947,25 +730,10 @@ workflows:
           - reference: $components.parameters.application
           - name: interviewId
             in: path
-            value: $workflows.beforeInterview.outputs.scheduleInterview
+            value: $workflows.beforeInterview.outputs.interview
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'completed'
-      - stepId: nothingWaiting
-        description: |
-          List the interview's open suggestions
-
-          - `q` limits the list to this interview's suggestions with `status:proposed`.
-          - `total` is 0. Nobody decided on the two tips suggestions, so the server expired them when the caseworker completed the interview.
-        operationId: $sourceDescriptions.suggestions.listSuggestions
-        parameters:
-          - reference: $components.parameters.worker
-          - name: q
-            in: query
-            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview} status:proposed
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/total == 0
       - stepId: changeAfterwards
         x-actors:
           - caseworker
@@ -985,17 +753,18 @@ workflows:
             amount: 140
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: stillFive
+      - stepId: nothingWaiting
         description: |
-          List the interview's suggestions again
+          List the interview's open suggestions
 
-          - `total` is still 5. The interview is completed, so the server no longer reacts to Rosa's income changes for it.
+          - `q` limits the list to this interview's suggestions with `status:proposed`.
+          - `total` is 0. Nobody decided on the two tips flags, so the server expired them when the interview was completed, and the change to the tips afterwards proposed nothing new.
         operationId: $sourceDescriptions.suggestions.listSuggestions
         parameters:
           - reference: $components.parameters.worker
           - name: q
             in: query
-            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.scheduleInterview}
+            value: metadata.intake.interviewId:{$workflows.beforeInterview.outputs.interview} status:proposed
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/total == 5
+          - condition: $response.body#/total == 0

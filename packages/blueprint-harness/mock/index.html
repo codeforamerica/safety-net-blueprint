@@ -850,15 +850,17 @@ const asFormData = (parts) => {
   return form;
 };
 
-/** Every property on a schema, following allOf. */
-const collectProperties = (schema, doc) => {
-  const out = {};
-  for (const part of [schema, ...(schema?.allOf ?? [])]) {
-    const resolved = deref(part, doc);
-    Object.assign(out, resolved?.properties ?? {});
-    for (const inner of resolved?.allOf ?? []) {
-      Object.assign(out, deref(inner, doc)?.properties ?? {});
-    }
+/**
+ * Every property on a schema, following allOf, and oneOf and anyOf: a
+ * suggestion is one of two kinds, and `status` is a field of both.
+ */
+const collectProperties = (schema, doc, out = {}, seen = new Set()) => {
+  const resolved = deref(schema, doc);
+  if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) return out;
+  seen.add(resolved);
+  Object.assign(out, resolved.properties ?? {});
+  for (const part of [...(resolved.allOf ?? []), ...(resolved.oneOf ?? []), ...(resolved.anyOf ?? [])]) {
+    collectProperties(part, doc, out, seen);
   }
   return out;
 };
@@ -886,7 +888,7 @@ const fieldsReached = (schema, doc, owner, out = [], seen = new Set(), via = '')
     out.push({ owner, name, declared, path });
     const field = deref(declared, doc);
     for (const inner of [field, deref(field?.items, doc), deref(field?.additionalProperties, doc)]) {
-      if (inner && typeof inner === 'object' && (inner.properties || inner.allOf)) {
+      if (inner && typeof inner === 'object' && (inner.properties || inner.allOf || inner.oneOf || inner.anyOf)) {
         const named = [declared, field?.items, field?.additionalProperties].map(refName).find(Boolean);
         fieldsReached(inner, doc, named ?? name, out, seen, path);
       }
@@ -2288,6 +2290,11 @@ const locate = (token, op) => {
       return { path: candidate.relativePath, yaml: snippet(token, declared, { prose: true }) };
     }
   }
+
+  // A field with the value it holds, as the notes write one: `paidInCash:
+  // true` is about the field, so it's looked up by its name.
+  const pair = /^([\w.$-]+): \S/.exec(token);
+  if (pair) return locate(pair[1], op);
 
   return null;
 };
