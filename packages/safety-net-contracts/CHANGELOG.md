@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- **Breaking:** An overlay that targeted `$.queues[...]`, `$.services[...]` or `$.document-types[...]` in a safety-net config file now targets `.entries[...]` under it. (#470)
+- **Breaking:** `x-data-classification` on `DocumentVersion.uploadedById` and `DocumentLink.linkedBy` is now the list `[pii]` the convention defines, not the single value `pii`; read it as a list.
+- **Breaking:** Events are named for the resource that sends them, with hyphenated domains as declared: for example `eligibility.decision.completed` where it was `eligibility.application.decision_completed`, and `data-exchange.call.completed` where it was `data_exchange.call.completed`. (#470)
+- **Breaking:** The intake and workflow AsyncAPI documents are gone, and the others hold only events sent from outside the contracts; every other event is in the `*-events-asyncapi.yaml` that resolve generates beside each API. (#470)
+- **Breaking:** Where a scheduler listened for `scheduling.timer.requested` and `scheduling.timer.cancelled`, listen for `platform.timer.requested` and `platform.timer.cancelled`, which the shared `requestTimer` and `cancelTimer` procedures now emit. (#469)
+- **Breaking:** Where you created a data exchange call with only `requestingResourceId`, also send `requestingResourceType`, `member` or `income`. (#516)
+- A workflow task's SLA warning and breach timers are now scheduled when it's created with an SLA type, cancelled when it pauses, and scheduled again at the moved deadline when it resumes. Before, they were scheduled only when a client set `slaDeadline`, which the server sets. (#516)
+- Before, the server always chose a new record's id. Now a create may carry the id the caller chose, and one another record already has gets 409. (#516)
+- **Breaking:** The event log's API (`/platform/events`, its stream, single events and publishing) now comes with the framework in every resolved contract set, and `safety-net-contracts` no longer declares its own. A contract set that declares `/platform/events` itself must remove it. (#470)
+- **Breaking:** Every registry type a contract set declares is now served at `/platform/registry/{type}` and `/platform/registry/{type}/{entryId}`, with `/platform/registry` listing the types, read from the registry files themselves — files of a type combine, and an entry id two of them define fails, naming both. `safety-net-contracts` no longer declares `/registry/policies`, which the generic endpoint serves at the same URL. (#470)
+
+### Patch Changes
+
+- Before, the state machines' calls sent their bodies as `body:`, now deprecated. Now they send `requestBody: {payload: …}`, so an overlay that targeted a call's `body` should target `requestBody.payload`. (#469)
+- `GET /eligibility/determinations/{determinationId}/decisions` now takes `q`, like every other list.
+- Every document in the contracts now declares its domain: `info.x-domain` on OpenAPI and AsyncAPI documents, and a top-level `domain` elsewhere, mock data included. (#470)
+- Before, delete operations didn't list 409. Now every one does, for a record that other records still name. (#516)
+- Before, an expedited SNAP determination left the application's review task unflagged, because the reaction also wrote a `slaType` field Task doesn't have. Now the task gets `isExpedited: true`; its SLA stays as created. (#469)
+- Before, a follow-up task copied the finished task's id, outcome and assignment, so it started completed. Now it carries over the work and starts pending and unassigned. (#516)
+- Before, the document upload's `documentTypeId` and `BackendAuthContext.userId` didn't say what they point at. Now they declare `x-relationship` to `DocumentType` and `User`. (#481)
+- Before, fields that may be null were marked `nullable: true`, which validators implementing OpenAPI 3.1 ignore, so they refused the null. Now those fields are typed `[<type>, "null"]`. (#461)
+- The contracts' conditions are now written as CEL with no dialect — names without `$`, `has()` for fields that may be absent — so any CEL implementation evaluates them the way the mock server does. (#445)
+- Before, the `applicationReview` composition's contact section asked for `email`, `preferredLanguage` and `preferredContactMethod`, which members don't have, so it returned no email. Now it returns `contact.email`. (#516)
+- Before, the workflow metrics other than `tasks_in_queue` could never count anything: they named event types no event has, paired by a `resourceId` events do not carry, and matched SLA status with a path wildcard JSON Logic does not support. Now they name the `workflow.task.*` event types, pair by `subject`, and match SLA status with `some`. (#470)
+- Each package now declares its license, `PolyForm-Noncommercial-1.0.0`, so npm and dependency scanners show it. The terms are unchanged. (#452)
+- Uses @codeforamerica/blueprint-mock-server 0.4.0.
+
 ## 0.1.2
 
 ### Patch Changes
