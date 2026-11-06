@@ -37,7 +37,11 @@ const PACKAGES = [
   },
   {
     workspace: 'packages/blueprint-mock-server',
-    required: ['cli/server.js', 'src/route-generator.js', 'src/test-utils.js', 'README.md'],
+    required: ['cli/server.js', 'src/route-generator.js', 'src/test-utils.js', 'dist/blueprint-mock-server.esm-browser.js', 'README.md'],
+  },
+  {
+    workspace: 'packages/blueprint-rules-engine',
+    required: ['src/evaluator.js', 'dist/browser.js', 'README.md'],
   },
   {
     workspace: 'packages/safety-net-contracts',

@@ -249,6 +249,18 @@ describe('generate(docs, \'artifact\', { domains })', () => {
       paths: { '/invoices': { get: { operationId: 'listInvoices', responses: {} } } },
       components: { schemas: { Invoice: { type: 'object' } } },
     },
+    // A library of guards: a state machine with no domain, which the
+    // domain's own machine names in `extends`, not by $ref.
+    'domains/intake/intake-state-machine.yaml': {
+      $schema: 'https://blueprint.codeforamerica.org/schemas/state-machine-schema.yaml',
+      extends: '../platform/platform-state-machine.yaml',
+      domain: 'intake',
+      machines: [],
+    },
+    'domains/platform/platform-state-machine.yaml': {
+      $schema: 'https://blueprint.codeforamerica.org/schemas/state-machine-schema.yaml',
+      guards: [{ id: 'callerIsCaseworker', condition: '"case_worker" in caller.roles' }],
+    },
     'domains/platform/platform-registry-policies.yaml': {
       $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
       domain: 'platform',
@@ -272,6 +284,18 @@ describe('generate(docs, \'artifact\', { domains })', () => {
         'a parameter referenced from the spec belongs to no domain and must still be kept');
       assert.ok(kept.includes('common/schemas/shared.yaml'),
         'and so does a schema referenced from components');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('keeps the state machine a domain\'s machine extends', () => {
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      const kept = pathsOf(generate(docs, 'artifact', { domains: ['intake'] }));
+      assert.ok(kept.includes('domains/platform/platform-state-machine.yaml'),
+        'without it the mock refuses to start, since the guards intake extends are missing');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

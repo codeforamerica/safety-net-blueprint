@@ -1,0 +1,3 @@
+version: 2.15.0
+LICENSE: https://github.com/bufbuild/protobuf-es/blob/v2.15.0/LICENSE
+NOTICE-BSD-3-Clause: the notice at the top of https://github.com/bufbuild/protobuf-es/blob/v2.15.0/packages/protobuf/src/wire/varint.ts
