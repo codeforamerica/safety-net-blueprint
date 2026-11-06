@@ -98,7 +98,7 @@
               "properties": {
                 "operationId": {
                   "type": "string",
-                  "description": "The operation's operationId, e.g. `updateApplicationMember`."
+                  "description": "The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.\n"
                 },
                 "parameters": {
                   "type": "array",
