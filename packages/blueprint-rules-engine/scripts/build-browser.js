@@ -67,7 +67,8 @@ window.RulesEngine = { evaluate };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { outfile, packages } = await buildBrowser();
-  console.log(`Wrote ${outfile}, with the notices of ${packages.length} third-party packages.`);
+  // To stderr: npm runs this on `prepare`, and `npm pack --json` prints its JSON to stdout.
+  console.error(`Wrote ${outfile}, with the notices of ${packages.length} third-party packages.`);
   // Not a failure: this runs on every install. tests/browser-bundle.test.js fails on it.
   for (const line of noticeProblems(packages)) console.warn(`Warning: ${line}`);
 }

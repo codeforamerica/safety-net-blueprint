@@ -58,7 +58,8 @@ export async function buildBrowser(outfile = resolve(rootDir, 'dist/blueprint-mo
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = process.argv.slice(2).find((arg) => arg.startsWith('--out='))?.slice('--out='.length);
   const { outfile, packages } = await buildBrowser(out ? resolve(out) : undefined);
-  console.log(`Wrote ${outfile}, with the notices of ${packages.length} third-party packages.`);
+  // To stderr: npm runs this on `prepare`, and `npm pack --json` prints its JSON to stdout.
+  console.error(`Wrote ${outfile}, with the notices of ${packages.length} third-party packages.`);
   // Not a failure: this runs on every install. The bundle's tests fail on it.
   for (const line of noticeProblems(packages)) console.warn(`Warning: ${line}`);
 }
