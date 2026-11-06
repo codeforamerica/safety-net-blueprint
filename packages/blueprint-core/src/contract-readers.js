@@ -253,13 +253,24 @@ export function readRules(docs) {
     }));
 }
 
-const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
+/**
+ * The state machine document an `extends` names, resolved by its path from
+ * the extending document, as a `$ref` is; null when there is no `extends` or
+ * it names no state machine in the set.
+ *
+ * @param {object} stateMachine - A state machine document
+ * @param {string|null} from - relativePath of the extending document
+ * @param {import('../types.js').Doc[]} machineDocs
+ * @returns {import('../types.js').Doc|null}
+ */
+export function extendedDocOf(stateMachine, from, machineDocs) {
+  if (!stateMachine?.extends) return null;
+  const found = followRef(stateMachine.extends, indexByRelativePath(machineDocs), from);
+  return found ? machineDocs.find((d) => d.relativePath === found.relativePath) ?? null : null;
+}
 
 /**
  * The document an `extends` names, or null when there is no `extends`.
- *
- * Matched by filename because the `extends` value carries a path prefix that
- * is relative to wherever the file happened to live when it was written.
  *
  * Throws when the named document is not in the set. Silence here is the worst
  * available option: an engine evaluating these treats a guard it cannot find
@@ -276,14 +287,13 @@ const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
 function findExtended(stateMachine, machineDocs, from) {
   if (!stateMachine?.extends) return null;
 
-  const wanted = basename(stateMachine.extends);
-  const extended = machineDocs.find((d) => d.relativePath && basename(d.relativePath) === wanted);
+  const extended = extendedDocOf(stateMachine, from, machineDocs);
 
   if (!extended) {
-    const available = machineDocs.map((d) => basename(d.relativePath ?? '')).sort().join(', ');
+    const available = machineDocs.map((d) => d.relativePath ?? '').sort().join(', ');
     throw new Error(
       `${from ?? 'a state machine'} declares extends: "${stateMachine.extends}", ` +
-        `but no state machine named "${wanted}" is in the contract set. ` +
+        `but no state machine is at that path in the contract set. ` +
         `Its guards and procedures would be missing, and a guard that cannot be ` +
         `found is treated as satisfied. Available: ${available || '(none)'}.`
     );

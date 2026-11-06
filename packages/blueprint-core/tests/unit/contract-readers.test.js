@@ -202,9 +202,13 @@ describe('extract(docs, "state-machines")', () => {
     assert.deepEqual(entries[0].stateMachine._platformProcedures, [{ id: 'notify', steps: [] }]);
   });
 
-  test('extends matches on filename, so the library file can move', () => {
+  test('extends resolves by its path, as a $ref does, so a file of the same name elsewhere is not it', () => {
     const docs = setOf({
       'somewhere/else/platform-state-machine.yaml': {
+        $schema: 'state-machine-schema.yaml',
+        guards: [{ id: 'elsewhere' }],
+      },
+      'domains/platform/platform-state-machine.yaml': {
         $schema: 'state-machine-schema.yaml',
         guards: [{ id: 'g' }],
       },
@@ -233,7 +237,7 @@ describe('extract(docs, "state-machines")', () => {
     });
 
     assert.throws(() => extract(docs, 'state-machines'), (err) => {
-      assert.match(err.message, /no state machine named "absent-state-machine\.yaml"/);
+      assert.match(err.message, /no state machine is at that path/);
       assert.match(err.message, /treated as satisfied/);
       return true;
     });
@@ -327,7 +331,7 @@ describe('extends on a library document', () => {
 
     assert.throws(
       () => extract(discover(dir).map(load), 'state-machines'),
-      /no state machine named "absent-state-machine\.yaml"/
+      /no state machine is at that path/
     );
   });
 });

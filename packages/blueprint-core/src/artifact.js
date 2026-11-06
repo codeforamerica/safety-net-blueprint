@@ -27,6 +27,7 @@
 
 import { toDoc } from './doc.js';
 import { followRef, indexByRelativePath, isRemoteRef } from './ref-lookup.js';
+import { extendedDocOf } from './contract-readers.js';
 
 /** Bumped when the layout below changes in a way a reader must notice. */
 export const ARTIFACT_VERSION = 1;
@@ -63,8 +64,8 @@ function plainDoc(doc) {
  * runtime: `intake`'s specs reference `base/components/parameters.yaml` and
  * `common/schemas/income.yaml`, which belong to no domain. Dropping those
  * leaves an artifact that parses and then cannot resolve a ref. So the named
- * domains are a starting set, and this follows every `$ref` out of them until
- * nothing new is reached.
+ * domains are a starting set, and this follows every `$ref` out of them, and
+ * every state machine's `extends`, until nothing new is reached.
  *
  * `platform` always comes along. The mock server seeds platform registries and
  * task queues whatever domain is being demonstrated, and nothing `$ref`s them,
@@ -82,6 +83,7 @@ export function domainClosure(docs, domains) {
   const wanted = new Set([...domains, 'platform']);
   const byRelativePath = indexByRelativePath(docs);
   const positioned = new Map(docs.filter((d) => d.relativePath).map((d) => [d.relativePath, d]));
+  const machineDocs = docs.filter((d) => d.type === 'state-machine');
 
   const keep = new Set(
     docs.filter((doc) => doc.relativePath && wanted.has(doc.domain)).map((doc) => doc.relativePath)
@@ -95,11 +97,15 @@ export function domainClosure(docs, domains) {
       const doc = positioned.get(relativePath);
       if (!doc) continue;
 
-      for (const ref of doc.refs().values()) {
-        if (!ref.external || !ref.file || isRemoteRef(ref.file)) continue;
-        const found = followRef(ref.file, byRelativePath, relativePath);
-        if (found && !keep.has(found.relativePath)) {
-          keep.add(found.relativePath);
+      // What it $refs, and the state machine it extends, which names a
+      // library such as platform-state-machine.yaml that has no domain.
+      const found = [...doc.refs().values()]
+        .filter((ref) => ref.external && ref.file && !isRemoteRef(ref.file))
+        .map((ref) => followRef(ref.file, byRelativePath, relativePath));
+      if (doc.type === 'state-machine') found.push(extendedDocOf(doc.content, relativePath, machineDocs));
+      for (const reached of found) {
+        if (reached && !keep.has(reached.relativePath)) {
+          keep.add(reached.relativePath);
           growing = true;
         }
       }

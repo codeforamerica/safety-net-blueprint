@@ -21,20 +21,20 @@ import { mkdtempSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { buildBrowser } from '../../scripts/build-browser.js';
+import { noticeProblems } from '../../../../scripts/third-party-notices.js';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const entry = join(packageRoot, 'src/browser.js');
 
-/** Bundle the browser entry, returning the output path. Throws on any error. */
-function bundle({ minify = false } = {}) {
-  const out = join(mkdtempSync(join(tmpdir(), 'mock-bundle-')), 'mock.js');
-  const args = ['esbuild', entry, '--bundle', '--platform=browser', '--format=esm',
-    '--log-level=error', `--outfile=${out}`];
-  if (minify) args.push('--minify');
-
-  const stderr = execFileSync('npx', args, { cwd: packageRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  assert.strictEqual(stderr.trim(), '', 'esbuild reported problems');
-  return out;
+/**
+ * Bundle the browser entry the way the published esm-browser file is built,
+ * returning the output path. Built once: every test reads the same file.
+ * Throws on any error.
+ */
+let built;
+async function bundle() {
+  built ??= buildBrowser(join(mkdtempSync(join(tmpdir(), 'mock-bundle-')), 'mock.js'));
+  return (await built).outfile;
 }
 
 /** A minimal artifact with one postable collection, whose create requires `label`. */
@@ -87,17 +87,17 @@ describe('the browser entry', () => {
     assert.strictEqual(typeof createMockServer, 'function');
   });
 
-  test('bundles for the browser platform with no Node builtins', () => {
+  test('bundles for the browser platform with no Node builtins', async () => {
     // platform=browser makes `fs`, `path` and the rest unresolvable, so this
     // fails loudly rather than producing a bundle that breaks at runtime.
-    const out = bundle();
+    const out = await bundle();
     assert.ok(statSync(out).size > 0, 'should produce a bundle');
   });
 
   test('the bundle actually runs, and serves a seeded request', async () => {
     // Building is not the same as working: a bundle can resolve cleanly and
     // still reference something only Node provides. This boots it.
-    const out = bundle({ minify: true });
+    const out = await bundle();
     const { createMockServer } = await import(out);
 
     const contracts = {
@@ -155,7 +155,7 @@ describe('the browser entry', () => {
     assert.strictEqual(body.items[0].id, 'w1');
   });
 
-  test('runs with no Node globals, on the failure path as well as the happy one', () => {
+  test('runs with no Node globals, on the failure path as well as the happy one', async () => {
     // Every other test here executes browser code inside Node, where `process`
     // and `Buffer` exist — so a Node-only global is invisible to all of them.
     // That is how `validator.js` shipped a bare `process.env.DEBUG_VALIDATION`
@@ -172,7 +172,7 @@ describe('the browser entry', () => {
     // that as well: Node's bundled undici reaches for it to provide `Request`
     // and `fetch`, which a browser has natively, so deleting it fails inside
     // Node rather than inside anything being tested.
-    const out = bundle({ minify: true });
+    const out = await bundle();
     const driver = join(dirname(out), 'no-globals.mjs');
 
     writeFileSync(driver, `
@@ -201,10 +201,38 @@ describe('the browser entry', () => {
       'a rejected request must answer 422, not a 500 from touching a Node global');
   });
 
+  test('is published under its own filename, built on install and before publishing', () => {
+    // A consumer copies one file rather than running a bundler of their own,
+    // so the one name it has is its path. Only that file is exported, not all
+    // of dist/. It isn't committed, so npm builds it, as it does the rules
+    // engine's.
+    const file = './dist/blueprint-mock-server.esm-browser.js';
+    const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+    assert.strictEqual(manifest.exports[file], file);
+    assert.ok(manifest.files.includes('dist/'));
+    assert.match(manifest.scripts.prepare, /scripts\/build-browser\.js/);
+  });
+
+  test('carries the notice of every third-party package inside it', async () => {
+    // Their licenses require the notice to travel with the code, and a
+    // consumer who copies the file shouldn't have to work out what's inside.
+    await bundle();
+    const { outfile, packages } = await built;
+    const text = readFileSync(outfile, 'utf8');
+    const notices = text.slice(text.lastIndexOf('/*!'));
+    assert.ok(packages.length > 0, 'the mock bundles third-party code');
+    for (const { name, version } of packages) {
+      assert.ok(notices.includes(`${name}@${version} (`), `${name} should be named in the notices`);
+    }
+    assert.deepEqual(noticeProblems(packages), [], 'every package has notices, for the version bundled');
+    assert.ok(notices.includes('Copyright 2008 Google Inc.'),
+      'and a notice a package keeps only in a source comment, which minifying drops, is supplied');
+  });
+
   test('mock.fetch has fetch\'s signature, so it can replace the global', async () => {
     // The property the whole design rests on: substituting the mock for the
     // real network is the identity function, not an adapter (#283).
-    const out = bundle({ minify: true });
+    const out = await bundle();
     const { createMockServer } = await import(out);
 
     const mock = await createMockServer({

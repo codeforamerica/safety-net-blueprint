@@ -156,6 +156,14 @@ const response = await mock.fetch(new Request('/intake/applications'));
 `mock.fetch` has `fetch`'s own signature, so it can be called directly, handed
 to a test runner, or assigned over `window.fetch`.
 
+`/browser` is the source, for a page that has a bundler. For one that doesn't,
+use `dist/blueprint-mock-server.esm-browser.js`: one ES module with every
+dependency inside and nothing else to install. Copy it next to the page and
+import it from there, or import it by that path from the package
+(`@codeforamerica/blueprint-mock-server/dist/blueprint-mock-server.esm-browser.js`).
+The licenses and notices of the third-party code inside it are at the end of
+the file; keep them with it.
+
 Assigning over `window.fetch` only reaches code that calls `fetch`, which the
 generated clients do not. `generate-ts-clients` emits `@hey-api/client-axios`,
 and axios uses `XMLHttpRequest` in a browser, so that swap leaves every
