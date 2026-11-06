@@ -209,7 +209,7 @@ export const zApplication = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -824,7 +824,7 @@ export const zApplicationList = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -969,7 +969,7 @@ export const zApplicationMemberWritable = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -1040,7 +1040,7 @@ export const zApplicationMember = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -1132,7 +1132,7 @@ export const zApplicationMemberCreate = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -1202,7 +1202,7 @@ export const zApplicationMemberUpdate = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -1271,7 +1271,7 @@ export const zApplicationMemberList = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -1355,7 +1355,7 @@ export const zManualVerification = z.object({
 
 export const zSmsNotification = z.object({
     channel: z.enum(['sms']),
-    phone: z.string()
+    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
 });
 
 export const zCloseRequest = z.object({
@@ -1618,7 +1618,7 @@ export const zApplicationDetailsResponse = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -1757,7 +1757,7 @@ export const zApplicationDetailsResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -1988,7 +1988,7 @@ export const zApplicationWritable2 = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -2338,7 +2338,7 @@ export const zApplicationListWritable = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -2434,7 +2434,7 @@ export const zApplicationMemberWritable2 = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -2512,7 +2512,7 @@ export const zApplicationMemberListWritable = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -2662,7 +2662,7 @@ export const zApplicationDetailsResponseWritable = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -2749,7 +2749,7 @@ export const zApplicationDetailsResponseWritable = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -3007,7 +3007,7 @@ export const zListApplicationsResponse = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -3323,7 +3323,7 @@ export const zCreateApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -3611,7 +3611,7 @@ export const zGetApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -3922,7 +3922,7 @@ export const zUpdateApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -4528,7 +4528,7 @@ export const zListApplicationMembersResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -4626,7 +4626,7 @@ export const zCreateApplicationMemberData = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -4704,7 +4704,7 @@ export const zCreateApplicationMemberResponse = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -4822,7 +4822,7 @@ export const zGetApplicationMemberResponse = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -4915,7 +4915,7 @@ export const zUpdateApplicationMemberData = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -4992,7 +4992,7 @@ export const zUpdateApplicationMemberResponse = z.object({
         }),
         z.object({
             channel: z.enum(['sms']),
-            phone: z.string()
+            phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
         }),
         z.object({
             channel: z.enum(['mail']),
@@ -5219,7 +5219,7 @@ export const zSubmitApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -5494,7 +5494,7 @@ export const zOpenApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -5772,7 +5772,7 @@ export const zCloseApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -6047,7 +6047,7 @@ export const zWithdrawApplicationResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -6716,7 +6716,7 @@ export const zGetApplicationDetailsResponse = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -6855,7 +6855,7 @@ export const zGetApplicationDetailsResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),
@@ -7128,7 +7128,7 @@ export const zUpdateApplicationDetailsResponse = z.object({
                 }),
                 z.object({
                     channel: z.enum(['sms']),
-                    phone: z.string()
+                    phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
                 }),
                 z.object({
                     channel: z.enum(['mail']),
@@ -7267,7 +7267,7 @@ export const zUpdateApplicationDetailsResponse = z.object({
             }),
             z.object({
                 channel: z.enum(['sms']),
-                phone: z.string()
+                phone: z.string().regex(/^\+[1-9][0-9]{1,14}$/)
             }),
             z.object({
                 channel: z.enum(['mail']),

@@ -7,7 +7,7 @@
 > so are accepting, dismissing and expiring them, and refusing a proposal that
 > repeats one open or dismissed. The harness's interview puts its flags to the
 > worker as suggestions, end to end, walked through in
-> `blueprint-harness/contracts/scenarios/interview-suggestions.arazzo.yaml`.
+> `blueprint-harness/contracts/scenarios/suggestion-lifecycle.arazzo.yaml`.
 
 See [AI Services](../cross-cutting/ai-services.md) for how suggestions fit with
 transcripts and fact extraction, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -115,7 +115,9 @@ took it up.
 A person can correct a proposed change before accepting it by sending the call
 with the accept: it must name the same operation, and accepting makes that call
 instead, keeping it as what was performed. A call naming another operation, or
-any call sent to accept an informing suggestion, is refused with `409`.
+any call sent to accept an informing suggestion, is refused with `409`. A patch
+is corrected by its values only: the same changes, to the same paths, in the
+same order, with each `test` as proposed, since it records what was read.
 
 ## Domain events
 
@@ -144,12 +146,12 @@ In `blueprint-core/base-contracts/domains/decision-support/`.
 | # | Decision | Summary |
 |---|---|---|
 | 1 | [A framework domain a set opts into](#decision-1-a-framework-domain-a-set-opts-into) | Not on platform, not in intake |
-| 2 | [Two kinds: a proposed operation, or information](#decision-2-two-kinds-a-proposed-operation-or-information) | A change names its operation; anything else has a category. Planned: a change to data is a JSON Patch against a composition |
-| 3 | [One suggestion is one change](#decision-3-one-suggestion-is-one-change) | A patch of five changes is five suggestions. Planned: changes that depend on each other go together |
+| 2 | [Two kinds: a proposed operation, or information](#decision-2-two-kinds-a-proposed-operation-or-information) | A change names its operation, and a change to data is a JSON Patch to an editable composition; anything else has a category |
+| 3 | [One suggestion is one change](#decision-3-one-suggestion-is-one-change) | Changes that depend on each other go together, in one patch; the rest are separate |
 | 4 | [Accepting performs the change as the person who accepts](#decision-4-accepting-performs-the-change-as-the-person-who-accepts) | The same permissions and rules as making it by hand |
 | 5 | [A failed accept is recorded and can be retried](#decision-5-a-failed-accept-is-recorded-and-can-be-retried) | Refused, and retried by a person until it expires |
 | 6 | [Evidence refers, it does not quote](#decision-6-evidence-refers-it-does-not-quote) | Nothing sensitive copied out of its source |
-| 7 | [The same suggestion is not proposed twice](#decision-7-the-same-suggestion-is-not-proposed-twice) | The whole call, or the subject and category |
+| 7 | [The same suggestion is not proposed twice](#decision-7-the-same-suggestion-is-not-proposed-twice) | The call, with a patch's new ids in order; or the subject and category |
 | 8 | [Whatever gives suggestions their context creates and closes them](#decision-8-whatever-gives-suggestions-their-context-creates-and-closes-them) | Its state machine evaluates the rules, creates the suggestions, and expires them; anything left expires after a day |
 
 ### Decision 1: A framework domain a set opts into
@@ -178,7 +180,7 @@ decides who can use it and who has to carry it.
 
 ### Decision 2: Two kinds: a proposed operation, or information
 
-**Status:** Decided: B. C is planned for changes to data.
+**Status:** Decided: B and C
 
 **What's being decided:** Some suggestions are changes to make and some are only
 things to notice, so how a suggestion says what it is decides what accepting
@@ -202,20 +204,23 @@ it does.
   the contracts when proposed, in the shape an Arazzo step names a call.
   Everything else names a category its domain declares, says what it points
   out in a message, or both.
-- **(C) Planned** A change to data is a JSON Patch (RFC 6902) against a
-  composition whose records are keyed by id. On accept, the server applies it
-  all or nothing, making each change through its record's own operation as the
-  person who accepts, so Decision 4 still holds. New records carry ids the
-  caller chooses, so a change can refer to a record another change creates.
-  Each change cites its own evidence. Operations stay for actions that aren't
-  changes to data, such as starting an interview. The composition half exists:
-  an `editable` composition takes such a patch (see
-  [Resource Composition](../cross-cutting/resource-composition.md#editable)).
-  What's planned is a suggestion carrying one.
+- **(C) ✓** A change to data is a proposed change whose call is a JSON Patch
+  (RFC 6902) to an `editable` composition (see
+  [Resource Composition](../cross-cutting/resource-composition.md#editable)),
+  whose records are keyed by id. It's still a proposed change, not a new kind:
+  an app knows to preview it because the operation takes
+  `application/json-patch+json`. On accept, the composition applies it all or
+  nothing, making each change through its record's own operation as the person
+  who accepts, so Decision 4 still holds. New records carry ids the proposer
+  chooses, so a change can refer to a record another change creates. Each
+  `replace`, and each `remove` of a field, comes right after a `test` of what
+  the proposer read, so a change based on old data is refused. Each evidence
+  entry may name the change it backs up by its path. Operations stay for
+  actions that aren't changes to data, such as starting an interview.
 
 ### Decision 3: One suggestion is one change
 
-**Status:** Decided: B. C is planned, with Decision 2's C.
+**Status:** Decided: C
 
 **What's being decided:** A model reading a conversation can find several changes
 at once, so how they are grouped decides what a person can accept or turn down.
@@ -229,11 +234,12 @@ at once, so how they are grouped decides what a person can accept or turn down.
 
 **Options:**
 - **(A)** One suggestion per batch, accepted or dismissed whole.
-- **(B) ✓** One suggestion per change. Whatever turns a result into suggestions
-  splits it.
-- **(C) Planned** One suggestion per set of changes that depend on each other,
-  such as a new member and their income, accepted or dismissed whole. Changes
-  that don't depend on each other are still separate suggestions.
+- **(B)** One suggestion per change. Whatever turns a result into suggestions
+  splits it. A new member and their income couldn't be proposed together.
+- **(C) ✓** One suggestion per set of changes that depend on each other, such
+  as a new member and their income, in one patch, accepted or dismissed whole.
+  Changes that don't depend on each other are separate suggestions, and each
+  accept takes one suggestion.
 
 ### Decision 4: Accepting performs the change as the person who accepts
 
@@ -313,6 +319,9 @@ sees one twice, or one already turned down.
 - A model rewords the same point from one reading to the next, so a message is
   not what identifies an informing suggestion.
 - Personal values should not be readable from whatever is kept to compare.
+- A model chooses a new id for each record it proposes, every time it reads, so
+  the same new member comes with a different id each time.
+- Headers say how a request is sent, not what it changes.
 
 **Options:**
 - **(A)** Compare everything, the message included. A reworded point gets
@@ -320,9 +329,11 @@ sees one twice, or one already turned down.
 - **(B)** Each operation and category declares which fields identify it. It
   needs a new extension on every operation a suggestion can name, and a schema
   in each category's registry entry.
-- **(C) ✓** A proposed change is identified by its whole call; an informing
-  suggestion by its subject, the field within it, and its category — or, with
-  no category, its message. A
+- **(C) ✓** A proposed change is identified by its call: the operation, its
+  path and query parameters, and its body. In a patch, the ids of records it
+  creates are read in their order of appearance, so the same new member under a
+  fresh id matches. An informing suggestion is identified by its subject, the
+  field within it, and its category — or, with no category, its message. A
   proposal matching one still open, or one dismissed, is refused. The
   comparison is a keyed hash of those values, normalized, so they cannot be
   read back from it.

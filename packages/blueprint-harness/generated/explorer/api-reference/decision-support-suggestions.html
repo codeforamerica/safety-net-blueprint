@@ -226,7 +226,43 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 92px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -279,7 +315,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -397,15 +433,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -446,7 +490,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -565,7 +609,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 92px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -654,15 +734,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -848,7 +936,7 @@ and a call's parameters may come in any order.
       </span>
     </summary>
     <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Propose a suggestion. It begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code>.</p><p style="margin:0 0 6px;">An operation suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its operation does not exist, or its call doesn't fit the operation: a parameter the operation doesn't declare, a required parameter left out, or a parameter value or request body the operation's schemas refuse. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code> names the field, as <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">call.requestBody.payload.&lt;field&gt;</code> for the body.</p><p style="margin:0 0 6px;">An informing suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its category does not exist, when it has neither a category nor a message, or when its <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">path</code> isn't a JSON Pointer.</p><p style="margin:0 0 6px;">One whose fingerprint matches a suggestion still open (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">refused</code>) or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">dismissed</code> is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code>, naming that suggestion in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code>. One matching an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">accepted</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">expired</code> suggestion may be proposed again.</p></div></div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Propose a suggestion. It begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code>.</p><p style="margin:0 0 6px;">An operation suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its operation does not exist, or its call doesn't fit the operation: a parameter the operation doesn't declare, a required parameter left out, or a parameter value or request body the operation's schemas refuse. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code> names the field, as <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">call.requestBody.payload.&lt;field&gt;</code> for the body. A call leaves out an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Idempotency-Key</code> header its operation requires: the accept supplies one, the suggestion's id.</p><p style="margin:0 0 6px;">A call whose body is a JSON Patch (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">contentType: application/json-patch+json</code>) is applied, in memory, to what its operation would change as it is now; nothing is saved. It is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">replace</code>, or a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">remove</code> of a field, doesn't come right after a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">test</code> of the same path with the value the proposer read, or when a change names a record that neither exists nor is created earlier in the same patch, or when an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">evidence</code> entry's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">path</code> is no change's path. Each record the patch creates, changes or removes becomes a call to that record's own operation, and each call is checked as an operation suggestion's call is, refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when it doesn't fit. It is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code> when a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">test</code> fails: the data changed after the proposer read it. The operations themselves aren't run until the suggestion is accepted.</p><p style="margin:0 0 6px;">An informing suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its category does not exist, when it has neither a category nor a message, or when its <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">path</code> isn't a JSON Pointer.</p><p style="margin:0 0 6px;">One whose fingerprint matches a suggestion still open (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">refused</code>) or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">dismissed</code> is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code>, naming that suggestion in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code>. One matching an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">accepted</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">expired</code> suggestion may be proposed again.</p></div></div>
       
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
@@ -897,7 +985,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -960,7 +1084,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -1079,7 +1203,43 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -1203,7 +1363,43 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -1256,7 +1452,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -1374,15 +1570,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -1423,7 +1627,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -1542,7 +1746,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -1631,15 +1871,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -1938,7 +2186,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -1991,7 +2275,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -2109,15 +2393,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -2158,7 +2450,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -2277,7 +2569,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -2366,15 +2694,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -2555,7 +2891,7 @@ and a call's parameters may come in any order.
             <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">OperationCall</span>
             
             
-            <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+            <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
           </summary>
           <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
@@ -2695,7 +3031,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -2748,7 +3120,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -2866,15 +3238,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -2915,7 +3295,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -3034,7 +3414,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -3123,15 +3539,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -3529,7 +3953,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -3582,7 +4042,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -3700,15 +4160,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -3749,7 +4217,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -3868,7 +4336,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -3957,15 +4461,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -4342,7 +4854,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -4395,7 +4943,7 @@ during something can be listed together.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -4513,15 +5061,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       
@@ -4562,7 +5118,7 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+        <span style="font-size:11px;color:#555;margin-left:2px;">An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
 </span>
       </div>
       
@@ -4681,7 +5237,43 @@ and a call's parameters may come in any order.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The record it cites. `sourceType` says what kind, and
+`links.source` is where to read it.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (json-pointer)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a suggestion whose call carries a JSON Patch, the change this
+backs up: the `path` of one of the patch's changes, such as
+`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.
+A path no change in the patch has is refused with `422`.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">links</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related record, of the kind sourceType names.</span>
       </div>
       
     </div>
@@ -4770,15 +5362,23 @@ said no; `expired` once it stopped applying.
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
         <span style="font-size:11px;color:#555;margin-left:2px;">What identifies it, for refusing the same one proposed again: an
-operation suggestion's whole call; an informing one's subject,
-path and category — or, uncategorized, its message. A keyed hash,
-so nothing can be read back from it.
+operation suggestion's call (its operation, path and query
+parameters, and body, but not headers or cookies, which are about
+how a request is sent); an informing one's subject, path and
+category — or, uncategorized, its message. A keyed hash, so
+nothing can be read back from it.
 
 Before hashing, values are made comparable, so two suggestions that
 differ only in these ways have the same fingerprint: text is
 trimmed, runs of spaces become one, and case is ignored; a
 date-time is compared as the instant it names; an object's keys
 and a call's parameters may come in any order.
+
+In a JSON Patch, the id of each record the patch creates (one an
+`add` puts a record under, which no record has yet) is replaced by
+its order of appearance, wherever the patch names it. So the same
+new member proposed again under a freshly chosen id has the same
+fingerprint. Ids of existing records are kept.
 </span>
       </div>
       

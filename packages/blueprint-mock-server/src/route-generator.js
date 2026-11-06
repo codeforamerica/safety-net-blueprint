@@ -41,7 +41,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { operationsOf } from './operation-calls.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
-import { editableResources, assembleEditable, createEditablePatchHandler } from './editable-composition.js';
+import { editableResources, assembleEditable, createEditablePatchHandler, registerEditableOperation, clearEditableOperations } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
@@ -755,6 +755,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
   const editables = editableResources(apiSpecs, resourceCollectionNameMap);
+  clearEditableOperations();
 
   for (const { domain, doc, filePath, relativePath, api } of compositionFiles) {
     const table = routesFrom(routes, relativePath ?? filePath);
@@ -813,6 +814,8 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
           ?.requestBody?.content?.['application/json-patch+json']?.schema?.$ref;
         const requestSchema = { relativePath: apiSpec?.doc?.relativePath, ref: patchBodyRef, schema: { $ref: patchBodyRef } };
         const editableOpts = { resources: editables, store, stepCalls, primaryParam, requestSchema };
+        const updateOperationId = apiSpec?.doc?.content?.paths?.[endpointPath]?.patch?.operationId;
+        if (updateOperationId) registerEditableOperation(updateOperationId, composition, editableOpts);
         addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
           const result = assembleEditable(composition, params, editableOpts);
           if (!result) {

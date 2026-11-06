@@ -214,9 +214,10 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * @param {{ id: string|null, roles: string[] }} options.caller
    * @param {string|null} [options.traceparent]
    * @param {string|null} [options.causationid] - The event the call's own events name as their cause
+   * @param {string|null} [options.idempotencyKey] - Sent as the Idempotency-Key when the operation requires one and the call has none
    * @returns {Promise<{ ok: boolean, status: number, body: * }>}
    */
-  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null } = {}) {
+  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
     const operation = operations.get(call.operationId);
     if (!operation) {
       return failure(422, 'VALIDATION_ERROR', `No operation in the contract set has the operationId "${call.operationId}".`);
@@ -231,6 +232,12 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     const query = new URLSearchParams(given.filter((p) => p.in === 'query').map((p) => [p.name, String(p.value)]));
     const headers = { 'content-type': call.requestBody?.contentType ?? 'application/json' };
     for (const p of given.filter((p) => p.in === 'header')) headers[p.name] = String(p.value);
+    // A stored call leaves out the Idempotency-Key its operation requires; the
+    // one making the call supplies it (base/schemas/operations.yaml).
+    const wantsKey = operation.parameters.some((p) => p.in === 'header' && p.name.toLowerCase() === 'idempotency-key');
+    if (wantsKey && idempotencyKey && !Object.keys(headers).some((h) => h.toLowerCase() === 'idempotency-key')) {
+      headers['Idempotency-Key'] = String(idempotencyKey);
+    }
     // A caller who is the system — a call made as the caller from an action
     // the system ran — is the system here too.
     const system = runAs !== 'caller' || areSystemRoles(caller?.roles);

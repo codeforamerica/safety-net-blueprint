@@ -26,7 +26,24 @@
               "sourceId": {
                 "type": "string",
                 "format": "uuid",
-                "description": "The record it cites. `sourceType` says what kind."
+                "description": "The record it cites. `sourceType` says what kind, and\n`links.source` is where to read it.\n"
+              },
+              "path": {
+                "type": "string",
+                "format": "json-pointer",
+                "description": "For a suggestion whose call carries a JSON Patch, the change this\nbacks up: the `path` of one of the patch's changes, such as\n`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.\nA path no change in the patch has is refused with `422`.\n"
+              },
+              "links": {
+                "type": "object",
+                "readOnly": true,
+                "description": "Related resource links.",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "format": "uri-reference",
+                    "description": "Link to the related record, of the kind sourceType names."
+                  }
+                }
               }
             }
           }

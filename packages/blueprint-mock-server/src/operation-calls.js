@@ -37,12 +37,21 @@ export function operationsOf(apiSpecs) {
         const id = operation?.operationId;
         if (!id || index.has(id)) continue;
         const raw = operation.requestBody?.content?.['application/json']?.schema;
+        // Each media type the operation takes, with its schema: a composition's
+        // update takes application/json-patch+json and nothing else.
+        const bodies = Object.fromEntries(Object.entries(follow(operation.requestBody)?.content ?? {})
+          .map(([type, media]) => [type, {
+            schema: media?.schema ? follow(media.schema) : null,
+            ref: typeof media?.schema?.$ref === 'string' ? media.schema.$ref : null,
+          }]));
         index.set(id, {
           method: method.toUpperCase(),
           path: `${api.serverBasePath ?? ''}${path}`,
           parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])].map(follow),
           requestSchema: raw ? follow(raw) : null,
           requestSchemaRef: typeof raw?.$ref === 'string' ? raw.$ref : null,
+          bodies,
+          follow,
           bodyRequired: Boolean(follow(operation.requestBody)?.required),
           relativePath: api.relativePath,
         });
@@ -122,19 +131,25 @@ export function callProblems({ field, call }, operations) {
   });
   for (const declared of operation.parameters) {
     if (!(declared.required || declared.in === 'path')) continue;
+    // A key guards one request, so whatever makes the call supplies it.
+    if (declared.in === 'header' && declared.name.toLowerCase() === 'idempotency-key') continue;
     if (!given.some((p) => p.name === declared.name && p.in === declared.in)) {
       problems.push({ field: at('parameters'), message: `${call.operationId} requires the ${declared.in} parameter "${declared.name}".` });
     }
   }
 
   const payload = call.requestBody?.payload;
+  const contentType = call.requestBody?.contentType ?? 'application/json';
+  const body = operation.bodies?.[contentType];
   if (payload === undefined) {
     if (operation.bodyRequired) problems.push({ field: at('requestBody.payload'), message: `${call.operationId} requires a body.` });
-  } else if (!operation.requestSchema) {
+  } else if (Object.keys(operation.bodies ?? {}).length === 0) {
     problems.push({ field: at('requestBody.payload'), message: `${call.operationId} takes no body.` });
-  } else {
-    const { valid, errors } = validate(payload, operation.requestSchema, `${call.operationId}-body`,
-      { relativePath: operation.relativePath, ref: operation.requestSchemaRef });
+  } else if (!body) {
+    problems.push({ field: at('requestBody.contentType'), message: `${call.operationId} takes ${Object.keys(operation.bodies).join(' or ')}, not ${contentType}.` });
+  } else if (body.schema) {
+    const { valid, errors } = validate(payload, body.schema, `${call.operationId}-body-${contentType}`,
+      { relativePath: operation.relativePath, ref: body.ref });
     if (!valid) {
       for (const error of errors) {
         problems.push({ field: error.field === 'body' ? at('requestBody.payload') : at(`requestBody.payload.${error.field}`), message: error.message });

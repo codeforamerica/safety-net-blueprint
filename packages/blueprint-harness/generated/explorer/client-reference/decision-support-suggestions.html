@@ -105,7 +105,7 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-SuggestionCommon" class="nav-link">SuggestionCommon</a><a href="#type-OperationSuggestionFields" class="nav-link">OperationSuggestionFields</a><a href="#type-SuggestionRead" class="nav-link">SuggestionRead</a><a href="#type-SuggestionEvidence" class="nav-link">SuggestionEvidence</a><a href="#type-OperationSuggestionCreate" class="nav-link">OperationSuggestionCreate</a><a href="#type-InformingSuggestionCreate" class="nav-link">InformingSuggestionCreate</a><a href="#type-OperationSuggestion" class="nav-link">OperationSuggestion</a><a href="#type-InformingSuggestion" class="nav-link">InformingSuggestion</a><a href="#type-SuggestionList" class="nav-link">SuggestionList</a><a href="#type-AcceptRequest" class="nav-link">AcceptRequest</a><a href="#type-DismissRequest" class="nav-link">DismissRequest</a><a href="#type-OperationSuggestionWritable" class="nav-link">OperationSuggestionWritable</a><a href="#type-InformingSuggestionWritable" class="nav-link">InformingSuggestionWritable</a><a href="#type-SuggestionListWritable" class="nav-link">SuggestionListWritable</a>
+        <a href="#type-SuggestionCommon" class="nav-link">SuggestionCommon</a><a href="#type-OperationSuggestionFields" class="nav-link">OperationSuggestionFields</a><a href="#type-SuggestionRead" class="nav-link">SuggestionRead</a><a href="#type-SuggestionEvidence" class="nav-link">SuggestionEvidence</a><a href="#type-OperationSuggestionCreate" class="nav-link">OperationSuggestionCreate</a><a href="#type-InformingSuggestionCreate" class="nav-link">InformingSuggestionCreate</a><a href="#type-OperationSuggestion" class="nav-link">OperationSuggestion</a><a href="#type-InformingSuggestion" class="nav-link">InformingSuggestion</a><a href="#type-SuggestionList" class="nav-link">SuggestionList</a><a href="#type-AcceptRequest" class="nav-link">AcceptRequest</a><a href="#type-DismissRequest" class="nav-link">DismissRequest</a><a href="#type-SuggestionCommonWritable" class="nav-link">SuggestionCommonWritable</a><a href="#type-SuggestionEvidenceWritable" class="nav-link">SuggestionEvidenceWritable</a><a href="#type-OperationSuggestionCreateWritable" class="nav-link">OperationSuggestionCreateWritable</a><a href="#type-InformingSuggestionCreateWritable" class="nav-link">InformingSuggestionCreateWritable</a><a href="#type-OperationSuggestionWritable" class="nav-link">OperationSuggestionWritable</a><a href="#type-InformingSuggestionWritable" class="nav-link">InformingSuggestionWritable</a><a href="#type-SuggestionListWritable" class="nav-link">SuggestionListWritable</a>
       </div>
       </div>
     </nav>
@@ -156,17 +156,25 @@
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createSuggestion<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createSuggestion<span style="color:#aaa;font-weight:400;">(source)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Propose a suggestion</span>
       
       <a href="#ep-createSuggestion" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">decision-support-suggestions.createSuggestion({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">decision-support-suggestions.createSuggestion({
+  path: { source: string },
+  body: { ... },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
       <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">source</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
@@ -311,18 +319,18 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (14)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (18)</h2>
         <div id="type-SuggestionCommon" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SuggestionCommon</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
       <a href="#type-SuggestionCommon" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionCommon</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -359,12 +367,12 @@
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">SuggestionEvidence</code>
-      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
       <a href="#type-SuggestionEvidence" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionEvidence</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;transcript_entry&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;transcript_entry&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">path</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -373,12 +381,12 @@
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">OperationSuggestionCreate</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
       <a href="#type-OperationSuggestionCreate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">OperationSuggestionCreate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -387,12 +395,12 @@
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">InformingSuggestionCreate</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
       <a href="#type-InformingSuggestionCreate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">InformingSuggestionCreate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -463,6 +471,62 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DismissRequest</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-SuggestionCommonWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">SuggestionCommonWritable</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-SuggestionCommonWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionCommonWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-SuggestionEvidenceWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">SuggestionEvidenceWritable</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-SuggestionEvidenceWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SuggestionEvidenceWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;transcript_entry&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">path</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-OperationSuggestionCreateWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">OperationSuggestionCreateWritable</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-OperationSuggestionCreateWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">OperationSuggestionCreateWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-InformingSuggestionCreateWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">InformingSuggestionCreateWritable</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-InformingSuggestionCreateWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">InformingSuggestionCreateWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">evidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expiresAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

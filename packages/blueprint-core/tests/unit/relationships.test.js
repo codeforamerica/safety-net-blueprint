@@ -2502,5 +2502,36 @@ test('relationship-resolver tests', async (t) => {
     assert.strictEqual(schemas.ApplicationCreate.properties.household, undefined, 'request schema must not have expanded object');
     assert.deepStrictEqual(schemas.ApplicationCreate.required, ['householdId'], 'required array unchanged on request schema');
   });
-});
 
+  // ===========================================================================
+  // resolveRelationships — polymorphic references
+  // ===========================================================================
+
+  await t.test('a polymorphic reference gets a link only when it asks for links-only, and is never expanded', () => {
+    const polymorphic = (style) => ({
+      resource: 'Polymorphic',
+      discriminator: { propertyName: 'sourceType' },
+      ...(style ? { style } : {}),
+    });
+    const spec = {
+      paths: {},
+      components: {
+        schemas: {
+          Linked: { type: 'object', properties: { sourceType: { type: 'string' }, sourceId: { type: 'string', format: 'uuid', 'x-relationship': polymorphic('links-only') } } },
+          ByTheSetsStyle: { type: 'object', properties: { subjectType: { type: 'string' }, subjectId: { type: 'string', format: 'uuid', 'x-relationship': polymorphic() } } },
+          Expanded: { type: 'object', properties: { sourceType: { type: 'string' }, sourceId: { type: 'string', format: 'uuid', 'x-relationship': polymorphic('expand') } } },
+        },
+      },
+    };
+    const { result } = resolveRelationships(spec, 'expand', buildSchemaIndex(new Map([['spec.yaml', spec]])));
+    const { Linked, ByTheSetsStyle, Expanded } = result.components.schemas;
+
+    assert.ok(Linked.properties.sourceId, 'the id stays');
+    assert.strictEqual(Linked.properties.links.properties.source.format, 'uri-reference');
+    assert.match(Linked.properties.links.properties.source.description, /sourceType/);
+    assert.strictEqual(ByTheSetsStyle.properties.links, undefined, "the set's style doesn't reach it");
+    assert.ok(Expanded.properties.sourceId, 'expand leaves the id alone');
+    assert.strictEqual(Expanded.properties.source, undefined);
+    assert.strictEqual(Expanded.properties.links, undefined);
+  });
+});

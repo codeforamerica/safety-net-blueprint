@@ -24,6 +24,10 @@ import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
  * came back without their `links`, because `x-relationship` lives on a
  * property the walker could not see (#448).
  *
+ * A resource with kinds is a `oneOf` of them, each an `allOf` of refs —
+ * a suggestion is an operation suggestion or an informing one — so the
+ * members of `oneOf` and `anyOf` are read too, as deep as they go.
+ *
  * `follow` is `api.resolve.schema`, which resolves one hop against the
  * document the schema was declared in. Identity when omitted, which is right
  * for a schema that carries no refs.
@@ -32,20 +36,18 @@ import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
  * @param {(schema: *) => *} follow
  * @returns {object[]} Property maps, outermost first
  */
-export function propertiesOf(schema, follow = (x) => x) {
+export function propertiesOf(schema, follow = (x) => x, seen = new Set()) {
   const resolved = follow(schema);
-  if (!resolved || typeof resolved !== 'object') return [];
+  if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) return [];
+  seen.add(resolved);
 
   const sources = [];
   if (resolved.properties) sources.push(resolved.properties);
-
-  if (Array.isArray(resolved.allOf)) {
-    for (const entry of resolved.allOf) {
-      const member = follow(entry);
-      if (member?.properties) sources.push(member.properties);
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    for (const entry of Array.isArray(resolved[key]) ? resolved[key] : []) {
+      sources.push(...propertiesOf(entry, follow, seen));
     }
   }
-
   return sources;
 }
 
@@ -212,35 +214,48 @@ export function resourceToCollection(resource) {
  * Walk a response schema and return all fields annotated with
  * x-relationship.style: links-only.
  *
- * Handles flat schemas and allOf.
+ * Handles flat schemas, allOf and oneOf. A polymorphic reference has no one
+ * resource: its type field names one for each record, through the
+ * discriminator's mapping or by name (transcript_entry → TranscriptEntry).
+ * A record held inside this one — each evidence entry of a suggestion —
+ * comes back as `{ within, fields }`, its own fields to link.
  *
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
- * @returns {Array<{ fkField: string, linkName: string, resource: string, collection: string }>}
+ * @returns {Array<{ fkField: string, linkName: string, resource: string, collection: string, typeField?: string, mapping?: object } | { within: string, fields: Array }>}
  */
-export function extractLinksFields(schema, follow = (x) => x) {
+export function extractLinksFields(schema, follow = (x) => x, seen = new Set()) {
   if (!schema) return [];
 
   const fields = [];
-  const propertySources = propertiesOf(schema, follow);
-  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
-
-  for (const props of propertySources) {
+  for (const props of propertiesOf(schema, follow)) {
     for (const [fieldName, propDef] of Object.entries(props)) {
       const rel = propDef?.['x-relationship'];
       if (rel?.style === 'links-only' && rel.resource) {
         // Derive the link name by stripping trailing Id (only when > 2 chars remain)
         const linkName = fieldName.length > 2 ? fieldName.replace(/Id$/, '') : fieldName;
-        fields.push({
-          fkField: fieldName,
-          linkName,
-          resource: rel.resource,
-          collection: resourceToCollection(rel.resource),
-        });
+        fields.push(rel.resource === 'Polymorphic'
+          ? { fkField: fieldName, linkName, typeField: rel.discriminator?.propertyName, mapping: rel.discriminator?.mapping ?? {} }
+          : { fkField: fieldName, linkName, resource: rel.resource, collection: resourceToCollection(rel.resource) });
+        continue;
       }
+      const held = follow(propDef)?.items ?? propDef;
+      const resolved = follow(held);
+      // Only the schemas above this one are skipped, so a schema that holds
+      // itself ends, and two fields holding the same schema both link.
+      if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) continue;
+      const inner = extractLinksFields(held, follow, new Set([...seen, resolved]));
+      if (inner.length > 0) fields.push({ within: fieldName, fields: inner });
     }
   }
 
   return fields;
+}
+
+/** The resource a polymorphic reference's type value names, or null for one outside the contracts. */
+function resourceOfType(type, mapping) {
+  if (typeof type !== 'string' || type === '') return null;
+  const resource = mapping[type] ?? type.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+  return resource === 'External' ? null : resource;
 }
 
 /**
@@ -279,30 +294,40 @@ function linkTo(resource, id, collection, lookup) {
  *
  * For each linksField with an id on the record, adds `links[linkName]`: where
  * the related record is read, in the API that serves it. The id field stays
- * (unlike expand).
+ * (unlike expand). A record held inside this one gets its own `links`.
  *
  * @param {object} record - Raw DB record (or already-expanded record)
- * @param {Array<{ fkField, linkName, resource, collection }>} linksFields
+ * @param {Array} linksFields - From extractLinksFields
  * @param {(collection: string, id: string) => object|null} [lookup] - Finds a related record, for its parent ids
  * @returns {object}
  */
 export function applyLinks(record, linksFields, lookup) {
-  if (!linksFields || linksFields.length === 0) return record;
+  if (!linksFields || linksFields.length === 0 || !record || typeof record !== 'object') return record;
 
   const links = record.links ? { ...record.links } : {};
   let hasLinks = false;
+  let out = record;
 
-  for (const { fkField, linkName, resource, collection } of linksFields) {
-    const fkValue = record[fkField];
+  for (const field of linksFields) {
+    if (field.within) {
+      const held = record[field.within];
+      const linked = Array.isArray(held)
+        ? held.map((item) => applyLinks(item, field.fields, lookup))
+        : applyLinks(held, field.fields, lookup);
+      if (linked !== held) out = { ...out, [field.within]: linked };
+      continue;
+    }
+    const fkValue = record[field.fkField];
     if (!fkValue) continue;
-    const href = linkTo(resource, fkValue, collection, lookup);
+    const resource = field.typeField ? resourceOfType(record[field.typeField], field.mapping) : field.resource;
+    if (!resource) continue;
+    const href = linkTo(resource, fkValue, field.typeField ? resourceToCollection(resource) : field.collection, lookup);
     if (!href) continue;
-    links[linkName] = href;
+    links[field.linkName] = href;
     hasLinks = true;
   }
 
-  if (!hasLinks) return record;
-  return { ...record, links };
+  return hasLinks ? { ...out, links } : out;
 }
 
 /**
