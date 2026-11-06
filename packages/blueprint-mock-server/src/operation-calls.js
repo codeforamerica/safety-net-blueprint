@@ -14,20 +14,25 @@
  * calls too, so they are read from the documents, not from the routes.
  */
 
+import { extract } from '@codeforamerica/blueprint-core/browser';
 import { validate } from './validator.js';
 
 const OPERATION_CALL = /(^|\/)schemas\/operations\.yaml#\/\$defs\/OperationCall$/;
 const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
 
 /**
- * Every operation in the set, by operationId: where it is — its method and
- * full path — its parameters and request schema, and the document they were
- * declared in.
+ * Every operation in the set: where it is — its method and full path — its
+ * parameters and request schema, and the document they were declared in.
+ *
+ * Found by what names it, as core finds it (extract(docs, 'operations')): a
+ * bare operationId one API declares, or `$apis.<api>.<id>`. An id two APIs
+ * declare finds nothing bare; `whyNot` says which to write instead.
  *
  * @param {object[]} apiSpecs - From apiSpecsFromDocs
- * @returns {Map<string, { method: string, path: string, parameters: object[], requestSchema: object|null, requestSchemaRef: string|null, bodyRequired: boolean, relativePath: string }>}
+ * @returns {{ get: (ref: string) => object|undefined, whyNot: (ref: string) => string, [Symbol.iterator]: () => Iterator<[string, object]> }}
  */
 export function operationsOf(apiSpecs) {
+  // Keyed by document and id: an id is unique only within its document.
   const index = new Map();
   for (const api of apiSpecs ?? []) {
     const follow = api.resolve?.schema ?? ((x) => x);
@@ -35,7 +40,7 @@ export function operationsOf(apiSpecs) {
       for (const method of METHODS) {
         const operation = item?.[method];
         const id = operation?.operationId;
-        if (!id || index.has(id)) continue;
+        if (!id || index.has(`${api.relativePath}#${id}`)) continue;
         const raw = operation.requestBody?.content?.['application/json']?.schema;
         // Each media type the operation takes, with its schema: a composition's
         // update takes application/json-patch+json and nothing else.
@@ -44,7 +49,8 @@ export function operationsOf(apiSpecs) {
             schema: media?.schema ? follow(media.schema) : null,
             ref: typeof media?.schema?.$ref === 'string' ? media.schema.$ref : null,
           }]));
-        index.set(id, {
+        index.set(`${api.relativePath}#${id}`, {
+          id,
           method: method.toUpperCase(),
           path: `${api.serverBasePath ?? ''}${path}`,
           parameters: [...(item.parameters ?? []), ...(operation.parameters ?? [])].map(follow),
@@ -53,12 +59,35 @@ export function operationsOf(apiSpecs) {
           bodies,
           follow,
           bodyRequired: Boolean(follow(operation.requestBody)?.required),
+          // What it answers, by status, for checking a routed handler's response.
+          responses: operation.responses ?? {},
           relativePath: api.relativePath,
         });
       }
     }
   }
-  return index;
+  const found = extract((apiSpecs ?? []).map((api) => api.doc).filter(Boolean), 'operations');
+  // The API each belongs to, as core names it.
+  for (const operation of found?.all ?? []) {
+    const details = index.get(`${operation.file}#${operation.id}`);
+    if (details) details.api = operation.api;
+  }
+  const lookup = (ref) => found?.find(ref) ?? { candidates: [] };
+  return {
+    get(ref) {
+      const { operation } = lookup(ref);
+      return operation && index.get(`${operation.file}#${operation.id}`);
+    },
+    whyNot(ref) {
+      const { candidates } = lookup(ref);
+      return candidates.length > 1
+        ? `More than one API has the operationId "${ref}"; write ${candidates.map((o) => `$apis.${o.api}.${o.id}`).join(' or ')}.`
+        : `No operation in the contract set has the operationId "${ref}".`;
+    },
+    *[Symbol.iterator]() {
+      for (const operation of index.values()) yield [operation.id, operation];
+    },
+  };
 }
 
 /**
@@ -111,9 +140,7 @@ export function callsIn(body, schema, follow = (x) => x, at = '') {
 export function callProblems({ field, call }, operations) {
   const at = (name) => (field ? `${field}.${name}` : name);
   const operation = operations.get(call.operationId);
-  if (!operation) {
-    return [{ field: at('operationId'), message: `No operation in the contract set has the operationId "${call.operationId}".` }];
-  }
+  if (!operation) return [{ field: at('operationId'), message: operations.whyNot(call.operationId) }];
 
   const problems = [];
   const given = call.parameters ?? [];

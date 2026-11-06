@@ -126,6 +126,10 @@ function indexRefs(content) {
         // legitimately address a null node. Collapsing the two would report a
         // valid reference as broken.
         const found = external ? undefined : resolvePointer(content, pointer);
+        // A pointer that passes through a reference to another document — an
+        // operation's message under a channel listed by reference — lands
+        // there, so it's that document's to check, as an external ref is.
+        const viaFile = !external && found === undefined ? fileOnTheWay(content, pointer) : null;
         refs.set(value, {
           pointer,
           external,
@@ -134,7 +138,7 @@ function indexRefs(content) {
           // ref form: #/components/schemas/Foo, #/$defs/Foo, and external
           // refs ending in either.
           name: pointer.split('/').filter(Boolean).pop() ?? null,
-          resolved: external ? null : found !== undefined,
+          resolved: external || viaFile ? null : found !== undefined,
           target: found ?? null,
         });
       }
@@ -163,6 +167,26 @@ function resolvePointer(root, pointer) {
     node = node[segment];
   }
   return node;
+}
+
+/**
+ * The file a pointer reaches through a `$ref` on the way to its target, if it
+ * does: `/channels/a.b/messages/X` where `/channels/a.b` is `{$ref:
+ * '../a/a-events-asyncapi.yaml#/channels/a.b'}`. Dereferencing tools follow
+ * it; this only says where to.
+ *
+ * @param {*} root
+ * @param {string} pointer
+ * @returns {string|null}
+ */
+function fileOnTheWay(root, pointer) {
+  let node = root;
+  for (const rawSegment of pointer.split('/').filter(Boolean)) {
+    if (node === null || typeof node !== 'object') return null;
+    if (typeof node.$ref === 'string' && !node.$ref.startsWith('#')) return node.$ref.split('#')[0];
+    node = node[rawSegment.replace(/~1/g, '/').replace(/~0/g, '~')];
+  }
+  return null;
 }
 
 /**

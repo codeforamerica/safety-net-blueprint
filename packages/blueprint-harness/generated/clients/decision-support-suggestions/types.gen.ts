@@ -71,7 +71,8 @@ export type OperationSuggestionFields = {
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -268,7 +269,8 @@ export type SuggestionCreate = ({
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -433,7 +435,8 @@ export type OperationSuggestionCreate = {
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -595,7 +598,8 @@ export type Suggestion = ({
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -682,7 +686,8 @@ export type Suggestion = ({
      */
     readonly performed?: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -884,7 +889,8 @@ export type OperationSuggestion = {
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -971,7 +977,8 @@ export type OperationSuggestion = {
      */
     readonly performed?: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -1176,7 +1183,8 @@ export type SuggestionList = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -1263,7 +1271,8 @@ export type SuggestionList = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -1437,7 +1446,8 @@ export type AcceptRequest = {
      */
     call?: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -1579,7 +1589,8 @@ export type SuggestionCreateWritable = ({
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -1726,7 +1737,8 @@ export type OperationSuggestionCreateWritable = {
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -1870,7 +1882,8 @@ export type SuggestionWritable = ({
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -2007,7 +2020,8 @@ export type OperationSuggestionWritable = {
      */
     call: {
         /**
-         * The operation's operationId, e.g. `updateApplicationMember`.
+         * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+         *
          */
         operationId: string;
         /**
@@ -2147,7 +2161,8 @@ export type SuggestionListWritable = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -2500,7 +2515,8 @@ export type ListSuggestionsResponses = {
              */
             call: {
                 /**
-                 * The operation's operationId, e.g. `updateApplicationMember`.
+                 * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+                 *
                  */
                 operationId: string;
                 /**
@@ -2587,7 +2603,8 @@ export type ListSuggestionsResponses = {
              */
             readonly performed?: {
                 /**
-                 * The operation's operationId, e.g. `updateApplicationMember`.
+                 * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+                 *
                  */
                 operationId: string;
                 /**
@@ -2830,7 +2847,8 @@ export type CreateSuggestionData = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3094,7 +3112,8 @@ export type CreateSuggestionResponses = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3181,7 +3200,8 @@ export type CreateSuggestionResponses = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3460,7 +3480,8 @@ export type GetSuggestionResponses = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3547,7 +3568,8 @@ export type GetSuggestionResponses = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3717,7 +3739,8 @@ export type AcceptSuggestionData = {
          */
         call?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -3942,7 +3965,8 @@ export type AcceptSuggestionResponses = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -4029,7 +4053,8 @@ export type AcceptSuggestionResponses = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -4389,7 +4414,8 @@ export type DismissSuggestionResponses = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -4476,7 +4502,8 @@ export type DismissSuggestionResponses = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -4812,7 +4839,8 @@ export type ExpireSuggestionResponses = {
          */
         call: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**
@@ -4899,7 +4927,8 @@ export type ExpireSuggestionResponses = {
          */
         readonly performed?: {
             /**
-             * The operation's operationId, e.g. `updateApplicationMember`.
+             * The operation's operationId, e.g. `updateApplicationMember`. An id is unique only within the document that declares it, so when more than one API declares it, qualify it by the API's name — its OpenAPI file's name without `-openapi.yaml`, which the events AsyncAPI beside it shares: `$apis.intake.updateApplicationMember`. A bare id more than one API declares names no operation.
+             *
              */
             operationId: string;
             /**

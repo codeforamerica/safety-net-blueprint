@@ -15,7 +15,7 @@
 
 import { previewPatch } from './editable-composition.js';
 import { missingReferences } from './references.js';
-import { callProblems } from './operation-calls.js';
+import { callProblems, operationsOf } from './operation-calls.js';
 
 const PATCH = 'application/json-patch+json';
 
@@ -48,7 +48,7 @@ const refuse = (status, message, details) => ({
  * @returns {Promise<{ refused?: { status: number, body: object }, created: Set<string> }>}
  *   `created`: the ids of records the patch creates, for its fingerprint
  */
-export async function checkProposedPatch(suggestion, operations = new Map()) {
+export async function checkProposedPatch(suggestion, operations = operationsOf([])) {
   const created = new Set();
   const call = suggestion?.kind === 'operation' ? suggestion.call : null;
   const cited = (suggestion?.evidence ?? []).map((entry, i) => ({ entry, i })).filter(({ entry }) => entry.path !== undefined);

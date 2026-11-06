@@ -10,7 +10,7 @@
  * Only what the mock holds is checked:
  *   - `External` and `Polymorphic` name no schema, so there is nothing to find;
  *   - a collection no loaded contract serves has no records here at all;
- *   - a collection whose routes are forwarded lives in a real service, and its
+ *   - a collection whose routes are routed elsewhere lives in a real service, and its
  *     records here, if any, are not the ones that count.
  *
  * Fields are read from the request schema, so only what a client may send is
@@ -24,7 +24,7 @@ const NOTHING_TO_FIND = new Set(['External', 'Polymorphic']);
 
 /**
  * The route each collection's records are read from, so a check can tell
- * whether that route still answers here or has been forwarded. Module-level
+ * whether that route still answers here or has been routed elsewhere. Module-level
  * like `collectionsByResource`, and cleared by each server as it starts.
  *
  * @type {Map<string, { routes: { get(key: string): object|undefined }, key: string }>}
@@ -51,7 +51,7 @@ export function registerReadRoute(collection, routes, key) {
 export function heldHere(collection) {
   const read = readRoutes.get(collection);
   if (!read) return false;
-  return !read.routes.get(read.key)?.forwarded;
+  return !read.routes.get(read.key)?.routed;
 }
 
 /** The resource an `x-relationship` points at, when there's a record of it to find. */

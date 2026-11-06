@@ -114,7 +114,7 @@ export function domainClosure(docs, domains) {
  *
  * `discover` keeps every YAML file it finds, and one it cannot identify as
  * any contract type is `unknown`. Such a file in a contracts directory is
- * usually something else entirely — a mock forwarding file, a note, a local
+ * usually something else entirely — a mock routing file, a note, a local
  * config — and the artifact is published: the harness one is committed and
  * inlined into a page anyone can open. So an `unknown` document is left out,
  * unless a contract `$ref`s it, in which case it is part of the set whatever

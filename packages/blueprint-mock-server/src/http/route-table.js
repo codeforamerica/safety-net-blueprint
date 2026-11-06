@@ -61,6 +61,8 @@ export function addRoute(routes, method, expressPath, handler, meta = {}) {
     operationId: meta.operationId ?? null,
     description: meta.description ?? null,
     domain: meta.domain ?? null,
+    // The API the operation belongs to, tagged once every route is registered.
+    api: null,
     mock: meta.mock ?? false,
     handler,
   });
@@ -340,19 +342,23 @@ export function wrapRoute(routes, key, wrap) {
  * Drift against the real contract set is caught by a test instead.
  *
  * @param {Map<string, object>} routes
- * @param {Record<string, Function>} overrides - operationId → handler
+ * @param {Record<string, Function>} overrides - operationId, bare or `$apis.<api>.<id>`, → handler
  * @returns {{ applied: string[], unmatched: string[] }}
  */
 export function overrideByOperationId(routes, overrides) {
-  const byOperationId = new Map();
-  for (const [key, entry] of routes) {
-    if (entry.operationId) byOperationId.set(entry.operationId, key);
-  }
+  // An id is unique only within its document, so a bare one finds a route
+  // only when one API has it; `$apis.<api>.<id>` finds it when several do.
+  const keysOf = (ref) => {
+    const qualified = /^\$apis\.([^.]+)\.(.+)$/.exec(ref);
+    const [api, id] = qualified ? [qualified[1], qualified[2]] : [null, ref];
+    return [...routes].filter(([, entry]) => entry.operationId === id && (!api || entry.api === api)).map(([key]) => key);
+  };
 
   const applied = [];
   const unmatched = [];
   for (const [operationId, handler] of Object.entries(overrides)) {
-    const key = byOperationId.get(operationId);
+    const keys = keysOf(operationId);
+    const key = keys.length === 1 ? keys[0] : undefined;
     if (key === undefined) {
       unmatched.push(operationId);
       continue;

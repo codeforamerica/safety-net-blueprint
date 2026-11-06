@@ -39,7 +39,19 @@ naming:
   # Operation IDs: camelCase verb + noun
   # REST example: listPersons, createApplication, getHouseholdById
   # RPC example: claimTask, completeTask, submitApplication
+  # AsyncAPI operations resolve generates: send or receive + the message name,
+  # sendIntakeApplicationSubmitted, receiveIntakeApplicationSubmitted.
   operation_ids: camelCase
+
+  # Naming an operation from a state machine call, a suggestion's call or a
+  # routing entry: its bare id when one API declares it. An id is unique only
+  # within its document, so when more than one API declares it — two domains
+  # receiving the same event do — write $apis.<api>.<id>, where <api> is the
+  # OpenAPI file's name without -openapi.yaml, which its events AsyncAPI
+  # shares. An Arazzo step writes $sourceDescriptions.<name>.<id> instead,
+  # as Arazzo requires once it has more than one source.
+  # Example: $apis.workflow.receiveIntakeApplicationSubmitted
+  operation_references: bare id, or $apis.<api>.<id> when more than one API declares it
 
   # Schema/component names: PascalCase
   # Example: Person, ApplicationCreate, HouseholdList

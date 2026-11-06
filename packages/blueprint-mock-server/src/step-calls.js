@@ -219,9 +219,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    */
   async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
     const operation = operations.get(call.operationId);
-    if (!operation) {
-      return failure(422, 'VALIDATION_ERROR', `No operation in the contract set has the operationId "${call.operationId}".`);
-    }
+    if (!operation) return failure(422, 'VALIDATION_ERROR', operations.whyNot(call.operationId));
     if (!fetchHere) return failure(500, 'INTERNAL_ERROR', 'The mock has no routes to send a call through yet.');
 
     const given = call.parameters ?? [];

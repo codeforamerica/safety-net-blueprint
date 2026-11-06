@@ -27,7 +27,7 @@ import { jsonBody, readJsonBody, invalidJson } from './http/request.js';
 
 /**
  * Register the routes the mock serves itself, tagged so nothing mistakes them
- * for ones a contract declares: forwarding refuses them, and a contract that
+ * for ones a contract declares: routing refuses them, and a contract that
  * declares one of their paths is refused at boot.
  *
  * @param {Map<string, object>} routes

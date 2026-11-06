@@ -14,7 +14,7 @@ import { performSetup } from '../src/setup.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { createDispatcher } from '../src/http/route-table.js';
-import { forwardingFromDocument } from '../src/forwarding.js';
+import { routingFromDocument } from '../src/routing.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
 import { seedAllDatabases } from '../src/seeder.js';
@@ -49,9 +49,9 @@ Options:
                     store the browser build uses. Note that --detach --store=memory
                     gives a background server whose data disappears with it.
                     Override with MOCK_STORE env var
-  --forwarding=<file>
-                    YAML or JSON listing domains and endpoints to forward to a
-                    real service instead of mocking. See schemas/forwarding-schema.json
+  --routing=<file>  YAML or JSON listing domains, APIs and operations a real
+                    service answers instead of the mock, and the events its
+                    state machines receive. See schemas/routing-schema.json
   --detach          Start server in the background (logs to mock-server.log)
   --log=<path>      Log file or directory for --detach output (default: spec dir)
   --stop            Stop the running mock server
@@ -86,7 +86,7 @@ function parseSpecDirs() {
     a !== '--detach' && a !== '--stop' &&
     !a.startsWith('--spec=') && !a.startsWith('--seed=') &&
     !a.startsWith('--log=') && !a.startsWith('--store=') &&
-    !a.startsWith('--forwarding=')
+    !a.startsWith('--routing=')
   );
   if (unknown.length > 0) {
     console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
@@ -111,22 +111,22 @@ function parseSpecDirs() {
   // Routing is per-environment, so it is read from outside the contract set
   // rather than declared in it (#283). The file is loaded here; the server
   // itself takes data, because it also runs in a browser.
-  const forwardingArg = args.find(a => a.startsWith('--forwarding='));
-  let forwarding = [];
-  if (forwardingArg) {
-    const forwardingPath = resolve(forwardingArg.split('=')[1]);
+  const routingArg = args.find(a => a.startsWith('--routing='));
+  let routing = [];
+  if (routingArg) {
+    const routingPath = resolve(routingArg.split('=')[1]);
     let parsed;
     try {
-      const text = readFileSync(forwardingPath, 'utf8');
-      parsed = forwardingPath.endsWith('.json') ? JSON.parse(text) : loadYaml(text);
+      const text = readFileSync(routingPath, 'utf8');
+      parsed = routingPath.endsWith('.json') ? JSON.parse(text) : loadYaml(text);
     } catch (err) {
-      console.error(`Error: could not read --forwarding=${forwardingPath}: ${err.message}`);
+      console.error(`Error: could not read --routing=${routingPath}: ${err.message}`);
       process.exit(1);
     }
     try {
-      forwarding = forwardingFromDocument(parsed);
+      routing = routingFromDocument(parsed);
     } catch (err) {
-      console.error(`Error: --forwarding=${forwardingPath} is not valid:\n${err.message}`);
+      console.error(`Error: --routing=${routingPath} is not valid:\n${err.message}`);
       process.exit(1);
     }
   }
@@ -138,7 +138,7 @@ function parseSpecDirs() {
     process.exit(1);
   }
 
-  return { specDirs, seedDir, storeKind, forwarding };
+  return { specDirs, seedDir, storeKind, routing };
 }
 
 let httpServer = null;
@@ -183,12 +183,12 @@ function docsFromArtifactFile(path) {
 /**
  * Start the mock server
  * @param {string[]|null} specDirs - Spec directories to load. Defaults to parseSpecDirs() (from process.argv).
- * @param {Array|null} forwarding - Domains and endpoints to forward to a real service (#283). Parsed from --forwarding.
+ * @param {Array|null} routing - Domains, APIs and operations a real service answers (#283, #520). Parsed from --routing.
  * @param {string|null} seedDir - Directory containing seed data files. Defaults to each specDir.
  * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
  *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
-async function startMockServer(specDirs = null, seedDir = null, storeKind = null, forwarding = null) {
+async function startMockServer(specDirs = null, seedDir = null, storeKind = null, routing = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
@@ -200,7 +200,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       specDirs = parsed.specDirs;
       seedDir = seedDir ?? parsed.seedDir;
       storeKind = storeKind ?? parsed.storeKind;
-      forwarding = forwarding ?? parsed.forwarding;
+      routing = routing ?? parsed.routing;
     }
 
     // Resolved here as well as in parseSpecDirs, because a caller that passes
@@ -267,18 +267,19 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
           configs: allConfigs, compositions: allCompositions, rulesFiles: allRulesFiles,
           graphs: allGraphs, registries: allRegistries,
         },
-        { store, readDocs, seeded: Boolean(seedDir), baseUrl, forwarding: forwarding ?? [] },
+        { store, readDocs, seeded: Boolean(seedDir), baseUrl, routing: routing ?? [] },
       );
     } catch (err) {
       console.error(`Error: ${err.message}`);
       process.exit(1);
     }
-    const { routes, endpoints: allEndpoints, rpcEndpoints, overridden, forwarded } = assembled;
+    const { routes, endpoints: allEndpoints, rpcEndpoints, overridden, routed, receives } = assembled;
     for (const key of overridden.applied) console.log(`  ${key} - contract route, custom handler`);
     if (overridden.unmatched.length > 0) {
       console.warn(`  Note: no contract route declares ${overridden.unmatched.join(', ')} — not overridden`);
     }
-    for (const key of forwarded) console.log(`  FORWARD ${key}`);
+    for (const key of routed) console.log(`  ROUTE ${key}`);
+    for (const { api, id } of receives) console.log(`  ROUTE $apis.${api}.${id}`);
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.

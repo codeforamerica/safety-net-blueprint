@@ -39,10 +39,10 @@ const CORS_HEADERS = {
  *
  * A fixed list refused anything not on it, and the browser then never sent
  * the request — so `includeHeaders: [X-API-Key]` could not work from a page,
- * and neither could `If-Match` or `Idempotency-Key`, which forwarding sends by
+ * and neither could `If-Match` or `Idempotency-Key`, which routing sends by
  * default. Allowing what was asked costs nothing here: the origin is already
  * `*`, so this is not a boundary the mock relies on, and what travels on to a
- * real service is decided by the forwarding rules, not by this.
+ * real service is decided by the routing rules, not by this.
  *
  * @param {import('node:http').IncomingMessage} req
  */

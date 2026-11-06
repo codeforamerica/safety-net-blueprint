@@ -113,15 +113,18 @@ function prefixStateMachine(content, prefix) {
 }
 
 /**
- * Three places name an event type in an AsyncAPI document:
+ * Four places name an event type in an AsyncAPI document:
  *
  *   channels          the map key, and the `address` field when present
  *   components.messages[*].name
  *   components.schemas[*].allOf[*].properties.type.const
+ *   references to a channel, by its key: a channel that is a reference to
+ *                     another document's, and an operation's channel and messages
  *
- * The last is the discriminating const in an event envelope, which is what a
+ * The third is the discriminating const in an event envelope, which is what a
  * subscriber matches on — missing it would leave the payload claiming an
- * unprefixed type while its channel says otherwise.
+ * unprefixed type while its channel says otherwise. An operation's id is a
+ * name, not a type, and keeps no prefix.
  *
  * @param {object} content
  * @param {string} prefix
@@ -136,9 +139,21 @@ function prefixAsyncApi(content, prefix) {
         prefix + address,
         typeof channel?.address === 'string'
           ? { ...channel, address: prefix + channel.address }
-          : channel,
+          : typeof channel?.$ref === 'string'
+            ? { ...channel, $ref: prefixChannelRef(channel.$ref, prefix) }
+            : channel,
       ])
     );
+  }
+
+  if (content.operations && typeof content.operations === 'object') {
+    next.operations = mapValues(content.operations, (operation) => ({
+      ...operation,
+      ...(typeof operation?.channel?.$ref === 'string'
+        ? { channel: { ...operation.channel, $ref: prefixChannelRef(operation.channel.$ref, prefix) } } : {}),
+      ...(Array.isArray(operation?.messages)
+        ? { messages: operation.messages.map((m) => (typeof m?.$ref === 'string' ? { ...m, $ref: prefixChannelRef(m.$ref, prefix) } : m)) } : {}),
+    }));
   }
 
   if (content.components) {
@@ -160,6 +175,11 @@ function prefixAsyncApi(content, prefix) {
   }
 
   return next;
+}
+
+/** `…#/channels/intake.application.submitted/messages/X` with the channel key prefixed. */
+function prefixChannelRef(ref, prefix) {
+  return ref.replace(/#\/channels\/([^/]+)/, (_, key) => `#/channels/${prefix}${key}`);
 }
 
 /**

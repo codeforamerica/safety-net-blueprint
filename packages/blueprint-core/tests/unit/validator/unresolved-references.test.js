@@ -245,4 +245,35 @@ describe('unresolved-fragment-ref', () => {
 
     assert.deepEqual(findings(docs, 'unresolved-fragment-ref'), []);
   });
+
+  // A receive operation's message is named under its channel, and the channel
+  // is a reference to the document that sends the event.
+  const receiving = (messagePointer) => ({
+    asyncapi: '3.0.0',
+    info: { title: 'Workflow events', version: '1.0.0', 'x-domain': 'workflow' },
+    channels: { 'intake.application.submitted': { $ref: '../intake/intake-asyncapi.yaml#/channels/intake.application.submitted' } },
+    operations: {
+      receiveIntakeApplicationSubmitted: {
+        action: 'receive',
+        channel: { $ref: '#/channels/intake.application.submitted' },
+        messages: [{ $ref: messagePointer }],
+      },
+    },
+  });
+
+  test('a pointer that passes through a reference to another document is that document\'s to check, not an error', () => {
+    const docs = setOf({
+      'domains/workflow/workflow-asyncapi.yaml': receiving('#/channels/intake.application.submitted/messages/IntakeApplicationSubmitted'),
+    });
+
+    assert.deepEqual(findings(docs, 'unresolved-fragment-ref'), []);
+  });
+
+  test('a pointer that goes wrong before reaching a reference is still an error', () => {
+    const docs = setOf({
+      'domains/workflow/workflow-asyncapi.yaml': receiving('#/channels/intake.application.withdrawn/messages/IntakeApplicationWithdrawn'),
+    });
+
+    assert.equal(findings(docs, 'unresolved-fragment-ref').length, 1);
+  });
 });

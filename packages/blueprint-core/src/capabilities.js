@@ -12,7 +12,7 @@ import { discover } from './discover.js';
 import { load } from './load.js';
 import { baseContractsDir } from './paths.js';
 import { definedDomains } from './contract-types.js';
-import { operationIdsOf } from './validator/arazzo-validator.js';
+import { readOperations } from './operations.js';
 
 /** The framework's base contracts, loaded once: they do not change while running. */
 let frameworkDocs;
@@ -31,15 +31,14 @@ function framework() {
  * this works on a resolved set as well as on one being resolved.
  *
  * @param {import('../types.js').Doc[]} docs - The set
- * @param {{ generatedOverlays: Function, rulesApis: Function }} generators - From
- *   core's generate, passed in to avoid an import cycle
  * @returns {Map<string, string>} Name to capability
  */
-export function unlistedCapabilityNames(docs, generators) {
+export function unlistedCapabilityNames(docs) {
   const listed = new Set(docs.map((doc) => doc.capability).filter(Boolean));
   const setDomains = new Set(definedDomains(docs));
   const shared = framework().filter((doc) => !doc.capability);
-  const sharedIds = operationIdsOf(shared, generators) ?? new Set();
+  const idsOf = (docs) => new Set(readOperations(docs)?.all.map((operation) => operation.id) ?? []);
+  const sharedIds = idsOf(shared);
 
   const byCapability = new Map();
   for (const doc of framework()) {
@@ -53,7 +52,7 @@ export function unlistedCapabilityNames(docs, generators) {
     const add = (name) => { if (name && !names.has(name)) names.set(name, capability); };
     // A capability's state machines add operations to its APIs, which only
     // generating them shows; platform's are subtracted, since every set has them.
-    for (const id of operationIdsOf([...shared, ...own], generators) ?? []) {
+    for (const id of idsOf([...shared, ...own])) {
       if (!sharedIds.has(id)) add(id);
     }
     for (const doc of own) {
