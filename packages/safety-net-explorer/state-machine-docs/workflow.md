@@ -59,12 +59,14 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Transition: `in_progress` → `awaiting_client`
   - Record when the task entered a waiting state (sets `blockedAt`)
   - Schedule auto-cancellation after 30 calendar days of client unresponsiveness.
+  - Cancel the SLA warning and breach timers while the SLA clock is paused; they are scheduled again, at the deadline the pause moved, on resume. Idempotent.
   - Emit: `workflow.task.awaiting_client` — Emit a domain event recording the block
 - **await-verification** — Pauses an in-progress task while waiting for a verification result
   - Actors: case_worker, or supervisor
   - Transition: `in_progress` → `awaiting_verification`
   - Record when the task entered a waiting state (sets `blockedAt`)
   - Schedule auto-resume after 7 calendar days waiting on verification.
+  - Cancel the SLA warning and breach timers while the SLA clock is paused; they are scheduled again, at the deadline the pause moved, on resume. Idempotent.
   - Emit: `workflow.task.awaiting_verification` — Emit a domain event recording the block
 - **resume** — Resumes a blocked task, cancelling any active wait timers
   - Actors: case_worker, or supervisor
@@ -72,12 +74,14 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Clear the block timestamp on resume (sets `blockedAt`)
   - Cancel the client unresponsive timer; idempotent.
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
+  - Schedule the SLA warning and breach timers when the task's SLA clocks set a deadline: on create, and on resume at the deadline the pause moved. Runs after the action's SLA clocks are updated.
   - Emit: `workflow.task.resumed` — Emit a domain event recording the resumption
 - **auto-resume** — System resumes a verification-blocked task when the timeout fires or a verification result arrives
   - Actors: system only
   - Transition: `awaiting_verification` → `in_progress`
   - Clear the block timestamp on system resume (sets `blockedAt`)
   - Cancel the verification timeout timer; idempotent, safe to call even if already fired.
+  - Schedule the SLA warning and breach timers when the task's SLA clocks set a deadline: on create, and on resume at the deadline the pause moved. Runs after the action's SLA clocks are updated.
   - Emit: `workflow.task.resumed` — Emit a domain event recording the automated resumption; causationid links to the triggering event
 - **sla-escalate** — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)
   - Actors: system only
@@ -127,6 +131,7 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Schedule auto-escalation 72 business hours after task creation.
+  - Schedule the SLA warning and breach timers when the task's SLA clocks set a deadline: on create, and on resume at the deadline the pause moved. Runs after the action's SLA clocks are updated.
 - **`workflow.task.updated`**
   - If `this.data.changes.exists(c, c.field is "isExpedited" || c.field is "programType")`:
     - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).

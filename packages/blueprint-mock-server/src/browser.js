@@ -19,22 +19,12 @@
 
 import { createMemoryStore } from './stores/memory-store.js';
 import { apiSpecsFromDocs } from './spec-loader.js';
-import { registerPlatformRoutes, contractOverrides, refuseOwnRouteCollisions } from './platform-routes.js';
-import {
-  registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
-  registerRulesRoutes, buildRulesIndex,
-} from './route-generator.js';
-import { createDispatcher, overrideByOperationId } from './http/route-table.js';
-import { applyForwarding } from './forwarding.js';
 import { seedAllDatabases } from './seeder.js';
-import { registerEventSubscriptions } from './event-subscription.js';
-import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { seedConfigs } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
-import { createStepCalls } from './step-calls.js';
-import { initRulesIndex } from './state-machine-engine.js';
+import { assembleServer } from './assemble-server.js';
 export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
 
 
@@ -97,42 +87,13 @@ export async function createMockServer({
 
   seedConfigs(configs, store);
 
-  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
-  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);
-  // Stubs are kept per module, not per server: a new server starts with none,
-  // so one registered on the server it replaces cannot answer here.
-  clearAllStubs();
-  subscribeStubDispatch(store);
-  // The rulesets a state machine's `evaluate:` step runs, as the Node server
-  // loads them.
-  initRulesIndex(buildRulesIndex(graphs));
-
-  // Registration order is priority — the same order the Node server uses.
-  const routes = new Map();
-  registerPlatformRoutes(routes, {
-    store,
-    apiNames: apiSpecs.map((a) => a.name),
+  // From here on, the same server the Node process builds.
+  const { fetch, routes, endpoints, forwarded } = assembleServer(
+    { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
     // A page has no directory to re-read, so reseed restores the documents the
     // artifact carries. Node passes a function that walks the directory again.
-    readDocs: () => docs,
-    configs,
-    seeded: seed,
-  });
-  if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store, stepCalls });
-  if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
-  const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
-  registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });
-  overrideByOperationId(routes, contractOverrides({ store, registries }));
-
-  // Last, so a route is forwarded whatever registered it, and before the
-  // dispatcher is built, so the first request is already answered the way
-  // the configuration says (#283).
-  refuseOwnRouteCollisions(routes, apiSpecs);
-  const forwarded = applyForwarding(routes, forwarding);
+    { store, readDocs: () => docs, seeded: seed, baseUrl, basePath, forwarding },
+  );
   for (const key of forwarded) console.log(`  FORWARD ${key}`);
-
-  const fetch = createDispatcher(routes, { basePath });
-  // An action calling an operation as its caller sends the call through here.
-  stepCalls.serve(createDispatcher(routes));
   return { fetch, routes, store, endpoints, forwarded };
 }

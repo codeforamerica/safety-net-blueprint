@@ -1,6 +1,7 @@
 /**
  * A field the server sets (readOnly) is the server's: a client's update may
- * not change it, though it may send it back unchanged, and the system may. A
+ * not change it, though it may send it back unchanged, and only the server's
+ * own calls may — not a client claiming the system role. A
  * create may send one its create schema declares writable — an id the caller
  * chooses — or the value the server sets anyway, such as the state a machine
  * starts every record in. Against the harness contracts; the states are read
@@ -54,6 +55,18 @@ test('a client may send a readOnly field back unchanged', async () => {
   const { status, body } = await send(request('PATCH', `/intake/applications/${APPLICATION}`, { status: before.status, interviewDate: '2026-12-01' }));
   assert.strictEqual(status, 200, JSON.stringify(body));
   assert.strictEqual(body.interviewDate, '2026-12-01');
+});
+
+test('a client claiming the system role in X-Caller-Roles is still a client, and is refused', async () => {
+  const before = await stored();
+  const claimed = new Request(`http://localhost/intake/applications/${APPLICATION}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', 'x-caller-id': 'anyone', 'x-caller-roles': 'system' },
+    body: JSON.stringify({ status: otherState === before.status ? initialState : otherState }),
+  });
+  const { status, body } = await send(claimed);
+  assert.strictEqual(status, 422, JSON.stringify(body));
+  assert.strictEqual((await stored()).status, before.status);
 });
 
 test('the system may change a readOnly field', async () => {

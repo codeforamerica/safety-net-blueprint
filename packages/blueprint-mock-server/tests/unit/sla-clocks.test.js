@@ -135,7 +135,8 @@ test('one a procedure creates directly starts its clocks and sends its created e
 });
 
 test('a created application\'s slaInfo, in its response and its created event, matches the SlaInfo contract', async () => {
-  const { SlaInfo } = yaml.load(readFileSync(resolve(harness, 'base/components/sla.yaml'), 'utf8'));
+  // Defined in base/schemas/sla.yaml; base/components/sla.yaml refers to it.
+  const { SlaInfo } = yaml.load(readFileSync(resolve(harness, 'base/schemas/sla.yaml'), 'utf8')).$defs;
   const ajv = new Ajv2020({ strict: false });
   addFormats(ajv);
   const matches = ajv.compile({ type: 'array', items: SlaInfo });

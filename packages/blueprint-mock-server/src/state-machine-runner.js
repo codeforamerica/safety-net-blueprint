@@ -5,7 +5,7 @@
  */
 
 import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities } from './state-machine-engine.js';
-import { updateSlaInfo } from './sla-engine.js';
+import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
@@ -208,11 +208,17 @@ export async function executeTransition({
 
   if (slaTypes.length > 0 && updated.slaInfo?.length > 0) {
     updateSlaInfo(updated, slaTypes, timestamp, stateMachine.states || {});
+    // A record that keeps a slaDeadline keeps it current: a resume moves its
+    // deadlines.
+    if ('slaDeadline' in updated) updated.slaDeadline = earliestDeadline(updated.slaInfo);
   }
 
   const inlineRules = buildInlineRules(stateMachine, machine);
+  // Procedures run after the action's own steps and its SLA clocks, so they
+  // read the record as the action left it: a resume's deadline, not the one
+  // from while it was paused.
   const procedures = await executeProcedures(
-    pendingProcedures, updated, inlineRules, context, store, perform
+    pendingProcedures, updated, inlineRules, { ...context, object: { ...updated } }, store, perform
   );
   // A procedure's call that failed with nothing to handle it fails the action.
   if (procedures.failed) return refusedBy(procedures.failed.outcome);

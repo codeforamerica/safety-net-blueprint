@@ -1762,18 +1762,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -2401,18 +2403,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -2908,18 +2912,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -3529,18 +3535,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -4211,18 +4219,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -4795,18 +4805,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -5401,18 +5413,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -6007,18 +6021,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -6613,18 +6629,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -7219,18 +7237,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -7825,18 +7845,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -8431,18 +8453,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -9037,18 +9061,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -9622,18 +9648,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -10187,18 +10215,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -10793,18 +10823,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -11378,18 +11410,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -11921,18 +11955,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -12495,18 +12531,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -13101,18 +13139,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -13717,18 +13757,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -14333,18 +14375,20 @@
     </div>
     </div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
-        
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest active deadline across all slaInfo entries. Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/workflow.html#field-task.slaDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">slaDeadline</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">SlaDeadline</span>
+            
+            <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">Engine-managed. The earliest deadline among the record's slaInfo entries that are active or in warning; null when none is. Recalculated whenever slaInfo changes. A record with slaInfo may declare it as slaDeadline.
 </span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
