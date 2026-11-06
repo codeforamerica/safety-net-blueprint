@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { initializeSlaInfo, updateSlaInfo } from '../../src/sla-engine.js';
+import { initializeSlaInfo, updateSlaInfo, earliestDeadline } from '../../src/sla-engine.js';
 
 // =============================================================================
 // Helpers
@@ -167,4 +167,17 @@ test('updateSlaInfo — pauseWhen does not fire when resolved entity field is fa
   const resolvedEntities = { application: { id: 'app-1', pendingDocuments: false } };
   updateSlaInfo(resource, slaTypesWithPause, NOW, STATES, resolvedEntities);
   assert.strictEqual(resource.slaInfo[0].status, 'active');
+});
+
+test('slaDeadline is the earliest deadline still running, and null while none is', () => {
+  const entry = (status, deadline) => ({ slaTypeCode: 't', status, clockStartedAt: '2026-01-01T00:00:00.000Z', deadline });
+  assert.strictEqual(earliestDeadline([
+    entry('active', '2026-02-01T00:00:00.000Z'),
+    entry('warning', '2026-01-15T00:00:00.000Z'),
+    entry('completed', '2026-01-02T00:00:00.000Z'),
+    entry('breached', '2026-01-03T00:00:00.000Z'),
+  ]), '2026-01-15T00:00:00.000Z');
+  assert.strictEqual(earliestDeadline([entry('paused', '2026-01-15T00:00:00.000Z')]), null, 'a paused clock is not running');
+  assert.strictEqual(earliestDeadline([]), null);
+  assert.strictEqual(earliestDeadline(undefined), null);
 });

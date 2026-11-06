@@ -6,7 +6,7 @@ import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf, actsAsSystem } from '../auth-context.js';
+import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf, areSystemRoles } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
@@ -116,9 +116,11 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         }, { status: 400 });
       }
 
-      // A client may not change a field the server sets (readOnly); the
-      // system — a state machine's own call — may.
-      if (!actsAsSystem(extractCallerRoles(request))) {
+      // A client may not change a field the server sets (readOnly). Only the
+      // server's own calls may — a state machine acting as the system, marked
+      // by asSystem; a client sending the system role in X-Caller-Roles is a
+      // client.
+      if (!areSystemRoles(extractCallerRoles(request))) {
         const fixed = changedReadOnlyFields(requestBody, endpoint.responseSchema, apiMetadata.resolve?.schema, existing);
         if (fixed.length > 0) {
           return Response.json({

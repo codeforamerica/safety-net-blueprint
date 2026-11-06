@@ -5,11 +5,11 @@
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { eventDomainOf } from '../collection-utils.js';
-import { startSlaClocks } from '../sla-engine.js';
+import { startSlaClocks, earliestDeadline } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf, causationOf, actsAsSystem } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields, writableFieldsOf } from './expand-utils.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf, areSystemRoles } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields, writableFieldsOf, propertiesOf } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 import { callsIn, callProblems } from '../operation-calls.js';
@@ -79,8 +79,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // A client may not set a field the server sets (readOnly), beyond the
       // value the server sets anyway, unless this create's schema takes it as a
-      // value set once; the system — a state machine's own call — may.
-      if (!actsAsSystem(extractCallerRoles(request))) {
+      // value set once. Only the server's own calls may — a state machine acting
+      // as the system, marked by asSystem; a client sending the system role in
+      // X-Caller-Roles is a client.
+      if (!areSystemRoles(extractCallerRoles(request))) {
         // What the server sets anyway: its defaults — a state machine's
         // initial state, an empty list for a required one — and the path's values.
         const known = { ...(options.defaults ?? {}), ...(enrichmentData ?? {}) };
@@ -171,8 +173,14 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // Its SLA clocks start now, before its created event carries it.
       const slaInfo = startSlaClocks(resource, slaTypes, now);
       if (slaInfo) {
-        resource.slaInfo = slaInfo;
-        store.update(endpoint.collectionName, resource.id, { slaInfo });
+        const clocks = { slaInfo };
+        // And its slaDeadline, where its schema declares one; kept current
+        // from then on wherever slaInfo changes.
+        if (propertiesOf(endpoint.responseSchema, apiMetadata.resolve?.schema).some((p) => 'slaDeadline' in p)) {
+          clocks.slaDeadline = earliestDeadline(slaInfo);
+        }
+        Object.assign(resource, clocks);
+        store.update(endpoint.collectionName, resource.id, clocks);
       }
       const traceparent = traceparentOf(request);
       // Named for the domain as declared and the resource the create acts on:

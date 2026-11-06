@@ -131,18 +131,6 @@ export function areSystemRoles(roles) {
 }
 
 /**
- * Whether a caller acts as the system: a request the mock sent itself
- * (asSystem), or one whose caller plays the system's role — the same role a
- * guard's actors name, read from the headers as every caller's roles are.
- *
- * @param {string[]} roles - As extractCallerRoles gave them
- * @returns {boolean}
- */
-export function actsAsSystem(roles) {
-  return systemRoleLists.has(roles) || (roles ?? []).includes(SYSTEM_ROLE);
-}
-
-/**
  * Read a header from either request shape, for callers that want one directly.
  * @param {import('express').Request|Request} req
  * @param {string} name - Lowercase header name
