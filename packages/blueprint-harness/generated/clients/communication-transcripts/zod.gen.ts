@@ -6,7 +6,7 @@ import { z } from 'zod';
  * Client-writable fields of a transcript.
  */
 export const zTranscriptWritable = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -16,7 +16,7 @@ export const zTranscriptWritable = z.object({
  * A transcript, including server-managed fields.
  */
 export const zTranscript = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -27,7 +27,7 @@ export const zTranscript = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -51,17 +51,19 @@ export const zTranscript = z.object({
 }));
 
 export const zTranscriptCreate = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.object({
     profileId: z.uuid(),
     startedAt: z.iso.datetime({ offset: true })
 }));
 
 export const zTranscriptUpdate = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -69,7 +71,7 @@ export const zTranscriptUpdate = z.object({
 
 export const zTranscriptList = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -80,7 +82,7 @@ export const zTranscriptList = z.object({
             'paused',
             'closed'
         ]),
-        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -181,6 +183,8 @@ export const zTranscriptEntry = z.object({
 
 export const zTranscriptEntryCreate = z.union([
     z.object({
+        id: z.optional(z.uuid())
+    }).and(z.object({
         kind: z.literal('line'),
         startedAt: z.iso.datetime({ offset: true }),
         endedAt: z.iso.datetime({ offset: true }),
@@ -193,8 +197,10 @@ export const zTranscriptEntryCreate = z.union([
         speakerLabel: z.optional(z.string()),
         confidence: z.optional(z.number().gte(0).lte(1)),
         language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-    }),
+    })),
     z.object({
+        id: z.optional(z.uuid())
+    }).and(z.object({
         kind: z.literal('gap'),
         startedAt: z.iso.datetime({ offset: true }),
         endedAt: z.iso.datetime({ offset: true }),
@@ -204,13 +210,15 @@ export const zTranscriptEntryCreate = z.union([
             'client',
             'unknown'
         ]))
-    })
+    }))
 ]);
 
 /**
  * A finished line, said or typed.
  */
 export const zTranscriptLineCreate = z.object({
+    id: z.optional(z.uuid())
+}).and(z.object({
     kind: z.literal('line'),
     startedAt: z.iso.datetime({ offset: true }),
     endedAt: z.iso.datetime({ offset: true }),
@@ -223,12 +231,14 @@ export const zTranscriptLineCreate = z.object({
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
     language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-});
+}));
 
 /**
  * A stretch where nothing was captured, recorded once transcription works again or the transcript closes.
  */
 export const zTranscriptGapCreate = z.object({
+    id: z.optional(z.uuid())
+}).and(z.object({
     kind: z.literal('gap'),
     startedAt: z.iso.datetime({ offset: true }),
     endedAt: z.iso.datetime({ offset: true }),
@@ -238,7 +248,7 @@ export const zTranscriptGapCreate = z.object({
         'client',
         'unknown'
     ]))
-});
+}));
 
 /**
  * When a pause ended. Written by resuming or closing the transcript.
@@ -333,7 +343,9 @@ export const zTranscriptionProfileCreate = z.object({
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
-}).and(z.record(z.string(), z.unknown()));
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.record(z.string(), z.unknown()));
 
 export const zTranscriptionProfileUpdate = z.object({
     name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
@@ -378,11 +390,12 @@ export const zAtRequest = z.object({
  * A transcript, including server-managed fields.
  */
 export const zTranscriptWritable2 = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     profile: z.optional(z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
@@ -398,11 +411,12 @@ export const zTranscriptWritable2 = z.object({
 
 export const zTranscriptListWritable = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         profile: z.optional(z.object({
             name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
             description: z.optional(z.string()),
@@ -550,7 +564,7 @@ export const zListTranscriptsData = z.object({
  */
 export const zListTranscriptsResponse = z.object({
     items: z.array(z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -561,7 +575,7 @@ export const zListTranscriptsResponse = z.object({
             'paused',
             'closed'
         ]),
-        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        startedAt: z.optional(z.iso.datetime({ offset: true })),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -591,11 +605,13 @@ export const zListTranscriptsResponse = z.object({
 
 export const zCreateTranscriptData = z.object({
     body: z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.object({
         profileId: z.uuid(),
         startedAt: z.iso.datetime({ offset: true })
     })),
@@ -607,7 +623,7 @@ export const zCreateTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zCreateTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -618,7 +634,7 @@ export const zCreateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -666,7 +682,7 @@ export const zGetTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zGetTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -677,7 +693,7 @@ export const zGetTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -702,7 +718,7 @@ export const zGetTranscriptResponse = z.object({
 
 export const zUpdateTranscriptData = z.object({
     body: z.object({
-        subjectType: z.optional(z.string()),
+        subjectType: z.optional(z.enum(['interview', 'chat'])),
         subjectId: z.optional(z.uuid()),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -717,7 +733,7 @@ export const zUpdateTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zUpdateTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -728,7 +744,7 @@ export const zUpdateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -816,6 +832,8 @@ export const zListTranscriptEntriesResponse = z.object({
 export const zAddTranscriptEntryData = z.object({
     body: z.union([
         z.object({
+            id: z.optional(z.uuid())
+        }).and(z.object({
             kind: z.literal('line'),
             startedAt: z.iso.datetime({ offset: true }),
             endedAt: z.iso.datetime({ offset: true }),
@@ -828,8 +846,10 @@ export const zAddTranscriptEntryData = z.object({
             speakerLabel: z.optional(z.string()),
             confidence: z.optional(z.number().gte(0).lte(1)),
             language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
-        }),
+        })),
         z.object({
+            id: z.optional(z.uuid())
+        }).and(z.object({
             kind: z.literal('gap'),
             startedAt: z.iso.datetime({ offset: true }),
             endedAt: z.iso.datetime({ offset: true }),
@@ -839,7 +859,7 @@ export const zAddTranscriptEntryData = z.object({
                 'client',
                 'unknown'
             ]))
-        })
+        }))
     ]),
     path: z.object({
         transcriptId: z.uuid()
@@ -1032,7 +1052,9 @@ export const zCreateTranscriptionProfileData = z.object({
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
@@ -1137,7 +1159,7 @@ export const zPauseTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zPauseTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1148,7 +1170,7 @@ export const zPauseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1185,7 +1207,7 @@ export const zResumeTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zResumeTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1196,7 +1218,7 @@ export const zResumeTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1233,7 +1255,7 @@ export const zCloseTranscriptData = z.object({
  * A transcript, including server-managed fields.
  */
 export const zCloseTranscriptResponse = z.object({
-    subjectType: z.optional(z.string()),
+    subjectType: z.optional(z.enum(['interview', 'chat'])),
     subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
@@ -1244,7 +1266,7 @@ export const zCloseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
-    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    startedAt: z.optional(z.iso.datetime({ offset: true })),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),

@@ -12,11 +12,7 @@ export const zDeterminationWritable = z.object({
 export const zDetermination = z.object({
     id: z.uuid().readonly(),
     applicationId: z.uuid(),
-    status: z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]),
+    status: z.enum(['pending', 'completed']),
     expedited: z.boolean().readonly(),
     determinedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -34,25 +30,22 @@ export const zDeterminationCreate = z.object({
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
 
 export const zDeterminationUpdate = z.object({
-    status: z.optional(z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]))
+    applicationId: z.optional(z.uuid()),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
+    }).readonly())
 });
 
 export const zDeterminationList = z.object({
     items: z.array(z.object({
         id: z.uuid().readonly(),
         applicationId: z.uuid(),
-        status: z.enum([
-            'pending',
-            'in_progress',
-            'complete'
-        ]),
+        status: z.enum(['pending', 'completed']),
         expedited: z.boolean().readonly(),
         determinedAt: z.optional(z.union([
             z.iso.datetime({ offset: true }).readonly(),
@@ -135,6 +128,12 @@ export const zDeterminationWritable2 = z.object({
 });
 
 export const zDeterminationCreateWritable = z.object({
+    applicationId: z.optional(z.uuid())
+}).and(z.object({
+    id: z.optional(z.uuid())
+}));
+
+export const zDeterminationUpdateWritable = z.object({
     applicationId: z.optional(z.uuid())
 });
 
@@ -222,11 +221,7 @@ export const zListDeterminationsResponse = z.object({
     items: z.array(z.object({
         id: z.uuid().readonly(),
         applicationId: z.uuid(),
-        status: z.enum([
-            'pending',
-            'in_progress',
-            'complete'
-        ]),
+        status: z.enum(['pending', 'completed']),
         expedited: z.boolean().readonly(),
         determinedAt: z.optional(z.union([
             z.iso.datetime({ offset: true }).readonly(),
@@ -250,7 +245,9 @@ export const zCreateDeterminationData = z.object({
         links: z.optional(z.object({
             application: z.optional(z.string())
         }).readonly())
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
@@ -261,11 +258,7 @@ export const zCreateDeterminationData = z.object({
 export const zCreateDeterminationResponse = z.object({
     id: z.uuid().readonly(),
     applicationId: z.uuid(),
-    status: z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]),
+    status: z.enum(['pending', 'completed']),
     expedited: z.boolean().readonly(),
     determinedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -292,11 +285,7 @@ export const zGetDeterminationData = z.object({
 export const zGetDeterminationResponse = z.object({
     id: z.uuid().readonly(),
     applicationId: z.uuid(),
-    status: z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]),
+    status: z.enum(['pending', 'completed']),
     expedited: z.boolean().readonly(),
     determinedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -311,11 +300,10 @@ export const zGetDeterminationResponse = z.object({
 
 export const zUpdateDeterminationData = z.object({
     body: z.object({
-        status: z.optional(z.enum([
-            'pending',
-            'in_progress',
-            'complete'
-        ]))
+        applicationId: z.optional(z.uuid()),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
     }),
     path: z.object({
         determinationId: z.uuid()
@@ -329,11 +317,7 @@ export const zUpdateDeterminationData = z.object({
 export const zUpdateDeterminationResponse = z.object({
     id: z.uuid().readonly(),
     applicationId: z.uuid(),
-    status: z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]),
+    status: z.enum(['pending', 'completed']),
     expedited: z.boolean().readonly(),
     determinedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),
@@ -443,11 +427,7 @@ export const zCompleteDeterminationData = z.object({
 export const zCompleteDeterminationResponse = z.object({
     id: z.uuid().readonly(),
     applicationId: z.uuid(),
-    status: z.enum([
-        'pending',
-        'in_progress',
-        'complete'
-    ]),
+    status: z.enum(['pending', 'completed']),
     expedited: z.boolean().readonly(),
     determinedAt: z.optional(z.union([
         z.iso.datetime({ offset: true }).readonly(),

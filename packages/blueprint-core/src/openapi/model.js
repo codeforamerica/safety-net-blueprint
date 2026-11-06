@@ -74,6 +74,29 @@ export function buildApiModel(content) {
     if (parent) parent.children.push(node);
   }
 
+  // A singleton is one record per parent, at a path under the parent's item
+  // with no id of its own — `/applications/{applicationId}/household-info` —
+  // read with GET, changed with PATCH, never created with POST, and with no
+  // item path beneath it (conventions/resources.yaml, "Singleton
+  // sub-resource"). It sits on the resource that owns it, named for the
+  // record it returns. A path resolve generated from another contract, such
+  // as a composition's, is not one.
+  const paths = content?.paths ?? {};
+  for (const [path, pathItem] of Object.entries(paths)) {
+    const segments = path.split('/').filter(Boolean);
+    const items = itemDepth(segments);
+    if (items === 0 || segments.length !== items * 2 + 1 || isParameter(segments.at(-1))) continue;
+    if (!pathItem?.get || pathItem.post || pathItem.get['x-relationship']?.type) continue;
+    if (Object.keys(paths).some((other) => other.startsWith(`${path}/{`))) continue;
+    const parent = nodeFor(segments.slice(0, items * 2));
+    if (parent.singletons.some((s) => s.collection.segment === segments.at(-1))) continue;
+    const node = createResource(parent, segments.at(-1), null);
+    node.singleton = true;
+    const ref = [pathItem.patch, pathItem.get].map((op) => refOf(op, '200')).find((r) => typeof r === 'string');
+    if (ref) node.name = ref.split('/').pop();
+    parent.singletons.push(node);
+  }
+
   return { servers: serversOf(content), resources };
 }
 
@@ -83,6 +106,8 @@ export function buildApiModel(content) {
  * @property {string|null} eventName - `name` in snake_case, as its events name it: `application_member`
  * @property {Resource|null} parent
  * @property {Resource[]} children
+ * @property {Resource[]} singletons - One record each per item of this resource, at a path with no id of its own
+ * @property {boolean} singleton - True for one of a parent's singletons
  * @property {{ segment: string }} collection
  * @property {{ parameter: string|null }} item - No parameter for a collection with no item endpoint
  * @property {(part: 'item'|'collection') => string|null} path - Relative to the server, as OpenAPI writes paths; null for an item that has no endpoint
@@ -100,6 +125,8 @@ function createResource(parent, segment, parameter) {
     get eventName() { return this.name ? snakeCase(this.name) : null; },
     parent,
     children: [],
+    singletons: [],
+    singleton: false,
     collection: { segment },
     item: { parameter },
     path(part) {

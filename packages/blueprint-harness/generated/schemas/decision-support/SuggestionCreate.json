@@ -20,7 +20,10 @@
                 "properties": {
                   "sourceType": {
                     "type": "string",
-                    "description": "What kind of record it cites, e.g. `transcript_entry`."
+                    "description": "What kind of record it cites, e.g. `transcript_entry`.",
+                    "enum": [
+                      "transcript_entry"
+                    ]
                   },
                   "sourceId": {
                     "type": "string",
@@ -44,6 +47,17 @@
               "type": "string",
               "format": "date-time",
               "description": "When it stops applying, if nothing decides it first. One day after it was proposed, when not given."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The new record's id, a UUID (RFC 9562)."
             }
           }
         },
@@ -140,7 +154,10 @@
                 "properties": {
                   "sourceType": {
                     "type": "string",
-                    "description": "What kind of record it cites, e.g. `transcript_entry`."
+                    "description": "What kind of record it cites, e.g. `transcript_entry`.",
+                    "enum": [
+                      "transcript_entry"
+                    ]
                   },
                   "sourceId": {
                     "type": "string",
@@ -169,6 +186,17 @@
         },
         {
           "type": "object",
+          "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The new record's id, a UUID (RFC 9562)."
+            }
+          }
+        },
+        {
+          "type": "object",
           "required": [
             "kind",
             "subjectType",
@@ -192,7 +220,11 @@
             },
             "subjectType": {
               "type": "string",
-              "description": "What kind of record it is about, e.g. `application_member`."
+              "description": "What kind of record it is about, e.g. `application_member`.",
+              "enum": [
+                "application_member",
+                "application_income"
+              ]
             },
             "subjectId": {
               "type": "string",

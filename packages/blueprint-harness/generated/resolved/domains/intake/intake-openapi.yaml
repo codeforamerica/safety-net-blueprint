@@ -47,9 +47,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationList"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Create an application
       operationId: createApplication
@@ -75,11 +75,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -96,9 +98,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update an application
       operationId: updateApplication
@@ -118,13 +120,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Application"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     delete:
       summary: Delete a draft application
       operationId: deleteApplication
@@ -134,9 +136,11 @@ paths:
         "204":
           description: Application deleted successfully.
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/income-verifications:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -157,9 +161,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerificationList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Record an income verification
       operationId: createIncomeVerification
@@ -179,13 +183,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerification"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/income-verifications/{incomeVerificationId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -208,9 +214,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/IncomeVerification"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/incomes:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -231,9 +237,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncomeList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Report an income
       operationId: createApplicationIncome
@@ -253,13 +259,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/incomes/{incomeId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -282,9 +290,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update an income
       operationId: updateApplicationIncome
@@ -304,13 +312,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationIncome"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/interviews:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -331,9 +339,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/InterviewList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Schedule an interview
       operationId: createApplicationInterview
@@ -353,13 +361,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Interview"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/interviews/{interviewId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -382,9 +392,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Interview"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/members:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -413,9 +423,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMemberList"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     post:
       summary: Add a household member
       operationId: createApplicationMember
@@ -435,13 +445,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/members/{memberId}:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -459,9 +471,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     patch:
       summary: Update a household member
       operationId: updateApplicationMember
@@ -481,13 +493,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApplicationMember"
         "400":
-          $ref: ../../common/components/responses.yaml#/BadRequest
+          $ref: ../../base/components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
     delete:
       summary: Remove a household member
       operationId: deleteApplicationMember
@@ -497,9 +509,11 @@ paths:
         "204":
           description: Household member removed successfully.
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
         "500":
-          $ref: ../../common/components/responses.yaml#/InternalError
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/submit:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -1023,6 +1037,75 @@ paths:
           $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/details:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationDetails
+      operationId: getApplicationDetails
+      responses:
+        "200":
+          description: applicationDetails retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailsResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: intake
+        id: applicationDetails
+    patch:
+      summary: Change applicationDetails
+      operationId: updateApplicationDetails
+      description: Applies a JSON Patch (RFC 6902) all or nothing. Each change is made through its record's own operation, as the caller, with that operation's permissions, guards and events; if any change is refused, nothing is saved and no events are sent. A change may add a record under an id the caller chooses, and another change in the same patch may name it.
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/IdempotencyKeyParam
+      requestBody:
+        required: true
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: ../../base/schemas/operations.yaml#/$defs/JsonPatch
+      responses:
+        "200":
+          description: applicationDetails after the patch.
+          headers:
+            Idempotent-Replayed:
+              $ref: ../../base/components/headers.yaml#/IdempotentReplayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailsResponse"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+          description: "The body is not a JSON Patch: not JSON, an unknown op, or an op missing what it needs."
+        "403":
+          $ref: ../../base/components/responses.yaml#/Forbidden
+          description: A change's own operation doesn't let the caller make it. Nothing was saved.
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+          description: "The data changed since it was read: a test operation failed, a path names a record or field that isn't there, or a record is in a state its change can't start from. Nothing was saved."
+        "415":
+          description: The request body is not application/json-patch+json.
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+          description: A change is refused because its record's own operation refuses it, such as one to a field marked readOnly, or because it moves a record to another root. Nothing was saved.
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: intake
+        id: applicationDetails
 components:
   parameters:
     ApplicationIdParam:
@@ -1127,7 +1210,7 @@ components:
               type: string
               format: uuid
               readOnly: true
-              description: Unique identifier (server-generated).
+              description: Unique identifier, given when the record was created or else generated by the server.
             previousHousehold:
               $ref: ../../common/schemas/household.yaml#/$defs/Household
               readOnly: true
@@ -1237,9 +1320,25 @@ components:
                       type: string
                       format: uri-reference
                       readOnly: true
+        - type: object
+          properties:
+            _links:
+              type: object
+              readOnly: true
+              description: Generated composition links.
+              properties:
+                applicationDetails:
+                  type: object
+                  description: Link to the applicationDetails composition.
+                  properties:
+                    href:
+                      type: string
+                      format: uri-reference
+                      readOnly: true
     ApplicationCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - programsAppliedFor
@@ -1303,6 +1402,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -1323,6 +1423,7 @@ components:
     IncomeVerificationCreate:
       allOf:
         - $ref: "#/components/schemas/IncomeVerificationWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - kind
@@ -1362,6 +1463,7 @@ components:
           x-relationship:
             type: fk
             resource: ApplicationMember
+            onDelete: cascade
             style: links-only
         source:
           type: string
@@ -1420,6 +1522,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -1440,6 +1543,7 @@ components:
     ApplicationIncomeCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationIncomeWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - memberId
@@ -1505,6 +1609,7 @@ components:
               readOnly: true
               x-relationship:
                 resource: Application
+                onDelete: cascade
             status:
               type: string
               readOnly: true
@@ -1539,7 +1644,9 @@ components:
                   format: uri-reference
                   description: Link to the related Application resource.
     InterviewCreate:
-      $ref: "#/components/schemas/InterviewWritable"
+      allOf:
+        - $ref: "#/components/schemas/InterviewWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
     InterviewList:
       type: object
       required:
@@ -1651,7 +1758,7 @@ components:
               type: string
               format: uuid
               readOnly: true
-              description: Unique identifier (server-generated).
+              description: Unique identifier, given when the record was created or else generated by the server.
             createdAt:
               type: string
               format: date-time
@@ -1670,7 +1777,7 @@ components:
                   type: string
                   format: uuid
                   readOnly: true
-                  description: Unique identifier (server-generated).
+                  description: Unique identifier, given when the record was created or else generated by the server.
                 status:
                   type: string
                   readOnly: true
@@ -1702,6 +1809,7 @@ components:
               x-relationship:
                 type: fk
                 resource: Application
+                onDelete: cascade
                 style: expand
                 fields:
                   - id
@@ -1711,6 +1819,7 @@ components:
     ApplicationMemberCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - $ref: ../../base/schemas/operations.yaml#/$defs/NewId
         - type: object
           required:
             - firstName
@@ -1882,6 +1991,9 @@ components:
             section:
               type: string
               readOnly: true
+              enum:
+                - demographics
+                - contact
             itemId:
               type:
                 - string
@@ -1890,6 +2002,12 @@ components:
               readOnly: true
               x-relationship:
                 resource: Polymorphic
+                discriminator:
+                  propertyName: section
+                  mapping:
+                    demographics: ApplicationMember
+                    contact: Application
+                onDelete: cascade
             createdAt:
               type: string
               format: date-time
@@ -1925,6 +2043,31 @@ components:
         - limit
         - offset
         - hasNext
+    ApplicationDetailsResponse:
+      type: object
+      description: "The applicationDetails composition: the Application under application, and the records it includes, whole. Change it with a JSON Patch to the same path."
+      required:
+        - application
+        - members
+        - incomes
+      additionalProperties: false
+      properties:
+        application:
+          $ref: "#/components/schemas/Application"
+        members:
+          type: object
+          description: The ApplicationMember records, keyed by id.
+          propertyNames:
+            format: uuid
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationMember"
+        incomes:
+          type: object
+          description: The ApplicationIncome records, keyed by id.
+          propertyNames:
+            format: uuid
+          additionalProperties:
+            $ref: "#/components/schemas/ApplicationIncome"
     Document:
       allOf:
         - $ref: "#/components/schemas/DocumentWritable"

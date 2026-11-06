@@ -12,7 +12,7 @@ export const zSuggestionKind = z.enum(['operation', 'informing']);
 
 export const zSuggestionCommon = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
@@ -43,7 +43,7 @@ export const zOperationSuggestionFields = z.object({
 
 export const zInformingSuggestionFields = z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
-    subjectType: z.string(),
+    subjectType: z.enum(['application_member', 'application_income']),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
     category: z.optional(z.enum([
@@ -71,20 +71,22 @@ export const zSuggestionRead = z.object({
 });
 
 export const zSuggestionEvidence = z.object({
-    sourceType: z.string(),
+    sourceType: z.enum(['transcript_entry']),
     sourceId: z.uuid()
 });
 
 export const zSuggestionCreate = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.object({
         kind: z.literal('operation'),
         call: z.object({
             operationId: z.string(),
@@ -106,15 +108,17 @@ export const zSuggestionCreate = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
-    }).and(z.intersection(z.unknown(), z.object({
+    }).and(z.object({
+        id: z.optional(z.uuid())
+    })).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -132,13 +136,15 @@ export const zSuggestionCreate = z.union([
  */
 export const zOperationSuggestionCreate = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
 }).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.object({
     kind: z.literal('operation'),
     call: z.object({
         operationId: z.string(),
@@ -164,15 +170,17 @@ export const zOperationSuggestionCreate = z.object({
  */
 export const zInformingSuggestionCreate = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
-}).and(z.intersection(z.unknown(), z.object({
+}).and(z.object({
+    id: z.optional(z.uuid())
+})).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
-    subjectType: z.string(),
+    subjectType: z.enum(['application_member', 'application_income']),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
     category: z.optional(z.enum([
@@ -187,7 +195,7 @@ export const zInformingSuggestionCreate = z.object({
 export const zSuggestion = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -245,14 +253,14 @@ export const zSuggestion = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -283,7 +291,7 @@ export const zSuggestion = z.union([
  */
 export const zOperationSuggestion = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
@@ -345,14 +353,14 @@ export const zOperationSuggestion = z.object({
  */
 export const zInformingSuggestion = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
 }).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
-    subjectType: z.string(),
+    subjectType: z.enum(['application_member', 'application_income']),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
     category: z.optional(z.enum([
@@ -380,7 +388,7 @@ export const zInformingSuggestion = z.object({
 export const zSuggestionList = z.object({
     items: z.array(z.union([z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
@@ -437,14 +445,14 @@ export const zSuggestionList = z.object({
             }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
         }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
-            subjectType: z.string(),
+            subjectType: z.enum(['application_member', 'application_income']),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
             category: z.optional(z.enum([
@@ -501,7 +509,7 @@ export const zDismissRequest = z.object({
 export const zSuggestionWritable = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -528,14 +536,14 @@ export const zSuggestionWritable = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -553,7 +561,7 @@ export const zSuggestionWritable = z.union([
  */
 export const zOperationSuggestionWritable = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
@@ -584,14 +592,14 @@ export const zOperationSuggestionWritable = z.object({
  */
 export const zInformingSuggestionWritable = z.object({
     evidence: z.optional(z.array(z.object({
-        sourceType: z.string(),
+        sourceType: z.enum(['transcript_entry']),
         sourceId: z.uuid()
     }))),
     confidence: z.optional(z.number().gte(0).lte(1)),
     expiresAt: z.optional(z.iso.datetime({ offset: true }))
 }).and(z.intersection(z.unknown(), z.object({
     kind: z.literal('informing'),
-    subjectType: z.string(),
+    subjectType: z.enum(['application_member', 'application_income']),
     subjectId: z.uuid(),
     path: z.optional(z.string()),
     category: z.optional(z.enum([
@@ -606,7 +614,7 @@ export const zInformingSuggestionWritable = z.object({
 export const zSuggestionListWritable = z.object({
     items: z.array(z.union([z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
@@ -632,14 +640,14 @@ export const zSuggestionListWritable = z.object({
             })
         })), z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
         }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
-            subjectType: z.string(),
+            subjectType: z.enum(['application_member', 'application_income']),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
             category: z.optional(z.enum([
@@ -678,7 +686,7 @@ export const zListSuggestionsData = z.object({
 export const zListSuggestionsResponse = z.object({
     items: z.array(z.union([z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
@@ -736,7 +744,7 @@ export const zListSuggestionsResponse = z.object({
             }).readonly())
         })), z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
@@ -744,7 +752,7 @@ export const zListSuggestionsResponse = z.object({
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
         }).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
-            subjectType: z.string(),
+            subjectType: z.enum(['application_member', 'application_income']),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
             category: z.optional(z.enum([
@@ -778,13 +786,15 @@ export const zCreateSuggestionData = z.object({
     body: z.union([
         z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
         }).and(z.object({
+            id: z.optional(z.uuid())
+        })).and(z.object({
             kind: z.literal('operation'),
             call: z.object({
                 operationId: z.string(),
@@ -806,15 +816,17 @@ export const zCreateSuggestionData = z.object({
         })),
         z.object({
             evidence: z.optional(z.array(z.object({
-                sourceType: z.string(),
+                sourceType: z.enum(['transcript_entry']),
                 sourceId: z.uuid()
             }))),
             confidence: z.optional(z.number().gte(0).lte(1)),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             expiresAt: z.optional(z.iso.datetime({ offset: true }))
-        }).and(z.intersection(z.unknown(), z.object({
+        }).and(z.object({
+            id: z.optional(z.uuid())
+        })).and(z.intersection(z.unknown(), z.object({
             kind: z.literal('informing'),
-            subjectType: z.string(),
+            subjectType: z.enum(['application_member', 'application_income']),
             subjectId: z.uuid(),
             path: z.optional(z.string()),
             category: z.optional(z.enum([
@@ -836,7 +848,7 @@ export const zCreateSuggestionData = z.object({
 export const zCreateSuggestionResponse = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -895,7 +907,7 @@ export const zCreateSuggestionResponse = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -903,7 +915,7 @@ export const zCreateSuggestionResponse = z.union([
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -943,7 +955,7 @@ export const zGetSuggestionData = z.object({
 export const zGetSuggestionResponse = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1002,7 +1014,7 @@ export const zGetSuggestionResponse = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1010,7 +1022,7 @@ export const zGetSuggestionResponse = z.union([
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -1068,7 +1080,7 @@ export const zAcceptSuggestionData = z.object({
 export const zAcceptSuggestionResponse = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1127,7 +1139,7 @@ export const zAcceptSuggestionResponse = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1135,7 +1147,7 @@ export const zAcceptSuggestionResponse = z.union([
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -1177,7 +1189,7 @@ export const zDismissSuggestionData = z.object({
 export const zDismissSuggestionResponse = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1236,7 +1248,7 @@ export const zDismissSuggestionResponse = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1244,7 +1256,7 @@ export const zDismissSuggestionResponse = z.union([
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([
@@ -1284,7 +1296,7 @@ export const zExpireSuggestionData = z.object({
 export const zExpireSuggestionResponse = z.union([
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1343,7 +1355,7 @@ export const zExpireSuggestionResponse = z.union([
     })),
     z.object({
         evidence: z.optional(z.array(z.object({
-            sourceType: z.string(),
+            sourceType: z.enum(['transcript_entry']),
             sourceId: z.uuid()
         }))),
         confidence: z.optional(z.number().gte(0).lte(1)),
@@ -1351,7 +1363,7 @@ export const zExpireSuggestionResponse = z.union([
         expiresAt: z.optional(z.iso.datetime({ offset: true }))
     }).and(z.intersection(z.unknown(), z.object({
         kind: z.literal('informing'),
-        subjectType: z.string(),
+        subjectType: z.enum(['application_member', 'application_income']),
         subjectId: z.uuid(),
         path: z.optional(z.string()),
         category: z.optional(z.enum([

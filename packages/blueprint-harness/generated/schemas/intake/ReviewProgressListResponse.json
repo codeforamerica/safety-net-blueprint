@@ -35,7 +35,11 @@
               },
               "section": {
                 "type": "string",
-                "readOnly": true
+                "readOnly": true,
+                "enum": [
+                  "demographics",
+                  "contact"
+                ]
               },
               "itemId": {
                 "type": [

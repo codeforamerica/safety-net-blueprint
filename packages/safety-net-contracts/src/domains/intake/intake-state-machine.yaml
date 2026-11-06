@@ -561,7 +561,7 @@ machines:
         parameters: [serviceId]
         if: has(object.verificationType) && object.verificationType == "electronic"
         then:
-          - call: {POST: data-exchange/service-calls, requestBody: {payload: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}}
+          - call: {POST: data-exchange/service-calls, requestBody: {payload: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, requestingResourceType: $object.sourceType, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"

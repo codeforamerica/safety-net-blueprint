@@ -21,9 +21,9 @@ import { deriveCollectionName } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
 import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
-import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
+import { extractExpandFields, applyExpand, propertiesOf } from './handlers/expand-utils.js';
 import { operationsOf } from './operation-calls.js';
-import { startSlaClocks } from './sla-engine.js';
+import { startSlaClocks, earliestDeadline } from './sla-engine.js';
 import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
 
 /**
@@ -105,17 +105,23 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /** The collection a resource is stored in, as the mock names it. */
   const collectionOf = (resource) => deriveCollectionName(resource.path('collection'), '');
 
+  /** A resource's schema, and how to follow a `$ref` within its document. */
+  function schemaOf(resolved) {
+    const schema = resolved.api.doc.content?.components?.schemas?.[resolved.resource.name];
+    const follow = (node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
+      ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], resolved.api.doc.content) ?? node
+      : node);
+    return { schema, follow };
+  }
+
   /**
    * Check a record against its resource's full schema, as the API would return
    * it — a related record the contract shows expanded is checked expanded —
    * and throw naming what is wrong.
    */
   function checkRecord(resolved, stored) {
-    const schema = resolved.api.doc.content?.components?.schemas?.[resolved.resource.name];
+    const { schema, follow } = schemaOf(resolved);
     if (!schema) return;
-    const follow = (node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
-      ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], resolved.api.doc.content) ?? node
-      : node);
     const record = applyExpand(stored, extractExpandFields(schema, follow), store.findById);
     const source = { relativePath: resolved.api.doc.relativePath, ref: `#/components/schemas/${resolved.resource.name}` };
     const { valid, errors } = validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
@@ -198,7 +204,9 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * system`, the default, makes it as the system: role matching is skipped,
    * and its events name the system as who acted, `causationid` linking them
    * to the event that caused the call. The request is marked as the system's
-   * beside it (asSystem), never by a header a client could send.
+   * beside it (asSystem), which is what skips role matching. A caller whose
+   * headers name the system's role acts as the system too, as a guard's actors
+   * match it, but its roles are still matched.
    *
    * @param {{ operationId: string, parameters?: Array<{ name: string, in: string, value: * }>, requestBody?: { contentType?: string, payload?: * } }} call
    * @param {Object} options
@@ -261,7 +269,12 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     if (!machineFor(resolved.api, resolved.resource)) return record;
     const slaInfo = startSlaClocks(record, slaTypesFor(resolved.api.domain), now ?? new Date().toISOString());
     if (!slaInfo) return record;
-    return store.update(collectionOf(resolved.resource), record.id, { slaInfo }) ?? { ...record, slaInfo };
+    const clocks = { slaInfo };
+    // And its slaDeadline, where its schema declares one, as a create through
+    // the API sets it.
+    const { schema, follow } = schemaOf(resolved);
+    if (propertiesOf(schema, follow).some((p) => 'slaDeadline' in p)) clocks.slaDeadline = earliestDeadline(slaInfo);
+    return store.update(collectionOf(resolved.resource), record.id, clocks) ?? { ...record, ...clocks };
   }
 
   /**

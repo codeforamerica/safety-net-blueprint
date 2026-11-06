@@ -208,7 +208,10 @@ it does.
   person who accepts, so Decision 4 still holds. New records carry ids the
   caller chooses, so a change can refer to a record another change creates.
   Each change cites its own evidence. Operations stay for actions that aren't
-  changes to data, such as starting an interview.
+  changes to data, such as starting an interview. The composition half exists:
+  an `editable` composition takes such a patch (see
+  [Resource Composition](../cross-cutting/resource-composition.md#editable)).
+  What's planned is a suggestion carrying one.
 
 ### Decision 3: One suggestion is one change
 

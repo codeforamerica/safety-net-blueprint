@@ -260,6 +260,25 @@ Declares a relationship between a spec element and another contract artifact. Us
 
 Omitting `type` is equivalent to `type: fk` for backward compatibility.
 
+**Polymorphic references** (`resource: Polymorphic`) name a record whose resource is given by a type field beside the id, such as a document link's `subjectType` and `subjectId`. The reference names that field with `discriminator.propertyName`, borrowing OpenAPI's discriminator vocabulary. The type field is an enum, and each value names a resource by its name in snake_case (`application_member` → `ApplicationMember`), as OpenAPI's discriminator takes a value as a schema's name, unless `discriminator.mapping` names a resource for it, or `External` for something outside the contracts. Validation fails for a type field that isn't an enum or a value that names nothing. A framework reference, whose resources only a contract set knows, gets its enum from the set's overlay. A polymorphic reference is then checked on write and reached by `onDelete` like any other.
+
+```yaml
+subjectType:
+  type: string
+  enum: [member, income]
+subjectId:
+  type: string
+  format: uuid
+  x-relationship:
+    resource: Polymorphic
+    discriminator:
+      propertyName: subjectType
+      mapping: { member: ApplicationMember }   # income → Income by name
+    onDelete: cascade
+```
+
+**What deleting the named record does** (`onDelete`, FK fields only). Each FK field says what happens to its record when the record it names is deleted, as SQL's referential actions and OData's `OnDelete` do. With `onDelete: cascade`, the record is deleted too, and so are the records a cascade reaches from it. Without `onDelete`, the delete is refused with `409` while any record names it, which is OData's `None`. A record with several FK fields declares each separately: an income deleted with its member is also deleted with its application, because its `applicationId` and its `memberId` each say `cascade`. `External` references have no `onDelete`: there's no record here to delete.
+
 ```yaml
 # FK — same-domain reference (type omitted, defaults to fk)
 queueId:
@@ -269,6 +288,14 @@ queueId:
   x-relationship:
     resource: Queue
     style: expand
+
+# FK — deleted with the member it names
+memberId:
+  type: string
+  format: uuid
+  x-relationship:
+    resource: ApplicationMember
+    onDelete: cascade
 
 # FK — cross-domain reference
 applicationId:

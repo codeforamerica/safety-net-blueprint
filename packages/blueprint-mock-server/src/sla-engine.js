@@ -211,6 +211,23 @@ export function updateSlaInfo(resource, slaTypes, now, states = {}, resolvedEnti
 }
 
 /**
+ * A record's slaDeadline, as SlaDeadline (base/schemas/sla.yaml) defines it:
+ * the earliest deadline among its slaInfo entries still running, active or in
+ * warning; null when none is.
+ *
+ * @param {Array} [slaInfo]
+ * @returns {string|null} ISO 8601
+ */
+export function earliestDeadline(slaInfo) {
+  const running = (slaInfo ?? [])
+    .filter((entry) => entry.status === 'active' || entry.status === 'warning')
+    .map((entry) => entry.deadline)
+    .filter(Boolean)
+    .sort((a, b) => new Date(a) - new Date(b));
+  return running[0] ?? null;
+}
+
+/**
  * Start a new record's SLA clocks: the SLA types its domain declares that it
  * names in `slaInfo` or that assign themselves (`autoAssignWhen`), each
  * running from now. Clocks start when the record is created, however it is —

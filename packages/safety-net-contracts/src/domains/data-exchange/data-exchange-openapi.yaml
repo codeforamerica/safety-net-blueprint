@@ -184,6 +184,8 @@ paths:
                 $ref: "#/components/schemas/ExternalServiceCall"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -270,6 +272,8 @@ paths:
           description: Metadata removed successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -363,6 +367,12 @@ components:
         hasNext:
           type: boolean
 
+    RequestingResourceType:
+      type: string
+      enum: [member, income]
+      description: >
+        The kind of record requestingResourceId names, which an adapter fetches
+        its input from: a member, or an income. The caller sends it with the id.
     ExternalServiceCall:
       type: object
       description: |
@@ -399,10 +409,12 @@ components:
           description: ID of the resource that triggered the call (e.g., an ApplicationMember ID). Combined with `serviceId`, forms the idempotency key.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: requestingResourceType
+              mapping:
+                member: ApplicationMember
         requestingResourceType:
-          type: string
-          description: Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.
-          example: intake/applications/members
+          $ref: "#/components/schemas/RequestingResourceType"
         callMode:
           $ref: "#/components/schemas/CallMode"
           description: Whether this call is synchronous or asynchronous.
@@ -430,12 +442,15 @@ components:
 
     ExternalServiceCallCreate:
       type: object
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
       description: |
         Fields required to submit a new external service call. Exactly one of `serviceId`
         or `serviceType` must be provided to identify the target ExternalService catalog entry.
-      additionalProperties: false
+      unevaluatedProperties: false
       required:
         - requestingResourceId
+        - requestingResourceType
       oneOf:
         - required: [serviceId]
           not:
@@ -464,6 +479,12 @@ components:
           description: ID of the resource triggering the call. Adapters use this to fetch required input data from the source domain.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: requestingResourceType
+              mapping:
+                member: ApplicationMember
+        requestingResourceType:
+          $ref: "#/components/schemas/RequestingResourceType"
         callMode:
           $ref: "#/components/schemas/CallMode"
           description: Override the ExternalService default call mode for this submission. If omitted, the catalog default is used.

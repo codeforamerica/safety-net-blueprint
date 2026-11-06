@@ -17,6 +17,8 @@ import { eventBus } from '../../src/event-bus.js';
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 const APPLICATION = '6a0c3e2b-1f4d-4b8a-9c7e-5d2f1a0b3c84';
 const MEMBER = '1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26';
+// What an informing suggestion is about has to exist: Rosa, seeded in the harness.
+const ROSA = '11111111-1111-4111-8111-100000000001';
 
 let mock;
 beforeEach(async () => {
@@ -111,7 +113,7 @@ test('a parameter value its schema refuses is refused', async () => {
 const inform = (overrides = {}) => send('POST', '/decision-support/suggestions', {
   kind: 'informing',
   subjectType: 'application_member',
-  subjectId: MEMBER,
+  subjectId: ROSA,
   path: '/firstName',
   category: 'name-mismatch',
   message: 'The caller spelled her first name R-O-S-A.',

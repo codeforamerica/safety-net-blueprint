@@ -1,0 +1,12 @@
+# Common response headers used across multiple APIs
+IdempotentReplayed:
+  description: |
+    Whether this response is a replay. `true` when the request repeated an
+    `Idempotency-Key` the caller already used for the same request, so the
+    first response was sent back and nothing was carried out again; `false`
+    when the request was carried out. Sent by every operation that lists the
+    shared IdempotencyKeyParam. Named as Stripe names it; the IETF
+    `Idempotency-Key` header draft doesn't name one.
+  schema:
+    type: string
+    enum: ["true", "false"]

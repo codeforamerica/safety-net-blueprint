@@ -1,0 +1,39 @@
+overlay: '1.0.0'
+info:
+  title: Harness subject types
+  version: 1.0.0
+
+# The framework's polymorphic references — what a transcript records, what a
+# suggestion is about, what its evidence cites — name their type in a field
+# the framework leaves a plain string, since only a contract set knows its
+# resources. A set that includes the capability gives each type field the
+# values it uses, as this overlay does. Each value names a resource in
+# snake_case (application_member → ApplicationMember) unless the
+# discriminator's mapping says otherwise; one mapped to External points
+# outside the contracts.
+
+actions:
+  - target: "$.components.schemas.TranscriptWritable.properties.subjectType"
+    files: base/domains/communication/communication-transcripts-openapi.yaml
+    description: What a harness transcript records
+    update:
+      enum: [interview, chat]
+
+  - target: "$.components.schemas.TranscriptWritable.properties.subjectId.x-relationship.discriminator"
+    files: base/domains/communication/communication-transcripts-openapi.yaml
+    description: A chat is held in a tool outside the contracts
+    update:
+      mapping:
+        chat: External
+
+  - target: "$.components.schemas.InformingSuggestionFields.properties.subjectType"
+    files: base/domains/decision-support/decision-support-suggestions-openapi.yaml
+    description: What a harness suggestion is about
+    update:
+      enum: [application_member, application_income]
+
+  - target: "$.components.schemas.SuggestionEvidence.properties.sourceType"
+    files: base/domains/decision-support/decision-support-suggestions-openapi.yaml
+    description: What a harness suggestion's evidence cites
+    update:
+      enum: [transcript_entry]

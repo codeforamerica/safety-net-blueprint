@@ -146,7 +146,10 @@ export function createMemoryStore() {
     },
 
     create(collection, data) {
-      const id = crypto.randomUUID();
+      // A caller may choose the id (NewId in the base contracts); one already
+      // taken is refused, never overwritten.
+      const id = data.id ?? crypto.randomUUID();
+      if (getCollection(collection).has(id)) throw new Error(`${collection} already has a record with id ${id}`);
       const now = new Date().toISOString();
 
       const resource = {

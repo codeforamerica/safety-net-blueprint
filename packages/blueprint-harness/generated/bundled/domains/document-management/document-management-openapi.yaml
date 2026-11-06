@@ -435,14 +435,28 @@ paths:
                             format: uri-reference
                             description: Link to the related DocumentVersion resource.
         "422":
-          description: Unprocessable entity — business rule validation failed
+          description: The request was well-formed but contained semantic errors.
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
                 properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
                   message:
                     type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
   /documents/{documentId}:
     parameters:
       - name: documentId
@@ -543,14 +557,28 @@ paths:
                             format: uri-reference
                             description: Link to the related DocumentVersion resource.
         "404":
-          description: Resource not found
+          description: The requested resource was not found.
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
                 properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
                   message:
                     type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
 components:
   schemas:
     DocumentWritable:

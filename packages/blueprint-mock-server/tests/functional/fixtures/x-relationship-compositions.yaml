@@ -21,12 +21,12 @@ compositions:
   # as stored in the DB (ownerId present, no expanded owner object) plus a
   # projected children include.
   parentOverview:
-    resource: parents
+    resource: Parent
     endpoint:
       path: /parents/{parentId}/overview
     include:
       children:
-        resource: children
+        resource: Child
         bind: parentId
         fields: [id, label, parentId]
 
@@ -38,7 +38,7 @@ compositions:
   # Expected result: { name } only — owner.label is absent, ownerId is absent
   # (was not in the fields list).
   parentOwnerLabel:
-    resource: parents
+    resource: Parent
     fields: [name, owner.label]
     endpoint:
       path: /parents/{parentId}/owner-label
@@ -50,11 +50,11 @@ compositions:
   # ignored by the composition assembler.
   # Expected: children items have _links.self; no links.parent object.
   parentChildrenWithLinks:
-    resource: parents
+    resource: Parent
     endpoint:
       path: /parents/{parentId}/children-with-links
     include:
       children:
-        resource: children
+        resource: Child
         bind: parentId
         links: true

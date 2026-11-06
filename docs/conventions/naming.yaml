@@ -45,6 +45,17 @@ naming:
   # Example: Person, ApplicationCreate, HouseholdList
   schemas: PascalCase
 
+  # Naming a resource from another contract: name it by the schema its
+  # endpoints return, as declared. x-relationship's resource, a state
+  # machine's object, a config catalog's resource and a composition's
+  # resource all name it this way. Not the path segment (members) and not a
+  # storage name (application-members): one resource has one name everywhere.
+  # A step that addresses records by location, such as a call's
+  # PATCH: intake/applications/verifications/$verification.id, writes a path
+  # instead.
+  # Example: resource: ApplicationMember
+  resource_references: schema name, PascalCase
+
   # Schema property names (field names): camelCase — always, regardless of x-casing.
   # x-casing is a rendering hint that tells the runtime how to serialize field names
   # to API clients. It does NOT rename YAML properties in source files. All spec

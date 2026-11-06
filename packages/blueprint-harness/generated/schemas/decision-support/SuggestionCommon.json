@@ -14,7 +14,10 @@
         "properties": {
           "sourceType": {
             "type": "string",
-            "description": "What kind of record it cites, e.g. `transcript_entry`."
+            "description": "What kind of record it cites, e.g. `transcript_entry`.",
+            "enum": [
+              "transcript_entry"
+            ]
           },
           "sourceId": {
             "type": "string",

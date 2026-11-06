@@ -101,7 +101,7 @@ State machine operations use two headers to identify who is making the request:
 | Header | Description |
 |--------|-------------|
 | `X-Caller-Id` | ID of the acting user (used in `$caller.id` expressions, e.g., to assign a task to the claiming worker) |
-| `X-Caller-Roles` | Comma-separated roles (e.g., `caseworker,supervisor`). Operations with actor restrictions return 403 if none of the caller's roles match. |
+| `X-Caller-Roles` | Comma-separated roles (e.g., `caseworker,supervisor`). Operations with actor restrictions return 403 if none of the caller's roles match. Changing a field marked `readOnly` gets 422, whatever the roles: only the server's own calls, a state machine acting as the system, may set one. |
 
 ```bash
 curl -X POST http://localhost:1080/workflow/tasks/<id>/claim \

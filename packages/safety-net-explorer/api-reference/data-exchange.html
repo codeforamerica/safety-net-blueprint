@@ -792,17 +792,20 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.</span>
-      </div>
-      
-    </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">RequestingResourceType</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The kind of record requestingResourceId names, which an adapter fetches its input from: a member, or an income. The caller sends it with the id.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -1025,28 +1028,17 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
         <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ExternalServiceCallCreate</span>
       </summary>
-      <div style="border-top:1px solid #eee;"><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-    <details>
-      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">(one of)</span>
+      <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
-      </summary>
-      <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><details style="border-top:1px solid #ede8f5;">
-      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 12px;background:rgba(124,92,191,0.03);">
-        <span class="chevron" style="font-size:9px;color:#7c5cbf;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-        <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">Variant</span>
-      </summary>
-      <div style="padding:4px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
-    </details><details style="border-top:1px solid #ede8f5;">
-      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 12px;background:rgba(124,92,191,0.03);">
-        <span class="chevron" style="font-size:9px;color:#7c5cbf;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-        <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">Variant</span>
-      </summary>
-      <div style="padding:4px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
-    </details></div>
-    </details>
-  </div></div>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The new record's id, a UUID (RFC 9562).</span>
+      </div>
+      
+    </div>
+    </div>
     </details>
   </div>
       <div style="margin-top:16px;">
@@ -1105,17 +1097,20 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.</span>
-      </div>
-      
-    </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">RequestingResourceType</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The kind of record requestingResourceId names, which an adapter fetches its input from: a member, or an income. The caller sends it with the id.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -1235,17 +1230,20 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.</span>
-      </div>
-      
-    </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">RequestingResourceType</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The kind of record requestingResourceId names, which an adapter fetches its input from: a member, or an income. The caller sends it with the id.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -1320,6 +1318,48 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">409</span>
+        <span style="font-size:11px;color:#555;">A conflict occurred with the current state of the resource.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Conflict</span>
         </summary>
         <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
@@ -1534,17 +1574,20 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.</span>
-      </div>
-      
-    </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">RequestingResourceType</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The kind of record requestingResourceId names, which an adapter fetches its input from: a member, or an income. The caller sends it with the id.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -1802,17 +1845,20 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Resource type of the requesting resource, copied from the ExternalService catalog entry at submission time. Together with `requestingResourceId`, tells adapters where to fetch sensitive input fields.</span>
-      </div>
-      
-    </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/data-exchange.html#field-serviceCall.requestingResourceType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">requestingResourceType</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">RequestingResourceType</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">The kind of record requestingResourceId names, which an adapter fetches its input from: a member, or an income. The caller sends it with the id.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -2068,6 +2114,48 @@ FDSH services are prefixed fdsh_ — they route through the CMS Federal Data Ser
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">409</span>
+        <span style="font-size:11px;color:#555;">A conflict occurred with the current state of the resource.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Conflict</span>
         </summary>
         <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">

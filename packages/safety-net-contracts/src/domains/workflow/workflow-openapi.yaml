@@ -88,6 +88,8 @@ paths:
                 $ref: "#/components/schemas/Queue"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -157,6 +159,8 @@ paths:
           description: Queue deleted successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -218,6 +222,8 @@ paths:
                 $ref: "#/components/schemas/Task"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -287,6 +293,8 @@ paths:
           description: Task deleted successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -483,11 +491,12 @@ components:
     QueueCreate:
       allOf:
         - $ref: "../workflow/workflow-schema.yaml#/$defs/Queue"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           description: |
             Payload to create a new queue. Name is required.
 
-            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+            Note: createdAt and updatedAt are server-generated (readOnly) and will be returned in the response, as is id unless the request gives one.
           required:
             - name
 
@@ -560,14 +569,7 @@ components:
                 $ref: "https://blueprint.codeforamerica.org/base/components/sla.yaml#/SlaInfo"
               readOnly: true
             slaDeadline:
-              type:
-                - string
-                - "null"
-              format: date-time
-              description: >
-                Engine-managed. The earliest active deadline across all slaInfo entries.
-                Null when no active SLA entries exist. Recalculated whenever slaInfo is updated.
-              readOnly: true
+              $ref: "https://blueprint.codeforamerica.org/base/components/sla.yaml#/SlaDeadline"
             createdAt:
               type: string
               format: date-time
@@ -582,12 +584,13 @@ components:
     TaskCreate:
       allOf:
         - $ref: "../workflow/workflow-schema.yaml#/$defs/Task"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           description: |
             Payload to create a new task. name is required; status is set by the state machine and
             defaults to the initialState (pending) when omitted.
 
-            Note: id, createdAt, and updatedAt are server-generated and will be returned in the response.
+            Note: createdAt and updatedAt are server-generated and will be returned in the response, as is id unless the request gives one.
           required:
             - name
           properties:

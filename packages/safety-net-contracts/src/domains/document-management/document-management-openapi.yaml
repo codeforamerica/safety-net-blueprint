@@ -265,6 +265,8 @@ paths:
           description: Metadata removed successfully.
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
@@ -446,6 +448,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentType"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -569,6 +573,8 @@ paths:
                 $ref: "#/components/schemas/DocumentLink"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -837,7 +843,9 @@ components:
 
     DocumentTypeCreate:
       type: object
-      additionalProperties: false
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
+      unevaluatedProperties: false
       required:
         - name
         - retentionYears
@@ -913,6 +921,8 @@ components:
           description: ID of the linked record.
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
         linkedBy:
           type: string
           description: Identity of who created the link. Required for HIPAA chain-of-custody (45 CFR § 164.312).
@@ -927,7 +937,9 @@ components:
 
     DocumentLinkCreate:
       type: object
-      additionalProperties: false
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
+      unevaluatedProperties: false
       required:
         - documentId
         - subjectType
@@ -948,6 +960,8 @@ components:
           format: uuid
           x-relationship:
             resource: Polymorphic
+            discriminator:
+              propertyName: subjectType
 
     DocumentLinkList:
       type: object

@@ -82,7 +82,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
         '422':
-          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
   /documents/{documentId}:
     parameters:
       - name: documentId
@@ -103,7 +103,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
         '404':
-          $ref: '../../common/components/responses.yaml#/NotFound'
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
 components:
   schemas:
     # A document is what was filed; a version is what arrived. The split is

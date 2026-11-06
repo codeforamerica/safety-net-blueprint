@@ -188,7 +188,26 @@ machines:
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
           - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
           - if: has(request.createFollowUp) && request.createFollowUp == true
-            then: [{call: {POST: workflow/tasks, requestBody: {payload: {$merge: $object, status: pending}}}, description: Create a follow-up task when caller requests one}]
+            then:
+              - call:
+                  POST: workflow/tasks
+                  requestBody:
+                    payload:
+                      name: $object.name
+                      description: $object.description
+                      taskType: $object.taskType
+                      subjectType: $object.subjectType
+                      subjectId: $object.subjectId
+                      programType: $object.programType
+                      isExpedited: $object.isExpedited
+                      queueId: $object.queueId
+                      priority: $object.priority
+                      status: pending
+                description: >
+                  Create a follow-up task when the caller asks for one: the same
+                  work, for the same subject, in the same queue. It carries none of
+                  the finished task's id, timestamps, outcome or assignment, so it
+                  starts pending and unassigned.
       - id: release
         description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
         guards:
@@ -271,6 +290,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleClientTimeout
+          - call: cancelSlaTimers
           - emit: {event: awaiting_client, description: Emit a domain event recording the block}
       - id: await-verification
         description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
@@ -284,6 +304,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleVerificationTimeout
+          - call: cancelSlaTimers
           - emit: {event: awaiting_verification, description: Emit a domain event recording the block}
       - id: resume
         description: "POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait timers"
@@ -295,6 +316,7 @@ machines:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on resume}
           - call: cancelClientTimeout
           - call: cancelVerificationTimeout
+          - call: scheduleSlaTimers
           - emit: {event: resumed, description: Emit a domain event recording the resumption}
       - id: auto-resume
         description: "POST /tasks/{taskId}/auto-resume — System resumes a verification-blocked task when the timeout fires or a verification result arrives"
@@ -308,6 +330,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
           - call: cancelVerificationTimeout
+          - call: scheduleSlaTimers
           - emit: {event: resumed, causationid: $request.causationid, description: Emit a domain event recording the automated resumption; causationid links to the triggering event}
       - id: sla-escalate
         description: "POST /tasks/{taskId}/sla-escalate — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)"
@@ -402,12 +425,13 @@ machines:
           - emit: {event: priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
     on:
       - type: workflow.task.created
-        description: Route and prioritize a new task, then schedule its 72-hour creation deadline
+        description: Route and prioritize a new task, then schedule its 72-hour creation deadline and, when its SLA clocks set a deadline, its SLA warning and breach timers
         transition: {}
         steps:
           - call: assignToQueue
           - call: setPriority
           - call: scheduleCreationDeadline
+          - call: scheduleSlaTimers
       - type: workflow.task.updated
         description: Re-evaluate priority and queue assignment when relevant fields change; reschedule SLA timers when the SLA deadline is set
         transition: {}
@@ -609,6 +633,17 @@ procedures:
     description: "Cancel the verification timeout timer; idempotent, safe to call even if already fired."
     call: cancelWorkflowTimer
     with: {timerType: verification_timeout}
+  - id: scheduleSlaTimers
+    description: "Schedule the SLA warning and breach timers when the task's SLA clocks set a deadline: on create, and on resume at the deadline the pause moved. Runs after the action's SLA clocks are updated."
+    if: has(object.slaDeadline) && object.slaDeadline != null
+    then: [{call: scheduleSlaWarning}, {call: scheduleSlaBreachTimer}]
+  - id: cancelSlaTimers
+    description: "Cancel the SLA warning and breach timers while the SLA clock is paused; they are scheduled again, at the deadline the pause moved, on resume. Idempotent."
+    steps:
+      - call: cancelWorkflowTimer
+        with: {timerType: sla_warning}
+      - call: cancelWorkflowTimer
+        with: {timerType: sla_breach}
 
 $defs:
   ApproveTaskRequest:

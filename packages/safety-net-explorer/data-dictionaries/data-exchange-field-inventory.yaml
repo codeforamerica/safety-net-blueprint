@@ -16,7 +16,7 @@ serviceCall.id: { type: uuid }
 serviceCall.serviceId: { type: uuid, relationship: ExternalService }
 serviceCall.requestingResourceId: { type: uuid, relationship: Polymorphic }
 serviceCall.serviceType: { type: enum, values: [fdsh_ssa, fdsh_vlp, fdsh_fti, fdsh_medicare, fdsh_vci, ssa_ievs, irs_ievs, swica, uib, save, enrollment_check, incarceration_check] }
-serviceCall.requestingResourceType: { type: string }
+serviceCall.requestingResourceType: { type: enum, values: [member, income] }
 serviceCall.callMode: { type: enum, values: [async, sync] }
 serviceCall.status: { type: enum, values: [pending, completed, failed, timed_out] }
 serviceCall.data: { type: [object, 'null'] }

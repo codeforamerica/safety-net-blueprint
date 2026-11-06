@@ -7,7 +7,11 @@
       "properties": {
         "subjectType": {
           "type": "string",
-          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`.",
+          "enum": [
+            "interview",
+            "chat"
+          ]
         },
         "subjectId": {
           "type": "string",
@@ -22,6 +26,17 @@
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$",
           "description": "The software that wrote its lines, as `name/version` — a transcription client, or a chat."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The new record's id, a UUID (RFC 9562)."
         }
       }
     },

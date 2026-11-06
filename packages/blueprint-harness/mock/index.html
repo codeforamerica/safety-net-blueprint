@@ -147,6 +147,10 @@
     line-height: 1.35;
   }
   .steps .section:first-child { margin-top: .2rem; }
+  .steps .section-link {
+    all: unset; cursor: pointer; font: inherit; color: inherit;
+  }
+  .steps .section-link:hover, .steps .section-link:focus-visible { text-decoration: underline; }
   #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
   #stage > .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
   #stage > ul.note { padding-left: 1.1rem; }
@@ -839,6 +843,38 @@ const collectProperties = (schema, doc) => {
   return out;
 };
 
+/**
+ * Every field a schema reaches, with the schema it is declared on and the
+ * path to it: its own, then those of the records it holds in a property, a
+ * list or a map. A map or list adds nothing to the path, so `incomes.amount`
+ * is the amount of any income.
+ */
+const fieldsReached = (schema, doc, owner, out = [], seen = new Set(), via = '') => {
+  const resolved = deref(schema, doc);
+  if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) return out;
+  seen.add(resolved);
+  // One of several shapes, told apart by a field: a rules fact's `state`
+  // says which kind of answer it is.
+  for (const part of [resolved, ...(resolved.allOf ?? []).map((one) => deref(one, doc))]) {
+    const name = part?.discriminator?.propertyName;
+    if (!name || !Array.isArray(part.oneOf)) continue;
+    const declared = { discriminator: part.discriminator, oneOf: part.oneOf.map((one) => refName(one) ?? one) };
+    out.push({ owner, name, declared, path: via ? `${via}.${name}` : name });
+  }
+  for (const [name, declared] of Object.entries(collectProperties(resolved, doc))) {
+    const path = via ? `${via}.${name}` : name;
+    out.push({ owner, name, declared, path });
+    const field = deref(declared, doc);
+    for (const inner of [field, deref(field?.items, doc), deref(field?.additionalProperties, doc)]) {
+      if (inner && typeof inner === 'object' && (inner.properties || inner.allOf)) {
+        const named = [declared, field?.items, field?.additionalProperties].map(refName).find(Boolean);
+        fieldsReached(inner, doc, named ?? name, out, seen, path);
+      }
+    }
+  }
+  return out;
+};
+
 /** A plausible value for each required property, taking enums seriously. */
 const fromSchema = (schema, doc) => {
   // One of several shapes — a line or a gap — is shown as the first.
@@ -1381,7 +1417,21 @@ const renderTourNav = (nav, doc) => {
   const sectioned = (doc.content.workflows ?? []).length > 1;
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
     if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-      list.append(el('li', sectionOf(entry.workflow), 'section'));
+      // A section's name goes to where its description is: its first step,
+      // or its heading when the whole walk is on one page.
+      const section = el('li', '', 'section');
+      const go = el('button', sectionOf(entry.workflow), 'section-link');
+      go.onclick = () => {
+        tourStep = index;
+        renderGroups();
+        if (tourWhole) {
+          document.getElementById(`tour-section-${entry.workflow.workflowId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        renderStage();
+      };
+      section.append(go);
+      list.append(section);
     }
     const item = el('li');
     const button = el('button', '', 'op step');
@@ -1493,7 +1543,9 @@ const noticeList = (points, op) => {
     for (const [index, part] of line.split('`').entries()) {
       if (part === '') continue;
       if (index % 2 === 0) { item.append(el('span', part)); continue; }
-      const found = op ? locate(part, op) : null;
+      // A step with no operation of the set's own — one of the mock's
+      // controls — still names things declared in it.
+      const found = locate(part, op ?? {});
       if (!found) { item.append(el('code', part)); continue; }
       const chipped = el('span', '', 'ref');
       const chip = el('code', part);
@@ -1655,7 +1707,9 @@ const renderTourStage = (stage, doc) => {
     for (const [index, entry] of entries.entries()) {
       if (!tourResults.has(entry.key)) continue;
       if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-        stage.append(el('h2', sectionOf(entry.workflow), 'section-heading'));
+        const heading = el('h2', sectionOf(entry.workflow), 'section-heading');
+        heading.id = `tour-section-${entry.workflow.workflowId}`;
+        stage.append(heading);
         for (const part of sectionIntroOf(entry.workflow)) stage.append(part);
       }
       stage.append(tourStepPanel(doc, entries, index, { live: false }));
@@ -1761,8 +1815,8 @@ const flattened = (schema, doc) => {
  * What a given status answers with, named and located.
  *
  * A success is declared inline and lives in this document. A failure is a
- * `$ref` to `common/components/responses.yaml`, which every operation in
- * every domain shares — so the response object has to be followed before
+ * `$ref` to the shared responses in core's base contracts, which every
+ * operation in every domain shares — so the response object has to be followed before
  * there is a schema to name, and the file it is named in is not this one.
  * Without that, the page showed a shape for the happy path and nothing at
  * all for the four declared ways to fail.
@@ -1895,8 +1949,9 @@ const locate = (token, op) => {
   if (token === 'multipart/form-data' && multipart) {
     return { path: here, yaml: snippet(token, deref(multipart, doc)) };
   }
-  const sources = [envelope, responseSchema(op), requestSchema(op), multipart && deref(multipart, doc)]
-    .filter(Boolean);
+  const sources = op.operation
+    ? [envelope, responseSchema(op), requestSchema(op), multipart && deref(multipart, doc)].filter(Boolean)
+    : [];
   const asProperty = (name, declared) => {
     // Printed as authored: a property that is nothing but a `$ref` says
     // nothing, so that one is followed, and one carrying its own keywords
@@ -1935,6 +1990,26 @@ const locate = (token, op) => {
       const resolved = deref(declared, doc);
       const values = resolved?.enum ?? deref(resolved?.items, doc)?.enum;
       if (Array.isArray(values) && values.includes(token)) return null;
+    }
+  }
+
+  // A field of a record held inside the response: a composition answers with
+  // its members and incomes, and `memberId` is the income's. Named alone, by
+  // its path (`links.proofOfIncomeDocument`), or by a patch's pointer to it
+  // (`/incomes/{incomeId}/amount`, whose `{incomeId}` is any income).
+  if (op.operation) {
+    const reached = [responseSchema(op), requestSchema(op)].filter(Boolean)
+      .flatMap((schema) => fieldsReached(schema, doc, null));
+    const wanted = token.startsWith('/')
+      ? token.split('/').filter((part) => part && !/^\{.*\}$/.test(part)).join('.')
+      : token;
+    const nested = reached.find((hit) => hit.name === wanted || hit.path === wanted);
+    if (nested) return asProperty(nested.owner ? `${nested.owner}.${nested.name}` : nested.path, nested.declared);
+    // A group of answers named by what comes before the dot: `risks` is every
+    // `risks.*` a ruleset gives back.
+    const group = reached.filter((hit) => hit.name.startsWith(`${token}.`));
+    if (group.length > 0) {
+      return { path: here, yaml: snippet(token, group.map((hit) => hit.name.slice(token.length + 1)), { prose: true }) };
     }
   }
 
@@ -1984,7 +2059,9 @@ const locate = (token, op) => {
         // inside those turns a number quoted in a note into a false lead.
         for (const step of declared.steps ?? []) {
           const bare = essential(step);
-          if (JSON.stringify(bare).includes(token)) return { path: at, yaml: asList(bare) };
+          // Or as the notes write a `set`: `set: openedAt = $now`.
+          const written = bare.set ? `set: ${bare.set.field} = ${bare.set.value}` : null;
+          if (written === token || JSON.stringify(bare).includes(token)) return { path: at, yaml: asList(bare) };
         }
       }
     }
@@ -1995,12 +2072,17 @@ const locate = (token, op) => {
   for (const candidate of docs.filter((d) => d.type === 'compositions')) {
     for (const [name, declared] of Object.entries(candidate.content?.compositions ?? {})) {
       const endpoint = declared.endpoint ?? {};
+      // A field it selects, as written (`interviewDate as asOf`) or by its
+      // alias (`asOf`).
+      const selects = (declared.fields ?? []).some((field) => field === token || field.endsWith(` as ${token}`));
       const mine = token === name
         || (typeof endpoint.path === 'string' && endpoint.path.endsWith(token))
         || endpoint[token] !== undefined
-        || declared.include?.[token] !== undefined;
+        || declared.include?.[token] !== undefined
+        || selects;
       if (!mine) continue;
       let node = essential(declared);
+      if (selects) node = { resource: declared.resource, fields: declared.fields };
       if (endpoint[token] !== undefined) node = { endpoint };
       if (declared.include?.[token] !== undefined) node = { include: { [token]: declared.include[token] } };
       return { path: candidate.relativePath, yaml: snippet(name, node) };
@@ -2038,6 +2120,26 @@ const locate = (token, op) => {
     if (procedure) return { path: candidate.relativePath, yaml: asList(essential(procedure)) };
   }
 
+  // An action, by its id, from a step that isn't that action: the scheduler's
+  // stand-in names the `submit` that asks for a timer.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    for (const machine of candidate.content?.machines ?? []) {
+      const action = (machine.actions ?? []).find((one) => one.id === token);
+      if (action) return { path: candidate.relativePath, yaml: asList(essential({ ...action, steps: undefined })) };
+    }
+  }
+
+  // An event, by its type: the channel an AsyncAPI document declares for it.
+  for (const candidate of docs.filter((d) => d.type === 'asyncapi')) {
+    const channel = candidate.content?.channels?.[token];
+    if (!channel) continue;
+    const messages = Object.values(channel.messages ?? {}).map((message) => deref(message, candidate));
+    return {
+      path: candidate.relativePath,
+      yaml: snippet(token, { messages: messages.map(({ name, summary }) => ({ name, summary })) }, { prose: true }),
+    };
+  }
+
   // A reaction, by the event it reacts to: `on: intake.application_income.updated`.
   for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
     for (const machine of candidate.content?.machines ?? []) {
@@ -2063,6 +2165,19 @@ const locate = (token, op) => {
       const fact = (ruleset.facts ?? []).find((one) => one.path === factPath);
       if (fact) return { path: at, yaml: asList(essential(fact)) };
     }
+  }
+
+  // An operation anywhere in the set, by its operationId: the notes name the
+  // record's own operation a composition's patch runs through.
+  const called = operations().find((one) => one.operation?.operationId === token);
+  if (called) {
+    const { summary, description } = called.operation;
+    const said = Object.fromEntries(Object.entries({ operationId: token, summary, description })
+      .filter(([, value]) => value !== undefined));
+    return {
+      path: called.doc.relativePath,
+      yaml: snippet(called.template, { [called.method.toLowerCase()]: said }, { prose: true }),
+    };
   }
 
   // A schema anywhere in the set.

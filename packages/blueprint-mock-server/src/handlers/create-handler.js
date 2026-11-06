@@ -5,11 +5,11 @@
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { eventDomainOf } from '../collection-utils.js';
-import { startSlaClocks } from '../sla-engine.js';
+import { startSlaClocks, earliestDeadline } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
-import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { extractCallerRoles, callerHeader, traceparentOf, causationOf, areSystemRoles } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields, writableFieldsOf, propertiesOf } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 import { missingReferences, parentsOf } from '../references.js';
 import { callsIn, callProblems } from '../operation-calls.js';
@@ -22,6 +22,8 @@ import { makesSuggestions, fingerprintOf, repeated } from '../suggestion-fingerp
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
+ * @param {Object} [options]
+ * @param {Object} [options.defaults] - The values the server sets on create: required defaults and a machine's initial state
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, operations } = {}, options = {}) {
@@ -73,6 +75,35 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         if (!valid) {
           return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
+      }
+
+      // A client may not set a field the server sets (readOnly), beyond the
+      // value the server sets anyway, unless this create's schema takes it as a
+      // value set once. Only the server's own calls may — a state machine acting
+      // as the system, marked by asSystem; a client sending the system role in
+      // X-Caller-Roles is a client.
+      if (!areSystemRoles(extractCallerRoles(request))) {
+        // What the server sets anyway: its defaults — a state machine's
+        // initial state, an empty list for a required one — and the path's values.
+        const known = { ...(options.defaults ?? {}), ...(enrichmentData ?? {}) };
+        const fixed = changedReadOnlyFields(requestBody, endpoint.responseSchema, apiMetadata.resolve?.schema,
+          known, writableFieldsOf(endpoint.requestSchema, apiMetadata.resolve?.schema));
+        if (fixed.length > 0) {
+          return Response.json({
+            code: 'VALIDATION_ERROR',
+            message: `${fixed.join(', ')} ${fixed.length === 1 ? 'is' : 'are'} read-only: the server sets ${fixed.length === 1 ? 'it' : 'them'}.`,
+            details: fixed.map((field) => ({ field, message: 'read-only' })),
+          }, { status: 422 });
+        }
+      }
+
+      // A caller may choose the new record's id, but not one another record has.
+      if (requestBody.id !== undefined && store.findById(endpoint.collectionName, requestBody.id)) {
+        return Response.json({
+          code: 'CONFLICT',
+          message: `Another record already has the id ${requestBody.id}.`,
+          details: [{ field: 'id', message: 'already in use' }],
+        }, { status: 409 });
       }
 
       // An id that names no record is refused, like any other invalid value.
@@ -142,8 +173,14 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // Its SLA clocks start now, before its created event carries it.
       const slaInfo = startSlaClocks(resource, slaTypes, now);
       if (slaInfo) {
-        resource.slaInfo = slaInfo;
-        store.update(endpoint.collectionName, resource.id, { slaInfo });
+        const clocks = { slaInfo };
+        // And its slaDeadline, where its schema declares one; kept current
+        // from then on wherever slaInfo changes.
+        if (propertiesOf(endpoint.responseSchema, apiMetadata.resolve?.schema).some((p) => 'slaDeadline' in p)) {
+          clocks.slaDeadline = earliestDeadline(slaInfo);
+        }
+        Object.assign(resource, clocks);
+        store.update(endpoint.collectionName, resource.id, clocks);
       }
       const traceparent = traceparentOf(request);
       // Named for the domain as declared and the resource the create acts on:

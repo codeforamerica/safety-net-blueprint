@@ -18,6 +18,9 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { createMockServer } from '../../src/browser.js';
 
+// What an informing suggestion is about has to exist: Rosa, seeded in the harness.
+const ROSA = '11111111-1111-4111-8111-100000000001';
+
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const harness = resolve(packageRoot, '../blueprint-harness/generated/resolved');
 const DAY = 24 * 60 * 60 * 1000;
@@ -103,7 +106,7 @@ test('one no SLA assigns itself to gets no clocks', async () => {
 test('an application a state machine\'s step creates directly starts its clocks too', async () => {
   await boot();
   const { body: suggestion } = await send('POST', '/decision-support/suggestions', {
-    kind: 'informing', subjectType: 'application_member', subjectId: '1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26', category: 'name-mismatch',
+    kind: 'informing', subjectType: 'application_member', subjectId: ROSA, category: 'name-mismatch',
   });
   const before = Date.now();
   assert.equal((await send('POST', `/decision-support/suggestions/${suggestion.id}/open`, {})).status, 200);
@@ -116,7 +119,7 @@ test('an application a state machine\'s step creates directly starts its clocks 
 test('one a procedure creates directly starts its clocks and sends its created event, as whoever ran the action', async () => {
   await boot();
   const { body: suggestion } = await send('POST', '/decision-support/suggestions', {
-    kind: 'informing', subjectType: 'application_member', subjectId: '1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26', category: 'name-mismatch',
+    kind: 'informing', subjectType: 'application_member', subjectId: ROSA, category: 'name-mismatch',
   });
   const before = Date.now();
   assert.equal((await send('POST', `/decision-support/suggestions/${suggestion.id}/openLater`, {})).status, 200);
@@ -132,7 +135,8 @@ test('one a procedure creates directly starts its clocks and sends its created e
 });
 
 test('a created application\'s slaInfo, in its response and its created event, matches the SlaInfo contract', async () => {
-  const { SlaInfo } = yaml.load(readFileSync(resolve(harness, 'base/components/sla.yaml'), 'utf8'));
+  // Defined in base/schemas/sla.yaml; base/components/sla.yaml refers to it.
+  const { SlaInfo } = yaml.load(readFileSync(resolve(harness, 'base/schemas/sla.yaml'), 'utf8')).$defs;
   const ajv = new Ajv2020({ strict: false });
   addFormats(ajv);
   const matches = ajv.compile({ type: 'array', items: SlaInfo });

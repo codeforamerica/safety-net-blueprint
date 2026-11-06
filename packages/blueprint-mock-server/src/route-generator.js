@@ -8,7 +8,7 @@ import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expa
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
 import { addRoute, routesFrom, tagRoutesAddedBy, routeKey, templateOf } from './http/route-table.js';
-import { registerReadRoute, clearReadRoutes, heldHere } from './references.js';
+import { registerReadRoute, clearReadRoutes, heldHere, referencesByTarget } from './references.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -41,6 +41,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { operationsOf } from './operation-calls.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
+import { editableResources, assembleEditable, createEditablePatchHandler } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
@@ -389,7 +390,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
       if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
       if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
-      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
+      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps, { defaults: requiredDefaults });
       // A machine may guard the creation of its own object. There is no record
       // yet, so its guards see only the body and the caller.
       const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
@@ -495,7 +496,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps, { defaults: subRequiredDefaults });
           // The machines guarding this create, matched on the path as the API
           // document writes it, without the server's base.
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
@@ -650,8 +651,9 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   // collection only that server held isn't checked here.
   clearReadRoutes();
 
-  // Every operation in the set, for checking a call a write carries.
-  deps = { ...deps, operations: operationsOf(apiSpecs) };
+  // Every operation in the set, for checking a call a write carries, and
+  // every field naming a record of each resource, for what a delete does.
+  deps = { ...deps, operations: operationsOf(apiSpecs), referencesTo: referencesByTarget(apiSpecs) };
 
   const allEndpoints = [];
 
@@ -710,14 +712,14 @@ function buildResourceItemPathMap(apiSpecs) {
 }
 
 /**
- * Build a map from resource name (path segment) to DB collection name.
- * Scans collection endpoints (no path params) and calls deriveCollectionName
- * on each, using the same logic as the route generator for CRUD routes.
+ * Build a map from a resource's schema name to its DB collection name.
  *
- * e.g. "children" → "childrens", "applications" → "applications"
+ * A composition names a resource by the schema its endpoints return
+ * (`ApplicationMember`), as x-relationship does. Each endpoint answering with
+ * a record names its schema; the collection is the one the route generator
+ * stores that path's records in.
  *
- * Used by the composition assembler so resource names in composition YAML
- * resolve to the same collection names that CRUD routes write to.
+ * e.g. "Child" → "childrens", "Application" → "applications"
  *
  * @param {Array} apiSpecs - Array of API metadata objects from loadAllSpecs()
  * @returns {Map<string, string>}
@@ -726,19 +728,10 @@ function buildResourceCollectionNameMap(apiSpecs) {
   const map = new Map();
   for (const spec of apiSpecs) {
     for (const endpoint of (spec.endpoints || [])) {
-      // Skip item endpoints (e.g. /resources/{id}) — those end with a path param.
-      // Include collection endpoints (e.g. /resources, /parents/{id}/children).
-      if (endpoint.path.trimEnd().endsWith('}')) continue;
+      const name = endpoint.responseSchemaRef?.match(/^#\/components\/schemas\/(.+)$/)?.[1];
+      if (!name || map.has(name)) continue;
       const collectionName = deriveCollectionName(endpoint.path, spec.serverBasePath || '');
-      if (!collectionName) continue;
-      const basePath = spec.serverBasePath || '';
-      const relativePath = basePath && endpoint.path.startsWith(basePath)
-        ? endpoint.path.slice(basePath.length)
-        : endpoint.path;
-      const resourceName = relativePath.split('/').filter(Boolean).pop();
-      if (resourceName && !map.has(resourceName)) {
-        map.set(resourceName, collectionName);
-      }
+      if (collectionName) map.set(name, collectionName);
     }
   }
   return map;
@@ -757,10 +750,11 @@ function buildResourceCollectionNameMap(apiSpecs) {
  * @returns {Array} Registered endpoint info
  */
 export function registerCompositionRoutes(routes, compositionFiles = [], apiSpecs = [], deps = {}) {
-  const { store } = deps;
+  const { store, stepCalls } = deps;
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
+  const editables = editableResources(apiSpecs, resourceCollectionNameMap);
 
   for (const { domain, doc, filePath, relativePath, api } of compositionFiles) {
     const table = routesFrom(routes, relativePath ?? filePath);
@@ -812,7 +806,36 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
       const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
-      if (composition.compositeType === 'sectionView') {
+      if (composition.compositeType === 'editable') {
+        // Editable — the root under its key, includes keyed by id; changed
+        // with a JSON Patch through each record's own operations.
+        const patchBodyRef = apiSpec?.doc?.content?.paths?.[endpointPath]?.patch
+          ?.requestBody?.content?.['application/json-patch+json']?.schema?.$ref;
+        const requestSchema = { relativePath: apiSpec?.doc?.relativePath, ref: patchBodyRef, schema: { $ref: patchBodyRef } };
+        const editableOpts = { resources: editables, store, stepCalls, primaryParam, requestSchema };
+        addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
+          const result = assembleEditable(composition, params, editableOpts);
+          if (!result) {
+            return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} not found` }, { status: 404 });
+          }
+          return Response.json(result);
+        });
+        addRoute(table, 'PATCH', indexExpressPath,
+          withIdempotency(createEditablePatchHandler(composition, editableOpts), { required: true }, { store }));
+        for (const writeMethod of ['post', 'put', 'delete']) {
+          addRoute(table, writeMethod.toUpperCase(), indexExpressPath, () =>
+            Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'Change this composition with PATCH' },
+              { status: 405, headers: { Allow: 'GET, PATCH' } })
+          );
+        }
+
+        console.log(`    GET    ${indexExpressPath} - ${compositionName} editable composition`);
+        console.log(`    PATCH  ${indexExpressPath} - ${compositionName} editable composition`);
+        registeredEndpoints.push(
+          { method: 'GET', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} editable composition` },
+          { method: 'PATCH', path: fullPath, expressPath: indexExpressPath, description: `${compositionName} editable composition` }
+        );
+      } else if (composition.compositeType === 'sectionView') {
         // Section index
         addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
           const parentId = primaryParam ? params[primaryParam] : null;
@@ -887,7 +910,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
             routes, composition, compositionName, stateInfo, stateDefaults,
-            endpointPath, fullPath, basePath, deps
+            endpointPath, fullPath, basePath, { ...deps, rootCollectionName }
           );
           registeredEndpoints.push(...stateEndpoints);
         }
@@ -947,7 +970,7 @@ function loadStateDefaults(stateConfig, apiSpec) {
  * @returns {Array} Registered endpoint descriptors
  */
 function registerStateRoutes(routes, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath, deps = {}) {
-  const { store } = deps;
+  const { store, rootCollectionName } = deps;
   const bindParam = extractPrimaryParam(endpointPath);
   if (!bindParam) return [];
 
@@ -965,7 +988,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
 
   // GET /{section} — paginated list of state records for that section
   addRoute(routes, 'GET', sectionPath, (request, { params }) => {
-    const parent = store.findById(composition.resource, params[bindParam]);
+    const parent = store.findById(rootCollectionName, params[bindParam]);
     if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
 
     const query = queryOf(request);
@@ -984,7 +1007,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
   // PUT/PATCH /{section} — singleton write
   for (const method of ['put', 'patch']) {
     addRoute(routes, method.toUpperCase(), sectionPath, async (request, { params }) => {
-      const parent = store.findById(composition.resource, params[bindParam]);
+      const parent = store.findById(rootCollectionName, params[bindParam]);
       if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
       const sent = await jsonBody(request);
       const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;
@@ -995,7 +1018,7 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
   // PUT/PATCH /{section}/{itemId} — collection item write
   for (const method of ['put', 'patch']) {
     addRoute(routes, method.toUpperCase(), itemPath, async (request, { params }) => {
-      const parent = store.findById(composition.resource, params[bindParam]);
+      const parent = store.findById(rootCollectionName, params[bindParam]);
       if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
       const sent = await jsonBody(request);
       const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;

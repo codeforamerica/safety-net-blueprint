@@ -784,7 +784,8 @@ describe('Zod sweep — intake CRUD: applications & members', () => {
     const res = await updateApplicationVerification({
       client: intakeClient,
       path: { applicationId: crudAppId, verificationId: crudVerificationId },
-      body: { status: 'satisfied' } as any,
+      // status is the verification's state machine's to change, so update a field a client writes.
+      body: { category: 'income' } as any,
     });
     assert.equal(res.status, 200);
     assert.equal((res.data as { id: string }).id, crudVerificationId);
@@ -1792,7 +1793,19 @@ describe('Zod sweep — platform (extended)', () => {
 
 describe('Zod sweep — data-exchange (extended)', () => {
   let serviceCallId: string;
-  before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
+  // A call names the record it's for, which has to exist: a member, here.
+  let memberId: string;
+  before(async () => {
+    await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
+    const headers = { 'content-type': 'application/json', 'x-caller-id': 'caseworker-1', 'x-caller-roles': 'caseworker' };
+    const application = await (await fetch(`${BASE_URL}/intake/applications`, {
+      method: 'POST', headers, body: JSON.stringify({ programsAppliedFor: ['snap'] }),
+    })).json();
+    const member = await (await fetch(`${BASE_URL}/intake/applications/${application.id}/members`, {
+      method: 'POST', headers, body: JSON.stringify({ firstName: 'Call', lastName: 'Subject', roles: ['primary_applicant'] }),
+    })).json();
+    memberId = member.id;
+  });
 
   it('getService — response validates against schema', async () => {
     const res = await getService({ client: dataExchangeClient, path: { serviceId: SEED_SERVICE_ID } });
@@ -1803,9 +1816,10 @@ describe('Zod sweep — data-exchange (extended)', () => {
   it('createServiceCall — response validates against schema', async () => {
     const res = await createServiceCall({
       client: dataExchangeClient,
-      body: { serviceId: SEED_SERVICE_ID, requestingResourceId: '00000002-0000-4000-8000-000000000001' },
+      // Named as a member: the call's id is checked against its type.
+      body: { serviceId: SEED_SERVICE_ID, requestingResourceId: memberId, requestingResourceType: 'member' },
     });
-    assert.equal(res.status, 201);
+    assert.equal(res.status, 201, JSON.stringify(res.error));
     serviceCallId = (res.data as { id: string }).id;
     assert.ok(serviceCallId);
   });

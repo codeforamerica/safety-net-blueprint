@@ -585,13 +585,17 @@ $defs:
   #
   #   Body operators — special keys in a payload:
   #     $merge — copy all fields from a source object; explicit sibling keys override.
-  #              Use to create a new resource from an existing one with minimal changes:
-  #       - call:
-  #           POST: workflow/tasks
-  #           requestBody:
-  #             payload:
-  #               $merge: $object
-  #               status: pending
+  #              Use it to pass a procedure's arguments through to the call it
+  #              wraps, so only the arguments a caller gave are sent:
+  #       - id: scheduleTimer
+  #         parameters: [timerType, fireAfter, fireAt, fireOffset, calendarType]
+  #         call: requestTimer
+  #         with:
+  #           $merge: $params
+  #           timerId: "workflow.{$params.timerType}.{$object.id}"
+  #              Don't merge a stored record into a create: it copies the record's
+  #              id, timestamps and state fields, and a create with an id another
+  #              record has is refused. Name the fields the new record carries over.
   #     $push  — append a value to a named array field (PATCH only):
   #       requestBody:
   #         payload:

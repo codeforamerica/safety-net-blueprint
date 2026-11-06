@@ -81,7 +81,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Document"
         "422":
-          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
   /documents/{documentId}:
     parameters:
       - name: documentId
@@ -103,7 +103,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Document"
         "404":
-          $ref: ../../common/components/responses.yaml#/NotFound
+          $ref: ../../base/components/responses.yaml#/NotFound
 components:
   schemas:
     DocumentWritable:

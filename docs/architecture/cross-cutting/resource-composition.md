@@ -1,6 +1,6 @@
 # Resource Composition
 
-This document is the architecture reference for the resource composition pattern — the mechanism for declaratively defining composite views and associated composition-owned state resources across all Safety Net Blueprint domains. It covers the composition config format, assembly behavior, write path and links, field selection, filters, named views, derived fields, fragments, the `sectionView` composite type, composition state management, and overlay extensibility. The design draws from GraphQL's type system and the Backend-for-Frontend (BFF) deployment pattern, applied server-side at config time.
+This document is the architecture reference for the resource composition pattern — the mechanism for declaratively defining composite views and associated composition-owned state resources across all Safety Net Blueprint domains. It covers the composition config format, assembly behavior, write path and links, field selection, filters, named views, derived fields, fragments, the three composite types (`view`, `sectionView` and `editable`), composition state management, and overlay extensibility. The design draws from GraphQL's type system and the Backend-for-Frontend (BFF) deployment pattern, applied server-side at config time.
 
 ## Overview
 
@@ -12,7 +12,7 @@ The machine-readable structure also enables front-end integration. A `sectionVie
 
 The three components of the pattern:
 
-1. **Composition config** (`*-compositions.yaml`) — the single source of truth for a composite view. Declares the composite type, which resources are assembled and how they are bound and filtered, which fields are included, where state is tracked, and what endpoint the composite is served at. The composite type (`sectionView` or plain) determines the endpoint structure and assembly behavior.
+1. **Composition config** (`*-compositions.yaml`) — the single source of truth for a composite view. Declares the composite type, which resources are assembled and how they are bound and filtered, which fields are included, where state is tracked, and what endpoint the composite is served at. The composite type (`view`, the default; `sectionView`; or `editable`) determines the endpoint structure and assembly behavior.
 2. **Resolve pipeline** — reads composition configs at build time and generates an OpenAPI overlay adding all declared and derived endpoints to the spec — the OpenAPI document in the composition's domain that declares the resource its `resource:` names, whichever document that is — including composition state endpoints generated from `state:` declarations. Also injects `_links` into parent resource response schemas when `parentLink: true` is set.
 3. **Assembly runtime** — a generic engine that executes the resource queries declared in the config and returns the assembled response at request time. The mock server is the reference implementation; production adopters provide their own.
 
@@ -35,8 +35,8 @@ A composition definition:
 ```yaml
 compositions:
   {compositionId}:
-    compositeType: sectionView     # optional; omit for a plain composition
-    resource: {resource-name}      # required; collection → array, singleton → object
+    compositeType: view            # optional; view (default), sectionView or editable
+    resource: {SchemaName}         # required; by schema name, e.g. ApplicationMember; collection → array, singleton → object
     bind: {fieldName}              # optional; field on child matching parent ID; list for compound joins
     filter: "..."                  # optional; CEL expression, always applied
     fields: [field, field as alias]  # optional; field projection; omit for all fields
@@ -52,7 +52,7 @@ compositions:
       path: /applications/{applicationId}/{compositionId}
       methods: [get]               # optional; default [get]
       parentLink: true             # optional; default false
-    state:                         # optional; generates composition state endpoints
+    state:                         # optional; sectionView only; generates composition state endpoints
       schema:
         name: {SchemaName}         # PascalCase — drives generated OpenAPI schema names
         type: object
@@ -74,7 +74,7 @@ For compound joins (e.g., a resource keyed by both `memberId` and `programId`), 
 ```yaml
 include:
   benefits:
-    resource: member-benefits
+    resource: MemberBenefit
     bind: [memberId, programId]
 ```
 
@@ -130,7 +130,7 @@ For singleton resources, the object's fields are spread into the parent. For col
 # Config
 include:
   primaryAddress:
-    resource: application-addresses
+    resource: ApplicationAddress
     bind: applicationId
     filter: "type == 'primary'"
     flatten: true
@@ -185,7 +185,7 @@ derives:
 
 compositions:
   memberSummary:
-    resource: application-members
+    resource: ApplicationMember
     bind: applicationId
     derive:
       complete: { $ref: '#/derives/memberComplete' }  # reuse from derives map
@@ -200,7 +200,7 @@ Expressions use the same CEL syntax as state machine conditions. Derived fields 
 
 ## Composition state
 
-A composition can declare an owned `state:` resource that the framework creates, persists, and exposes as a first-class resource with generated endpoints and schemas.
+A `sectionView` composition can declare an owned `state:` resource that the framework creates, persists, and exposes as a first-class resource with generated endpoints and schemas.
 
 **Schema.** `schema:` declares the client-writable fields inline in the composition config. The `name` field (PascalCase) drives generated OpenAPI schema names; `properties` follows standard JSON Schema with `default` values applied on GET for unwritten fields. The resolve pipeline generates `{Name}Writable` (request body) and `{Name}` (full read response) in `components/schemas`. The framework adds the following fields to the read schema automatically:
 
@@ -223,7 +223,7 @@ GET always returns current state, using JSON Schema `default` values for unwritt
 
 For `sectionView` compositions, the cross-section collection endpoint is intentionally not generated — state is accessed per section, not as a cross-section aggregate.
 
-**Placement.** `state:` may appear at composition root level or, within a `sectionView`, at section level (applying only to that section). For `sectionView` compositions, granularity is auto-inferred: singleton-backed sections get one state record per section; collection-backed sections get one record per item.
+**Placement.** `state:` is allowed only on a `sectionView`, at its root or on a section (applying only to that section). Granularity is auto-inferred: singleton-backed sections get one state record per section; collection-backed sections get one record per item.
 
 **State machines.** A state machine can govern a `state:` resource following the same convention as other resources.
 
@@ -237,7 +237,7 @@ The `sectionView` composite type models the named-section navigation pattern: a 
 compositions:
   applicationReview:
     compositeType: sectionView
-    resource: applications
+    resource: Application
     endpoint:
       path: /applications/{applicationId}/review
       parentLink: true
@@ -251,36 +251,77 @@ compositions:
       methods: [put, patch]
     sections:
       identity:
-        resource: members
+        resource: ApplicationMember
         bind: applicationId
         index:
           filter: "roles.contains('primary_applicant')"
           fields: [name, dateOfBirth]
       household:
-        resource: household-info
+        resource: ApplicationHousehold
         bind: applicationId
       income:
-        resource: members
+        resource: ApplicationMember
         bind: applicationId
         index:
           fields: [*]
     panel:
       include:
         verifications:
-          resource: verifications
+          resource: Verification
           bind: applicationId
           filter: "category == $section.name"
 ```
 
 **Section index** (`GET /applications/{applicationId}/review`)
 
-The index is a navigation surface — sections default to link-only (`{ name, href }`), the opposite of the all-fields default for plain compositions and panels. `index:` opts into embedded data per section: `index: { fields: [...] }` embeds those fields; `index: { fields: [*] }` embeds all fields. The `href` pointing to the panel endpoint is always included, generated automatically from the endpoint path and section name.
+The index is a navigation surface — sections default to link-only (`{ name, href }`), the opposite of the all-fields default for views and panels. `index:` opts into embedded data per section: `index: { fields: [...] }` embeds those fields; `index: { fields: [*] }` embeds all fields. The `href` pointing to the panel endpoint is always included, generated automatically from the endpoint path and section name.
 
 **Panel** (`GET /applications/{applicationId}/review/{sectionName}`)
 
-Field and link defaults match plain compositions: all fields unless `fields:` is declared on the section, no links unless `links: true` is set. Path is derived: `{endpoint.path}/{$section.name}` — not declared separately. Assembles the matching section's resource plus everything in `panel.include:`. `$section.name` in filters resolves to the path parameter value. The section's `state:` fields are included automatically.
+Field and link defaults match views: all fields unless `fields:` is declared on the section, no links unless `links: true` is set. Path is derived: `{endpoint.path}/{$section.name}` — not declared separately. Assembles the matching section's resource plus everything in `panel.include:`. `$section.name` in filters resolves to the path parameter value. The section's `state:` fields are included automatically.
 
 **Enum byproduct.** Section keys in `sections:` generate a named enum type at resolve time, emitted into the companion schemas file. The name is derived from the composition key: PascalCase + `Sections` suffix (`applicationReview` → `ApplicationReviewSections`). This eliminates manually maintained enums whose valid values are defined by the composition's section structure.
+
+## editable
+
+The `editable` composite type is a composition a client can change as well as read. It's the records that change together, what domain-driven design calls an aggregate: an application with its members and incomes, for example. The client sends a JSON Patch (RFC 6902) to change any of them in one request.
+
+```yaml
+compositions:
+  applicationDetails:
+    compositeType: editable
+    resource: Application
+    include:
+      members:
+        resource: ApplicationMember
+        bind: applicationId
+      incomes:
+        resource: ApplicationIncome
+        bind: applicationId
+    endpoint:
+      path: /applications/{applicationId}/details
+      parentLink: true
+```
+
+**Generated operations.** Resolve generates a GET and a PATCH at the endpoint path (`getApplicationDetails`, `updateApplicationDetails`). The PATCH takes `application/json-patch+json` and requires an `Idempotency-Key`.
+
+**Response shape.** The root record sits under its resource name with a lowercase first letter (`application`). Each collection include is an object keyed by record id, so a patch path such as `/incomes/{incomeId}/amount` names the same record however the list changes. A singleton include is one record or null.
+
+```json
+{
+  "application": { "id": "abc-123", "status": "draft" },
+  "members": { "m-1": { "id": "m-1", "firstName": "Rosa" } },
+  "incomes": { "i-1": { "id": "i-1", "memberId": "m-1", "amount": 1100 } }
+}
+```
+
+**What it leaves out.** Records come whole. There's no `fields`, `filter` or `flatten`, and includes don't nest, because a patch has to see every record and know whose field it names. There's no `sections`, `panel` or `state`.
+
+**Applying a patch.** The server applies the patch to the document, works out which records it adds, changes and removes, and makes each change through that record's own operation (`createApplicationMember`, `updateApplicationIncome`, `deleteApplicationMember`), as the caller. Each operation's permissions, guards, `readOnly` fields and events apply. The patch is kept whole or not at all: if any change is refused, nothing is saved and no events are sent.
+
+- **New records.** A change may add a record under an id the client app chooses (`/members/{newId}`), and another change in the same patch may name it. A create takes an optional `id` for this (`NewId` in core's base contracts), and refuses one that's already taken with 409.
+- **Removed records.** Removing a record deletes it through its delete operation. Records that refer to it go with it where their reference declares `onDelete: cascade` (see [x-extensions](../x-extensions.md)); otherwise the delete is refused with 409.
+- **Errors**, as RFC 5789 sets out: 400 for a body that isn't a JSON Patch, 415 for another media type, 409 when the data changed since it was read (a `test` fails, a path names nothing, or a record's state refuses its change), and 422 for a change the record's own operation would refuse.
 
 ## Overlay extensibility
 
@@ -298,7 +339,7 @@ actions:
   - target: $.compositions.fosterCareHistory
     description: Add a California-specific foster care history composition
     add:
-      resource: foster-care-records
+      resource: FosterCareRecord
       bind: applicationId
       endpoint:
         path: /applications/{applicationId}/foster-care-history
@@ -406,16 +447,16 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 **What's being decided:** Whether the composition config should use an explicit `compositeType` field to select assembly behavior, or whether different behaviors should be inferred from config shape.
 
-**Background:** The composition pattern supports two assembly behaviors: a plain composition returning assembled resource data at a single endpoint, and `sectionView` generating an index plus per-section panel endpoints. These require different OpenAPI generation and assembly logic.
+**Background:** The composition pattern supports three assembly behaviors: a `view` returning assembled resource data at a single endpoint, and `sectionView` generating an index plus per-section panel endpoints, and `editable` taking a JSON Patch as well as answering reads. These require different OpenAPI generation and assembly logic.
 
 **Considerations:**
 - Inference from config shape is fragile: any heuristic (e.g., "has `sections:`") becomes a constraint on future config evolution. A new composite type would require a new inference rule with risk of ambiguity.
 - An explicit `compositeType` field is self-documenting and extensible: new types can be added without touching inference logic.
-- Omitting `compositeType` for plain compositions avoids noise in the simpler case — plain is the default.
+- Omitting `compositeType` for a view avoids noise in the simplest case — `view` is the default.
 
 **Options:**
 - **(A)** Infer from config shape — no explicit type field; simpler for simple configs; fragile as the schema evolves
-- **(B) ✓** Explicit `compositeType` field — `compositeType: sectionView` for sectionView; omit for plain; extensible, no inference ambiguity
+- **(B) ✓** Explicit `compositeType` field — `compositeType: sectionView` or `editable`; omit for `view`; extensible, no inference ambiguity
 
 **Decision:** Explicit discriminant (B). Inference is fragile and limits extensibility.
 
@@ -425,18 +466,18 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 **Status:** Decided: B
 
-**What's being decided:** Whether the named-section navigation pattern — a set of heterogeneous, independently addressable sections accessible via an index — should be a first-class composite type with generated structure, or assembled manually from plain compositions.
+**What's being decided:** Whether the named-section navigation pattern — a set of heterogeneous, independently addressable sections accessible via an index — should be a first-class composite type with generated structure, or assembled manually from views.
 
-**Background:** Benefits review workflows, interview flows, and multi-step case management screens share a common structure: a parent record (an application, a case) has several named sections, each backed by a different resource type, each individually addressable. Without a first-class type for this pattern, every domain implementing it would need to hand-assemble the section navigation from plain compositions — manually declaring a section index endpoint, per-section endpoints, a section enum, and section-scoped state paths.
+**Background:** Benefits review workflows, interview flows, and multi-step case management screens share a common structure: a parent record (an application, a case) has several named sections, each backed by a different resource type, each individually addressable. Without a first-class type for this pattern, every domain implementing it would need to hand-assemble the section navigation from views — manually declaring a section index endpoint, per-section endpoints, a section enum, and section-scoped state paths.
 
 **Considerations:**
-- A plain composition assembles resources but has no concept of named sections. Implementing a section navigation surface from plain compositions requires the consuming client to invent and maintain the section structure — it cannot be read from the API.
+- A view assembles resources but has no concept of named sections. Implementing a section navigation surface from views requires the consuming client to invent and maintain the section structure — it cannot be read from the API.
 - Carving out `sectionView` as a named type lets the framework generate the full section contract from a single config: section index, per-section panel paths, a generated sections enum, and section-scoped state endpoints. Adding a section in config is sufficient — no additional endpoint declarations, no enum update, no state path wiring.
 - The named-section pattern is common across case management vendors: ServiceNow's tabbed workspaces, Salesforce's multi-step Screen Flows, IBM Curam's section-based evidence pages all express a structurally similar concept. Making it a first-class type positions the blueprint's API surface to be legible to implementors familiar with those platforms.
 - Making it a type also makes the section structure machine-readable and discoverable from the API — clients read the section index to understand what sections exist and where they live, rather than relying on out-of-band documentation.
 
 **Options:**
-- **(A)** Manual assembly from plain compositions — maximum flexibility; no framework support; each domain reimplements section navigation; section structure not discoverable from the API
+- **(A)** Manual assembly from views — maximum flexibility; no framework support; each domain reimplements section navigation; section structure not discoverable from the API
 - **(B) ✓** `sectionView` as a named composite type — section index, panel paths, sections enum, and state endpoints generated from config; section structure machine-readable and API-discoverable
 
 **Decision:** First-class type (B). The pattern is common enough across domains and vendors to warrant framework support. Generated structure eliminates per-domain reimplementation and makes section contracts machine-readable.

@@ -60,7 +60,7 @@ test('compositions-schema structural requirements', async (t) => {
     domain: 'intake',
     compositions: {
       members: {
-        resource: 'application-members',
+        resource: 'ApplicationMember',
         bind: 'applicationId',
       },
     },
@@ -112,7 +112,7 @@ test('compositions-schema bind variants', async (t) => {
     return {
       version: '1.0',
       compositions: {
-        items: { resource: 'some-resource', bind },
+        items: { resource: 'SomeResource', bind },
       },
     };
   }
@@ -144,7 +144,7 @@ test('compositions-schema fields selection', async (t) => {
     return {
       version: '1.0',
       compositions: {
-        items: { resource: 'some-resource', fields },
+        items: { resource: 'SomeResource', fields },
       },
     };
   }
@@ -182,9 +182,9 @@ test('compositions-schema include map', async (t) => {
       version: '1.0',
       compositions: {
         application: {
-          resource: 'applications',
+          resource: 'Application',
           include: {
-            members: { resource: 'application-members', bind: 'applicationId' },
+            members: { resource: 'ApplicationMember', bind: 'applicationId' },
           },
         },
       },
@@ -198,10 +198,10 @@ test('compositions-schema include map', async (t) => {
       version: '1.0',
       compositions: {
         application: {
-          resource: 'applications',
+          resource: 'Application',
           include: {
             verifications: {
-              resource: 'verifications',
+              resource: 'Verification',
               bind: 'applicationId',
               filter: "category == 'identity'",
             },
@@ -218,7 +218,7 @@ test('compositions-schema include map', async (t) => {
       version: '1.0',
       compositions: {
         application: {
-          resource: 'applications',
+          resource: 'Application',
           include: {
             members: { bind: 'applicationId' },
           },
@@ -234,13 +234,13 @@ test('compositions-schema include map', async (t) => {
       version: '1.0',
       compositions: {
         application: {
-          resource: 'applications',
+          resource: 'Application',
           include: {
             members: {
-              resource: 'application-members',
+              resource: 'ApplicationMember',
               bind: 'applicationId',
               include: {
-                income: { resource: 'member-incomes', bind: 'memberId' },
+                income: { resource: 'Income', bind: 'memberId' },
               },
             },
           },
@@ -265,7 +265,7 @@ test('compositions-schema endpoint declaration', async (t) => {
       version: '1.0',
       compositions: {
         members: {
-          resource: 'application-members',
+          resource: 'ApplicationMember',
           endpoint: { path: '/applications/{applicationId}/members-summary' },
         },
       },
@@ -279,7 +279,7 @@ test('compositions-schema endpoint declaration', async (t) => {
       version: '1.0',
       compositions: {
         members: {
-          resource: 'application-members',
+          resource: 'ApplicationMember',
           endpoint: {
             path: '/applications/{applicationId}/members-summary',
             methods: ['get'],
@@ -295,7 +295,7 @@ test('compositions-schema endpoint declaration', async (t) => {
   await t.test('every composition declares an endpoint', () => {
     const { valid, errors } = validateAsWritten({
       version: '1.0', domain: 'intake',
-      compositions: { members: { resource: 'application-members' } },
+      compositions: { members: { resource: 'ApplicationMember' } },
     });
     assert.ok(!valid);
     assert.ok(errors.some((e) => e.params?.missingProperty === 'endpoint'), errorPaths(errors).join('; '));
@@ -303,7 +303,7 @@ test('compositions-schema endpoint declaration', async (t) => {
 
   await t.test('an endpoint path is one or more segments, with no trailing slash, and a URI template', () => {
     for (const path of ['applications/x', '/applications/{applicationId/review', '/', '/applications/', '//x']) {
-      const { valid } = validate({ version: '1.0', domain: 'intake', compositions: { m: { resource: 'applications', endpoint: { path } } } });
+      const { valid } = validate({ version: '1.0', domain: 'intake', compositions: { m: { resource: 'Application', endpoint: { path } } } });
       assert.ok(!valid, path);
     }
   });
@@ -313,7 +313,7 @@ test('compositions-schema endpoint declaration', async (t) => {
       version: '1.0',
       compositions: {
         members: {
-          resource: 'application-members',
+          resource: 'ApplicationMember',
           endpoint: { methods: ['get'] },
         },
       },
@@ -327,7 +327,7 @@ test('compositions-schema endpoint declaration', async (t) => {
       version: '1.0',
       compositions: {
         members: {
-          resource: 'application-members',
+          resource: 'ApplicationMember',
           endpoint: { path: '/applications/{id}/members', methods: ['invalidVerb'] },
         },
       },
@@ -349,7 +349,8 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
-          resource: 'applications',
+          compositeType: 'sectionView',
+          resource: 'Application',
           state: {
             schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
           },
@@ -365,7 +366,8 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
-          resource: 'applications',
+          compositeType: 'sectionView',
+          resource: 'Application',
           state: {
             schema: { name: 'ReviewProgress', type: 'object', properties: { status: { type: 'string' } } },
             methods: ['patch'],
@@ -383,7 +385,8 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
-          resource: 'applications',
+          compositeType: 'sectionView',
+          resource: 'Application',
           state: { methods: ['put'] },
         },
       },
@@ -397,7 +400,8 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
-          resource: 'applications',
+          compositeType: 'sectionView',
+          resource: 'Application',
           state: { schema: { type: 'object' } },
         },
       },
@@ -411,7 +415,8 @@ test('compositions-schema state resource', async (t) => {
       version: '1.0',
       compositions: {
         reviewContext: {
-          resource: 'applications',
+          compositeType: 'sectionView',
+          resource: 'Application',
           state: {
             schema: { name: 'ReviewProgress', type: 'object' },
             methods: ['get'],
@@ -436,10 +441,10 @@ test('compositions-schema sectionView', async (t) => {
     compositions: {
       reviewContext: {
         compositeType: 'sectionView',
-        resource: 'applications',
+        resource: 'Application',
         sections: {
-          identity: { resource: 'members', bind: 'applicationId' },
-          household: { resource: 'household-info', bind: 'applicationId' },
+          identity: { resource: 'ApplicationMember', bind: 'applicationId' },
+          household: { resource: 'ApplicationHousehold', bind: 'applicationId' },
         },
         endpoint: { path: '/applications/{applicationId}/review' },
       },
@@ -457,14 +462,14 @@ test('compositions-schema sectionView', async (t) => {
       compositions: {
         reviewContext: {
           compositeType: 'sectionView',
-          resource: 'applications',
+          resource: 'Application',
           sections: {
-            identity: { resource: 'members', bind: 'applicationId' },
+            identity: { resource: 'ApplicationMember', bind: 'applicationId' },
           },
           panel: {
             include: {
               verifications: {
-                resource: 'verifications',
+                resource: 'Verification',
                 bind: 'applicationId',
                 filter: "category == $section.name",
               },
@@ -484,10 +489,10 @@ test('compositions-schema sectionView', async (t) => {
       compositions: {
         reviewContext: {
           compositeType: 'sectionView',
-          resource: 'applications',
+          resource: 'Application',
           sections: {
             identity: {
-              resource: 'members',
+              resource: 'ApplicationMember',
               bind: 'applicationId',
               fields: ['name', 'dateOfBirth'],
               state: {
@@ -509,10 +514,10 @@ test('compositions-schema sectionView', async (t) => {
       compositions: {
         reviewContext: {
           compositeType: 'sectionView',
-          resource: 'applications',
+          resource: 'Application',
           sections: {
             household: {
-              resource: 'household-info',
+              resource: 'ApplicationHousehold',
               bind: 'applicationId',
               missing: 'empty',
             },
@@ -531,7 +536,7 @@ test('compositions-schema sectionView', async (t) => {
       compositions: {
         reviewContext: {
           compositeType: 'unknownType',
-          resource: 'applications',
+          resource: 'Application',
           endpoint: { path: '/applications/{applicationId}/review' },
         },
       },
@@ -542,3 +547,87 @@ test('compositions-schema sectionView', async (t) => {
 
 });
 
+
+test('compositions-schema editable', async (t) => {
+  const editable = (extra = {}, include = {}) => ({
+    version: '1.0',
+    compositions: {
+      applicationDetails: {
+        compositeType: 'editable',
+        resource: 'Application',
+        include: { members: { resource: 'ApplicationMember', bind: 'applicationId', ...include } },
+        ...extra,
+      },
+    },
+  });
+
+  await t.test('an editable composition with includes is valid', () => {
+    const { valid, errors } = validate(editable());
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('records come whole: fields is refused on the composition and its includes', () => {
+    assert.ok(!validate(editable({ fields: ['id', 'status'] })).valid);
+    assert.ok(!validate(editable({}, { fields: ['id', 'firstName'] })).valid);
+  });
+
+  await t.test('a view may still select fields', () => {
+    const doc = editable({ fields: ['id'] }, { fields: ['firstName'] });
+    doc.compositions.applicationDetails.compositeType = 'view';
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('filter and flatten are refused on an include', () => {
+    assert.ok(!validate(editable({}, { filter: "status == 'active'" })).valid);
+    assert.ok(!validate(editable({}, { flatten: true })).valid);
+  });
+
+  await t.test('includes do not nest', () => {
+    assert.ok(!validate(editable({}, {
+      include: { incomes: { resource: 'Income', bind: 'memberId' } },
+    })).valid);
+  });
+
+  await t.test('filter, flatten, sections and panel are refused on the composition', () => {
+    for (const extra of [{ filter: 'true' }, { flatten: true }, { sections: { s: { resource: 'X' } } }, { panel: { include: {} } }]) {
+      assert.ok(!validate(editable(extra)).valid, JSON.stringify(extra));
+    }
+  });
+
+  await t.test('a composition that is not editable may still filter its includes', () => {
+    const doc = editable({}, { filter: 'true' });
+    delete doc.compositions.applicationDetails.compositeType;
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('view may be written out, and is what no type means', () => {
+    const doc = editable({}, { filter: 'true' });
+    doc.compositions.applicationDetails.compositeType = 'view';
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('sections and panel belong to sectionView only', () => {
+    for (const extra of [{ sections: { s: { resource: 'X' } } }, { panel: { include: {} } }]) {
+      const doc = editable(extra);
+      doc.compositions.applicationDetails.compositeType = 'view';
+      assert.ok(!validate(doc).valid, JSON.stringify(extra));
+    }
+  });
+
+  await t.test('state belongs to sectionView only', () => {
+    const state = { schema: { name: 'ReviewProgress', type: 'object' } };
+    for (const type of ['view', 'editable']) {
+      const doc = editable({ state });
+      doc.compositions.applicationDetails.compositeType = type;
+      assert.ok(!validate(doc).valid, type);
+    }
+  });
+
+  await t.test('an endpoint declares only get; patch comes from the type', () => {
+    const doc = editable({ endpoint: { path: '/applications/{applicationId}/details', methods: ['get', 'patch'] } });
+    assert.ok(!validateAsWritten(doc).valid);
+  });
+});

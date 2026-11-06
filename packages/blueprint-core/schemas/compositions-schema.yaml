@@ -9,18 +9,18 @@
 #   compositions:
 #     applicationReview:
 #       compositeType: sectionView
-#       resource: applications
+#       resource: Application
 #       sections:
 #         identity:
-#           resource: members
+#           resource: ApplicationMember
 #           bind: applicationId
 #           index:
 #             fields: [name, dateOfBirth]
-#         household: { resource: household-info, bind: applicationId }
+#         household: { resource: ApplicationHousehold, bind: applicationId }
 #       panel:
 #         include:
 #           verifications:
-#             resource: verifications
+#             resource: Verification
 #             bind: applicationId
 #             filter: "category == $section.name"
 #       endpoint:
@@ -77,40 +77,38 @@ properties:
 $defs:
 
   Composition:
-    # Example — basic inline response composition:
-    #   members:
-    #     resource: application-members
-    #     bind: applicationId
-    #     filter: "status == 'active'"
-    #     fields: [firstName, lastName]
-    #     links: true
-    #     endpoint:
-    #       path: /applications/{applicationId}/members-summary
-    #
-    # Example — sectionView composite type:
-    #   reviewContext:
-    #     compositeType: sectionView
-    #     resource: applications
-    #     sections:
-    #       identity: { resource: members, bind: applicationId }
-    #     endpoint:
-    #       path: /applications/{applicationId}/review
+    # Three types, chosen by compositeType; each lists exactly what it allows.
+    description: >
+      A named composition declaration. compositeType chooses its schema:
+      view (the default), sectionView or editable.
+    if:
+      required: [compositeType]
+      properties: { compositeType: { const: sectionView } }
+    then:
+      $ref: "#/$defs/CompositionSectionView"
+    else:
+      if:
+        required: [compositeType]
+        properties: { compositeType: { const: editable } }
+      then:
+        $ref: "#/$defs/CompositionEditable"
+      else:
+        $ref: "#/$defs/CompositionView"
+
+  CompositionBase:
     type: object
-    description: A named composition declaration.
+    description: What every type of composition has.
     required:
       - resource
       - endpoint
-    additionalProperties: false
     properties:
       compositeType:
         type: string
-        enum: [sectionView]
-        description: >
-          Higher-level structural pattern. When present, composite-type-specific
-          properties apply (sections, panel for sectionView).
+        enum: [view, sectionView, editable]
+        default: view
+        description: Which type of composition this is. Each type's schema says what it is and allows.
       resource:
-        type: string
-        description: The backing REST resource name (kebab-case, matches the resource endpoint slug).
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       links:
@@ -124,9 +122,132 @@ $defs:
         description: >
           Singleton resources only. Default is null when not found;
           'empty' returns {} instead.
+      endpoint:
+        description: >
+          Where the composition is served. Every composition is reachable at the
+          path it declares; the path names which record the view is for.
+        $ref: "#/$defs/Endpoint"
+
+  CompositionViewBase:
+    description: >
+      What every view shares, a view and a sectionView alike: records put
+      together to read. Its endpoint answers get; change the records at their
+      own endpoints, which links can point to.
+    allOf:
+      - $ref: "#/$defs/CompositionBase"
+      - $ref: "#/$defs/ResponseShaping"
+    properties:
+      include:
+        $ref: "#/$defs/IncludeMap"
+
+  CompositionView:
+    # Example:
+    #   members:
+    #     resource: ApplicationMember
+    #     bind: applicationId
+    #     filter: "status == 'active'"
+    #     fields: [firstName, lastName]
+    #     links: true
+    #     endpoint:
+    #       path: /applications/{applicationId}/members-summary
+    description: >
+      compositeType view, the default: a view served at one endpoint.
+    allOf:
+      - $ref: "#/$defs/CompositionViewBase"
+    properties:
+      compositeType:
+        const: view
+    unevaluatedProperties: false
+
+  CompositionSectionView:
+    # Example:
+    #   reviewContext:
+    #     compositeType: sectionView
+    #     resource: Application
+    #     sections:
+    #       identity: { resource: ApplicationMember, bind: applicationId }
+    #     endpoint:
+    #       path: /applications/{applicationId}/review
+    description: >
+      compositeType sectionView: a view a worker steps through by section. Its
+      endpoint answers get with a section index, each section is served at its
+      own panel path, and review progress is kept in state.
+    allOf:
+      - $ref: "#/$defs/CompositionViewBase"
+    required: [compositeType]
+    properties:
+      compositeType:
+        const: sectionView
+      sections:
+        type: object
+        description: >
+          Named sections, each backed by a different resource type.
+          Each section is individually addressable at the derived panel path.
+        additionalProperties:
+          $ref: "#/$defs/Section"
+      panel:
+        type: object
+        description: >
+          Nodes added to every panel response in addition to the matching
+          section's resource.
+        additionalProperties: false
+        properties:
+          include:
+            $ref: "#/$defs/IncludeMap"
+      state:
+        $ref: "#/$defs/StateResource"
+    unevaluatedProperties: false
+
+  CompositionEditable:
+    # Example:
+    #   applicationDetails:
+    #     compositeType: editable
+    #     resource: Application
+    #     include:
+    #       members: { resource: ApplicationMember, bind: applicationId }
+    #       incomes: { resource: Income, bind: applicationId }
+    #     endpoint:
+    #       path: /applications/{applicationId}/details
+    description: >
+      compositeType editable: a composition a caller can change as well as
+      read, with a JSON Patch (RFC 6902, application/json-patch+json) sent as
+      its generated update operation. It's the records a change touches
+      together, what domain-driven design calls an aggregate. Each include is
+      keyed by record id, so a path like /incomes/{incomeId}/amount names one
+      record. Records come whole: there's no fields, filter, flatten,
+      sections or panel, since a patch has to see every record and know whose
+      field it names. A patch applies all or nothing: each change is made
+      through its record's own operation, as the caller, with that operation's
+      permissions, guards and events, and if any change is refused, nothing is
+      saved and no events are sent. A change may add a record under an id the
+      caller chooses, and another change in the same patch may name it.
+      A change that record's own operation would refuse, such as one to a
+      field marked readOnly, or to the field binding a record to the root, is
+      refused with 422. The update operation requires an Idempotency-Key, and
+      answers
+      200 with the document after the patch, 400 for a body that isn't a JSON
+      Patch, 409 when the data changed since it was read (a test fails, a path
+      names nothing, or a record's state refuses its change), and 415 for
+      another media type, as RFC 5789 sets out.
+    allOf:
+      - $ref: "#/$defs/CompositionBase"
+    required: [compositeType]
+    properties:
+      compositeType:
+        const: editable
+      include:
+        $ref: "#/$defs/IncludeMapEditable"
+    unevaluatedProperties: false
+
+  ResponseShaping:
+    description: >
+      How a view or sectionView, or one of its includes, shapes its response:
+      which records it returns, which of their fields, and where they sit. An
+      editable composition has none of these: a patch has to see every record,
+      whole, and know whose field it names.
+    properties:
       filter:
-        type: string
-        description: CEL expression evaluated per item at read time. Read-only.
+        $ref: "#/$defs/Filter"
       fields:
         $ref: "#/$defs/Fields"
       flatten:
@@ -135,55 +256,49 @@ $defs:
           Remove the composition key and promote the node's fields to the parent level.
           Mutually exclusive with links. Default false.
         default: false
-      include:
-        $ref: "#/$defs/IncludeMap"
-      endpoint:
-        description: >
-          Where the composition is served. Every composition is reachable at the
-          path it declares; the path names which record the view is for.
-        $ref: "#/$defs/Endpoint"
-      state:
-        $ref: "#/$defs/StateResource"
-      # sectionView-specific
-      sections:
-        type: object
-        description: >
-          sectionView only. Named sections, each backed by a different resource type.
-          Each section is individually addressable at the derived panel path.
-        additionalProperties:
-          $ref: "#/$defs/SectionNode"
-      panel:
-        type: object
-        description: >
-          sectionView only. Nodes added to every panel response in addition to
-          the matching section's resource.
-        additionalProperties: false
-        properties:
-          include:
-            $ref: "#/$defs/IncludeMap"
+
+  ResourceName:
+    type: string
+    pattern: '^[A-Z][A-Za-z0-9]*$'
+    description: >
+      A resource, named by the schema its endpoints return, as x-relationship
+      and a state machine's object name one: ApplicationMember, not the path's
+      members.
+
+  Filter:
+    type: string
+    description: >
+      CEL expression evaluated per record at read time; only records it's true
+      for are returned. Read-only: it doesn't limit what can be written.
 
   IncludeMap:
     type: object
     description: >
-      Map of named child compositions. Each key is the include name;
-      the value is a composition node.
+      Map of named includes in a view or sectionView. Each key is the include
+      name; the value is an include.
     additionalProperties:
-      $ref: "#/$defs/IncludeNode"
+      $ref: "#/$defs/Include"
 
-  IncludeNode:
-    # Example — child node with bind and field selection:
-    #   income:
-    #     resource: member-incomes
-    #     bind: memberId
-    #     fields: [amount, type]
+  IncludeMapEditable:
     type: object
-    description: A child composition node within an include map.
+    description: Map of named includes in an editable composition.
+    additionalProperties:
+      $ref: "#/$defs/IncludeEditable"
+
+  IncludeBase:
+    type: object
+    description: >
+      A related resource pulled into a composition, found by its binding
+      field; one entry under include. It answers with a list of the records it
+      finds, or, in an editable composition, an object of them keyed by id. An
+      include of a singleton resource (one per parent, at a path with no id of
+      its own) answers with that one record as an object, or null when there
+      isn't one.
     required:
       - resource
-    additionalProperties: false
     properties:
       resource:
-        type: string
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       links:
@@ -192,34 +307,53 @@ $defs:
       missing:
         type: string
         enum: [empty]
-      filter:
-        type: string
-      fields:
-        $ref: "#/$defs/Fields"
-      flatten:
-        type: boolean
-        default: false
+        description: >
+          Singleton resources only. Default is null when not found;
+          'empty' returns {} instead.
+
+  Include:
+    # Example — with bind and field selection:
+    #   income:
+    #     resource: Income
+    #     bind: memberId
+    #     fields: [amount, type]
+    description: An include in a view or sectionView.
+    allOf:
+      - $ref: "#/$defs/IncludeBase"
+      - $ref: "#/$defs/ResponseShaping"
+    properties:
       include:
         $ref: "#/$defs/IncludeMap"
+    unevaluatedProperties: false
 
-  SectionNode:
+  IncludeEditable:
+    description: >
+      An include in an editable composition: every record, whole, so a patch
+      can name any of them. Includes don't nest: every one sits directly under
+      the root, bound to it, so a patch path is always /{include}/{id}/{field},
+      and records refer to each other by id, as they're stored.
+    allOf:
+      - $ref: "#/$defs/IncludeBase"
+    unevaluatedProperties: false
+
+  Section:
     # Example — section with index config:
     #   income:
-    #     resource: member-incomes
+    #     resource: Income
     #     bind: applicationId
     #     index:
     #       fields: [id, memberId, type, amount]
     #
     # Example — section with index filter:
     #   demographics:
-    #     resource: application-members
+    #     resource: ApplicationMember
     #     bind: applicationId
     #     index:
     #       filter: "roles.contains('primary_applicant')"
     #       fields: [id, firstName, lastName]
     #
     # Example — link-only section (no index config):
-    #   household: { resource: household-info, bind: applicationId }
+    #   household: { resource: ApplicationHousehold, bind: applicationId }
     type: object
     description: A section in a sectionView composition.
     required:
@@ -227,7 +361,7 @@ $defs:
     additionalProperties: false
     properties:
       resource:
-        type: string
+        $ref: "#/$defs/ResourceName"
       bind:
         $ref: "#/$defs/Bind"
       fields:
@@ -240,15 +374,15 @@ $defs:
         additionalProperties: false
         properties:
           filter:
-            type: string
-            description: CEL expression applied when assembling this section's index entry.
+            $ref: "#/$defs/Filter"
+            description: Applied when assembling this section's index entry.
           fields:
             $ref: "#/$defs/Fields"
       missing:
         type: string
         enum: [empty]
       filter:
-        type: string
+        $ref: "#/$defs/Filter"
       include:
         $ref: "#/$defs/IncludeMap"
       sortable:
@@ -309,9 +443,12 @@ $defs:
           document that declares its resource, e.g. /applications/{applicationId}/review.
       methods:
         type: array
+        description: >
+          The methods the endpoint serves. Every composition serves get; an
+          editable one also serves patch, by its compositeType.
         items:
           type: string
-          enum: [get, post, put, patch, delete]
+          enum: [get]
         default: [get]
       parentLink:
         type: boolean
