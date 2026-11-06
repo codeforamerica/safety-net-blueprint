@@ -6,7 +6,7 @@
  *   - ids inside nested objects and arrays are checked too
  *   - an id left out or null is the schema's business, not this check's
  *   - `External` and `Polymorphic` name nothing to look up
- *   - a collection forwarded to a real service isn't checked here
+ *   - a collection routed to a real service isn't checked here
  *   - nothing is created under a parent the path names that isn't there
  *   - a link points at the related record's own route, parent ids and all,
  *     and is left out when no loaded API serves it
@@ -303,9 +303,9 @@ describe('a record under another parent', () => {
   });
 });
 
-describe('a collection forwarded to a real service', () => {
+describe('a collection routed to a real service', () => {
   test('isn\'t checked here, since its records live there', async () => {
-    mock = await boot({ forwarding: [{ endpoint: 'GET /demo/members/{memberId}', to: 'http://127.0.0.1:9' }] });
+    mock = await boot({ routing: [{ operation: 'getMember', to: 'http://127.0.0.1:9' }] });
     const { status } = await send('POST', '/demo/incomes', { memberId: NOBODY, amount: 900 });
     assert.strictEqual(status, 201);
   });

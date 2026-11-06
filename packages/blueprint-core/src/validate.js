@@ -99,6 +99,7 @@ export function validate(docs) {
     // Computed once, and only when the set has scenarios, or state machines
     // calling operations, to check.
     operations: readOperations(docs),
+    routeOwners: routeOwners(docs),
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -699,6 +700,38 @@ function eventIndex(docs) {
 }
 
 /**
+ * Routes declared by more than one OpenAPI document, as the mock would serve
+ * them: the method, and the path under the base of the document's localhost
+ * server, or none. Each document after the first to declare one is listed
+ * with the document that already did.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { key: string, file: string }[]>} relativePath → its collisions
+ */
+function routeOwners(docs) {
+  const operations = readOperations(docs);
+  if (!operations) return new Map();
+  const bases = new Map();
+  for (const doc of docs.filter((d) => d.type === 'openapi')) {
+    const local = (doc.content?.servers ?? []).find((server) => server?.url?.includes('localhost'));
+    let base = '';
+    try { base = local ? new URL(local.url).pathname.replace(/\/$/, '') : ''; } catch { /* no base */ }
+    bases.set(doc.relativePath, base);
+  }
+  const owner = new Map();
+  const collisions = new Map();
+  for (const operation of operations.all.filter((o) => o.kind === 'openapi')) {
+    const key = `${operation.method} ${bases.get(operation.file) ?? ''}${operation.path}`;
+    const first = owner.get(key);
+    if (!first) { owner.set(key, operation.file); continue; }
+    if (first === operation.file) continue;
+    if (!collisions.has(operation.file)) collisions.set(operation.file, []);
+    collisions.get(operation.file).push({ key, file: first });
+  }
+  return collisions;
+}
+
+/**
  * Channels written by hand that resolve generates.
  *
  * An event generated from the contracts has one source. A hand-written channel
@@ -768,6 +801,15 @@ function validateDoc(doc, context) {
 
   switch (doc.type) {
     case 'openapi': {
+      // A request goes to one operation: a route another document already
+      // declares would be two contracts for it, and the mock refuses to start.
+      for (const { key, file } of context.routeOwners?.get(doc.relativePath) ?? []) {
+        errors.push({
+          rule: 'route-collision',
+          message: `${key} is also declared by ${file}; a request to it can reach only one. Serve one of them under a different path or server.`,
+          path: doc.path,
+        });
+      }
       // An id is how an operation is found within its document, so it's one
       // operation's only (OpenAPI: unique among all operations described).
       for (const operation of context.operations?.repeated ?? []) {

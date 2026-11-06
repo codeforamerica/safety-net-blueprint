@@ -478,6 +478,8 @@ export interface Operation {
   path?: string;
   /** An AsyncAPI operation's action. */
   action?: 'send' | 'receive';
+  /** The event type an AsyncAPI operation sends or receives. */
+  event?: string | null;
 }
 
 export interface Operations {

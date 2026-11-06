@@ -12,6 +12,7 @@
  */
 
 import { eventBus } from './event-bus.js';
+import { deliverEvent } from './routing.js';
 import { theSystem } from './auth-context.js';
 import { executeTransition, performerFor } from './state-machine-runner.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
@@ -222,7 +223,17 @@ function aboutOwnResource(type, domain, eventName) {
   return eventDomain === domain && resource === eventName;
 }
 
-export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null) {
+/**
+ * @param {object[]} allStateMachines
+ * @param {object[]} [allSlaTypes]
+ * @param {object[]} [apiSpecs]
+ * @param {object} store
+ * @param {object|null} [stepCalls]
+ * @param {{ receives: Array<{ api: string, event: string, id: string, entry: object }>, apiOfFile: Map<string, string> }} [routedEvents]
+ *   The received events routing sends elsewhere (routing.js); read when an
+ *   event fires, so it can be filled in after this registers.
+ */
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null, routedEvents = { receives: [], apiOfFile: new Map() }) {
   currentStepCalls = stepCalls;
   // Replace rather than accumulate. Registering twice — a second server in
   // the same process, or a page rebooting one from an edited contract set —
@@ -255,10 +266,18 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
   }
 
   // Each subscription to an event's type handles it, in order with the
-  // events before it that share its partitionkey (inOrder below).
+  // events before it that share its partitionkey (inOrder below). One whose
+  // API's receive operation is routed doesn't run here: the event is
+  // delivered to whoever answers it instead, once, however many of the API's
+  // machines react to it.
   currentDispatch = (event) => {
+    const routed = routedEvents.receives.filter((receive) => eventTypeMatches(event.type, receive.event));
+    for (const receive of routed) deliverEvent(event, receive);
     for (const { smEntry, entry } of machineEventSubs) {
-      if (eventTypeMatches(event.type, entry.type)) inOrder(event.partitionkey, () => react(smEntry, entry, event));
+      if (!eventTypeMatches(event.type, entry.type)) continue;
+      const api = routedEvents.apiOfFile.get(smEntry.api?.relativePath);
+      if (routed.some((receive) => receive.api === api)) continue;
+      inOrder(event.partitionkey, () => react(smEntry, entry, event));
     }
   };
 

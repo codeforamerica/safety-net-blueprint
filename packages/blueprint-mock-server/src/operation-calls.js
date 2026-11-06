@@ -59,12 +59,19 @@ export function operationsOf(apiSpecs) {
           bodies,
           follow,
           bodyRequired: Boolean(follow(operation.requestBody)?.required),
+          // What it answers, by status, for checking a routed handler's response.
+          responses: operation.responses ?? {},
           relativePath: api.relativePath,
         });
       }
     }
   }
   const found = extract((apiSpecs ?? []).map((api) => api.doc).filter(Boolean), 'operations');
+  // The API each belongs to, as core names it.
+  for (const operation of found?.all ?? []) {
+    const details = index.get(`${operation.file}#${operation.id}`);
+    if (details) details.api = operation.api;
+  }
   const lookup = (ref) => found?.find(ref) ?? { candidates: [] };
   return {
     get(ref) {

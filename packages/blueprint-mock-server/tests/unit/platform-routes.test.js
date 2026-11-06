@@ -172,3 +172,18 @@ test('contractOverrides — registries are served from the contracts, every type
     assert.strictEqual((await call('getRegistryEntry', '/platform/registry/sources/z', { type: 'sources', entryId: 'z' })).status, 404);
   });
 });
+
+test('an override finds its route by an id one API has, or by $apis.<api>.<id>', () => {
+  // An id is unique only within its document, so two APIs may declare one.
+  const route = (api) => ({ operationId: 'search', api, domain: null, mock: false, handler: () => new Response(api) });
+  const routes = new Map([['GET /intake/search', route('intake')], ['GET /workflow/search', route('workflow')]]);
+  const mine = () => new Response('override');
+
+  const bare = overrideByOperationId(routes, { search: mine });
+  assert.deepStrictEqual(bare, { applied: [], unmatched: ['search'] }, 'a bare id two APIs have matches neither');
+
+  const qualified = overrideByOperationId(routes, { '$apis.workflow.search': mine });
+  assert.deepStrictEqual(qualified, { applied: ['GET /workflow/search'], unmatched: [] });
+  assert.strictEqual(routes.get('GET /workflow/search').handler, mine);
+  assert.notStrictEqual(routes.get('GET /intake/search').handler, mine);
+});

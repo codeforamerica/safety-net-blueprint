@@ -44,6 +44,7 @@ export function apiNameOf(relativePath) {
  * @property {string} [method] - An OpenAPI operation's, upper case
  * @property {string} [path] - An OpenAPI operation's path, as the document writes it
  * @property {'send'|'receive'} [action] - An AsyncAPI operation's
+ * @property {string|null} [event] - The event type an AsyncAPI operation sends or receives
  */
 
 /**
@@ -94,7 +95,12 @@ export function readOperations(docs) {
     if (doc.type === 'openapi') fromPaths(doc.content?.paths, doc.relativePath);
     if (doc.type === 'asyncapi') {
       for (const [id, operation] of Object.entries(doc.content?.operations ?? {})) {
-        add({ id, api: apiNameOf(doc.relativePath), file: doc.relativePath, kind: 'asyncapi', action: operation?.action });
+        // The event it sends or receives: its channel's address, or its key
+        // when the channel is a reference to another document's.
+        const key = /^#\/channels\/([^/]+)$/.exec(operation?.channel?.$ref ?? '')?.[1];
+        const channel = key ? doc.content?.channels?.[key] : null;
+        const event = channel?.address ?? key ?? null;
+        add({ id, api: apiNameOf(doc.relativePath), file: doc.relativePath, kind: 'asyncapi', action: operation?.action, event });
       }
     }
   }

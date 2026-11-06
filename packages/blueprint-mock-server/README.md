@@ -185,7 +185,7 @@ the default adapter in place.
 | `basePath` | `''` | A path prefix to strip before matching |
 | `baseUrl` | `''` | Base for `Location` headers |
 | `seed` | `true` | Seed from the artifact's mock-data documents |
-| `forwarding` | `[]` | Domains and endpoints to send to a real service — see [Forwarding](../../docs/guides/mock-server.md#forwarding-to-a-real-service) |
+| `routing` | `[]` | Domains, APIs and operations a real service or a `handler` answers — see [Routing](../../docs/guides/mock-server.md#routing-to-a-real-service) |
 
 `basePath` matters when the page is not at the root of its origin. GitHub Pages
 serves a project site from `/<repo>/`, so a request for `/intake/applications`

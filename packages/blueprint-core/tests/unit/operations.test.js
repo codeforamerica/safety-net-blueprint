@@ -47,7 +47,7 @@ describe('extract(docs, \'operations\')', () => {
     assert.deepEqual(operations.find('listTasks').operation,
       { id: 'listTasks', api: 'workflow', file: 'domains/workflow/workflow-openapi.yaml', kind: 'openapi', method: 'GET', path: '/tasks' });
     assert.deepEqual(operations.find('receiveIntakeApplicationSubmitted').operation,
-      { id: 'receiveIntakeApplicationSubmitted', api: 'workflow', file: 'domains/workflow/workflow-events-asyncapi.yaml', kind: 'asyncapi', action: 'receive' });
+      { id: 'receiveIntakeApplicationSubmitted', api: 'workflow', file: 'domains/workflow/workflow-events-asyncapi.yaml', kind: 'asyncapi', action: 'receive', event: 'intake.application.submitted' });
   });
 
   test('a bare id two APIs declare is ambiguous, and qualifying it by API finds one', () => {
@@ -130,5 +130,25 @@ describe('a state machine\'s call to an operation', () => {
   test('naming an id nothing has, or an API that hasn\'t it, is an error', () => {
     assert.deepEqual(rules('nope').map((e) => e.rule), ['unknown-operation']);
     assert.deepEqual(rules('$apis.intake.listTasks').map((e) => e.rule), ['unknown-operation']);
+  });
+});
+
+describe('two OpenAPI documents declaring one route', () => {
+  test('is a route-collision error on the second, naming the first', async () => {
+    const { validate } = await import('../../src/validate.js');
+    const adapter = (name) => toDoc({
+      path: `/set/domains/eligibility/${name}-openapi.yaml`,
+      relativePath: `domains/eligibility/${name}-openapi.yaml`,
+      type: 'openapi',
+      content: {
+        openapi: '3.1.0', info: { title: name, version: '1', 'x-domain': 'eligibility' },
+        servers: [{ url: 'http://localhost:9090' }],
+        paths: { '/evaluate/determination': { post: { operationId: `evaluate${name.length}`, responses: ok } } },
+      },
+    });
+    const errors = validate([adapter('eligibility-adapter'), adapter('other-adapter')]).results
+      .flatMap((r) => r.errors).filter((e) => e.rule === 'route-collision');
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].message, /POST \/evaluate\/determination is also declared by domains\/eligibility\/eligibility-adapter-openapi\.yaml/);
   });
 });
