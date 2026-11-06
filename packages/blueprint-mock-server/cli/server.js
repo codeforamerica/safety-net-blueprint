@@ -11,24 +11,18 @@ import { load as loadYaml } from 'js-yaml';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
-import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
-import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
-import { applyForwarding, forwardingFromDocument } from '../src/forwarding.js';
-import { registerPlatformRoutes, contractOverrides, refuseOwnRouteCollisions } from '../src/platform-routes.js';
-import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
+import { createDispatcher } from '../src/http/route-table.js';
+import { forwardingFromDocument } from '../src/forwarding.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
-import { initRulesIndex } from '../src/state-machine-engine.js';
-import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { seedAllDatabases } from '../src/seeder.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, registerHttpStub, listStubs, listHttpStubs, removeStub, removeHttpStub, clearStubs, clearHttpStubs, clearAllStubs } from '../src/mock-stub-engine.js';
 import { registerConfigManaged } from '../src/config-registry.js';
-import { createStepCalls } from '../src/step-calls.js';
+import { assembleServer } from '../src/assemble-server.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -263,103 +257,31 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
 
 
-    // One route table for the whole server. Registration order is priority:
-    // addRoute keeps the first entry for a key, which is what Express's
-    // first-match-wins resolution did.
-    const routes = new Map();
-
-    // One route table for the whole server. Registration order is priority:
-    // addRoute keeps the first entry for a key, which is what Express's
-    // first-match-wins resolution did.
-    registerPlatformRoutes(routes, {
-      store,
-      apiNames: apiSpecs.map((a) => a.name),
-      readDocs,
-      configs: allConfigs,
-      seeded: Boolean(seedDir),
-    });
-
-
-    // A step's call to a record — a nested create, an update, another action —
-    // means what the API's route at that method and path means, as in a page.
-    const stepCalls = createStepCalls({ apiSpecs, stateMachines: allStateMachines, slaTypes: allSlaTypes, store });
-
-    // Register event subscriptions
-    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs, store, stepCalls);
-
-    // Stub dispatch is subscribed here rather than on import, since firing a
-    // stub emits an event and emitting writes through a store.
-    subscribeStubDispatch(store);
-
-    // Register API routes dynamically
+    // The same server a page builds from here on (src/assemble-server.js).
     const baseUrl = `http://${HOST}:${PORT}`;
-    if (allCompositions.length > 0) {
-      console.log('\nRegistering composition routes...');
-      registerCompositionRoutes(routes, allCompositions, apiSpecs, { store });
-    }
-
-    // Register rules evaluation routes and initialize the state machine rules index
-    if (allRulesFiles.length > 0) {
-      console.log('\nRegistering rules evaluation routes...');
-      registerRulesRoutes(routes, allRulesFiles, apiSpecs, allGraphs);
-      initRulesIndex(buildRulesIndex(allGraphs));
-    }
-
-    const allEndpoints = registerAllRoutes(routes, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, { store });
-
-    // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store, stepCalls });
-
-    // A few contract-declared endpoints cannot be served by generated CRUD.
-    // Matched by operationId, so adding a platform endpoint to the contract
-    // needs no code here, and an override that stops matching fails at boot.
-    const { applied, unmatched } = overrideByOperationId(routes, contractOverrides({ store, registries: allRegistries }));
-    for (const key of applied) console.log(`  ${key} - contract route, custom handler`);
-    if (unmatched.length > 0) {
-      console.warn(`  Note: no contract route declares ${unmatched.join(', ')} — not overridden`);
-    }
-
-    // Service-call creation is enriched with catalog-derived fields: serviceType
-    // and callMode come from the referenced ExternalService, and status starts
-    // pending. They are server-derived rather than client-provided, so they are
-    // passed around the request schema rather than through it.
-    //
-    // This was Express middleware. It is route-level composition now — wrapping
-    // one table entry instead of matching a path prefix — which is both more
-    // precise and the same mechanism #283 uses to substitute a real endpoint.
-    wrapRoute(routes, 'POST /data-exchange/service-calls', (next) => async (request, ctx) => {
-      const body = await jsonBody(request);
-      const service = body?.serviceId ? store.findById('services', body.serviceId) : null;
-      // The body is already read, so it is handed on through ctx — a Request
-      // body cannot be read twice.
-      return next(request, {
-        ...ctx,
-        body,
-        enrichmentData: service && {
-          serviceType: service.serviceType,
-          callMode: body.callMode ?? service.defaultCallMode,
-          status: 'pending',
-        },
-      });
-    });
-
-    // Last, so a route is forwarded whatever registered it, and before the
-    // dispatcher exists, so the first request is already answered the way the
-    // configuration says (#283).
+    let assembled;
     try {
-      refuseOwnRouteCollisions(routes, apiSpecs);
-      for (const key of applyForwarding(routes, forwarding ?? [])) {
-        console.log(`  FORWARD ${key}`);
-      }
+      assembled = assembleServer(
+        {
+          apiSpecs, stateMachines: allStateMachines, slaTypes: allSlaTypes, metrics: allMetrics,
+          configs: allConfigs, compositions: allCompositions, rulesFiles: allRulesFiles,
+          graphs: allGraphs, registries: allRegistries,
+        },
+        { store, readDocs, seeded: Boolean(seedDir), baseUrl, forwarding: forwarding ?? [] },
+      );
     } catch (err) {
       console.error(`Error: ${err.message}`);
       process.exit(1);
     }
+    const { routes, endpoints: allEndpoints, rpcEndpoints, overridden, forwarded } = assembled;
+    for (const key of overridden.applied) console.log(`  ${key} - contract route, custom handler`);
+    if (overridden.unmatched.length > 0) {
+      console.warn(`  Note: no contract route declares ${overridden.unmatched.join(', ')} — not overridden`);
+    }
+    for (const key of forwarded) console.log(`  FORWARD ${key}`);
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
-    // An action calling an operation as its caller sends the call through here.
-    stepCalls.serve(createDispatcher(routes));
     const server = createNodeServer(createDispatcher(routes));
 
     // Start the server — if the port is in use, kill the existing process and retry once.

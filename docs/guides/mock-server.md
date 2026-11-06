@@ -101,7 +101,7 @@ State machine operations use two headers to identify who is making the request:
 | Header | Description |
 |--------|-------------|
 | `X-Caller-Id` | ID of the acting user (used in `$caller.id` expressions, e.g., to assign a task to the claiming worker) |
-| `X-Caller-Roles` | Comma-separated roles (e.g., `caseworker,supervisor`). Operations with actor restrictions return 403 if none of the caller's roles match. |
+| `X-Caller-Roles` | Comma-separated roles (e.g., `caseworker,supervisor`). Operations with actor restrictions return 403 if none of the caller's roles match. Changing a field marked `readOnly` gets 422, whatever the roles: only the server's own calls, a state machine acting as the system, may set one. |
 
 ```bash
 curl -X POST http://localhost:1080/workflow/tasks/<id>/claim \
@@ -341,9 +341,9 @@ Forwarding applies to requests that come into the mock. Two things it does not r
 
 ## Scenarios
 
-A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has and refers only to earlier steps.
+A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has, refers only to earlier steps, and names only actors the scenario lists in `info.x-actors` (extensions.yaml).
 
-The same file runs as a test, is one of the tours in the demo page's Show me around — the walk-through among them, each drawn a step at a time — and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+The same file runs as a test, is one of the walkthroughs in the demo page's Show me around, drawn a step at a time, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
 
 - steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`

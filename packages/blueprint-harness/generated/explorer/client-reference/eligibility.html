@@ -105,7 +105,7 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-DeterminationWritable" class="nav-link">DeterminationWritable</a><a href="#type-Determination" class="nav-link">Determination</a><a href="#type-DeterminationCreate" class="nav-link">DeterminationCreate</a><a href="#type-DeterminationUpdate" class="nav-link">DeterminationUpdate</a><a href="#type-DeterminationList" class="nav-link">DeterminationList</a><a href="#type-Decision" class="nav-link">Decision</a><a href="#type-DecisionList" class="nav-link">DecisionList</a><a href="#type-DeterminationWritableWritable" class="nav-link">DeterminationWritableWritable</a><a href="#type-DeterminationWritable2" class="nav-link">DeterminationWritable2</a><a href="#type-DeterminationCreateWritable" class="nav-link">DeterminationCreateWritable</a><a href="#type-DeterminationListWritable" class="nav-link">DeterminationListWritable</a><a href="#type-DecisionWritable" class="nav-link">DecisionWritable</a><a href="#type-DecisionListWritable" class="nav-link">DecisionListWritable</a>
+        <a href="#type-DeterminationWritable" class="nav-link">DeterminationWritable</a><a href="#type-Determination" class="nav-link">Determination</a><a href="#type-DeterminationCreate" class="nav-link">DeterminationCreate</a><a href="#type-DeterminationUpdate" class="nav-link">DeterminationUpdate</a><a href="#type-DeterminationList" class="nav-link">DeterminationList</a><a href="#type-Decision" class="nav-link">Decision</a><a href="#type-DecisionList" class="nav-link">DecisionList</a><a href="#type-DeterminationWritableWritable" class="nav-link">DeterminationWritableWritable</a><a href="#type-DeterminationWritable2" class="nav-link">DeterminationWritable2</a><a href="#type-DeterminationCreateWritable" class="nav-link">DeterminationCreateWritable</a><a href="#type-DeterminationUpdateWritable" class="nav-link">DeterminationUpdateWritable</a><a href="#type-DeterminationListWritable" class="nav-link">DeterminationListWritable</a><a href="#type-DecisionWritable" class="nav-link">DecisionWritable</a><a href="#type-DecisionListWritable" class="nav-link">DecisionListWritable</a>
       </div>
       </div>
     </nav>
@@ -365,7 +365,7 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (13)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (14)</h2>
         <div id="type-DeterminationWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -390,7 +390,7 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Determination</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;in_progress&quot;, &quot;complete&quot;</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;completed&quot;</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -418,7 +418,7 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationUpdate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;in_progress&quot;, &quot;complete&quot;</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -502,6 +502,20 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationCreateWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationUpdateWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationUpdateWritable</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationUpdateWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationUpdateWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>

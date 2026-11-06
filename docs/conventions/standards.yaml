@@ -92,10 +92,46 @@ adopted:
     version: RFC 6901
     url: https://www.rfc-editor.org/rfc/rfc6901
     use: >
-      Use it to point at one field in one specific record, such as a
-      suggestion's path into the record it's about (`/members/0/income`),
+      Use it to point at one field in one specific record, such as a JSON
+      Patch's path into an editable composition (`/incomes/{incomeId}/amount`),
       or a value at a fixed place in a response, as a scenario's
-      `$response.body#/id` does.
+      `$response.body#/id` does. It addresses a list item only by position,
+      so key records by id wherever a path has to name one.
+
+  - name: JSON Patch
+    version: RFC 6902
+    url: https://www.rfc-editor.org/rfc/rfc6902
+    use: >
+      Use it to change several related records in one request: an editable
+      composition takes one as application/json-patch+json, applied all or
+      nothing, and a suggestion that proposes a change to data carries one.
+      An operation may carry members the RFC doesn't define, such as
+      evidence; the RFC says they're ignored.
+    details: blueprint-core/schemas/compositions-schema.yaml (CompositionEditable), docs/conventions/resources.yaml (editable_composition)
+
+  - name: OData referential actions
+    version: OData 4.01 CSDL, section 8.6 (OnDelete)
+    url: https://docs.oasis-open.org/odata/odata-csdl-xml/v4.01/odata-csdl-xml-v4.01.html
+    use: >
+      Use x-relationship's onDelete to say what deleting the named record does
+      to the record holding the field, with OData's names. cascade deletes it
+      too. Leaving onDelete out is OData's None: the delete is refused while any
+      record names it. SQL's ON DELETE actions are the origin; OData is the API
+      description standard that declares them.
+    exception: >
+      Only cascade is declared; SetNull and SetDefault aren't, until a contract
+      needs them. OData leaves the action unspecified when OnDelete is absent;
+      here, absent means None, so a contract always says what a delete does.
+    details: docs/architecture/x-extensions.md (x-relationship), docs/conventions/extensions.yaml (x-relationship)
+
+  - name: UUID
+    version: RFC 9562
+    url: https://www.rfc-editor.org/rfc/rfc9562
+    use: >
+      Use it for every record id (format: uuid). A caller may choose a new
+      record's id on create, so one request can name a record another change
+      in it creates.
+    details: blueprint-core/base-contracts/schemas/operations.yaml (NewId), docs/conventions/resources.yaml (create)
 
   - name: CEL
     url: https://github.com/google/cel-spec
@@ -111,7 +147,11 @@ adopted:
       Use methods, status codes and headers as RFC 9110 defines them. Use its
       conditional requests (ETag, If-Match) so a write based on an outdated
       read is refused instead of overwriting a newer change, and the
-      Idempotency-Key header (an IETF draft) to make a retried POST safe.
+      Idempotency-Key header (an IETF draft) to make a retried POST or a
+      composition's PATCH safe. For a PATCH, answer as RFC 5789 sets out: 400
+      for a malformed patch, 415 for a media type the operation doesn't take,
+      409 when the data changed since it was read, and 422 for a change that
+      can't be made.
     exception: >
       The mock server doesn't send ETags or check If-Match yet, and the
       framework contracts don't declare them.
@@ -126,6 +166,28 @@ borrowed:
       When you add or change a state machine step, use its name and shape
       where one fits. Don't adopt it wholesale.
     details: docs/architecture/cross-cutting/behavioral-contract-dsl.md (Decision 2)
+
+  - name: OpenAPI discriminator
+    url: https://spec.openapis.org/oas/v3.1.0#discriminator-object
+    use: >
+      A polymorphic reference names its type field and maps type values to
+      resources with x-relationship's discriminator, borrowing OpenAPI's
+      propertyName and mapping. As in OpenAPI, a value without a mapping is
+      taken as a name; here a resource's, in snake_case.
+    details: docs/architecture/x-extensions.md (x-relationship)
+
+  - name: JSON:API client-generated ids
+    url: https://jsonapi.org/format/#crud-creating-client-ids
+    use: >
+      A create may carry the id the caller chose; without one the server sets
+      it, and an id another record has is refused with 409.
+
+  - name: Domain-driven design aggregates
+    url: https://martinfowler.com/bliki/DDD_Aggregate.html
+    use: >
+      An editable composition is an aggregate: a root record and the records
+      changed with it, as one unit, all or nothing. Use the term when you
+      describe what an editable composition holds.
 
   - name: Amazon States Language
     url: https://states-language.net/spec.html

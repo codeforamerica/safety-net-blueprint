@@ -167,6 +167,11 @@ idempotency:
     - name: Idempotent-Replayed
       values: ["true", "false"]
       description: Indicates whether this response is a replay of a previous request
+      declared_by: |
+        The shared IdempotentReplayed header in the base components
+        (base/components/headers.yaml). An operation that lists
+        IdempotencyKeyParam lists this header on its success responses, under
+        the name Idempotent-Replayed.
 
   error_cases:
     - code: IDEMPOTENCY_KEY_REUSED

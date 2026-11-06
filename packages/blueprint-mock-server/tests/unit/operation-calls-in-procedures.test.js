@@ -18,7 +18,8 @@ import { createMockServer } from '../../src/browser.js';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const harness = resolve(packageRoot, '../blueprint-harness/generated/resolved');
-const MEMBER = '1b7d9e3f-2a4c-4e6b-8d0f-3c5e7a9b1d26';
+// What an informing suggestion is about has to exist: Rosa, seeded in the harness.
+const MEMBER = '11111111-1111-4111-8111-100000000001';
 
 /** The harness, with the Suggestion machine given more actions, procedures and reactions. */
 function contractsWith({ actions = [], procedures = [], on = [], dismissedOnlyBy = null }) {

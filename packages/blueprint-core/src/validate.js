@@ -18,6 +18,8 @@ import {
   buildResourceSchemaIndex,
   validateBindFields,
   validateFieldsArrays,
+  validateResourceNames,
+  validateEditableKeys,
   validateSortableConfig,
 } from './compositions.js';
 import { validateEvents } from './validator/event-validator.js';
@@ -40,6 +42,7 @@ import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
 import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
+import { polymorphicReferenceErrors } from './validator/polymorphic-validator.js';
 import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
 import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
 import { unlistedCapabilityNames, withCapability } from './capabilities.js';
@@ -121,10 +124,12 @@ export function validate(docs) {
   };
 
   const routeErrors = duplicateRoutes(docs);
+  const polymorphicErrors = polymorphicReferenceErrors(docs);
 
   const results = docs.map((doc) => {
     const { errors, warnings } = validateDoc(doc, context);
     errors.push(...(routeErrors.get(doc.path) ?? []));
+    errors.push(...(polymorphicErrors.get(doc.path) ?? []));
     return {
       path: doc.path,
       type: doc.type,
@@ -852,6 +857,8 @@ function validateDoc(doc, context) {
         doc: doc.content,
       };
       errors.push(
+        ...validateResourceNames(compositionDoc, context.resourceSchemaIndex),
+        ...validateEditableKeys(compositionDoc),
         ...validateBindFields(compositionDoc, context.resourceSchemaIndex),
         ...validateFieldsArrays(compositionDoc, context.resourceSchemaIndex),
         ...validateSortableConfig(compositionDoc)

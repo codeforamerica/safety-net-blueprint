@@ -192,7 +192,10 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
 
     create(collection, data) {
       const db = getDatabase(collection);
-      const id = randomUUID();
+      // A caller may choose the id (NewId in the base contracts); one already
+      // taken is refused, never overwritten.
+      const id = data.id ?? randomUUID();
+      if (store.findById(collection, id)) throw new Error(`${collection} already has a record with id ${id}`);
       const now = new Date().toISOString();
 
       const resource = {

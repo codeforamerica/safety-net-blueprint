@@ -1,0 +1,762 @@
+arazzo: 1.1.0
+info:
+  title: The framework's core features
+  version: 1.0.0
+  x-domain: intake
+  description: |
+    What the server does from the contracts alone, feature by feature. A household's SNAP application is the example throughout: it's created, read through compositions and edited through one, taken through its lifecycle, checked by rules, and traced in the event log.
+  x-actors:
+    - id: client
+      name: The client app
+      description: An app that calls the APIs, such as the one a caseworker uses.
+    - id: server
+      name: The server
+      description: Runs the contracts. In this demo, that's the mock server. The application's state machine runs there.
+    - id: developer
+      name: The developer
+      description: Runs the demo or test, and uses the mock server's own routes to set things up, like standing in for a scheduler.
+sourceDescriptions:
+  - name: intake
+    url: ../domains/intake/intake-openapi.yaml
+    type: openapi
+  - name: intakeRules
+    url: ../domains/intake/intake-rules-openapi.yaml
+    type: openapi
+  - name: documents
+    url: ../domains/document-management/document-management-openapi.yaml
+    type: openapi
+  - name: eligibilityRules
+    url: ../domains/eligibility/eligibility-rules-openapi.yaml
+    type: openapi
+  - name: events
+    url: ../base/domains/platform/platform-events-openapi.yaml
+    type: openapi
+  - name: mock
+    url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: the-explorer
+workflows:
+  - workflowId: resources
+    summary: Resources
+    description: |
+      - A resource's contract declares what a client app may write and what the server keeps, and the server serves both.
+      - It also checks relationships between records, takes uploads, and searches, sorts and pages lists, from declarations alone.
+    steps:
+      - stepId: createApplication
+        x-actors:
+          - client
+        description: |
+          Create an application
+
+          - The client app sent an `ApplicationCreate` and got back an `Application` — two schemas, not one. The contract declares the shape a client app may write separately from the shape the server keeps.
+          - `id`, `confirmationNumber`, `status`, `submittedAt`, `openedAt` are marked readOnly, so they are not on the shape the client app sent at all. The server filled them in because the contract says they exist.
+          - `programCount` is declared as a derived field, with the expression `this.programsAppliedFor.size()`. Nothing stores it: the server evaluates that expression every time the record is read.
+          - `channel` is an enum in the contract — online, phone, in_person, mail. A value outside that list is refused by the schema, and no validation was written for this endpoint to do it.
+          - `slaInfo` already has a running clock: the SLA contract says `snap_standard` assigns itself to every application for SNAP, runs 30 days, warns at 80% of it, and stops while `status` is withdrawn. The clock is a declaration, not a cron job somebody remembered to write.
+          - `201` and `400`, `422`, `500` are all declared on this operation, and the server worked out which one applied and returned it. None of them are canned.
+        operationId: $sourceDescriptions.intake.createApplication
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            programsAppliedFor:
+              - snap
+            channel: online
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/slaInfo/0/slaTypeCode == 'snap_standard'
+          - condition: $response.body#/slaInfo/0/status == 'active'
+        outputs:
+          id: $response.body#/id
+      - stepId: uploadDocument
+        x-actors:
+          - client
+        description: |
+          Upload a document
+
+          - This body is `multipart/form-data`, not JSON. The contract declares `file` with format: binary, which is how an OpenAPI document says bytes, and `documentTypeId`, `title` alongside it as ordinary fields. One operation in the whole set sends something that is not JSON, and it is the one most mocks fall over on.
+          - What came back describes the upload and does not contain it. The bytes were hashed as they were read and then dropped — `contentHash` and `sizeBytes` are kept on the version this created, which `latestVersionId` names, and the file itself is nowhere. Nothing the server holds can leak something nobody meant to share.
+        operationId: $sourceDescriptions.documents.uploadDocument
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          contentType: multipart/form-data
+          payload:
+            file:
+              fileName: april-pay-stub.txt
+              contentType: text/plain
+              content: |
+                Hashed on the way in, and then thrown away.
+            documentTypeId: proof-of-income
+            title: April pay stub
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: attachADocumentThatIsNotThere
+        x-actors:
+          - client
+        description: |
+          Attach a document that isn't there
+
+          - Refused with `422`. `proofOfIncomeDocumentId` declares `x-relationship` to document management's `Document`, so the server looked for that document and found none.
+          - The refusal names the field and the id, in the same shape as a schema error. The id is a valid uuid, so the schema had nothing to object to.
+          - The check crosses domains, from intake into document management, and nothing was written for it. Every field that declares a relationship is checked the same way, on every create and update.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            proofOfIncomeDocumentId: 00000000-0000-4000-8000-000000000000
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == 'proofOfIncomeDocumentId'
+      - stepId: attachTheDocument
+        x-actors:
+          - client
+        description: |
+          Edit and attach the document
+
+          - A third shape: `ApplicationUpdate` is what the client app may send here, and it is not `Application` either.
+          - `proofOfIncomeDocumentId` is the id of the `Document` the client app uploaded a moment ago, and `links.proofOfIncomeDocument` is where to read it. The field declares an `x-relationship` to document management's `Document` with style: links-only, so the response keeps the id and adds a link to the record, and nothing builds that URL in the client app.
+          - `updatedAt` moved on its own. Everything the request did not mention is as it was.
+          - `id`, `confirmationNumber`, `status` are not on `ApplicationUpdate` at all, so there is no way to send them and nothing to reject.
+          - `200` and `400`, `404`, `422`, `500` are all declared on this operation, and the server worked out which one applied and returned it. None of them are canned.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            programsAppliedFor:
+              - snap
+            channel: online
+            proofOfIncomeDocumentId: $steps.uploadDocument.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: listApplications
+        x-actors:
+          - client
+        description: |
+          List the applications
+
+          - `q`, `sort`, `limit` are in the request above, and `q`, `limit`, `offset`, `sort`, `status`, `channel` are all declared on the operation. Declaring them was the whole of the work — the searching, filtering and paging came with them.
+          - `x-sortable` lists `createdAt`, `updatedAt`, `submittedAt`, `status`, `channel` as the fields that may be sorted, and -createdAt as the order when a request does not say. Any other field is refused by name. The allowlist is that declaration — there is no check written for this endpoint.
+          - `items`, `total`, `limit`, `offset` — the page envelope is the contract's shape, not a convention the server chose.
+        operationId: $sourceDescriptions.intake.listApplications
+        parameters:
+          - reference: $components.parameters.caller
+          - name: q
+            in: query
+            value: online
+          - name: sort
+            in: query
+            value: "-createdAt"
+          - name: limit
+            in: query
+            value: "5"
+        successCriteria:
+          - condition: $statusCode == 200
+    outputs:
+      application: $steps.createApplication.outputs.id
+      document: $steps.uploadDocument.outputs.id
+  - workflowId: compositeViews
+    summary: Composite views
+    description: |
+      - A composite view puts several records together into one response, from a declaration in the contracts. A `view` is read at one endpoint; a `sectionView` is read section by section.
+    dependsOn:
+      - resources
+    steps:
+      - stepId: readTheSummary
+        x-actors:
+          - client
+        description: |
+          Read the application's summary
+
+          - `applicationSummary` is a `view`: the application's `programsAppliedFor`, `status` and `channel`, with its `members` alongside. Nothing stores this shape; the server assembles it from the records when the client app asks.
+          - Its fields choose what each part shows, so a summary carries only what a reader of a summary needs.
+        operationId: $sourceDescriptions.intake.getApplicationSummary
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: buildAView
+        x-actors:
+          - client
+        description: |
+          Build a view of the application
+
+          - Nothing stores this shape. The composition names `programsAppliedFor`, `status` and the server reads those fields off the stored application when the client app asks for it.
+          - It also pulls in `members`, which live in their own collection. Reading this without the composition means a request for the application and 1 more for the rest, then assembling them in the client app.
+          - This is where the `_links` on the application came from. `applicationSummary`, `applicationReview` set `parentLink`, so the server added `/summary`, `/review` to every application it returns. The application's own schema says nothing about either of them.
+        operationId: $sourceDescriptions.intake.getApplicationReview
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+  - workflowId: editableComposition
+    summary: An editable composition
+    description: |
+      - `applicationDetails` is an editable composition: the application and its members and incomes as one document, which a client app changes with a JSON Patch (RFC 6902).
+      - The composition is a wrapper. Each change in a patch is made through its record's own operation, on behalf of whoever sent the patch, so that operation's checks, permissions and events apply. A patch is kept whole or not at all.
+    dependsOn:
+      - resources
+    steps:
+      - stepId: readTheDetails
+        x-actors:
+          - client
+        description: |
+          Read the application's details
+
+          - The application is under `application`, with its members and incomes beside it, each keyed by its id. A patch names one record by that key, as in `/incomes/{incomeId}/amount`, so a path always names the same record however the list changes.
+          - Records come whole, each as its own read returns it.
+        operationId: $sourceDescriptions.intake.getApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/application/id == $workflows.resources.outputs.application
+      - stepId: addAHousehold
+        x-actors:
+          - client
+        description: |
+          Add a household in one patch
+
+          - Two members and an income, in one request. The client app chose each new record's id, so the income can name its member, Maria, before she exists.
+          - The server created Maria and Luis through `createApplicationMember` and the income through `createApplicationIncome`, Maria first, since the income names her.
+          - Each record sent its own created event, and each names this patch as its cause.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-add-household
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: add
+              path: /members/22222222-2222-4222-8222-000000000001
+              value:
+                firstName: Maria
+                lastName: Delgado
+                relationship: self
+            - op: add
+              path: /members/22222222-2222-4222-8222-000000000002
+              value:
+                firstName: Luis
+                lastName: Delgado
+                relationship: child
+            - op: add
+              path: /incomes/22222222-2222-4222-8222-000000000011
+              value:
+                memberId: 22222222-2222-4222-8222-000000000001
+                source: earned
+                amount: 1100
+                frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/members/22222222-2222-4222-8222-000000000001/firstName == 'Maria'
+          - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/memberId == '22222222-2222-4222-8222-000000000001'
+      - stepId: correctTheIncome
+        x-actors:
+          - client
+        description: |
+          Change the income from 1100 to 1250, only if nobody else changed it first
+
+          - The patch starts with a test: it checks the amount is still 1100, the value the client app read, and changes nothing. If the amount is different, the whole patch is refused. The replace after it runs only if the test passed.
+          - The change went through `updateApplicationIncome`, with its checks and its updated event.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-correct-income
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: test
+              path: /incomes/22222222-2222-4222-8222-000000000011/amount
+              value: 1100
+            - op: replace
+              path: /incomes/22222222-2222-4222-8222-000000000011/amount
+              value: 1250
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/amount == 1250
+      - stepId: sendAStalePatch
+        x-actors:
+          - client
+        description: |
+          Send the same change again, as a client app that read the income before it changed
+
+          - Refused with `409`: the amount is 1250 now, so the test for 1100 fails. A client app working from an older copy can't overwrite a change it didn't see.
+          - Nothing in the patch was kept, not even the change after the failed test.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-stale-correction
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: test
+              path: /incomes/22222222-2222-4222-8222-000000000011/amount
+              value: 1100
+            - op: replace
+              path: /incomes/22222222-2222-4222-8222-000000000011/amount
+              value: 1250
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: spoilThePatch
+        x-actors:
+          - client
+        description: |
+          Send one bad change among good ones
+
+          - The patch adds a member, Ana, and clears the income's amount, which an income can't do without.
+          - Refused with `422`, naming the income's change. Ana was created first and then removed again: an undo log puts back what the earlier changes wrote, and the events they caused were held and never sent.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-spoiled-patch
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: add
+              path: /members/22222222-2222-4222-8222-000000000003
+              value:
+                firstName: Ana
+                lastName: Delgado
+                relationship: child
+            - op: replace
+              path: /incomes/22222222-2222-4222-8222-000000000011/amount
+              value: null
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == '/incomes/22222222-2222-4222-8222-000000000011'
+      - stepId: seeNothingWasKept
+        description: |
+          Read the application's details again
+
+          - The income is still 1250, and Ana isn't among the members.
+        operationId: $sourceDescriptions.intake.getApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/incomes/22222222-2222-4222-8222-000000000011/amount == 1250
+      - stepId: changeTheStatus
+        x-actors:
+          - client
+        description: |
+          Try to change what the state machine owns
+
+          - Refused with `422`. `status` is marked readOnly: the server sets it, and the application's state machine moves it through its actions. A patch can change only what the record's own update would let the client app change.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-change-status
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: replace
+              path: /application/status
+              value: submitted
+        successCriteria:
+          - condition: $statusCode == 422
+      - stepId: retryTheSamePatch
+        x-actors:
+          - client
+        description: |
+          Retry the household patch with its key
+
+          - The same patch with the same `Idempotency-Key` gets the first answer back, marked `Idempotent-Replayed`. Maria and Luis aren't added twice.
+          - A client app that lost the first response can retry safely.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-add-household
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: add
+              path: /members/22222222-2222-4222-8222-000000000001
+              value:
+                firstName: Maria
+                lastName: Delgado
+                relationship: self
+            - op: add
+              path: /members/22222222-2222-4222-8222-000000000002
+              value:
+                firstName: Luis
+                lastName: Delgado
+                relationship: child
+            - op: add
+              path: /incomes/22222222-2222-4222-8222-000000000011
+              value:
+                memberId: 22222222-2222-4222-8222-000000000001
+                source: earned
+                amount: 1100
+                frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.header.Idempotent-Replayed == 'true'
+      - stepId: removeAMember
+        x-actors:
+          - client
+        description: |
+          Remove a member
+
+          - One change removes Maria, through `deleteApplicationMember`. Her income goes with her: the income's `memberId` declares onDelete: cascade, as OData's OnDelete does.
+          - The patch didn't have to name the income. The data model says it belongs to her.
+        operationId: $sourceDescriptions.intake.updateApplicationDetails
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+          - name: Idempotency-Key
+            in: header
+            value: walkthrough-remove-maria
+        requestBody:
+          contentType: application/json-patch+json
+          payload:
+            - op: remove
+              path: /members/22222222-2222-4222-8222-000000000001
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/members/22222222-2222-4222-8222-000000000002/firstName == 'Luis'
+  - workflowId: stateMachines
+    summary: State machines
+    description: |
+      - An application's lifecycle is a state machine in the contracts. The server moves the record only along the transitions it declares, and runs each action's steps: setting fields, calling procedures, sending events.
+    dependsOn:
+      - resources
+    steps:
+      - stepId: standInForTheScheduler
+        x-actors:
+          - developer
+        description: |
+          Stand in for the scheduler
+
+          - Nothing in the contract set implements a scheduler, and `submit` asks for one 72 hours out. That gap is declared, not accidental.
+          - This registers a stand-in for `platform.timer.requested`, so the callback lands the moment it is asked for. The contract did not change — the thing on the other end of it did.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            "on": platform.timer.requested
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: submitApplication
+        x-actors:
+          - client
+          - server
+        description: |
+          Submit the application
+
+          - The contract declares this move as `draft → submitted`. From any other state the server refuses it — not from a check somebody wrote for this endpoint, but by reading that line.
+          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `platform.timer.requested`. The stand-in the developer registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
+          - `submittedAt` is annotated with `snap-processing-clock`, which the shared policy registry resolves to 7 CFR § 273.2(g). SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
+          - `200` and `400`, `404`, `409`, `500` are all declared on this operation, and the server worked out which one applied and returned it. A `409` is declared here because the contract anticipates this call being made out of turn.
+        operationId: $sourceDescriptions.intake.submitApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: closeFromTheWrongState
+        x-actors:
+          - client
+        description: |
+          Close it from the wrong state
+
+          - The contract declares this move as `under_review → closed`, and the record is not in that state yet. Nothing checked for this case on purpose — the server reads that line and answers from it, the same line the moves that worked read.
+          - Every lifecycle in the set is enforced this way, so a state machine nobody implemented is still a state machine no client app can get around.
+        operationId: $sourceDescriptions.intake.closeApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        requestBody:
+          payload:
+            outcome: approved
+        successCriteria:
+          - condition: $statusCode == 409
+      - stepId: openApplication
+        x-actors:
+          - client
+          - server
+        description: |
+          Open the application
+
+          - `openedAt` was null until now. The lifecycle declares `set: openedAt = $now` on this move, so the field is written because the state machine says so — there is no handler here that writes it.
+        operationId: $sourceDescriptions.intake.openApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: closeApplication
+        x-actors:
+          - client
+          - server
+        description: |
+          Close the application
+
+          - This move emits `intake.application.closed`, which the log a few steps on will have in it. Nothing subscribed to it and nothing called a publisher: the action declares an `emit` and the server does it.
+        operationId: $sourceDescriptions.intake.closeApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $workflows.resources.outputs.application
+        requestBody:
+          payload:
+            outcome: approved
+        successCriteria:
+          - condition: $statusCode == 200
+  - workflowId: rules
+    summary: Rules
+    description: |
+      - A ruleset is a contract of named facts. The server evaluates it at its own endpoint and answers with every fact's value and how sure it is, so the client app can see why, not just what.
+    steps:
+      - stepId: evaluateExpeditedSnap
+        x-actors:
+          - client
+        description: |
+          Evaluate expeditedSnap
+
+          - The answer is not one expression but a chain of named facts. The last is `isExpeditedEligible = (isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources` — so the server can say which condition carried, not just what it concluded.
+          - `incomeThreshold` is an input with a default of 150, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - `resourceThreshold` is an input with a default of 100, citing 7 CFR § 273.2(i)(1)(i). It is a number Congress changes, so the contract treats it as one rather than burying it in code.
+          - Every fact comes back as a `state` and a `value` rather than a bare answer. complete means everything it needed was given to it; a fact that fell back to a declared default says placeholder instead, so the client app can tell a real conclusion from a provisional one.
+        operationId: $sourceDescriptions.eligibilityRules.evaluateExpeditedSnap
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            household:
+              monthlyGrossIncome: 120
+              liquidResources: 75
+              monthlyShelterCost: 800
+              isMigrantFarmworker: false
+            policy:
+              incomeThreshold: 150
+              resourceThreshold: 100
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: gatherWhatTheFlagsCompareAgainst
+        x-actors:
+          - client
+        description: |
+          Gather what the interview flags compare against
+
+          - A renewal: a household already on SNAP recertifying.
+          - `previous` is the household as last certified, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
+          - The `interviewFlagsInputs` composition translates the data model into the ruleset's inputs by alias — `interviewDate as asOf`, `previousHousehold as previous` — so the rules speak their own vocabulary and nothing between them maps by hand.
+        operationId: $sourceDescriptions.intake.getInterviewFlagsInputs
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: 66666666-6666-4666-8666-666666666666
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          asOf: $response.body#/asOf
+          previous: $response.body#/previous
+          verified: $response.body#/verified
+          programsAppliedFor: $response.body#/programsAppliedFor
+      - stepId: evaluateInterviewFlags
+        x-actors:
+          - client
+        description: |
+          Evaluate interviewFlags
+
+          - `current` is what the household is reporting in the interview, sent by the client app: the client's mother has moved in with Social Security, warehouse hours were cut, there's cash work cleaning offices, rent went up, and the electric bill is in the client's name. Everything else came from the step before.
+          - One call answers in two groups: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree. `risks.householdChangedSincePrevious` is true — the mother is new — and so is `inconsistencies.wagesDifferFromWageRecords`: the wage records show about 1800 a month, and the household reports about 1100.
+          - Every flag is worked out from data, never a conclusion the client app sent: ages from dates of birth and the interview date, monthly amounts from what's paid and how often.
+          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from.
+        operationId: $sourceDescriptions.intakeRules.evaluateInterviewFlags
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            asOf: $steps.gatherWhatTheFlagsCompareAgainst.outputs.asOf
+            previous: $steps.gatherWhatTheFlagsCompareAgainst.outputs.previous
+            verified: $steps.gatherWhatTheFlagsCompareAgainst.outputs.verified
+            programsAppliedFor: $steps.gatherWhatTheFlagsCompareAgainst.outputs.programsAppliedFor
+            current:
+              size: 3
+              utilitiesIncludedInRent: true
+              monthlyIncome: 2200
+              monthlyExpenses: 2600
+              members:
+                - id: client
+                  dateOfBirth: "1985-03-02"
+                  isDisabled: false
+                - id: daughter
+                  dateOfBirth: "2007-06-10"
+                  isDisabled: false
+                - id: son
+                  dateOfBirth: "2018-01-15"
+                  isDisabled: false
+                - id: mother
+                  dateOfBirth: "1958-05-20"
+                  isDisabled: false
+              jobs:
+                - id: warehouse
+                  memberId: client
+                  employer: Northgate Distribution
+              incomes:
+                - id: wages
+                  memberId: client
+                  jobId: warehouse
+                  source: earned
+                  amount: 510
+                  frequency: biweekly
+                  paidInCash: false
+                  amountVaries: true
+                - id: cleaning
+                  memberId: client
+                  source: self_employment
+                  amount: 200
+                  frequency: irregular
+                  paidInCash: true
+                  amountVaries: true
+                - id: ss
+                  memberId: mother
+                  source: unearned
+                  amount: 900
+                  frequency: monthly
+                  paidInCash: false
+                  amountVaries: false
+              expenses:
+                - type: rent
+                  amount: 1400
+                  frequency: monthly
+                - type: utilities
+                  amount: 128
+                  frequency: monthly
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/risks.householdChangedSincePrevious/value == true
+          - condition: $response.body#/inconsistencies.wagesDifferFromWageRecords/value == true
+  - workflowId: events
+    summary: Events
+    description: |
+      - Every change sends an event, named for its domain, resource and what happened, into one log shared by every domain.
+    dependsOn:
+      - resources
+    steps:
+      - stepId: seeWhatTheWalkEmitted
+        description: |
+          List the events this walkthrough sent
+
+          - Every change the client app made emitted one of these, and nothing asked for them. Uploading a document wrote to this log; so did submitting, opening and closing.
+          - The types are declared as channels in the contract set — `communication.transcript.created`, `communication.transcript.updated`, `communication.transcript.deleted`, `communication.transcript_entry.created`, and the rest.
+          - One log, every domain. Nothing wired them together.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.caller
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: narrowTheLog
+        description: |
+          List the events for the application
+
+          - `q` is full text over the whole log, narrowed here to the application the client app created. The document upload drops out — it happened, but to a different subject.
+          - What is left was written by more than one domain. Submitting the application is what made eligibility start a determination, and neither domain was wired to the other: each declares its own channel, and this log is all they share.
+          - `sort` works here for the same reason it worked on the applications — this operation declares its own `x-sortable`, over `time`, `type`, `source`. Nothing was written twice to make both endpoints sortable.
+        operationId: $sourceDescriptions.events.listEvents
+        parameters:
+          - reference: $components.parameters.caller
+          - name: q
+            in: query
+            value: $workflows.resources.outputs.application
+          - name: sort
+            in: query
+            value: "-time"
+          - name: limit
+            in: query
+            value: "5"
+        successCriteria:
+          - condition: $statusCode == 200
+  - workflowId: theMock
+    summary: The mock server's own controls
+    description: |
+      - The mock server has a few controls of its own, outside the contracts, for putting its records into a known state.
+    steps:
+      - stepId: emptyTheStore
+        x-actors:
+          - developer
+        description: |
+          Empty the store
+
+          - No contract declares this endpoint. It belongs to the mock server, not to the system it is running.
+          - It clears records, never contracts — afterwards the API is exactly the API it was.
+        operationId: $sourceDescriptions.mock.resetMock
+        successCriteria:
+          - condition: $statusCode == 204
+      - stepId: putTheDataBack
+        x-actors:
+          - developer
+        description: |
+          Put the data back
+
+          - The records come from the contract set's own `*-mock-data.yaml`, and are checked against the same schemas as anything a client app sends.
+        operationId: $sourceDescriptions.mock.reseedMock
+        successCriteria:
+          - condition: $statusCode == 204

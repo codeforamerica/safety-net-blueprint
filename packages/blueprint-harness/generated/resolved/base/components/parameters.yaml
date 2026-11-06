@@ -191,9 +191,10 @@ IdempotencyKeyParam:
   in: header
   required: true
   description: |
-    A key the client makes for one create, so a retry is not a second create.
-    Send the same key with every retry of the same request: the first is
-    created, and a repeat gets the same response back. The same key with a
+    A key the client makes for one request that creates or changes records,
+    so a retry doesn't make them twice. Send the same key with every retry of
+    the same request: the first is carried out, and a repeat gets the same
+    response back. The same key with a
     different request is refused with 422. Keys are scoped to the caller.
 
     Any value unique to the operation works; a UUID is recommended. An

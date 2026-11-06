@@ -466,7 +466,9 @@ function applyLinksOnly(schema, fields) {
     linkProperties[linkName] = {
       type: 'string',
       format: 'uri-reference',
-      description: `Link to the related ${relationship.resource} resource.`
+      description: relationship.resource === 'Polymorphic'
+        ? `Link to the related record, of the kind ${relationship.discriminator?.propertyName ?? 'its type field'} names.`
+        : `Link to the related ${relationship.resource} resource.`
     };
   }
 
@@ -839,11 +841,13 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
       // No style configured — annotation is metadata only; leave FK field as-is.
       if (effectiveStyle == null) continue;
 
-      // A reserved resource names no schema, so there is nothing to expand or
-      // link to. Applying a style would replace a usable scalar FK with an
-      // empty object. The annotation stays as metadata and the field is left
-      // alone, which is what the convention has always said these mean.
-      if (isReservedResource(field.relationship.resource)) continue;
+      // A reserved resource names no schema, so there is nothing to expand:
+      // applying a style would replace a usable scalar FK with an empty
+      // object, and the field is left alone. The one exception is a
+      // polymorphic reference that asks for links-only — a link needs only
+      // where the record is read, which its type field says, record by record.
+      const linkedPolymorphic = field.relationship.resource === 'Polymorphic' && field.relationship.style === 'links-only';
+      if (isReservedResource(field.relationship.resource) && !linkedPolymorphic) continue;
 
       // Request schemas send flat FKs to the server. Expand (and links-only)
       // are response-only transforms — applying them to a request body breaks
@@ -921,6 +925,9 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
       applyLinksOnly(schema, linksOnlyFields);
 
       for (const field of linksOnlyFields) {
+        // Example records get links by one base path per field, which a
+        // polymorphic reference doesn't have.
+        if (field.relationship.resource === 'Polymorphic') continue;
         linksData.push({
           propertyName: field.propertyName,
           linkName: deriveLinkName(field.propertyName),

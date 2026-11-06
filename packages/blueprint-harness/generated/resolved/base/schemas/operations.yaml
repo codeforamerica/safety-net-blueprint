@@ -2,12 +2,12 @@ $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://blueprint.codeforamerica.org/base/schemas/operations.yaml
 title: CommonOperations
 description: |
-  An operation named by its operationId, with its arguments — what a suggestion proposes and accepting it performs. Written as an Arazzo step writes a call: parameters by name and location, and the request body as `requestBody` with its `payload`.
+  What an operation's request carries, shared across the contracts: an operation named by its operationId with its arguments, as a suggestion proposes it; why a call failed; the id a caller may choose for a new record; and a JSON Patch. A call is written as an Arazzo step writes one: parameters by name and location, and the request body as `requestBody` with its `payload`.
 $defs:
   OperationCall:
     type: object
     description: |
-      An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.
+      An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.
     additionalProperties: false
     required:
       - operationId
@@ -72,3 +72,66 @@ $defs:
         example: application/json
       payload:
         description: The request body, in the operation's request schema.
+  NewId:
+    type: object
+    description: |
+      The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: The new record's id, a UUID (RFC 9562).
+  JsonPatch:
+    type: array
+    description: |
+      A JSON Patch (RFC 6902), sent as application/json-patch+json: changes applied in order, all or nothing. Each change's path is a JSON Pointer (RFC 6901). A change may carry members the RFC doesn't define, such as evidence; the RFC says they're ignored when the patch is applied.
+    items:
+      $ref: "#/$defs/JsonPatchOperation"
+  JsonPatchOperation:
+    type: object
+    description: One change in a JSON Patch.
+    required:
+      - op
+      - path
+    properties:
+      op:
+        type: string
+        enum:
+          - add
+          - remove
+          - replace
+          - move
+          - copy
+          - test
+        description: |
+          What the change does. `test` changes nothing: it refuses the whole patch unless the value at `path` equals `value`.
+      path:
+        type: string
+        format: json-pointer
+        description: Where the change applies, e.g. `/incomes/{incomeId}/amount`.
+      value:
+        description: The value to add, replace with, or test for.
+      from:
+        type: string
+        format: json-pointer
+        description: Where `move` and `copy` take their value from.
+    allOf:
+      - if:
+          properties:
+            op:
+              enum:
+                - add
+                - replace
+                - test
+        then:
+          required:
+            - value
+      - if:
+          properties:
+            op:
+              enum:
+                - move
+                - copy
+        then:
+          required:
+            - from

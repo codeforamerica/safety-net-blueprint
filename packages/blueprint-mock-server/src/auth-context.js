@@ -79,9 +79,12 @@ export function extractCallerRoles(req) {
 const systemRequests = new WeakSet();
 const systemRoleLists = new WeakSet();
 
+/** The role the system plays, as a contract's guards name it in actors. */
+const SYSTEM_ROLE = 'system';
+
 /** The roles of the system: `['system']`, marked as the system's. */
 function systemRoles() {
-  const roles = ['system'];
+  const roles = [SYSTEM_ROLE];
   systemRoleLists.add(roles);
   return roles;
 }

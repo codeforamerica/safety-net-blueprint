@@ -74,6 +74,8 @@ paths:
                 "$ref": "#/components/schemas/Person"
         '400':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        '409':
+          "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         '422':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         '500':
@@ -139,6 +141,8 @@ paths:
           description: Person deleted successfully.
         '404':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '409':
+          "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
         '500':
           "$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 components:
@@ -177,11 +181,12 @@ components:
     PersonCreate:
       allOf:
       - $ref: "../client-management/client-management-schema.yaml#/$defs/Person"
+      - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
       - type: object
         description: |
           Payload to create a new person record.
 
-          Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+          Note: createdAt and updatedAt are server-generated (readOnly) and will be returned in the response, as is id unless the request gives one.
     PersonUpdate:
       allOf:
       - $ref: "../client-management/client-management-schema.yaml#/$defs/Person"

@@ -3,7 +3,7 @@ version: "1.0"
 domain: intake
 compositions:
   applicationSummary:
-    resource: applications
+    resource: Application
     fields:
       - id
       - status
@@ -15,7 +15,7 @@ compositions:
       parentLink: true
     include:
       members:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         fields:
           - id
@@ -25,7 +25,7 @@ compositions:
           - relationship
           - incomeSource
   interviewFlagsInputs:
-    resource: applications
+    resource: Application
     fields:
       - interviewDate as asOf
       - previousHousehold as previous
@@ -34,7 +34,7 @@ compositions:
       path: /applications/{applicationId}/interview-flags-inputs
     include:
       verified:
-        resource: income-verifications
+        resource: IncomeVerification
         bind: applicationId
         fields:
           - kind
@@ -44,7 +44,7 @@ compositions:
           - amount
           - frequency
       incomes:
-        resource: incomes
+        resource: ApplicationIncome
         bind: applicationId
         fields:
           - id
@@ -56,13 +56,13 @@ compositions:
           - amountVaries
   applicationReview:
     compositeType: sectionView
-    resource: applications
+    resource: Application
     fields:
       - programsAppliedFor
       - status
     include:
       members:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         fields:
           - id
@@ -73,7 +73,7 @@ compositions:
       parentLink: true
     sections:
       demographics:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         links: true
         index:
@@ -83,7 +83,7 @@ compositions:
             - lastName
             - dateOfBirth
       contact:
-        resource: applications
+        resource: Application
         fields:
           - contactInfo
     state:
@@ -101,3 +101,16 @@ compositions:
               - complete
               - flagged
             default: not_started
+  applicationDetails:
+    compositeType: editable
+    resource: Application
+    include:
+      members:
+        resource: ApplicationMember
+        bind: applicationId
+      incomes:
+        resource: ApplicationIncome
+        bind: applicationId
+    endpoint:
+      path: /applications/{applicationId}/details
+      parentLink: true

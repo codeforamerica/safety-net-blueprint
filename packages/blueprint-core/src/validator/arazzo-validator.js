@@ -64,6 +64,19 @@ export function validateArazzo(doc, operationIds) {
   const sources = new Map((c.sourceDescriptions ?? []).map((source) => [source.name, source]));
   const outside = (source) => /^https?:\/\//.test(source?.url ?? '');
 
+  // Who takes part (docs/conventions/extensions.yaml, x-actors): listed once
+  // under info, then named by id on the steps they act in.
+  const actors = new Set();
+  if (c.info?.['x-actors'] !== undefined && !Array.isArray(c.info['x-actors'])) {
+    err('arazzo-shape', '`info.x-actors` is a list of actors.', 'info.x-actors');
+  }
+  for (const [i, actor] of (Array.isArray(c.info?.['x-actors']) ? c.info['x-actors'] : []).entries()) {
+    const where = `info.x-actors[${i}]`;
+    if (!actor?.id || !actor?.name) err('arazzo-shape', 'Each actor has an id and a name.', where);
+    else if (actors.has(actor.id)) err('arazzo-shape', `Actor "${actor.id}" is listed twice.`, where);
+    if (actor?.id) actors.add(actor.id);
+  }
+
   const workflowsById = new Map((c.workflows ?? []).map((w) => [w.workflowId, w]));
   for (const workflow of c.workflows ?? []) {
     const where = `workflows[${workflow.workflowId ?? '?'}]`;
@@ -101,6 +114,16 @@ export function validateArazzo(doc, operationIds) {
           // A source outside the set — the mock's own routes, by URL — is
           // checked where it is served, not here.
           err('unknown-operation', `Step "${step.stepId}" calls ${id}, which no API in the set declares.`, stepWhere);
+        }
+      }
+
+      if (step['x-actors'] !== undefined) {
+        if (!Array.isArray(step['x-actors'])) {
+          err('arazzo-shape', `Step "${step.stepId}"'s x-actors is a list of actor ids.`, stepWhere);
+        } else {
+          for (const id of step['x-actors']) {
+            if (!actors.has(id)) err('unknown-actor', `Step "${step.stepId}" names actor "${id}", which info.x-actors does not list.`, stepWhere);
+          }
         }
       }
 

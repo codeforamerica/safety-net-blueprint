@@ -154,11 +154,17 @@ crud_operations:
           description: URL of the newly created resource
           format: uri
       body: Created resource object
-    error_responses: [400, 422, 500]
+    error_responses: [400, 409, 422, 500]
     request_body:
       required: true
       schema_suffix: Create
       description: "Payload to create a new {resource}"
+    chosen_id: >
+      Reference NewId (base schemas/operations.yaml) from every Create schema,
+      so a caller may choose the new record's id. Without one the server sets
+      it; answer 409 when another record has it. A Create schema that closes
+      its fields uses unevaluatedProperties: false, which counts the
+      referenced id; additionalProperties: false would refuse it.
 
   # READ (single) - GET /resources/{id}
   read:
@@ -323,6 +329,45 @@ sub_resource_paths:
     examples:
       - GET   /applications/{applicationId}/interview
       - PATCH /applications/{applicationId}/interview
+
+  # ---------------------------------------------------------------------------
+  # Editable composition: related records changed together
+  # ---------------------------------------------------------------------------
+  # Example: GET   /applications/{applicationId}/details
+  #          PATCH /applications/{applicationId}/details
+  editable_composition:
+    rule: >
+      When a client changes several related records at once — a new member
+      and their income, or an assistant's proposed changes previewed on a
+      copy — declare a composition with compositeType: editable rather than
+      asking the client to make one call per record. It's a wrapper over the
+      records' own operations: it adds one document to read and patch, all or
+      nothing across the changes, and the order that lets one change name a
+      record another creates. Resolve generates its
+      GET and its PATCH (update{Name}); don't write them by hand.
+    shape: >
+      The root record sits under its resource name with a lowercase first
+      letter (application). Each include sits beside it, keyed by record id,
+      or, for a singleton, as one record or null. Records come whole, and
+      includes don't nest: bind each to the root, and let records refer to
+      each other by id, as they're stored.
+    patch: >
+      The PATCH takes a JSON Patch (RFC 6902) as application/json-patch+json
+      and requires an Idempotency-Key. It applies all or nothing: each change
+      goes through its record's own operation, as the caller, so permissions,
+      guards and events apply as they would to that call. To add a record, add
+      it under an id the caller chooses (/members/{newId}); another change in
+      the same patch may name that id. Use a test operation before a change
+      that depends on a value the client read.
+    refused: >
+      A change the record's own operation would refuse, such as one to a
+      field marked readOnly, or to the field binding a record to the root, is
+      refused with 422, and nothing is saved. The composition adds no rules
+      of its own: what a client may change in a record through it is what it
+      may change through that record's operations.
+    examples:
+      - GET   /applications/{applicationId}/details
+      - PATCH /applications/{applicationId}/details
 
   # ---------------------------------------------------------------------------
   # OpenAPI tags for sub-resources

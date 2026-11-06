@@ -11,6 +11,9 @@
 /** @type {Map<string, Set<Function>>} */
 const listeners = new Map();
 
+/** Domain events held back from listeners until released. */
+const holds = new Set();
+
 const eventBus = {
   /**
    * @param {string} event
@@ -37,6 +40,12 @@ const eventBus = {
    * @returns {boolean} Whether anything was listening
    */
   emit(event, ...args) {
+    for (const held of holds) {
+      if (event === 'domain-event' && held.picks(args[0])) {
+        held.events.push(args[0]);
+        return true;
+      }
+    }
     const registered = listeners.get(event);
     if (!registered || registered.size === 0) return false;
     // Iterate a copy: a listener that unsubscribes itself while handling an
@@ -51,6 +60,29 @@ const eventBus = {
       }
     }
     return true;
+  },
+
+  /**
+   * Hold back the domain events `picks` chooses, so listeners see them only
+   * when released, in the order they were sent, or never when discarded. A
+   * composition's patch holds the events its changes cause until all of
+   * them are saved; events anything else sends meanwhile pass through.
+   *
+   * @param {(event: object) => boolean} picks
+   * @returns {{ release: () => void, discard: () => void }}
+   */
+  hold(picks) {
+    const held = { picks, events: [] };
+    holds.add(held);
+    return {
+      release() {
+        holds.delete(held);
+        for (const event of held.events) eventBus.emit('domain-event', event);
+      },
+      discard() {
+        holds.delete(held);
+      },
+    };
   },
 
   /** @param {string} event */

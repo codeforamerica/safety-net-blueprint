@@ -764,10 +764,22 @@ async function testWorkflowEventEmission() {
 // ---------------------------------------------------------------------------
 
 async function testWorkflowTimerBehavior() {
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
   section('Workflow — Timer-triggered behavior');
 
   const TASK = '/workflow/tasks';
   const CASEWORKER = caller('worker-aaa', ROLES.CASE_WORKER);
+
+  /** A task with an SLA clock, whose slaDeadline the server sets. */
+  async function createTaskWithSla(name = 'SLA timer test') {
+    const res = await fetch(`${BASE_URL}${TASK}`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { name, programType: 'snap', slaInfo: [{ slaTypeCode: 'snap_expedited' }] },
+    });
+    const task = await res.json();
+    assert.ok(task.slaDeadline, 'the SLA clock sets slaDeadline on create');
+    return task.id;
+  }
 
   async function createTask(name = 'Timer test') {
     const res = await fetch(`${BASE_URL}${TASK}`, {
@@ -844,19 +856,16 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // sla_warning fires when slaDeadline is set → sla-escalate(approaching)
-  await test('sla_warning: task auto-escalates with approaching reason when slaDeadline set', async () => {
+  // sla_warning fires once a task's SLA clock sets slaDeadline → sla-escalate(approaching)
+  await test('sla_warning: a task created with an SLA type auto-escalates with approaching reason', async () => {
     await clearStubs();
-    const id = await createTask();
-
     await registerStub({
       on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.sla_warning' },
     });
-    await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
-    });
+    // Its SLA clock sets slaDeadline when it's created, and creating it
+    // schedules the timer, which the stub fires.
+    const id = await createTaskWithSla();
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_warning');
@@ -868,19 +877,16 @@ async function testWorkflowTimerBehavior() {
     await clearStubs();
   });
 
-  // sla_breach fires when slaDeadline is set → sla-escalate(exceeded) → sla_breached
-  await test('sla_breach: task escalates and emits sla_breached when slaDeadline set', async () => {
+  // sla_breach fires once a task's SLA clock sets slaDeadline → sla-escalate(exceeded) → sla_breached
+  await test('sla_breach: a task created with an SLA type escalates and emits sla_breached', async () => {
     await clearStubs();
-    const id = await createTask();
-
     await registerStub({
       on: 'platform.timer.requested',
       match: { 'data.callback.event': 'workflow.sla_breach' },
     });
-    await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
-    });
+    // Its SLA clock sets slaDeadline when it's created, and creating it
+    // schedules the timer, which the stub fires.
+    const id = await createTaskWithSla();
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_breach');
@@ -900,6 +906,7 @@ async function testWorkflowTimerBehavior() {
 // ---------------------------------------------------------------------------
 
 async function testWorkflowEventSubscriptions() {
+  const SYSTEM = caller('system-1', ROLES.SYSTEM);
   section('Workflow — Event subscriptions');
 
   const TASK = '/workflow/tasks';
@@ -961,24 +968,53 @@ async function testWorkflowEventSubscriptions() {
     assert.strictEqual(task.isExpedited, true, 'the review task should be flagged expedited');
   });
 
-  // workflow.task.updated: slaDeadline set → both sla_warning and sla_breach timers scheduled
-  await test('workflow.task.updated: setting slaDeadline schedules sla_warning and sla_breach timers', async () => {
+  // workflow.task.created: an SLA clock sets slaDeadline → both sla_warning and sla_breach timers scheduled
+  await test('workflow.task.created: a task with an SLA type schedules sla_warning and sla_breach timers', async () => {
     await clearStubs();
-    const { id } = await (await fetch(`${BASE_URL}${TASK}`, {
-      method: 'POST', headers: CASEWORKER,
-      body: { name: 'SLA schedule test', programType: 'snap' },
-    })).json();
-
     await registerStub({ on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.sla_warning' } });
     await registerStub({ on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.sla_breach' } });
 
-    await fetch(`${BASE_URL}${TASK}/${id}`, {
-      method: 'PATCH', headers: CASEWORKER,
-      body: { slaDeadline: new Date(Date.now() + 86400000).toISOString() },
+    await fetch(`${BASE_URL}${TASK}`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { name: 'SLA schedule test', programType: 'snap', slaInfo: [{ slaTypeCode: 'snap_expedited' }] },
     });
 
     const { total } = await (await fetch(`${BASE_URL}/mock/stubs/events`)).json();
     assert.strictEqual(total, 0, 'both sla_warning and sla_breach stubs consumed — both timers were scheduled');
+
+    await clearStubs();
+  });
+
+  // A pause stops the SLA clock: its timers are cancelled, and scheduled again
+  // on resume, at the deadline the pause moved. Timer events aren't stored, so
+  // stubs watch for them: each is consumed by the event it matches.
+  await test('await-client cancels the SLA timers, and resume schedules them again at the moved deadline', async () => {
+    await clearStubs();
+    const created = await (await fetch(`${BASE_URL}${TASK}`, {
+      method: 'POST', headers: CASEWORKER,
+      body: { name: 'SLA pause test', programType: 'snap', slaInfo: [{ slaTypeCode: 'snap_expedited' }] },
+    })).json();
+    const { id } = created;
+    await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
+    const pending = async () => (await (await fetch(`${BASE_URL}/mock/stubs/events`)).json()).total;
+
+    for (const kind of ['sla_warning', 'sla_breach']) {
+      await registerStub({
+        on: 'platform.timer.cancelled',
+        match: { 'data.timerId': `workflow.${kind}.${id}` },
+        response: { type: 'test.sla_timer_cancelled', subject: id },
+      });
+    }
+    await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER, body: {} });
+    assert.strictEqual(await pending(), 0, 'pausing cancels both SLA timers');
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    for (const kind of ['sla_warning', 'sla_breach']) {
+      await registerStub({ on: 'platform.timer.requested', match: { 'data.timerId': `workflow.${kind}.${id}` } });
+    }
+    const resumed = await (await fetch(`${BASE_URL}${TASK}/${id}/resume`, { method: 'POST', headers: CASEWORKER, body: {} })).json();
+    assert.strictEqual(await pending(), 0, 'resuming schedules both SLA timers again');
+    assert.ok(new Date(resumed.slaDeadline) > new Date(created.slaDeadline), 'the pause moved the deadline later');
 
     await clearStubs();
   });

@@ -83,7 +83,7 @@ Options:
                     page can show how this deployment customizes the base
                     contracts. Optional — resolve has already applied them.
   --first-tour=<p>  The scenario Show me around opens with, by its path in the set
-                    (e.g. scenarios/application-walkthrough.arazzo.yaml); else the first
+                    (e.g. scenarios/framework-features.arazzo.yaml); else the first
   --source-url=<u>  Base URL the authored contracts are browsable at, so each
                     step can link to the file it cites. Omit and the page
                     names the file without linking — it cannot guess where a

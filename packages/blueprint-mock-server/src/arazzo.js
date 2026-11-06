@@ -314,7 +314,9 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     let path = operation.path;
     const query = new URLSearchParams();
     const multipart = step.requestBody?.contentType === 'multipart/form-data' || (!step.requestBody?.contentType && operation.multipart);
-    const headers = multipart ? {} : { 'content-type': 'application/json' };
+    // A step's requestBody.contentType names the media type it sends, as
+    // Arazzo says; a JSON body without one is application/json.
+    const headers = multipart ? {} : { 'content-type': step.requestBody?.contentType ?? 'application/json' };
     for (const raw of step.parameters ?? []) {
       const parameter = raw.reference
         ? components.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')]

@@ -8,6 +8,7 @@ import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { assertFetchShaped } from '../http/request.js';
+import { deletionOf } from '../references.js';
 
 /**
  * Create delete handler for a resource.
@@ -18,7 +19,7 @@ import { assertFetchShaped } from '../http/request.js';
  * @param {Object} endpoint - Endpoint metadata
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Response}
  */
-export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
+export function createDeleteHandler(apiMetadata, endpoint, { store, referencesTo } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createDeleteHandler').url);
@@ -50,29 +51,41 @@ export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
       }, { status: 409 });
     }
 
-    // Delete the resource
-    store.deleteResource(endpoint.collectionName, resourceId);
+    // Records that name this one go with it where their relationship says
+    // onDelete: cascade; any other record naming it refuses the delete.
+    const { deleted, refusedBy } = deletionOf(
+      { name: endpoint.resource?.name, collection: endpoint.collectionName, id: resourceId }, referencesTo, store);
+    if (refusedBy.length > 0) {
+      return Response.json({
+        code: 'CONFLICT',
+        message: `${capitalize(paramName.replace(/Id$/, ''))} can't be deleted while other records name it.`,
+        details: refusedBy.map(({ name, id, field }) => ({ field, message: `${name} ${id} names it` })),
+      }, { status: 409 });
+    }
 
-    // Auto-emit deleted event
-    if (endpoint.resource) try {
-      const domain = eventDomainOf(apiMetadata);
-      const object = endpoint.resource.eventName;
-      emitEvent({
-        store,
-        domain,
-        object,
-        action: 'deleted',
-        resourceId,
-        source: apiMetadata.serverBasePath,
-        data: null,
-        callerId: callerHeader(request, 'x-caller-id'),
-        callerRoles: extractCallerRoles(request),
-        traceparent: traceparentOf(request),
-        causationid: causationOf(request),
-        now: new Date().toISOString(),
-      });
-    } catch (eventError) {
-      console.error('Failed to emit deleted event:', eventError.message);
+    // The records a cascade reaches first, then this one, each announcing it.
+    for (const { collection, id, reference } of deleted.reverse()) {
+      store.deleteResource(collection, id);
+      const api = reference?.api ?? apiMetadata;
+      const object = reference ? reference.resource.eventName : endpoint.resource?.eventName;
+      if (object) try {
+        emitEvent({
+          store,
+          domain: eventDomainOf(api),
+          object,
+          action: 'deleted',
+          resourceId: id,
+          source: api.serverBasePath,
+          data: null,
+          callerId: callerHeader(request, 'x-caller-id'),
+          callerRoles: extractCallerRoles(request),
+          traceparent: traceparentOf(request),
+          causationid: causationOf(request),
+          now: new Date().toISOString(),
+        });
+      } catch (eventError) {
+        console.error('Failed to emit deleted event:', eventError.message);
+      }
     }
 
     return new Response(null, { status: 204 });

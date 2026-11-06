@@ -57,6 +57,18 @@ machines:
       - id: sameOperation
         description: a corrected call names the suggestion's own operation
         condition: '!has(request.call) || object.kind != "operation" || request.call.operationId == object.call.operationId'
+      # A JSON Patch is corrected by changing values, not by rewriting it: the
+      # same parameters, and the same changes to the same paths in the same
+      # order. A test's value stays as proposed, since it records what was read.
+      - id: samePatchExceptValues
+        description: a corrected patch changes only the values of the suggestion's own patch
+        condition: >-
+          !has(request.call) || object.kind != "operation"
+          || !has(object.call.requestBody) || !has(object.call.requestBody.contentType)
+          || object.call.requestBody.contentType != "application/json-patch+json"
+          || (request.call.parameters == object.call.parameters
+              && request.call.requestBody.payload.map(c, c.op == "test" ? [c.op, c.path, c.value] : [c.op, c.path])
+                 == object.call.requestBody.payload.map(c, c.op == "test" ? [c.op, c.path, c.value] : [c.op, c.path]))
     # No actor guards: who may decide is the set's to say, by overlay.
     actions:
       # Accepting an operation suggestion makes its call as the person
@@ -65,6 +77,9 @@ machines:
       # `performed`. A call that fails leaves the suggestion refused, and its
       # refused event carries the call and the error; accepting again tries
       # again. Accepting an informing suggestion means the person took it up.
+      # A call to an operation that requires an `Idempotency-Key` is made with
+      # the suggestion's id as the key; only a call that succeeds is kept
+      # under it, so accepting again after a refusal is carried out.
       - id: accept
         description: Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.
         transition:
@@ -74,7 +89,7 @@ machines:
           request:
             $ref: "#/$defs/AcceptRequest"
         guards:
-          - conditions: [callOnlyForAnOperation, sameOperation]
+          - conditions: [callOnlyForAnOperation, sameOperation, samePatchExceptValues]
         steps:
           - if: object.kind == "operation" && has(request.call)
             then:

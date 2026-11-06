@@ -68,6 +68,41 @@ x_data_classification:
 
 x_extensions:
 
+  x-actors:
+    description: >
+      Names who takes part in an Arazzo scenario, and who acts in each step.
+      Arazzo allows x- extensions but has no field for this, so the name and
+      shape are ours. It is optional. When a scenario uses it, list every actor once under info, with an id, the name
+      the scenario's text uses for them, and a one-sentence description. On a
+      step, list the ids of the actors involved in the order they act, starting
+      with the one who starts the step (a caseworker who clicks record, then
+      the software that sends the request). Leave it off a step that only checks what happened. Use exactly
+      the listed name for an actor everywhere in the scenario's text, never a
+      second name for the same actor. A scenario is not an actor. The demo
+      page shows each step's actors as colored badges joined by arrows above
+      its title, with the description on hover.
+    location: Arazzo info (the list of actors) and Arazzo step (the ids of a step's actors)
+    type: array
+    fields:
+      id: (info form) The id steps use to name this actor.
+      name: (info form) The name the badge shows and the text uses.
+      description: (info form) Who this actor is, shown on hover.
+    example: |
+      info:
+        title: Interview suggestions
+        x-actors:
+          - id: caseworker
+            name: The caseworker
+            description: Interviews Rosa, and accepts or dismisses suggestions.
+          - id: server
+            name: The server
+            description: Runs the contracts.
+      workflows:
+        - workflowId: beforeInterview
+          steps:
+            - stepId: scheduleInterview
+              x-actors: [caseworker, server]
+
   x-domain:
     description: >
       The business domain this API belongs to. Required on all API specs.
@@ -183,6 +218,26 @@ x_extensions:
         FK only. Controls how the resolver transforms the FK field. "expand" inlines
         the related resource; "links-only" adds a links navigation object. Omitting
         style leaves the field untouched — x-relationship is metadata only.
+        A Polymorphic reference takes only "links-only", written on the field
+        itself; the set's style doesn't reach it. Its link goes to the record its
+        type field names, record by record, and is left out when that type maps
+        to External. Don't expand one: its record's shape changes with its type,
+        so no one schema describes it.
+      discriminator: >
+        Polymorphic only (resource: Polymorphic), and required there. Name the
+        field beside the id that says its type in propertyName, as OpenAPI's
+        discriminator does; make that field an enum. Each value names a
+        resource in snake_case (application_member → ApplicationMember); write
+        mapping for a value that doesn't (member: ApplicationMember), or map it
+        to External for something outside the contracts. A framework field
+        leaves the enum to the contract set, which adds it by overlay.
+      onDelete: >
+        FK only. What deleting the named record does to this one, as OData's
+        OnDelete. Write cascade when this record can't outlive the one it names,
+        such as a member's income or an application's members: deleting the
+        named record deletes this one too. Leave it out to refuse that delete
+        with 409 while this record names it (OData's None). cascade is the only
+        value; External references take none.
       id: >
         Non-FK only. The identifier of the artifact within its domain contract.
         For state-machine-action: the action id. For ruleset: the ruleset name.

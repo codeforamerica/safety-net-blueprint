@@ -1,12 +1,27 @@
 {
-  "type": "object",
-  "properties": {
-    "scheduledFor": {
-      "type": "string",
-      "format": "date",
-      "description": "The date the interview is scheduled for."
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "scheduledFor": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the interview is scheduled for."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The new record's id, a UUID (RFC 9562)."
+        }
+      }
     }
-  },
+  ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "#/components/schemas/InterviewCreate"
 }

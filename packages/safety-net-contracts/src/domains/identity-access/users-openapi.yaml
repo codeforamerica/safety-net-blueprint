@@ -212,6 +212,8 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Forbidden"
         "404":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Token Enrichment (IdP Integration)
@@ -346,12 +348,13 @@ components:
     UserCreate:
       allOf:
         - $ref: "../identity-access/identity-access-schema.yaml#/$defs/User"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
         - type: object
           description: |
             Payload to create a new user.
 
-            Note: id, userId, createdAt, and updatedAt are server-generated (readOnly)
-            and will be returned in the response.
+            Note: userId, createdAt, and updatedAt are server-generated (readOnly)
+            and will be returned in the response, as is id unless the request gives one.
           required:
             - idpSubject
             - email

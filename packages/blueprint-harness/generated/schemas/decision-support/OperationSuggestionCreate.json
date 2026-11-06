@@ -18,12 +18,32 @@
             "properties": {
               "sourceType": {
                 "type": "string",
-                "description": "What kind of record it cites, e.g. `transcript_entry`."
+                "description": "What kind of record it cites, e.g. `transcript_entry`.",
+                "enum": [
+                  "transcript_entry"
+                ]
               },
               "sourceId": {
                 "type": "string",
                 "format": "uuid",
-                "description": "The record it cites. `sourceType` says what kind."
+                "description": "The record it cites. `sourceType` says what kind, and\n`links.source` is where to read it.\n"
+              },
+              "path": {
+                "type": "string",
+                "format": "json-pointer",
+                "description": "For a suggestion whose call carries a JSON Patch, the change this\nbacks up: the `path` of one of the patch's changes, such as\n`/incomes/e218…/amount`. Absent, it backs up the whole suggestion.\nA path no change in the patch has is refused with `422`.\n"
+              },
+              "links": {
+                "type": "object",
+                "readOnly": true,
+                "description": "Related resource links.",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "format": "uri-reference",
+                    "description": "Link to the related record, of the kind sourceType names."
+                  }
+                }
               }
             }
           }
@@ -47,6 +67,17 @@
     },
     {
       "type": "object",
+      "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The new record's id, a UUID (RFC 9562)."
+        }
+      }
+    },
+    {
+      "type": "object",
       "required": [
         "kind",
         "call"
@@ -57,7 +88,7 @@
         },
         "call": {
           "type": "object",
-          "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema.\n",
+          "description": "An operation and its arguments. The operationId is one the contracts declare, as overlays leave them; the arguments are checked against that operation's parameters and request schema. A stored call leaves out the `Idempotency-Key` header even where its operation requires one: a key guards one request, so whatever makes the call supplies it.\n",
           "additionalProperties": false,
           "required": [
             "operationId"

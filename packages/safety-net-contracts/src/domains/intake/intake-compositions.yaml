@@ -25,11 +25,11 @@ compositions:
 
   applicationReview:
     compositeType: sectionView
-    resource: applications
+    resource: Application
     fields: [programsAppliedFor, status]
     include:
       members:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         fields: [id, contact.name.firstName, contact.name.lastName]
     endpoint:
@@ -76,7 +76,7 @@ compositions:
       # Member-scoped sections — one review-progress entry per member × section
 
       demographics:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         links: true
         index:
@@ -84,11 +84,11 @@ compositions:
           fields: [id, contact.name.firstName, contact.name.lastName, dateOfBirth]
 
       identity:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
         include:
           verifications:
-            resource: application-verifications
+            resource: Verification
             bind: applicationId
             filter: "category == 'identity'"
         index:
@@ -96,7 +96,7 @@ compositions:
           fields: [id, contact.name.firstName, contact.name.lastName, citizenshipStatus, immigrationStatus]
 
       income:
-        resource: application-incomes
+        resource: Income
         bind: applicationId
         sortable:
           fields: [memberId, type, amount, frequency]
@@ -105,13 +105,13 @@ compositions:
           fields: [id, memberId, type, amount, frequency]
 
       employment:
-        resource: application-jobs
+        resource: Job
         bind: applicationId
         index:
           fields: [id, memberId, status, jobTitle]
 
       health-coverage:
-        resource: application-health-enrollments
+        resource: HealthEnrollment
         bind: applicationId
         index:
           fields: [id, memberId, coverageType, planName]
@@ -119,27 +119,27 @@ compositions:
       # Household-level sections — one review-progress entry per section (no memberId)
 
       assets:
-        resource: application-assets
+        resource: Asset
         bind: applicationId
         index:
           fields: [id, memberId, type, value]
 
       contact:
-        resource: application-members
+        resource: ApplicationMember
         bind: applicationId
-        fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email, preferredLanguage, preferredContactMethod]
+        fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, contact.email]
         index:
           filter: "'primary_applicant' in roles"
           fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email]
 
       expenses:
-        resource: application-expenses
+        resource: Expense
         bind: applicationId
         index:
           fields: [id, memberId, category, amount, frequency]
 
       household:
-        resource: household-info
+        resource: ApplicationHousehold
         bind: applicationId
         missing: empty
         index:
@@ -149,7 +149,7 @@ compositions:
     panel:
       include:
         verifications:
-          resource: application-verifications
+          resource: Verification
           bind: applicationId
           filter: "category == section.name"
 

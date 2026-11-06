@@ -59,31 +59,31 @@ export function governedResource(docs, domain, object) {
 }
 
 /**
- * The resource a compositions document is about: the top-level resource whose
- * collection each of its compositions names in `resource:` — `applications`
- * for intake's. Null when its domain declares none of them.
+ * The resource a compositions document is about: the top-level resource each
+ * of its compositions names in `resource:` — `Application` for intake's. Null
+ * when its domain declares none of them.
  *
- * Compositions name the collection, not the schema, so this matches a
- * top-level resource's collection segment.
+ * Compositions name a resource by its schema, as a state machine's object
+ * does, so this matches a top-level resource's name.
  *
  * @param {import('../types.js').Doc[]} docs
  * @param {string} domain
- * @param {string[]} collections - Each composition's `resource:`
+ * @param {string[]} names - Each composition's `resource:`
  * @param {string} subject - Names what is attaching, for the error
  * @returns {{ api: import('../types.js').Doc, resource: object }|null}
  * @throws {Error} When they name resources in more than one document, or a name matches more than one resource
  */
-export function declaredResource(docs, domain, collections, subject) {
+export function declaredResource(docs, domain, names, subject) {
   const found = [];
-  for (const collection of new Set(collections)) {
+  for (const name of new Set(names)) {
     const hits = [];
     for (const api of apisOf(docs, domain)) {
       for (const resource of api.model().resources) {
-        if (resource.parent === null && resource.collection.segment === collection) hits.push({ api, resource });
+        if (resource.parent === null && resource.name === name) hits.push({ api, resource });
       }
     }
     if (hits.length > 1) {
-      throw new Error(`${subject} names resource "${collection}", which ${hits.length} documents in domain "${domain}" declare.`);
+      throw new Error(`${subject} names resource "${name}", which ${hits.length} documents in domain "${domain}" declare.`);
     }
     if (hits.length === 1) found.push(hits[0]);
   }

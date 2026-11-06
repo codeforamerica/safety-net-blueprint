@@ -292,6 +292,19 @@ for (const impl of implementations) {
         store.registerCollectionDefaults(C, { status: 'draft' });
         assert.strictEqual(store.create(C, { status: 'open' }).status, 'open');
       });
+
+      it('keeps an id the caller chose', () => {
+        const id = '11111111-1111-4111-8111-000000000001';
+        assert.strictEqual(store.create(C, { id, name: 'Chosen' }).id, id);
+        assert.strictEqual(store.findById(C, id).name, 'Chosen');
+      });
+
+      it('refuses an id another record has, leaving that record as it was', () => {
+        const id = '11111111-1111-4111-8111-000000000002';
+        store.create(C, { id, name: 'First' });
+        assert.throws(() => store.create(C, { id, name: 'Second' }), /already has a record with id/);
+        assert.strictEqual(store.findById(C, id).name, 'First');
+      });
     });
 
     describe('update', () => {
