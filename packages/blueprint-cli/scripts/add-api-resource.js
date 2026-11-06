@@ -45,7 +45,8 @@ Options:
   -o, --out <dir>          Directory containing the spec (default: packages/contracts/)
       --ref <dir>          Path to the contracts package root (for correct $ref paths
                            when --out is outside the contracts package)
-      --bundle             Inline all external $refs to produce a self-contained spec
+      --bundle             Replace every $ref, internal or external, with what it
+                           points to, so the spec stands alone (a circular one stays)
   -h, --help               Show this help message
 
 Examples:

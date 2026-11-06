@@ -687,7 +687,10 @@ function eventIndex(docs) {
     // The set does not generate; that is reported where it fails.
   }
   for (const catalog of catalogs) {
-    for (const type of Object.keys(catalog.content.channels)) {
+    for (const [type, channel] of Object.entries(catalog.content.channels)) {
+      // A reference to the channel another document generates, for an event
+      // this one receives; it's generated there.
+      if (channel?.$ref) continue;
       generated.set(type, catalog.relativePath);
       channels.all.add(type);
     }
@@ -707,9 +710,10 @@ function eventIndex(docs) {
  */
 function channelsGenerated(doc, generated) {
   const errors = [];
-  for (const type of Object.keys(doc.content?.channels ?? {})) {
+  for (const [type, channel] of Object.entries(doc.content?.channels ?? {})) {
     const into = generated?.get(type);
-    if (!into || into === doc.relativePath) continue;
+    // A reference to the generated channel describes nothing a second time.
+    if (!into || into === doc.relativePath || channel?.$ref) continue;
     errors.push({
       rule: 'channel-generated',
       message: `Channel "${type}" is generated into ${into} from the contracts. Remove it here.`,
