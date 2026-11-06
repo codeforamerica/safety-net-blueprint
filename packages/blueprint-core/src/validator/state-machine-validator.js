@@ -8,6 +8,7 @@
  * Both return an array of { rule, message, path } error objects.
  */
 
+import { qualifiedRef } from '../operations.js';
 import { everyStep } from '../steps.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -584,11 +585,11 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
  * @param {Map} schemaIndex - From buildSchemaIndex() in indexes.js
  * @param {Map} endpointIndex - From buildCollectionIndex()
  * @param {Object} [exceptions]
- * @param {Set<string>|null} [operationIds] - Every operation in the set, from
- *   operationIdsOf; null skips checking calls to operations
+ * @param {ReturnType<import('../operations.js').readOperations>} [operations] - The
+ *   set's, from extract(docs, 'operations'); null skips checking calls to operations
  * @returns {Array<{rule, message, path}>}
  */
-export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}, operationIds = null) {
+export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}, operations = null) {
   const exceptedFields = new Set(
     (exceptions.unknownFields || []).map(e => `${e.schema}:${e.field}`)
   );
@@ -719,12 +720,20 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     }
 
     // A call to an operation names one the set has — one a capability the
-    // set hasn't listed is named as such, by validate.
+    // set hasn't listed is named as such, by validate — and only one: an id
+    // two APIs declare is qualified by the API it means.
     function validateOperationCalls(steps, locationPath) {
-      if (!operationIds) return;
-      for (const id of new Set(walkOperationCalls(steps))) {
-        if (!operationIds.has(id)) {
-          errors.push({ rule: 'unknown-operation', message: `call: operationId "${id}" names no operation in the set.`, path: locationPath });
+      if (!operations) return;
+      for (const ref of new Set(walkOperationCalls(steps))) {
+        const { candidates } = operations.find(ref);
+        if (candidates.length === 0) {
+          errors.push({ rule: 'unknown-operation', message: `call: operationId "${ref}" names no operation in the set.`, path: locationPath });
+        } else if (candidates.length > 1) {
+          errors.push({
+            rule: 'ambiguous-operation',
+            message: `call: operationId "${ref}" is declared by more than one API; write ${candidates.map(qualifiedRef).join(' or ')}.`,
+            path: locationPath,
+          });
         }
       }
     }

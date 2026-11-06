@@ -9,46 +9,15 @@
  * and their names are never worked out a second time.
  */
 
-/** Operation ids declared in a set of OpenAPI paths. */
-function idsIn(paths, out) {
-  for (const item of Object.values(paths ?? {})) {
-    for (const method of ['get', 'put', 'post', 'patch', 'delete']) {
-      const id = item?.[method]?.operationId;
-      if (id) out.add(id);
-    }
-  }
-}
-
-/**
- * Every operation id the set will have once resolved.
- *
- * @param {import('../types.js').Doc[]} docs
- * @param {{ generatedOverlays: Function, rulesApis: Function }} generators - core's,
- *   passed in to avoid an import cycle
- * @returns {Set<string>|null} Null when the set cannot be generated, so ids are not checked
- */
-export function operationIdsOf(docs, { generatedOverlays, rulesApis }) {
-  const ids = new Set();
-  for (const doc of docs.filter((d) => d.type === 'openapi')) idsIn(doc.content?.paths, ids);
-  try {
-    for (const overlay of generatedOverlays(docs)) {
-      for (const action of overlay.actions ?? []) {
-        if (action.target === '$.paths') idsIn(action.update, ids);
-      }
-    }
-    for (const api of rulesApis(docs)) idsIn(api.content?.paths, ids);
-  } catch {
-    return null; // The set does not generate; that is reported where it fails.
-  }
-  return ids;
-}
+import { normalizeRefPath } from '../ref-lookup.js';
 
 /**
  * @param {import('../types.js').Doc} doc - An Arazzo document
- * @param {Set<string>|null} operationIds - From operationIdsOf
+ * @param {ReturnType<import('../operations.js').readOperations>} operations - The
+ *   set's, from extract(docs, 'operations'); null skips checking that steps' operations exist
  * @returns {object[]} Errors
  */
-export function validateArazzo(doc, operationIds) {
+export function validateArazzo(doc, operations) {
   const errors = [];
   const c = doc.content ?? {};
   const at = (where) => `${doc.path}#${where}`;
@@ -104,16 +73,24 @@ export function validateArazzo(doc, operationIds) {
         // With more than one source, Arazzo requires each operation to say
         // which it belongs to: `$sourceDescriptions.<name>.<operationId>`.
         const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId);
-        const source = qualified ? sources.get(qualified[1]) : null;
+        const source = qualified ? sources.get(qualified[1]) : (sources.size === 1 ? [...sources.values()][0] : null);
         const id = qualified ? qualified[2] : step.operationId;
         if (qualified && !source) {
           err('arazzo-shape', `Step "${step.stepId}" names source "${qualified[1]}", which sourceDescriptions does not declare.`, stepWhere);
         } else if (!qualified && sources.size > 1) {
           err('arazzo-shape', `Step "${step.stepId}" names ${id} without its source; with more than one source, write $sourceDescriptions.<name>.${id}.`, stepWhere);
-        } else if (operationIds && !outside(source) && !operationIds.has(id)) {
-          // A source outside the set — the mock's own routes, by URL — is
-          // checked where it is served, not here.
-          err('unknown-operation', `Step "${step.stepId}" calls ${id}, which no API in the set declares.`, stepWhere);
+        } else if (operations && source && !outside(source)) {
+          // The operation is looked for in its source's document, not anywhere
+          // in the set. A source outside the set — the mock's own routes, by
+          // URL — is checked where it is served, not here.
+          const file = normalizeRefPath(source.url ?? '', doc.relativePath);
+          const { candidates } = operations.find(id, { file });
+          if (candidates.length === 0) {
+            const elsewhere = operations.find(id).candidates;
+            err('unknown-operation', elsewhere.length
+              ? `Step "${step.stepId}" calls ${id}, which ${source.url} doesn't declare; ${elsewhere.map((o) => o.file).join(' and ')} does.`
+              : `Step "${step.stepId}" calls ${id}, which no API in the set declares.`, stepWhere);
+          }
         }
       }
 

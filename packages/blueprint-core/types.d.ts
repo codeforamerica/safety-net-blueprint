@@ -463,3 +463,39 @@ export function extract(docs: Doc[], type: 'examples'): Record<string, ExampleRe
  */
 export function extract(artifact: ContractsArtifact, type: 'docs'): Doc[];
 
+/** One operation a contract set has, OpenAPI or AsyncAPI. */
+export interface Operation {
+  /** The operationId, or the AsyncAPI operation's key. */
+  id: string;
+  /** The API's name: its OpenAPI file's name without `-openapi.yaml`, which its events AsyncAPI shares. */
+  api: string;
+  /** The relative path of the document that declares it. */
+  file: string;
+  kind: 'openapi' | 'asyncapi';
+  /** An OpenAPI operation's method, upper case. */
+  method?: string;
+  /** An OpenAPI operation's path, as the document writes it. */
+  path?: string;
+  /** An AsyncAPI operation's action. */
+  action?: 'send' | 'receive';
+}
+
+export interface Operations {
+  all: Operation[];
+  /** Operations whose id another operation in the same document already has. */
+  repeated: Operation[];
+  /**
+   * The operation a reference names: a bare id, `$apis.<api>.<id>`, or, with
+   * `options.file` naming an Arazzo source's document, its operation there.
+   * `candidates` is empty when nothing has it, and has more than one when a
+   * bare id is in several APIs and has to be qualified.
+   */
+  find(ref: string, options?: { file?: string }): { operation?: Operation; candidates: Operation[] };
+}
+
+/**
+ * Every operation a set has, including the ones resolve generates, whether or
+ * not the set is resolved yet; null when the set can't be generated.
+ */
+export function extract(docs: Doc[], type: 'operations'): Operations | null;
+

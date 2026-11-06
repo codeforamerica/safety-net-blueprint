@@ -43,8 +43,9 @@ import { governedResource } from './attachment.js';
 import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { polymorphicReferenceErrors } from './validator/polymorphic-validator.js';
-import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
-import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
+import { validateArazzo } from './validator/arazzo-validator.js';
+import { readOperations } from './operations.js';
+import { eventsAsyncapis } from './generate.js';
 import { unlistedCapabilityNames, withCapability } from './capabilities.js';
 
 /**
@@ -97,8 +98,7 @@ export function validate(docs) {
     docs,
     // Computed once, and only when the set has scenarios, or state machines
     // calling operations, to check.
-    operationIds: docs.some((d) => d.type === 'arazzo' || (d.type === 'state-machine' && JSON.stringify(d.content).includes('"operationId"')))
-      ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
+    operations: readOperations(docs),
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -146,7 +146,7 @@ export function validate(docs) {
   // listed says so: the unknown operation or domain is not a typo, it is a
   // capability left out. Worked out only when there is something to explain.
   if (results.some((r) => !r.ok)) {
-    const unlisted = unlistedCapabilityNames(docs, { generatedOverlays, rulesApis });
+    const unlisted = unlistedCapabilityNames(docs);
     for (const finding of results.flatMap((r) => r.errors)) {
       finding.message = withCapability(finding.message, unlisted);
     }
@@ -768,6 +768,16 @@ function validateDoc(doc, context) {
 
   switch (doc.type) {
     case 'openapi': {
+      // An id is how an operation is found within its document, so it's one
+      // operation's only (OpenAPI: unique among all operations described).
+      for (const operation of context.operations?.repeated ?? []) {
+        if (operation.file !== doc.relativePath) continue;
+        errors.push({
+          rule: 'operation-id-repeated',
+          message: `operationId "${operation.id}" is on more than one operation in this document; ${operation.method} ${operation.path} is one.`,
+          path: doc.path,
+        });
+      }
       // A deprecated spec is kept for consumers still on it and is not held to
       // current pattern rules.
       if (isDeprecated(doc.content)) break;
@@ -823,7 +833,7 @@ function validateDoc(doc, context) {
       }
       errors.push(...validateWithinFile(doc.path, doc.content, { validRoles: context.validRoles }));
       errors.push(
-        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operationIds)
+        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operations)
       );
       errors.push(...validateEvents(doc, context.channels));
       errors.push(...resourcesNotNested(doc, context.docs));
@@ -838,7 +848,7 @@ function validateDoc(doc, context) {
       break;
 
     case 'arazzo':
-      errors.push(...validateArazzo(doc, context.operationIds));
+      errors.push(...validateArazzo(doc, context.operations));
       break;
 
     case 'sla-types':
