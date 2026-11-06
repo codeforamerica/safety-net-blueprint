@@ -204,7 +204,7 @@ describe('extract(docs, "state-machines")', () => {
 
   test('extends resolves by its path, as a $ref does, so a file of the same name elsewhere is not it', () => {
     const docs = setOf({
-      'somewhere/else/platform-state-machine.yaml': {
+      'base/domains/platform/platform-state-machine.yaml': {
         $schema: 'state-machine-schema.yaml',
         guards: [{ id: 'elsewhere' }],
       },
