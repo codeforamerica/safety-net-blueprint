@@ -545,3 +545,47 @@ test('executeTransition — a body its schema refuses is 422, even when a condit
   });
   assert.strictEqual(result.status, 422);
 });
+
+// =============================================================================
+// response: — what an action answers with
+// =============================================================================
+
+/** Answers every call to an operation with `body`, as a server adapter would. */
+const answering = (body) => ({ perform: async () => ({ ok: true, status: 200, body }) });
+
+const connecting = (response) => makeMachine([{
+  id: 'connect',
+  transition: { from: 'open' },
+  steps: [{ call: { operationId: 'connectTestAdapter' }, bind: '$connection' }],
+  ...(response ? { response } : {}),
+}]);
+
+const connect = (machine, stepCalls) => executeTransition({
+  store, stepCalls, resourceName: 'testresources', resourceId: 'res-1', trigger: 'connect',
+  callerId: 'user-1', callerRoles: [ROLES.CASE_WORKER], stateMachine: makeStateMachine(), machine, rules: [],
+});
+
+test('executeTransition — without response:, an action answers with the record', async () => {
+  store.insertResource('testresources', { id: 'res-1', status: 'open' });
+  const result = await connect(connecting(null), answering({ url: 'wss://x', metadata: { t: 1 } }));
+  assert.strictEqual(result.success, true);
+  assert.strictEqual(result.result.id, 'res-1');
+});
+
+test('executeTransition — with response:, it answers with the payload, read from what a call bound', async () => {
+  store.insertResource('testresources', { id: 'res-1', status: 'open' });
+  const machine = connecting({
+    schema: { type: 'object' },
+    payload: { url: '$connection.url', expiresIn: '$connection.expiresIn', transcriptId: '$object.id' },
+  });
+  const result = await connect(machine, answering({ url: 'wss://x', expiresIn: 60, metadata: { t: 1 } }));
+  assert.strictEqual(result.success, true);
+  // The adapter's metadata isn't passed on: only what the payload names.
+  assert.deepStrictEqual(result.result, { url: 'wss://x', expiresIn: 60, transcriptId: 'res-1' });
+});
+
+test('executeTransition — a payload can name a whole bound value', async () => {
+  store.insertResource('testresources', { id: 'res-1', status: 'open' });
+  const result = await connect(connecting({ schema: { type: 'object' }, payload: '$connection' }), answering({ url: 'wss://x' }));
+  assert.deepStrictEqual(result.result, { url: 'wss://x' });
+});

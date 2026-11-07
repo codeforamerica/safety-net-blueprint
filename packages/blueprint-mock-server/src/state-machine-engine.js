@@ -191,7 +191,7 @@ function resolveBody(body, context) {
  * Recurses into nested objects so expressions like { status: "confirmed", ids: "$this.data.ids" }
  * have their string fields resolved.
  */
-function resolveBodyValue(val, context) {
+export function resolveBodyValue(val, context) {
   if (typeof val === 'string') return resolveValue(val, context);
   if (Array.isArray(val)) return val.map(item => resolveBodyValue(item, context));
   if (val && typeof val === 'object') {

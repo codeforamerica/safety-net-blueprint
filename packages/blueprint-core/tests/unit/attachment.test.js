@@ -144,6 +144,38 @@ describe('a call sending its body as body:', () => {
   });
 });
 
+describe('an action saying what it answers with', () => {
+  const machinesWith = (action) => toDoc({
+    path: '/set/domains/intake/intake-state-machine.yaml',
+    relativePath: 'domains/intake/intake-state-machine.yaml',
+    type: 'state-machine',
+    content: {
+      // Declared, as a contract file declares it, so the document is checked against it.
+      $schema: 'https://blueprint.codeforamerica.org/schemas/state-machine-schema.yaml',
+      version: '1.0',
+      domain: 'intake',
+      machines: [{ object: 'Application', states: [{ id: 'draft', slaClock: 'stopped' }], initialState: 'draft', actions: [{ id: 'check', transition: { from: 'draft' }, steps: [{ set: { field: 'x', value: 1 } }], ...action }] }],
+    },
+  });
+  const findings = async (action) => {
+    const { validate } = await import('../../src/validate.js');
+    return validate([intake, machinesWith(action)]).results.flatMap((r) => [...r.errors, ...r.warnings]);
+  };
+
+  test('in schema.response is warned that response: {schema, payload} replaced it', async () => {
+    const warned = (await findings({ schema: { response: { type: 'object' } } })).filter((f) => f.rule === 'deprecated-schema-response');
+    assert.equal(warned.length, 1);
+    assert.match(warned[0].message, /write response: \{schema, payload\}/);
+  });
+
+  test('in response: needs both its schema and its payload', async () => {
+    const about = (fs) => fs.filter((f) => f.rule === 'schema-conformance' && /response/.test(f.message));
+    assert.deepEqual(about(await findings({ response: { schema: { type: 'object' }, payload: '$object' } })), []);
+    assert.ok(about(await findings({ response: { schema: { type: 'object' } } })).length > 0, 'a schema with nothing to fill it');
+    assert.ok(about(await findings({ response: { payload: '$object' } })).length > 0, 'a value with no schema saying its shape');
+  });
+});
+
 describe('an operation written by hand that a generated one would replace', async () => {
   const { generate } = await import('../../src/index.js');
   const machine = toDoc({

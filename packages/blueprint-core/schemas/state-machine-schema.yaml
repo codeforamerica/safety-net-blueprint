@@ -367,7 +367,12 @@ $defs:
             additionalProperties: true
           response:
             type: object
-            description: JSON Schema for the 200 response body. Defaults to the resource schema when absent.
+            deprecated: true
+            description: >
+              Deprecated: write the action's `response:`, which gives the
+              schema and the value that fills it together. This described a
+              response nothing produced: an action answered with the record
+              whatever it said.
             additionalProperties: true
       transition:
         $ref: "#/$defs/TransitionBlock"
@@ -380,6 +385,24 @@ $defs:
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
+      response:
+        type: object
+        description: >
+          What the action answers with, when it isn't the record: `schema`, a
+          JSON Schema the generated endpoint's 200 response declares, and
+          `payload`, the value that fills it — value expressions, as a call's
+          `requestBody.payload` takes, read after the steps run, such as a
+          field a step's call bound (`$connection.url`). Absent, the action
+          answers with the record as its steps leave it.
+        required: [schema, payload]
+        additionalProperties: false
+        properties:
+          schema:
+            type: object
+            description: JSON Schema for the 200 response body, or a `$ref` to one in `$defs`.
+            additionalProperties: true
+          payload:
+            description: The response body, as value expressions — an object of them, or one naming the whole value.
 
   GovernedResource:
     type: object

@@ -117,8 +117,8 @@ export function readConfigs(docs) {
  *                     Matched on filename alone, ignoring any directory part,
  *                     so moving a file does not require editing every
  *                     document that extends it.
- *   action `$ref`s    `schema.request` and `schema.response` are replaced by
- *                     what they point at.
+ *   action `$ref`s    `schema.request`, `response.schema` and the deprecated
+ *                     `schema.response` are replaced by what they point at.
  *   short emits       `emit: paused` gets its full type,
  *                     `communication.transcript.paused` (event-names.js).
  *
@@ -330,8 +330,15 @@ function resolveActionSchemas(stateMachine, byRelativePath, fromPath) {
 
   for (const machine of stateMachine.machines ?? []) {
     for (const action of machine.actions ?? []) {
-      for (const slot of ['request', 'response']) {
-        const ref = action.schema?.[slot]?.$ref;
+      // Each place an action names a schema: its request, what it answers
+      // with, and the old place for that.
+      const slots = [
+        [action.schema, 'request', 'request'],
+        [action.response, 'schema', 'response'],
+        [action.schema, 'response', 'response'],
+      ];
+      for (const [holder, key, slot] of slots) {
+        const ref = holder?.[key]?.$ref;
         if (typeof ref !== 'string') continue;
 
         const resolved = target(ref);
@@ -342,7 +349,7 @@ function resolveActionSchemas(stateMachine, byRelativePath, fromPath) {
               `The unresolved ref would be used as the schema, validating the ${slot} against nothing.`
           );
         }
-        action.schema[slot] = resolved;
+        holder[key] = resolved;
       }
     }
   }

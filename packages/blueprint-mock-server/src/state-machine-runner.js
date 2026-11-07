@@ -4,7 +4,7 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities, resolveBodyValue } from './state-machine-engine.js';
 import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
@@ -310,6 +310,12 @@ export async function executeTransition({
     };
   }
 
+  // An action that says what it answers with answers with that — a value a
+  // step's call bound, say — read once the steps have run and the record is
+  // saved; one that doesn't answers with the record.
+  if (operation.response?.payload !== undefined) {
+    return { success: true, result: resolveBodyValue(operation.response.payload, { ...context, object: result }) };
+  }
   return { success: true, result };
 }
 

@@ -189,6 +189,28 @@ test('generateOverlay — references resource schema in 200 response', () => {
   assert.strictEqual(schema.$ref, '#/components/schemas/Task');
 });
 
+test('generateOverlay — an action that says what it answers with declares that schema, its $defs hoisted', () => {
+  const stateMachine = {
+    domain: 'communication',
+    machines: [{
+      object: 'Transcript', states: [{ id: 'recording' }], initialState: 'recording',
+      actions: [{
+        id: 'connect',
+        transition: { from: 'recording' },
+        steps: [{ call: { operationId: 'connectTranscriptAdapter' }, bind: '$connection' }],
+        response: { schema: { $ref: '#/$defs/StreamConnection' }, payload: { url: '$connection.url' } },
+      }],
+    }],
+    $defs: { StreamConnection: { type: 'object', required: ['url'], properties: { url: { type: 'string' } } } },
+  };
+  const overlay = generateOverlay(stateMachine, { ...sampleEndpointInfo, basePath: '/transcripts', paramName: 'transcriptId', schemaRef: '#/components/schemas/Transcript' });
+  const path = Object.keys(overlay.actions[0].update).find((p) => p.endsWith('/connect'));
+  const schema = overlay.actions[0].update[path].post.responses['200'].content['application/json'].schema;
+  assert.strictEqual(schema.$ref, '#/components/schemas/StreamConnection');
+  const hoisted = overlay.actions.find((a) => a.target === '$.components.schemas');
+  assert.ok(hoisted?.update?.StreamConnection, 'the schema it names is hoisted into components');
+});
+
 test('generateOverlay — correct operationIds', () => {
   const overlay = generateOverlay(sampleStateMachine, sampleEndpointInfo);
   const paths = overlay.actions[0].update;
