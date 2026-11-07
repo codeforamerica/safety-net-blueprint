@@ -236,6 +236,9 @@ In the safety net contract set, `safety-net-contracts/src/domains/communication/
 | 9 | [A dropped connection is a gap, not an event](#decision-9-a-dropped-connection-is-a-gap-not-an-event) | The record shows what was lost, whatever caused it |
 | 10 | [A transcript names its profile; the profile's history is the record](#decision-10-a-transcript-names-its-profile-the-profiles-history-is-the-record) | Profiles change through the API, and their change events say what each said when |
 | 11 | [Event-driven triggers — not RPC](#decision-11-event-driven-triggers--not-rpc) | Notices are sent in reaction to other domains' events |
+| 12 | [The software asks the server how to stream, in one shape for every service](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
+| 13 | [A service with no browser path sits behind a relay that speaks the blueprint's audio contract](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) | Google, a self-hosted model, or any service a state fronts itself |
+| 14 | [The audio contract takes the services' common pattern and the standard result names](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
 
 ### Decision 1: A framework domain of its own
 
@@ -486,6 +489,221 @@ profile to another service, or adds a language.
 **What's being decided:** Whether other domains trigger notices via direct API calls to Communication or via domain events.
 
 **Decision:** Domain events. The calling domain has no dependency on Communication's API. Adding a new notice type requires no change to the producing domain — only a new subscription in Communication. This is consistent with the event-driven pattern in `docs/architecture/inter-domain-communication.md`.
+
+### Decision 12: The software asks the server how to stream, in one shape for every service
+
+**Status:** Decided: C
+
+**What's being decided:** The staff member's software streams audio straight to
+the transcription service ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)),
+which takes a credential the software must not hold for long; so what the
+server hands the software decides which services a deployment can use without
+changing the transcript contract.
+
+**Background:** How each service lets a browser stream to it, from its own
+documentation, November 2026:
+
+| Service | What the server gets | How the browser presents it | How long it lasts |
+|---|---|---|---|
+| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/streaming-setting-up.html) | A presigned WebSocket URL, with the language and audio format signed into it | The URL is the credential | At most 5 minutes to connect |
+| [Google Cloud Speech-to-Text](https://docs.cloud.google.com/speech-to-text/docs/streaming-recognize) | Nothing: streaming is gRPC only, which a browser cannot open | Through a relay ([Decision 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract)) | — |
+| [Google Gemini Live](https://aistudio.google.com/docs/live-api/ephemeral-tokens) | An ephemeral token | `access_token` query parameter | 1 minute to connect, 30 to use |
+| [Azure AI Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short#authentication) | A token, and the region it works in | An argument to Azure's SDK, the only browser client | 10 minutes, renewed during a session |
+| [OpenAI Realtime](https://developers.openai.com/api/reference/resources/realtime/subresources/client_secrets/methods/create) | A client secret | A bearer header (WebRTC) or a WebSocket subprotocol | Up to 2 hours, reusable |
+| [ElevenLabs Scribe](https://elevenlabs.io/docs/api-reference/tokens/create) | A single-use token | `token` query parameter | 15 minutes, consumed on use |
+| [Deepgram](https://developers.deepgram.com/reference/auth/tokens/grant) | `access_token` and `expires_in` | A WebSocket subprotocol | 30 seconds to an hour |
+| [AssemblyAI](https://www.assemblyai.com/docs/streaming/api-spec/generate-streaming-token.md) | A token | `token` query parameter | At most 10 minutes to connect |
+| [Speechmatics](https://docs.speechmatics.com/get-started/authentication) | A temporary key | `jwt` query parameter | 1 minute to a day |
+| [Gladia](https://docs.gladia.io/chapters/live-stt/getting-started) | A session URL with its token | The URL is the credential | Resumable at the same URL |
+
+**Considerations:**
+- Every service fits four things: where to connect, a credential unless the
+  URL carries one, how long it lasts, and settings the software sends when it
+  connects. Which settings are fixed when the credential is issued and which
+  are sent on connecting varies by service, so the settings the server chose
+  travel with the answer.
+- Each service frames audio and results its own way, so the software needs a
+  small adapter per service whatever the server answers. The adapter knows
+  where its service wants the credential; the answer doesn't need to say.
+- OAuth 2.0's token response ([RFC 6749 §5.1](https://www.rfc-editor.org/rfc/rfc6749#section-5.1))
+  names a credential and its lifetime, and Deepgram returns exactly those
+  names. Nothing standard names where to connect or the settings to send.
+- A credential lifetime relative to now (`expires_in`) doesn't depend on the
+  software's clock agreeing with the server's.
+
+**Options:**
+- **(A)** The software holds the service's key. Anyone with the page has it.
+- **(B)** An operation per service, answering in that service's own shape. A
+  new service is a contract change.
+- **(C) ✓** One operation on the transcript, answering in one shape for every
+  service: the service, the protocol (`websocket` or `webrtc`), the URL, the
+  credential as `accessToken` and `tokenType` with `expiresIn`,
+  `connectionParameters`, and — for a relay — the `subprotocol` the connection
+  speaks ([Decision 14](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names)). The request says the audio format the software will
+  send, which a service may sign into the credential. Behind the operation, a
+  server adapter holds the service's secret and issues the credential.
+
+**Decision:** OAuth's names, with its meaning and in the blueprint's camelCase.
+The operation is the transcript's `connect` action,
+`POST /transcripts/{transcriptId}/connect`: an action, so its guards say who may
+ask and that the transcript is recording, as `pause`'s do. Its steps call the
+server adapter, and it answers with the connection, not the transcript, by
+naming its response's schema and payload together (see the
+[DSL](../cross-cutting/behavioral-contract-dsl.md)). The answer is `200`: nothing is
+stored, and each call issues a fresh credential.
+
+The server adapter, `communication-transcripts-adapter-openapi.yaml` beside the
+transcripts API, has one operation, `connectTranscriptAdapter`
+(`POST /connect`). It takes what any service needs to issue a credential:
+
+- the service and its languages, from the transcript's profile, and the model,
+  from the transcript. Each adapter maps the languages to what its service
+  takes — one, a list, or none to detect — and answers `422` naming the
+  problem when it can't, rather than start a transcript in the wrong language;
+- the audio the software will send, from the request: its encoding, named as
+  Google Cloud Speech-to-Text names them (`LINEAR16`, `MULAW`, `OGG_OPUS`),
+  which fix the bit depth; `sampleRateHertz`; and `channels`. More than one
+  channel means the service tells speakers apart by channel, one that it does
+  by voice — a line must name its speaker, and Amazon Transcribe signs which
+  into its URL. The software's adapter, which is specific to its service,
+  captures audio in a format that service accepts; the request reports it;
+- the protocols the software speaks, of which the adapter picks one, so a
+  software adapter is never handed a protocol it doesn't know;
+- `metadata`, echoed back, as every adapter does.
+
+Settings that don't change from one call to the next — a region, a custom
+vocabulary, redaction — are the adapter's own configuration. Each of these
+grows without breaking: a new service is a registry entry and an adapter, a
+new setting an optional field. A credential that isn't a token — Amazon's
+temporary keys for its SDK, through a Cognito identity pool — can be added the
+way protocols are, offered only to software that says it handles one; a
+presigned URL covers Amazon Transcribe without it, giving the software one
+stream rather than keys. The contract is versioned as every API is
+(`docs/conventions/http.yaml`), not in its messages.
+
+Calling again is how the software renews a credential, whenever a service
+needs one: Azure's lasts ten minutes and is replaced during a session, so its
+software adapter asks again before `expiresIn` runs out. Where the settings go
+is the software adapter's to know, as where the credential goes is: most
+services take `connectionParameters` on connecting, and Speechmatics in its
+first message.
+
+### Decision 13: A service with no browser path sits behind a relay that speaks the blueprint's audio contract
+
+**Status:** Decided: C
+
+**What's being decided:** Some services can't be reached from a browser at
+all — Google Cloud Speech-to-Text accepts only gRPC, and a model a state runs
+itself has no browser credentials — so what stands in for the service
+decides whether a deployment can use them.
+
+**Considerations:**
+- Something outside the browser has to receive the audio and pass it on. The
+  mock running in a page can't either: it is code in the same browser.
+- A relay is the state's service, on the service's side. The software streams
+  to it as it would to any service, so audio still never passes through the
+  blueprint ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
+- Self-hosted models — Whisper, NVIDIA Riva — are a real option for a state
+  that doesn't want interview audio sent to a vendor, and have no browser
+  path. A relay also lets a state keep audio inside its own boundary, or change
+  the service behind it without changing the software.
+
+**Options:**
+- **(A)** Support only services a browser can reach. Google Cloud and
+  self-hosted models are out.
+- **(B)** A relay that copies an existing service's protocol, ElevenLabs' say,
+  so that service's software adapter works unchanged. The blueprint's design
+  then depends on a vendor's format.
+- **(C) ✓** A relay that speaks an audio contract the blueprint defines, in
+  AsyncAPI: one software adapter works with any relay, for any service behind
+  it. The operation in [Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)
+  answers with the relay's URL and a credential the relay accepts.
+
+**Decision:** Choosing a service behind a relay means running the relay: a
+deployment that uses one, including a demo in a page, points the software at
+wherever the state hosts it.
+
+### Decision 14: The audio contract takes the services' common pattern and the standard result names
+
+**Status:** Decided: C
+
+**What's being decided:** A relay ([Decision 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract))
+receives audio from the software and sends back what the service heard, so
+the messages it speaks decide what every relay builds and the one software
+adapter that talks to any of them.
+
+**Background:** How streaming services shape the connection, from their own
+documentation, November 2026:
+
+| Service | Audio up | Settings | Results down | Ending |
+|---|---|---|---|---|
+| [Deepgram](https://developers.deepgram.com/reference/speech-to-text/listen-streaming) | Binary frames | Query parameters | `Results`: `is_final`, `speech_final`, `alternatives[]`, words with speaker | `CloseStream` |
+| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/streaming-api/streaming-api) | Binary frames | Query parameters | `Turn`: `end_of_turn`, words in ms | `Terminate` → `Termination` |
+| [Speechmatics](https://docs.speechmatics.com/rt-api-ref) | Binary frames | `StartRecognition` → `RecognitionStarted` | `AddPartialTranscript`, `AddTranscript` | `EndOfStream` → `EndOfTranscript` |
+| [Gladia](https://docs.gladia.io/chapters/live-stt/getting-started) | Binary frames | Set when the session is made | `transcript`: `is_final`, speaker, channel | `stop_recording` → `end_session` |
+| [ElevenLabs](https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime) | Base64 in JSON | Query parameters | `partial_transcript`, `committed_transcript` | — |
+| [OpenAI Realtime](https://developers.openai.com/api/docs/guides/realtime-transcription) | Base64 in JSON | `session.update` | `…transcription.delta`, `.completed`; no timing or speakers | — |
+| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/streaming-setting-up.html) | AWS event-stream frames | Signed into the URL | `IsPartial`, `Alternatives[]`, `ChannelId` | An empty audio event |
+| [Google Cloud](https://docs.cloud.google.com/speech-to-text/v2/docs/reference/rpc/google.cloud.speech.v2), [NVIDIA Riva](https://github.com/nvidia-riva/common) | gRPC: config first, then audio | First message | `is_final`, `alternatives[{transcript, confidence, words}]`, `channel_tag` | Close the stream |
+
+No standard defines the connection. The W3C [Web Speech API](https://webaudio.github.io/web-speech-api/)
+names results in a browser — `isFinal`, `alternatives`, `transcript`,
+`confidence` — and is the only standard naming there is; MRCP (RFC 6787) runs
+over SIP, not WebSockets.
+
+**Considerations:**
+- Most services send audio as raw binary frames, which base64 in JSON makes a
+  third larger, and settle on one lifecycle: the software starts, streams,
+  and ends, and the service answers its last results before saying it's done.
+- A relay mostly translates Google's or a self-hosted model's results, which
+  are Google-shaped; result names taken from Google and the Web Speech API map
+  from them almost one to one.
+- Deepgram's protocol is the most copied — a self-hosted Whisper server,
+  WhisperLiveKit, speaks it — and Deepgram publishes it in AsyncAPI.
+- Browser code can't send WebSocket pings, so keeping a quiet connection open
+  needs a message of its own.
+
+**Options:**
+- **(A)** Copy Deepgram's protocol. Settings ride in the URL, the names are
+  Deepgram's, and two "final" flags (`is_final`, `speech_final`) mean
+  different things.
+- **(B)** Copy OpenAI's. Audio is base64, and results carry no timing or
+  speakers, which every line needs.
+- **(C) ✓** A message set of the blueprint's, in AsyncAPI, built from what the
+  services share and the standard names: `start` → `started`; audio as binary
+  frames; `keepalive`; `finalize` to flush what's been said; `end` → the last
+  results → `ended`; `result` with `isFinal` and
+  `alternatives[{transcript, confidence, words}]`, its start and end, channel,
+  language and speaker; and `error` with codes after the Web Speech API's.
+
+**Decision:** Three things are the blueprint's own, since no service settles
+them: each result has an id, so a final result replaces its earlier versions
+— Google's have none; times are whole milliseconds from the start of the
+connection — services split between seconds and milliseconds; and speaker
+labels are strings — Riva's are numbers, Google's and Gladia's strings.
+
+The connection is a WebSocket, the one way to stream both ways that every
+browser has and a state can run simply; WebRTC or WebTransport would be another
+server in the AsyncAPI document, offered only to software that names it in
+`connect`'s protocols. The relay speaks the subprotocol
+`blueprint.transcripts.audio.v1` ([RFC 6455](https://www.rfc-editor.org/rfc/rfc6455)'s
+way for a WebSocket to say what it speaks), which `connect` answers with, so
+the software knows to use its relay adapter.
+
+The relay accepts a signed, short-lived JWT ([RFC 7519](https://www.rfc-editor.org/rfc/rfc7519),
+following RFC 8725), which it checks itself: the server adapter signs it with a
+private key, naming the relay as its audience and expiring within a minute,
+and the relay checks the signature, audience and expiry against the public key
+the adapter publishes. Every relay can — each is a server, and every server
+language has the libraries — without a call per connection, and the relay can
+check tokens but never make them; a token that can't be revoked does little
+harm in the minute it lasts. An opaque token the relay asks about (RFC 7662)
+could be revoked, but costs a call and an endpoint; the staff member's own
+sign-in token would tie the relay to one identity provider and to no
+transcript. The software sends it in the WebSocket subprotocol header, beside
+the subprotocol's name, not in the URL: RFC 6750 says to avoid tokens in URLs,
+which are logged. A deployment with no backend of its own still has the relay's,
+so the relay's deployment runs the server adapter that signs.
 
 ## Key design questions
 
