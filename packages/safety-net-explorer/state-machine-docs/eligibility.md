@@ -77,6 +77,6 @@ Domain: `eligibility` | API: [eligibility-openapi.yaml](../../../contracts/domai
     - When `snap`:
       - Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))
     - When `medicaid`:
-      - Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)
+      - Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment checks (FDSH Medicare and FDSH VCI) (42 CFR § 435.940, 42 CFR § 435.916)
 - **`data-exchange.call.completed`**
   - Call the Medicaid ex parte adapter when all data exchange results for a Decision are in; adapter triggers approve, deny, or mark-ineligible (42 CFR § 435.911)

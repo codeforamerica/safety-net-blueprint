@@ -73,7 +73,7 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 - **`eligibility.determination.created`**
   - For each:
     - For each `$member.programsAppliedFor`:
-      - `POST eligibility/determinations/decisions`
+      - {"operationId":"createDecision","parameters":[{"name":"determinationId","in":"path","value":"$this.subject"}],"requestBody":{"payload":{"determinationId":"$this.subject","applicationId":"$this.data.applicationId","memberId":"$member.id","program":"$program","status":"pending"}}}
 - **`eligibility.decision.completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
