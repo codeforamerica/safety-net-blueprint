@@ -370,7 +370,7 @@ A page holds no secrets, so a route to a service from a page can reach only one 
 
 ### What routing does not reach
 
-- **Calls a state machine makes by path.** A call by `operationId` goes through the route table, so it is routed; a call written as a method and path is carried out inside the mock and is not. An [HTTP stub](#http-stubs) can intercept one, routing cannot.
+- **Calls a state machine makes by path.** A call by `operationId` goes through the route table, so it is routed; a call written as a method and path is carried out inside the mock and is not. A machine uses one only for its own domain's records, which are routed with its reactions; `validate` warns about one into another domain.
 - **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
 
 ## Scenarios

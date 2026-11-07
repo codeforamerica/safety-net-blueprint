@@ -782,6 +782,43 @@ function deprecatedCallBodies(doc) {
   return warnings;
 }
 
+/**
+ * Calls by method and path into another domain's records.
+ *
+ * A call by path is the machine's own direct write: it skips the API's checks
+ * and the route table, so routing never sees it. That's right for a machine
+ * writing its own domain's records — when the domain is routed, its reactions
+ * are too — and wrong for another domain's, which may be answered elsewhere.
+ * Those go through the other domain's API, by operationId.
+ *
+ * @param {import('../types.js').Doc} doc - A state-machine document
+ * @returns {object[]}
+ */
+function pathCallsAcrossDomains(doc) {
+  const own = doc.domain ?? doc.content?.domain;
+  if (!own) return [];
+  const warnings = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    const call = node.call;
+    if (call && typeof call === 'object' && !Array.isArray(call) && !call.operationId) {
+      const method = ['POST', 'PATCH', 'GET', 'DELETE'].find((m) => typeof call[m] === 'string');
+      const domain = method ? call[method].replace(/^\//, '').split('/')[0] : null;
+      if (domain && !domain.startsWith('$') && domain !== own) {
+        warnings.push({
+          rule: 'call-by-path-across-domains',
+          message: `${method} ${call[method]} is a call by path into ${domain}, so it skips that API and routing. Call the operation by its operationId.`,
+          path: `${doc.path}#${at}/call`,
+        });
+      }
+    }
+    for (const [key, value] of Object.entries(node)) walk(value, `${at}/${key}`);
+  };
+  walk(doc.content, '');
+  return warnings;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -863,6 +900,7 @@ function validateDoc(doc, context) {
         });
       }
       warnings.push(...deprecatedCallBodies(doc));
+      warnings.push(...pathCallsAcrossDomains(doc));
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',

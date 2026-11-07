@@ -162,6 +162,13 @@ carries, the operation's guards, refusing a duplicate — and is checked only
 against the resource's full schema. A call to an operation, by its
 `operationId` (below), is the validated path.
 
+Use a call by path only for the machine's own domain's records. It skips the
+route table as well, so [routing](../../guides/mock-server.md#routing-to-a-real-service)
+never sees it: when the domain is routed elsewhere its reactions are too, so
+its own writes stay right, but another domain's records may live in a real
+service. Call another domain by `operationId`; validation warns about a call
+by path into another domain.
+
 ### Calling an operation
 
 An action, a procedure, or a machine's reaction to an event can also call an

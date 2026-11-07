@@ -293,7 +293,7 @@ async function testDecisionTransitions() {
 async function testMedicaidServiceCalls() {
   section('Medicaid — data exchange service calls created on Decision');
 
-  await test('Medicaid submission creates two data-exchange service calls (fdsh_fti and fdsh_medicare_vci)', async () => {
+  await test('Medicaid submission creates three data-exchange service calls (fdsh_fti, fdsh_medicare and fdsh_vci)', async () => {
     const appId = await newApplication();
     await createApplicationMember(appId, ['medicaid']);
     await injectEvent('intake.application.submitted', { programs: ['medicaid'] }, appId);
@@ -306,10 +306,11 @@ async function testMedicaidServiceCalls() {
     assert.ok(decision, 'Medicaid Decision should exist');
 
     const { items: calls } = await (await fetch(`${BASE_URL}${SERVICE_CALLS}?limit=100`)).json();
-    const decisionCalls = calls.filter(c => c.decisionId === decision.id);
-    assert.strictEqual(decisionCalls.length, 2, 'should create exactly two service calls for Medicaid Decision');
+    const decisionCalls = calls.filter(c => c.metadata?.eligibility?.decisionId === decision.id);
+    assert.strictEqual(decisionCalls.length, 3, 'should create exactly three service calls for Medicaid Decision');
     assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_fti'), 'fdsh_fti service call should be created');
-    assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_medicare_vci'), 'fdsh_medicare_vci service call should be created');
+    assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_medicare'), 'fdsh_medicare service call should be created');
+    assert.ok(decisionCalls.find(c => c.serviceType === 'fdsh_vci'), 'fdsh_vci service call should be created');
   });
 
   await test('SNAP submission does not create data-exchange service calls', async () => {
@@ -323,7 +324,7 @@ async function testMedicaidServiceCalls() {
     const decision = decisions[0];
 
     const { items: calls } = await (await fetch(`${BASE_URL}${SERVICE_CALLS}?limit=100`)).json();
-    const decisionCalls = calls.filter(c => c.decisionId === decision.id);
+    const decisionCalls = calls.filter(c => c.metadata?.eligibility?.decisionId === decision.id);
     assert.strictEqual(decisionCalls.length, 0, 'SNAP Decision should not create data-exchange service calls');
   });
 }
@@ -335,21 +336,21 @@ async function testMedicaidServiceCalls() {
 async function testSnapExpeditedScreeningStub() {
   section('SNAP expedited screening — HTTP stub intercept');
 
-  await test('HTTP stub for POST /eligibility-adapter/evaluate/expedited-screening is consumed when SNAP Decision is created', async () => {
+  await test('HTTP stub for the adapter at POST /evaluate/expedited-screening is consumed when SNAP Decision is created', async () => {
     await clearHttpStubs();
 
-    // Register stub using the domain-scoped form
+    // Stubbed where the adapter contract declares it
     const stubRes = await fetch(`${BASE_URL}/mock/stubs/http`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } }),
+      body: JSON.stringify({ match: { method: 'POST', url: '/evaluate/expedited-screening' } }),
     });
     assert.strictEqual(stubRes.status, 201, 'stub registration should return 201');
     const stub = await stubRes.json();
     assert.ok(stub.id, 'stub should have an id');
 
     // Submit SNAP application — triggers Decision creation → eligibility.decision.created →
-    // evaluateSnapExpedited → POST /eligibility-adapter/evaluate/expedited-screening → stub intercepts
+    // evaluateSnapExpedited → the adapter's POST /evaluate/expedited-screening → stub intercepts
     const appId = await newApplication();
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
@@ -534,7 +535,7 @@ async function testMedicaidExParteEvaluation() {
     await registerHttpStub({ match: { method: 'POST', url: '/data-exchange/service-calls' } });
 
     // Register the ex parte adapter stub
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/medicaid-ex-parte' } });
+    await registerHttpStub({ match: { method: 'POST', url: '/evaluate/medicaid-ex-parte' } });
 
     const appId = await newApplication();
     await createApplicationMember(appId, ['medicaid']);
@@ -567,13 +568,13 @@ async function testFinalDetermination() {
     const appId = await newApplication();
 
     // Stub out the expedited screening call triggered when the SNAP Decision is created
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } });
+    await registerHttpStub({ match: { method: 'POST', url: '/evaluate/expedited-screening' } });
 
     await createApplicationMember(appId, ['snap']);
     await injectEvent('intake.application.submitted', { programs: ['snap'] }, appId);
 
     // Register HTTP stub for the final determination adapter call
-    await registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/determination' } });
+    await registerHttpStub({ match: { method: 'POST', url: '/evaluate/determination' } });
 
     await injectEvent('intake.application.review_completed', {}, appId);
 

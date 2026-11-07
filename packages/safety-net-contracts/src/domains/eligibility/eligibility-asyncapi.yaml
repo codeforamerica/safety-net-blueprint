@@ -13,11 +13,6 @@ info:
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
 channels:
-  eligibility.decision.created:
-    address: eligibility.decision.created
-    messages:
-      decisionCreated:
-        $ref: '#/components/messages/DecisionCreatedMessage'
   eligibility.determination.created:
     address: eligibility.determination.created
     messages:
@@ -25,11 +20,6 @@ channels:
         $ref: '#/components/messages/DeterminationCreatedMessage'
 components:
   messages:
-    DecisionCreatedMessage:
-      name: eligibility.decision.created
-      summary: Triggers expedited SNAP screening or Medicaid data exchange initiation.
-      payload:
-        $ref: '#/components/schemas/DecisionCreatedEvent'
     DeterminationCreatedMessage:
       name: eligibility.determination.created
       summary: Emitted when a Determination record is first created (auto-emitted on POST).
@@ -44,11 +34,3 @@ components:
             type:
               type: string
               const: eligibility.determination.created
-    DecisionCreatedEvent:
-      allOf:
-        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: eligibility.decision.created

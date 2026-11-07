@@ -152,3 +152,29 @@ describe('two OpenAPI documents declaring one route', () => {
     assert.match(errors[0].message, /POST \/evaluate\/determination is also declared by domains\/eligibility\/eligibility-adapter-openapi\.yaml/);
   });
 });
+
+describe('a state machine call by path', () => {
+  const machine = (call) => toDoc({
+    path: '/set/domains/intake/intake-state-machine.yaml',
+    relativePath: 'domains/intake/intake-state-machine.yaml',
+    type: 'state-machine',
+    content: { domain: 'intake', machines: [{ object: 'Application', states: [{ id: 'draft' }], initialState: 'draft', actions: [{ id: 'go', steps: [{ call }] }] }] },
+  });
+  const warned = async (call) => {
+    const { validate } = await import('../../src/validate.js');
+    return validate([machine(call)]).results.flatMap((r) => r.warnings).filter((w) => w.rule === 'call-by-path-across-domains');
+  };
+
+  test('into its own domain is the machine\'s own write, and not warned about', async () => {
+    assert.deepEqual(await warned({ PATCH: 'intake/applications/$object.id' }), []);
+  });
+
+  test('into another domain is warned about, naming the operationId form', async () => {
+    const [warning] = await warned({ POST: 'eligibility/determinations' });
+    assert.match(warning.message, /call by path into eligibility, so it skips that API and routing\. Call the operation by its operationId/);
+  });
+
+  test('by operationId is not', async () => {
+    assert.deepEqual(await warned({ operationId: 'createDetermination' }), []);
+  });
+});
