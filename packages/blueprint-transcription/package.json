@@ -1,0 +1,34 @@
+{
+  "name": "@codeforamerica/blueprint-transcription",
+  "version": "0.1.0",
+  "description": "Reference transcription software for Blueprint's transcription session contract \u2014 the driver and client adapters that run in the page, and the server adapter that issues connections",
+  "type": "module",
+  "files": [
+    "src/"
+  ],
+  "exports": {
+    "./client": "./src/client/index.js",
+    "./server": "./src/server/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
+    "directory": "packages/blueprint-transcription"
+  },
+  "devDependencies": {
+    "@codeforamerica/blueprint-mock-server": "^0.3.0",
+    "@smithy/signature-v4": "^5.0.0",
+    "@aws-crypto/sha256-js": "^5.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
