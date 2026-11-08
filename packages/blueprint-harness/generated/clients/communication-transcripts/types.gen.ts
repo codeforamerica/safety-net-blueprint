@@ -961,7 +961,7 @@ export type StreamConnection = {
      */
     protocol: 'websocket' | 'webrtc';
     /**
-     * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.audio.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
+     * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
      *
      */
     subprotocol?: string;
@@ -4744,7 +4744,7 @@ export type GetConnectionTranscriptResponses = {
          */
         protocol: 'websocket' | 'webrtc';
         /**
-         * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.audio.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
+         * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
          *
          */
         subprotocol?: string;

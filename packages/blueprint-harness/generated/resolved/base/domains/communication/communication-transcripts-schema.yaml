@@ -4,7 +4,7 @@ title: Transcription streaming
 domain: communication
 capability: transcripts
 description: |
-  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcripts adapter and the relay's audio contract, so all three agree. See docs/architecture/domains/communication.md, Decisions 12 to 14.
+  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcripts adapter and the relay contract, so all three agree. See docs/architecture/domains/communication.md, Decisions 12 to 14.
 $defs:
   AudioEncoding:
     type: string
@@ -90,8 +90,8 @@ $defs:
       subprotocol:
         type: string
         description: |
-          The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.audio.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
-        example: blueprint.transcripts.audio.v1
+          The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
+        example: blueprint.transcripts.relay.v1
       url:
         type: string
         format: uri

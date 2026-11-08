@@ -1,13 +1,13 @@
 asyncapi: 3.0.0
 info:
-  title: Transcription audio
+  title: Transcription relay
   version: 0.1.0
   x-domain: communication
   x-capability: transcripts
   x-status: alpha
   description: |
     One WebSocket connection per stream, speaking the subprotocol
-    `blueprint.transcripts.audio.v1`. The software gets the relay's URL and a
+    `blueprint.transcripts.relay.v1`. The software gets the relay's URL and a
     token from the transcript's get-connection action, and opens the connection
     asking for the subprotocol and presenting the token beside it, in the
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
