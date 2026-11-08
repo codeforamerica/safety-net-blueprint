@@ -7,6 +7,7 @@ info:
     The interview software records a caseworker's interview from start to close, then starts a second transcript that nobody speaks into, exercising the transcription domain end to end:
 
     - profiles, and what a transcript needs before it can start
+    - asking how to stream audio to the transcription service, with the developer standing in for the state's transcripts adapter
     - a timeline of lines, gaps and pauses, each judged by when it started
     - retries recognized by their Idempotency-Key, and entries that never change
     - closing, and the idle timeout, with the developer standing in for the scheduler
@@ -142,6 +143,50 @@ workflows:
         outputs:
           id: $response.body#/id
 
+      - stepId: standInForTheAdapter
+        x-actors: [developer]
+        description: |
+          Stand in for the transcripts adapter
+
+          - The state's transcripts adapter holds the transcription service's secret and issues the short-lived credential the interview software streams with. The mock can't issue one itself: it answers `POST /connect`, a call rather than a resource, with `501`.
+          - This stub, on the mock server's own route, answers the next `POST /connect` with what Amazon Transcribe's adapter would: a presigned URL that carries the credential, good for five minutes, and the `metadata` the request sent.
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match: {method: POST, url: /connect}
+            response:
+              status: 200
+              body:
+                metadata: {transcriptId: $steps.start.outputs.id}
+                provider: aws-transcribe
+                protocol: websocket
+                url: wss://transcribestreaming.us-east-1.amazonaws.com:8443/stream-transcription-websocket?language-code=en-US&media-encoding=pcm&sample-rate=16000&X-Amz-Expires=300
+                expiresIn: 300
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: connect
+        x-actors: [software, server]
+        description: |
+          Ask how to stream the audio
+
+          - `connect` is an action of the transcript's state machine, from `recording`. The interview software says what audio it will send and what it can connect over; the server calls the transcripts adapter with those, and with the profile's `provider` and `languages` and the transcript's `model`.
+          - The answer is a `StreamConnection`: the action's `response` maps it from what the adapter answered, leaving out the adapter's `metadata`. There is no `accessToken` here, since Amazon Transcribe's credential is in the URL.
+          - The interview software streams audio straight to the service; it never passes through the server. Asking again issues a fresh credential, which is how the software renews one, and how it reconnects.
+        operationId: $sourceDescriptions.transcripts.connectTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload:
+            audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}
+            protocols: [websocket]
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/provider == 'aws-transcribe'
+          - condition: $response.body#/protocol == 'websocket'
+          - condition: $response.body#/expiresIn == 300
+
       - stepId: firstLine
         x-actors: [software]
         description: |
@@ -257,6 +302,23 @@ workflows:
             value: gap-1
         requestBody:
           payload: {kind: gap, startedAt: '2026-10-12T10:00:09Z', endedAt: '2026-10-12T10:00:11Z', cause: connection}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: connectWhilePaused
+        x-actors: [software]
+        description: |
+          Ask how to stream during the pause
+
+          - Refused with `409`: `connect` goes only from `recording`. Off the record, there is nothing to stream, so the server issues no credential and doesn't call the adapter.
+        operationId: $sourceDescriptions.transcripts.connectTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload:
+            audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}
+            protocols: [websocket]
         successCriteria:
           - condition: $statusCode == 409
 
