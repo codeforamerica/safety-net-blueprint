@@ -98,8 +98,10 @@ flowchart LR
     session -- events --> page
     session -- events --> client
   end
-  client -- audio --> service[(Transcription service)]
-  service -- what it heard --> client
+  client -- audio --> relay[Relay, optional]
+  relay -- audio --> service[(Transcription service)]
+  service -- text --> relay
+  relay -- text --> client
   session -- start, get a connection, lines,<br/>pause, resume, close --> server[Blueprint, on the server:<br/>the transcript]
   server -- get a connection --> adapter[Server adapter]
   adapter -- ask for a credential,<br/>with the secret it holds --> service
@@ -112,10 +114,19 @@ flowchart LR
 | Blueprint, in the page: the session | Keeps track of the connection, shows lines in progress, and calls the server for everything that's kept. Kept in the page by routing. Planned. |
 | Blueprint, on the server: the transcript | Keeps the transcript and its rules, and sends every change as an event. |
 | Server adapter | A state's service beside the blueprint. It holds the transcription service's secret and issues a credential that lasts minutes ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
-| Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. One a browser can't reach sits behind a relay the state runs ([Decision 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract)). |
+| Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. |
+| Relay | Only for a service a browser can't reach, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself. A server the state runs, between the client adapter and the service: it speaks the blueprint's audio contract to the client and the service's own protocol to the service ([Decisions 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) and [14](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names)). |
 
-Audio goes from the page straight to the service and never through the
-blueprint. Lines in progress stay in the browser; only finished lines reach the
+The relay is only for a service a browser can't reach; otherwise the client
+adapter connects to the service directly. With a relay, the client adapter
+connects to the relay instead, using
+a client adapter for the audio contract that works with any relay; the server
+adapter answers `get-connection` with the relay's address and a token it signs
+itself; and in the diagrams below, the relay stands where the transcription
+service is. Nothing else changes.
+
+Audio goes from the page straight to the service, or its relay, and never
+through the blueprint. Lines in progress stay in the browser; only finished lines reach the
 server. The secret never reaches the page. Every diagram below starts with the
 staff member signed in; how they sign in is part of the security model in
 [Identity & Access](../cross-cutting/identity-access.md).
@@ -180,11 +191,11 @@ sequenceDiagram
         Page->>Client: Audio
         Client-)Service: Audio
     end
-    Service-)Client: What it heard so far
+    Service-)Client: Text so far
     Client->>Session: update-line, with its key
     Session--)Page: line_updated
     Note over Session: Stays in the browser, and nothing is kept
-    Service-)Client: The finished line
+    Service-)Client: The finished text
     Client->>Session: add-line, with its key
     Session->>Server: addTranscriptEntry, with the key
     Note over Server: Added once, even if the request is sent again
@@ -211,7 +222,7 @@ sequenceDiagram
     Note over Server: Keeps the pause, and refuses<br/>a line that starts during it
     Session--)Client: paused
     Client-)Service: The end of the audio
-    Service-)Client: The last lines
+    Service-)Client: The last text
     Client->>Session: add-line, for each
     Session->>Server: addTranscriptEntry, for each
     Note over Server: Kept if it started before the pause
@@ -279,7 +290,7 @@ sequenceDiagram
     Page->>Session: stop
     Session--)Client: stopping
     Client-)Service: The end of the audio
-    Service-)Client: The last lines
+    Service-)Client: The last text
     Client->>Session: add-line, for each
     Session->>Server: addTranscriptEntry, for each
     Service--xClient: The connection closes
