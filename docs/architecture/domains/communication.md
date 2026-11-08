@@ -5,7 +5,8 @@
 > asking how to stream to a transcription service, through a server adapter a
 > state runs, with the relay contract a relay implements, in the framework's
 > `communication` domain (`blueprint-core/base-contracts/domains/communication/`).
-> The session that keeps track of the software's connection is planned. Notices have minimal
+> The session that keeps track of the software's connection is built too, as its
+> contract; what runs it in the page is planned. Notices have minimal
 > contracts, for document request notices; their full lifecycle is TBD.
 
 See [Domain Design Overview](domain-design.md) for context, [AI Services](../cross-cutting/ai-services.md)
@@ -56,10 +57,11 @@ without taking anything else the framework adds to the domain.
 
 ## How the parts work together
 
-This is where transcription is headed. Some of it is built: the transcript,
-asking how to stream, the server adapter, and routing, which decides where
-each part runs. The session, which keeps track of the software's connection,
-is planned; the diagrams mark it so.
+This is where transcription is headed. The contracts are built: the
+transcript, the session that keeps track of the software's connection, the
+server adapter and the relay, and routing, which decides where each part runs.
+The mock runs all of it today. A package that runs the session in the page in
+production, and client adapters for the services, are planned.
 
 ### Where each part runs: routing
 
@@ -111,7 +113,7 @@ flowchart LR
 |---|---|
 | Page | The staff member's screen. It captures audio and calls only the blueprint, except to hand audio to the client adapter. |
 | Client adapter | Code in the page that speaks one transcription service's protocol. The only part of the page that knows which service it is. It tells the session about its connection and the lines it hears ([Decision 17](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)). |
-| Blueprint, in the page: the session | Keeps track of the connection, shows lines in progress, and calls the server for everything that's kept. Kept in the page by routing. Planned. |
+| Blueprint, in the page: the session | Keeps track of the connection, shows lines in progress, and calls the server for everything that's kept. Kept in the page by routing. |
 | Blueprint, on the server: the transcript | Keeps the transcript and its rules, and sends every change as an event. |
 | Server adapter | A state's service beside the blueprint. It holds the transcription service's secret and issues a credential that lasts minutes ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
 | Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. |
@@ -152,7 +154,7 @@ sequenceDiagram
     box The staff member's browser
         participant Page
         participant Client as Client adapter
-        participant Session as Blueprint, in the page (planned)
+        participant Session as Blueprint, in the page
     end
     participant Server as Blueprint, on the server
     participant Adapter as Server adapter
@@ -160,9 +162,9 @@ sequenceDiagram
 
     Staff->>Page: Start
     Page->>Session: create
-    Session->>Server: createTranscript
     Session--)Client: created
     Client->>Session: get-connection, with the audio
+    Session->>Server: createTranscript, the first time
     Session->>Server: getConnectionTranscript
     Server->>Adapter: issueTranscriptConnection
     Note over Adapter: Asks the service for a credential,<br/>with the secret it holds
@@ -182,7 +184,7 @@ sequenceDiagram
     box The staff member's browser
         participant Page
         participant Client as Client adapter
-        participant Session as Blueprint, in the page (planned)
+        participant Session as Blueprint, in the page
     end
     participant Service as Transcription service
     participant Server as Blueprint, on the server
@@ -211,7 +213,7 @@ sequenceDiagram
     box The staff member's browser
         participant Page
         participant Client as Client adapter
-        participant Session as Blueprint, in the page (planned)
+        participant Session as Blueprint, in the page
     end
     participant Server as Blueprint, on the server
     participant Service as Transcription service
@@ -249,7 +251,7 @@ sequenceDiagram
     box The staff member's browser
         participant Page
         participant Client as Client adapter
-        participant Session as Blueprint, in the page (planned)
+        participant Session as Blueprint, in the page
     end
     participant Server as Blueprint, on the server
     participant Adapter as Server adapter
@@ -281,7 +283,7 @@ sequenceDiagram
     box The staff member's browser
         participant Page
         participant Client as Client adapter
-        participant Session as Blueprint, in the page (planned)
+        participant Session as Blueprint, in the page
     end
     participant Service as Transcription service
     participant Server as Blueprint, on the server
@@ -451,6 +453,8 @@ All in `blueprint-core/base-contracts/domains/communication/`.
 |---|---|
 | API — transcripts, their entries, and profiles | `communication-transcripts-openapi.yaml` |
 | Lifecycle and the rules for entries | `communication-transcripts-state-machine.yaml` |
+| API — the session, designed to run in the page (Decisions 15 to 18) | `communication-transcription-sessions-openapi.yaml` |
+| The session's lifecycle, and its actions calling the transcript's operations | `communication-transcription-sessions-state-machine.yaml` |
 | Events | Generated by resolve beside the API, as `communication-transcripts-events-asyncapi.yaml`, from the API and the state machine's `emits:` |
 | Transcription services | `communication-transcripts-registry-transcription-services.yaml` |
 | The adapter a state runs to issue a service's credential (Decision 12) | `communication-transcripts-adapter-openapi.yaml` |
@@ -1124,17 +1128,35 @@ session's events is `communication.transcription_session.<event>`.
 
 | What it says | Sent by | Action | State | What it calls on the server | Event |
 |---|---|---|---|---|---|
-| Start | Page | `create` | `created` | `createTranscript` | `created` |
-| How do I stream? | Client | `get-connection` | `created`, `disconnected` or `connecting` → `connecting`; while `connected`, no change, to renew the credential | `getConnectionTranscript`, and answers with what it gets | `connecting`, or none when renewing |
+| Start | Page | `create`, naming an existing transcript or what to start one with | `created` | Nothing | `created` |
+| How do I stream? | Client | `get-connection` | `created`, `disconnected` or `connecting` → `connecting` | The first time, with no transcript yet, `createTranscript`; then `getConnectionTranscript`, and answers with what it gets | `connecting` |
+| A fresh credential, while connected | Client | `renew-connection` | No change, while `connected` | `getConnectionTranscript`, and answers with what it gets | None |
 | The connection is open | Client | `connect` | `connecting` → `connected` | After a reconnect, `addTranscriptEntry` for the lost stretch ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) | `connected` |
 | The connection dropped | Client | `disconnect` | `connected` → `disconnected` | Nothing | `disconnected` |
 | A line in progress | Client | `update-line` | No change, while `connected` or `stopping` | Nothing; the line is only shown | `line_updated` |
 | A finished line | Client | `add-line` | No change, while `connected`, `paused` or `stopping` | `addTranscriptEntry`, with the line's key ([Decision 18](#decision-18-a-line-in-progress-is-tied-to-its-finished-line-by-the-clients-key)) | `line_added` |
 | Pause | Page | `pause` | `connected` → `paused` | `pauseTranscript` | `paused` |
 | Resume | Page | `resume` | `paused` → `connecting` | `resumeTranscript` | `connecting` |
-| Stop | Page | `stop` | `connected` → `stopping`; `paused` or `disconnected` → `closed`, since there's no connection to finish | Nothing; from `paused` or `disconnected`, `closeTranscript` | `stopping`, or `closed` |
+| Stop | Page | `stop` | `connected`, `paused` or `disconnected` → `stopping` | Nothing | `stopping` |
 | Done with the service | Client | `close` | `stopping` → `closed` | `closeTranscript` | `closed` |
 | Gave up | Client | `fail` | `disconnected` → `failed` | Nothing; the transcript stays open | `failed` |
+
+Why the transcript starts at the first `get-connection`, not when the session
+is created: a machine can guard its own create but not run steps in it, and a
+reaction to the session's `created` event would answer before the transcript
+existed, so the client could ask how to stream for a transcript not there yet.
+An action's steps run in order, so the transcript exists before the connection
+is asked for. A session can also name an existing transcript when it's
+created, to carry on after one failed; its first `get-connection` then skips
+starting one. If the engine later lets a create run steps, the transcript can
+start with the session, and nothing a client sends or gets changes.
+
+Why `renew-connection` is its own action: renewing doesn't drop the
+connection, so the session stays `connected`, and an action has one id and
+one route. Why `stop` always leads to `stopping`: one action for the page,
+whatever the connection is doing. With no connection open, while paused or
+disconnected, the client adapter calls `close` as soon as it hears `stopping`,
+and the transcript always closes through `close`, at the client's time.
 
 Why `get-connection` and `connect` are two actions: the blueprint never touches
 the connection to the service
