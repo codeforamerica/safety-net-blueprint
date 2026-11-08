@@ -17,6 +17,9 @@ Domain: `communication` | API: [communication-transcripts-openapi.yaml](../../..
   - `PATCH communication/transcripts/$object.id/entries/$openPause.id`
   - Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
   - Emit: `communication.transcript.resumed`
+- **connect** — Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
+  - Transition: no state change
+  - {"operationId":"connectTranscriptAdapter","requestBody":{"payload":{"provider":"$profile.provider","model":"$object.model","languages":"$profile.languages","audio":"$request.audio","protocols":"$request.protocols","metadata":{"transcriptId":"$object.id"}}}}
 - **close** — End the transcript, at the time the client says. A pause still open ends then too.
   - Transition: `recording`/`paused` → `closed`
   - sets `closedAt`

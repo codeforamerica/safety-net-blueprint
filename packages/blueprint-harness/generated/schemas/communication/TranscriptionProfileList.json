@@ -39,9 +39,18 @@
                 "type": "string",
                 "description": "The transcription service — an entry of the `transcription-services`\nregistry, which a contract set extends with a registry file of its\nown. `none` for conversations no service transcribes: a chat, or\nlines a person types.\n",
                 "enum": [
+                  "assemblyai",
                   "aws-transcribe",
+                  "azure-speech",
+                  "deepgram",
                   "elevenlabs-scribe",
-                  "none"
+                  "gladia",
+                  "google-cloud-speech",
+                  "google-gemini-live",
+                  "none",
+                  "openai-realtime",
+                  "soniox",
+                  "speechmatics"
                 ]
               },
               "languages": {

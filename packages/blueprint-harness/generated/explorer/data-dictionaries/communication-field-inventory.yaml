@@ -36,7 +36,7 @@ transcript.entries[].links.transcript: { type: string }
 profile.id: { type: uuid }
 profile.name: { type: string }
 profile.description: { type: string }
-profile.provider: { type: enum, values: [aws-transcribe, elevenlabs-scribe, none] }
+profile.provider: { type: enum, values: [assemblyai, aws-transcribe, azure-speech, deepgram, elevenlabs-scribe, gladia, google-cloud-speech, google-gemini-live, none, openai-realtime, soniox, speechmatics] }
 profile.languages[]: { type: string }
 profile.idleTimeout: { type: string }
 profile.source: { type: enum, values: [system, user] }

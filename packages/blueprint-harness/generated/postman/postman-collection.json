@@ -7,6 +7,11 @@
   },
   "item": [
     {
+      "name": "Connect",
+      "item": [],
+      "description": "Transcripts Adapter API"
+    },
+    {
       "name": "Profiles",
       "item": [
         {
@@ -1819,6 +1824,52 @@
               ]
             },
             "description": "Trigger the resume transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connect Transcript",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/communication/transcripts/7a1e0c2d-0000-4000-8000-000000000001/connect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "communication",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "connect"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "description": "Trigger the connect transition"
           },
           "event": [
             {

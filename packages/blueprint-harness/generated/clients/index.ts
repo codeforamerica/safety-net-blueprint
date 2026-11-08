@@ -3,6 +3,7 @@ export * as eligibility from './eligibility/index.js';
 export * as eligibilityRules from './eligibility-rules/index.js';
 export * as intake from './intake/index.js';
 export * as intakeRules from './intake-rules/index.js';
+export * as communicationTranscriptsAdapter from './communication-transcripts-adapter/index.js';
 export * as communicationTranscripts from './communication-transcripts/index.js';
 export * as decisionSupportSuggestions from './decision-support-suggestions/index.js';
 export * as platformEvents from './platform-events/index.js';
