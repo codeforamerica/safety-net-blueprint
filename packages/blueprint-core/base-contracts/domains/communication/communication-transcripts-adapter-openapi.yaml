@@ -1,0 +1,135 @@
+# The transcripts adapter: the state's service that holds a transcription
+# service's secret and issues the short-lived credential transcription
+# software streams with. The transcript's connect action calls it; the
+# software never sees the secret. See
+# docs/architecture/domains/communication.md, Decision 12, and
+# docs/architecture/cross-cutting/adapters.md for the pattern.
+openapi: 3.1.0
+info:
+  title: Transcripts Adapter API
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  x-visibility: external
+  description: |
+    Contracted interface for the state-provided transcripts adapter. The
+    blueprint calls it when transcription software asks to connect, and the
+    adapter answers with where the software connects and a short-lived
+    credential — from the transcription service, or one it signs for a relay
+    the state runs in front of a service a browser can't reach.
+
+    The adapter is stateless: one request, one answer. It maps the languages
+    and audio it's given to what its service takes, and holds everything that
+    doesn't change from one call to the next — a region, a custom vocabulary,
+    redaction — as its own configuration. Requests extend AdapterRequest, so
+    the adapter echoes metadata back unchanged.
+servers:
+  - url: https://adapter.example.com
+    description: State-configured adapter server
+  - url: http://localhost:9090
+    description: Local stub server
+tags:
+  - name: Connect
+    description: Issuing what transcription software connects with.
+paths:
+  /connect:
+    post:
+      summary: Issue a connection to a transcription service
+      description: |
+        Answers with where transcription software connects and a credential
+        that starts one connection, for the service the request names. Every
+        service fits the one answer: a URL that may carry the credential, as
+        Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
+        Deepgram and AssemblyAI issue; or, for a service behind a relay, the
+        relay's URL, its subprotocol and a JWT the adapter signs for it.
+
+        Asked again, it issues a fresh credential: that is how software
+        renews one, and how it reconnects.
+      operationId: connectTranscriptAdapter
+      tags:
+        - Connect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionRequest"
+      responses:
+        '200':
+          description: Where and how the software connects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+              example:
+                metadata: {transcriptId: 7a1e0c2d-0000-4000-8000-0000000000c1}
+                provider: elevenlabs-scribe
+                protocol: websocket
+                url: wss://api.elevenlabs.io/v1/speech-to-text/realtime
+                accessToken: sutkn_example
+                tokenType: Bearer
+                expiresIn: 900
+                connectionParameters: {model_id: scribe_v2_realtime, language_code: en}
+        '400':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        '422':
+          description: >
+            The service can't take what the request asks for — several
+            languages for a service that takes one and can't detect among them,
+            say, or an audio encoding it doesn't accept — named in details.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
+        '500':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+
+components:
+  schemas:
+    ConnectionRequest:
+      description: >
+        What the service needs to issue a credential: the service and its
+        languages, from the transcript's profile; the model, from the
+        transcript; and the audio and protocols, from the software.
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/adapter.yaml#/AdapterRequest"
+        - type: object
+          required: [provider, audio, protocols]
+          properties:
+            provider:
+              type: string
+              description: The transcription service, an entry of the transcription-services registry.
+              x-enum-source:
+                registry: transcription-services
+              example: elevenlabs-scribe
+            model:
+              type: string
+              description: The service's model, for a service that fixes it when issuing the credential.
+              example: scribe_v2_realtime
+            languages:
+              type: array
+              minItems: 1
+              items:
+                $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
+              description: >
+                The languages the conversation may be in. The adapter maps them
+                to what its service takes — one, a list, or none to detect —
+                and answers 422 when it can't. Absent, the service detects the
+                language, if it can.
+              example: [en-US, es-US]
+            audio:
+              $ref: "./communication-transcripts-schema.yaml#/$defs/AudioFormat"
+            protocols:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items:
+                $ref: "./communication-transcripts-schema.yaml#/$defs/StreamProtocol"
+              description: The protocols the software can connect over. The adapter answers with one of them.
+    ConnectionResponse:
+      description: Where and how the software connects, with metadata echoed back.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/adapter.yaml#/AdapterResponse"
+        - $ref: "./communication-transcripts-schema.yaml#/$defs/StreamConnectionFields"
