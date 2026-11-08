@@ -29,6 +29,15 @@ import { readStateMachines } from '../contract-readers.js';
 import { extractDomain, extractCapability } from '../contract-types.js';
 
 const BASE_EVENTS = 'https://blueprint.codeforamerica.org/base/schemas/events.yaml';
+
+/**
+ * An event's schema is written as OpenAPI 3.1 writes schemas — its data is the
+ * API's own record, `discriminator` and `unevaluatedProperties` and all — so
+ * it is labeled as one: AsyncAPI's multi-format schema, which a tool reads in
+ * the format it names rather than as AsyncAPI's own.
+ */
+const OPENAPI_SCHEMA_FORMAT = 'application/vnd.oai.openapi;version=3.1.0';
+const asOpenApi = (schema) => ({ schemaFormat: OPENAPI_SCHEMA_FORMAT, schema });
 const ENVELOPE = { $ref: `${BASE_EVENTS}#/$defs/Event` };
 
 /** `intake.application_member.created` → `IntakeApplicationMemberCreated`. */
@@ -174,10 +183,10 @@ export function buildEventCatalogs(positioned) {
     for (const { type, summary, data, timer } of events) {
       const name = pascal(type);
       channels[type] = { address: type, messages: { [name]: { $ref: `#/components/messages/${name}` } } };
-      messages[name] = { name: type, summary, payload: { $ref: `#/components/schemas/${name}Event` } };
+      messages[name] = { name: type, summary, payload: asOpenApi({ $ref: `#/components/schemas/${name}Event` }) };
       const properties = { type: { type: 'string', const: type } };
       if (data) properties.data = data;
-      schemas[`${name}Event`] = { allOf: [ENVELOPE, { type: 'object', properties }] };
+      schemas[`${name}Event`] = asOpenApi({ allOf: [ENVELOPE, { type: 'object', properties }] });
       if (!timer) operations[`send${name}`] = operation('send', type, [name]);
     }
 
