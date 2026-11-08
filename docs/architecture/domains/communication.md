@@ -61,7 +61,10 @@ This is where transcription is headed. The contracts are built: the
 transcript, the session that keeps track of the software's connection, the
 server adapter and the relay, and routing, which decides where each part runs.
 The mock runs all of it today. A package that runs the session in the page in
-production, and client adapters for the services, are planned.
+production, and client adapters for the services, are planned. The shape is
+a general one, for any live stream from the browser to a vendor:
+[Browser-to-Vendor Stream](../cross-cutting/browser-vendor-stream.md) says when
+it fits and why each part is there.
 
 ### Where each part runs: routing
 

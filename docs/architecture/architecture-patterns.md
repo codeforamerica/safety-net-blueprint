@@ -82,6 +82,8 @@ For architects and technical leaders who want the specific, recognized software 
 | [Architecture Philosophy](architecture-philosophy.md) | The plain-language reasoning behind each design philosophy above |
 | [Contract-Driven Architecture](contract-driven-architecture.md) | Full contract artifact model, adapter pattern, standards alignment |
 | [Adapter Pattern](cross-cutting/adapters.md) | The adapter contract itself, including the metadata passthrough rule that keeps the blueprint's internal identifiers out of vendor contracts |
+| [Browser-to-Vendor Stream](cross-cutting/browser-vendor-stream.md) | A live stream from the browser to a vendor, with a session in the page, a credential adapter and an optional relay, and when to use it |
+| [Pattern conventions](../conventions/patterns/) | Each pattern's rules, with when to use it and when not to |
 | [Resolve Pipeline](resolve-pipeline.md) | The overlay mechanism in full: merge semantics, relationship resolution, environment filtering |
 | [Design Rationale](design-rationale.md) | Per-decision log with alternatives considered and "reconsider if" conditions |
 | [Domain Design](domain-design.md) | Domain boundaries, entity ownership, cross-domain rules |

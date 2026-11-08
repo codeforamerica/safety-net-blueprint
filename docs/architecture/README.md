@@ -61,6 +61,7 @@ How the contracts handle things no single domain owns.
 | [Contract Metadata](cross-cutting/contract-metadata.md) | Annotations, field-level metadata, and policy traceability |
 | [Resource Composition](cross-cutting/resource-composition.md) | Composite resources that aggregate data from multiple APIs within a domain |
 | [Adapters](cross-cutting/adapters.md) | The adapter pattern: how vendor systems connect without coupling |
+| [Browser-to-Vendor Stream](cross-cutting/browser-vendor-stream.md) | When a browser streams to a vendor directly, such as speech to a transcription service, while the blueprint keeps the result |
 | [Behavioral Contract DSL](cross-cutting/behavioral-contract-dsl.md) | State machine YAML format and expression language |
 | [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 

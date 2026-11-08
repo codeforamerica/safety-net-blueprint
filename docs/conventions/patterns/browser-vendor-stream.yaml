@@ -1,0 +1,88 @@
+# Pattern — Browser-to-vendor stream
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Browser-to-vendor stream
+summary: >
+  The browser streams to a vendor directly, for something live such as
+  speech, while the blueprint keeps the result. A session in the page tracks
+  the connection, a server adapter issues short-lived credentials, and a relay
+  stands in for a vendor the browser can't reach.
+
+use_when:
+  - >-
+    The browser and a vendor exchange a live, continuous stream — audio, video,
+    a real-time conversation — where delay matters.
+  - >-
+    The raw stream shouldn't pass through the server, for its delay or cost, or
+    because the blueprint shouldn't hold it.
+  - >-
+    What's kept is a result derived from the stream, such as text, not the
+    stream itself.
+  - >-
+    The connection belongs to one browser tab and doesn't need to outlive it.
+  - >-
+    The vendor issues browsers short-lived credentials, or a relay the state
+    runs can stand in for one that doesn't.
+
+do_not_use_when:
+  - case: One request and one answer, such as checking a fact with an outside authority.
+    use_instead: The adapter pattern (patterns/adapter.yaml), or Data Exchange.
+  - case: Processing content already stored, such as an uploaded document or a recording transcribed after the fact.
+    use_instead: A server-side adapter that reads the stored content.
+  - case: The raw stream has to be kept or audited.
+    use_instead: Stream through the state's own server, and keep it there.
+  - case: The connection has to outlive the tab, or continue with no page open.
+    use_instead: A session on the server, not in the page.
+
+rules:
+  - >-
+    Define a session resource, with a state machine, designed to run in the
+    page. Keep it there with routing, and send the record to the server, by
+    routing the domain to the server except the session's API. No contract says
+    where it runs.
+  - >-
+    Make the page and the client adapter talk only to the session. The
+    session's actions call the record's operations by operationId, so routing
+    carries the calls to the server; the client adapter never calls the record
+    directly.
+  - >-
+    Send everything in as a session action, and send an event out from each, so
+    whoever follows along listens to the session. Nothing goes straight to the
+    event stream.
+  - >-
+    Keep only finished results on the server. Drafts, such as a line still being
+    revised, stay in the page as events; tie each draft to its finished result
+    with a key the client gives, sent as the finished result's Idempotency-Key.
+  - >-
+    Issue the vendor's credential from a server adapter the state runs, which
+    holds the vendor's secret, as a short-lived credential in one shape for
+    every vendor. The vendor's secret never reaches the page.
+  - >-
+    Split getting a connection from the connection opening into two actions:
+    the blueprint gets where to connect and a credential; only the client knows
+    whether the connection opened, and says so.
+  - >-
+    Define a relay contract, in AsyncAPI, for vendors a browser can't reach; the
+    state runs the relay, which implements it toward the client and speaks the
+    vendor's protocol toward the vendor.
+  - >-
+    Name the session's states from a standard for a connection's states where
+    one fits (WebRTC's), and name actions, states and events with one word each
+    (naming.yaml, state_machine_names).
+  - >-
+    When the user goes off the record, stop the stream to the vendor, not only
+    what's kept: disconnect, and connect again to resume.
+  - >-
+    Draw the flow as the diagrams convention says (diagrams.yaml, flows),
+    showing where each part runs.
+
+example: >
+  Transcription, in the communication domain: the transcription session, the
+  transcript, the transcripts adapter and the relay contract
+  (docs/architecture/domains/communication.md, "How the parts work together"
+  and Decisions 3, 12 to 18).
+
+rationale: docs/architecture/cross-cutting/browser-vendor-stream.md

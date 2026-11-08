@@ -1,0 +1,49 @@
+# Pattern — Context passthrough
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Context passthrough
+summary: >
+  Opaque metadata one domain attaches to another's record, or to an adapter
+  call, so the result coming back can be matched to the record that started
+  it without a lookup.
+
+use_when:
+  - >-
+    A domain starts something in another domain or an adapter, and the result
+    comes back later, as an event or an answer, and has to be matched to the
+    domain's own record.
+  - >-
+    The other side shouldn't know or depend on the caller's records.
+
+do_not_use_when:
+  - case: The answer comes back in the same request.
+    use_instead: Nothing; the caller already has its record.
+  - case: The other domain needs the value to do its own work.
+    use_instead: A real field in that domain's contract.
+
+rules:
+  - >-
+    Key the metadata by domain name, one namespace each, with the domain's own
+    fields inside, nested, never as dotted keys at the top
+    ({ "intake": { "verificationId": "ver-abc-123" } }).
+  - >-
+    Change only your own namespace, with PUT /{resources}/{id}/metadata/{domain}
+    to replace it and DELETE to remove it; never merge into or touch another
+    domain's namespace.
+  - >-
+    Don't read, change or depend on another domain's namespace. An adapter
+    echoes metadata back unchanged (patterns/adapter.yaml).
+  - >-
+    Read it back in the result event's reaction, through the nested path — in
+    JSON Logic, { "var": "event.data.metadata.intake.verificationId" }.
+
+example: >
+  At submission, intake creates a verification and a data exchange service
+  call, and puts { intake: { verificationId } } on the service call. When
+  data-exchange.call.completed fires, intake reads the verification's id from
+  the event's metadata and moves that verification on.
+
+rationale: docs/architecture/inter-domain-communication.md

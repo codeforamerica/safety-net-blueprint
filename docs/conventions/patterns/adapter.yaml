@@ -1,0 +1,58 @@
+# Pattern — Adapter
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Adapter
+summary: >
+  A stateless HTTP service a state runs between the blueprint and a system it
+  doesn't control — a rules engine, a legacy platform, a vendor — implementing
+  a contract so the blueprint never depends on the system's own API.
+
+use_when:
+  - >-
+    The blueprint needs something from a system outside it, which a state runs
+    or buys.
+  - >-
+    Each call is one request and one answer, with no effect on the blueprint's
+    own data.
+  - >-
+    The system holds a secret the blueprint and the page shouldn't, such as a
+    vendor's key.
+
+do_not_use_when:
+  - case: The other side is another blueprint domain.
+    use_instead: The cross-domain communication pattern (patterns/cross-domain-communication.yaml).
+  - case: The browser and a vendor exchange a live stream.
+    use_instead: The browser-to-vendor stream pattern (patterns/browser-vendor-stream.yaml), which uses an adapter only to issue the credential.
+  - case: The answer takes longer than one request.
+    use_instead: An async command through Data Exchange (patterns/cross-domain-communication.yaml, async_command).
+
+rules:
+  - >-
+    Define the contract in the blueprint when the call is stateless and the
+    data shape is well constrained across states, as program rules make it;
+    otherwise the state defines it.
+  - >-
+    Put the contract beside the API it serves, named for it with -adapter, as
+    eligibility-adapter-openapi.yaml, communication-transcripts-adapter-openapi.yaml.
+  - >-
+    Call it from a state machine step by operationId.
+  - >-
+    Send metadata on every request and have the adapter echo it back
+    unchanged, without reading it (patterns/context-passthrough.yaml); build
+    requests on the adapter base schemas.
+  - >-
+    Keep the adapter stateless: one request, one answer. Settings that don't
+    change between calls are the adapter's own configuration, not request
+    fields.
+  - >-
+    In demos and tests, answer it with an HTTP stub on the mock, or in a page
+    with a routing handler.
+
+example: >
+  The eligibility adapter, beside eligibility; the transcripts adapter, which
+  issues a transcription service's short-lived credential.
+
+rationale: docs/architecture/cross-cutting/adapters.md

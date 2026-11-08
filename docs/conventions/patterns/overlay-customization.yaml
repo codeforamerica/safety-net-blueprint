@@ -1,0 +1,60 @@
+# Pattern — Overlay customization
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Overlay customization
+summary: >
+  A state changes what the blueprint declares with a separate overlay file
+  that resolve applies on top of the untouched base, so the base can be
+  upgraded underneath the state's changes and every change is reviewable as
+  a change.
+
+use_when:
+  - >-
+    A state needs the blueprint's contracts to differ: another enum value, a
+    field it collects, its own terms, a different step in a state machine, a
+    composition with another section.
+  - >-
+    A state wants a different setting the blueprint offers, such as cursor
+    pagination or snake_case on the wire.
+
+do_not_use_when:
+  - case: The change is something every state needs.
+    use_instead: A change to the blueprint itself.
+  - case: The difference is per environment — where a domain runs, which service answers it.
+    use_instead: Routing (patterns/routing.yaml), which is configuration outside the contracts.
+  - case: The state needs a domain the blueprint doesn't have.
+    use_instead: The state's own contract files, alongside the blueprint's, in the same conventions.
+
+rules:
+  - >-
+    Change what another file declares with an overlay, never by editing it —
+    above all, never by editing a framework file (contract-files.yaml,
+    change_by_overlay).
+  - >-
+    Write overlays in the OpenAPI Overlay format, targeting what they change
+    with JSONPath. The same format changes OpenAPI, state machines, rulesets
+    and compositions.
+  - >-
+    Set blueprint-wide options in the overlay's config: key (x-casing,
+    x-pagination, x-search, x-relationship), once across all the state's
+    overlays.
+  - >-
+    Extend an enum by overlay where the blueprint leaves its values to the
+    state; don't add a free-text field beside it.
+  - >-
+    Target items in an array by what they hold, with a filter such as
+    [?(@.id == 'foo')], not by index, so an upgrade that adds items doesn't
+    move the target.
+  - >-
+    Check the resolved result with the same validation as the base; an overlay
+    that breaks a reference or a schema fails there, not when it runs.
+
+example: >
+  A state adds a value to an enum the blueprint leaves open, renames a field to
+  its own term, and sets x-pagination to cursor in a global config overlay;
+  resolve produces the state's contracts, and validate checks them.
+
+rationale: docs/architecture/architecture-patterns.md

@@ -1,0 +1,47 @@
+# Pattern — Timers
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Timers
+summary: >
+  A state machine asks for an event to be sent at a later time — a deadline, a
+  reminder — and reacts to it like any other event. A timer service the state
+  runs sends it; the blueprint defines only the events.
+
+use_when:
+  - >-
+    Something has to happen when time passes without anything else happening:
+    a processing deadline, a reminder before an interview, an escalation.
+
+do_not_use_when:
+  - case: The time is only shown or compared, such as a due date on a task.
+    use_instead: A field on the record, and a guard or filter that compares it.
+  - case: Work runs on a fixed schedule across many records, such as a nightly report.
+    use_instead: A job the state schedules outside the state machines.
+
+rules:
+  - >-
+    Declare each timer type in the machine's timers: section; its event is
+    {domain}.{id}.
+  - >-
+    Ask for it with the requestTimer procedure and cancel it with
+    cancelTimer. Use fireAt with fireOffset when the deadline is stored on the
+    record, and fireAfter when it counts from now.
+  - >-
+    Give it an id that can be worked out again, {domain}.{timerType}.{objectId},
+    so cancelling needs no lookup and asking twice keeps one timer.
+  - >-
+    Cancel it when the record is resolved first; a cancel after it fired does
+    nothing, so it's always safe to send.
+  - >-
+    React to its event in on:, as to any other event; put what the reaction
+    needs in callback.data, which comes back unchanged.
+
+example: >
+  When a SNAP application is submitted, intake asks for intake.snap_deadline
+  30 days on; if the application is decided first it cancels the timer, and
+  if the timer fires, intake's reaction acts on the overdue application.
+
+rationale: docs/architecture/cross-cutting/timers.md
