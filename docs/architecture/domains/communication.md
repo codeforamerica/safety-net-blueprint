@@ -151,14 +151,28 @@ sequenceDiagram
 sequenceDiagram
     actor Staff as Staff member
     participant Page
+    participant Client as Client adapter
     participant Blueprint
+    participant Service as Transcription service
 
     Staff->>Page: Pause
     Page->>Blueprint: Pause the transcript
     Note over Blueprint: A line that starts while paused is refused
+    Blueprint--)Client: Paused (planned)
+    Client-)Service: The end of the audio
+    Service-)Client: The last lines
+    Client->>Blueprint: Add each finished line
+    Note over Blueprint: Kept if it started before the pause
+    Service--xClient: The connection closes
     Staff->>Page: Resume
     Page->>Blueprint: Resume the transcript
+    Blueprint--)Client: Resumed (planned)
+    Client->>Blueprint: How do I stream?
+    Blueprint-->>Client: Where to connect, and a new credential
+    Client->>Service: Connect again
 ```
+
+No audio leaves the page while the transcript is paused ([Decision 16](#decision-16-going-off-the-record-stops-the-audio)).
 
 ### When the connection drops
 
@@ -395,6 +409,8 @@ In the safety net contract set, `safety-net-contracts/src/domains/communication/
 | 12 | [The software asks the server how to stream, in one shape for every service](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
 | 13 | [A service with no browser path sits behind a relay that speaks the blueprint's audio contract](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) | Google, a self-hosted model, or any service a state fronts itself |
 | 14 | [The audio contract takes the services' common pattern and the standard result names](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
+| 15 | [The session's states are WebRTC's connection states](#decision-15-the-sessions-states-are-webrtcs-connection-states) | `new`, `connecting`, `connected`, `disconnected`, `closing`, `closed` and `failed`, and `paused` from Decision 16 |
+| 16 | [Going off the record stops the audio](#decision-16-going-off-the-record-stops-the-audio) | Pausing disconnects from the service, and resuming connects again |
 
 ### Decision 1: A framework domain of its own
 
@@ -859,6 +875,94 @@ transcript. The software sends it in the WebSocket subprotocol header, beside
 the subprotocol's name, not in the URL: RFC 6750 says to avoid tokens in URLs,
 which are logged. A deployment with no backend of its own still has the relay's,
 so the relay's deployment runs the server adapter that signs.
+
+### Decision 15: The session's states are WebRTC's connection states
+
+**Status:** Decided: D
+
+**What's being decided:** The session keeps track of the software's
+connection to its transcription service, in the page, so its states are what a
+page shows the staff member and what decides which of its actions can happen
+when. They need names a developer already knows, and a state for every
+situation the page has to show differently.
+
+**Considerations:**
+- A browser already names the states of a live media connection: W3C WebRTC's
+  `RTCPeerConnection.connectionState` is `new`, `connecting`, `connected`,
+  `disconnected`, `failed` and `closed`. WebSocket's `readyState` adds
+  `CLOSING`, between asking to close and being closed.
+- Stopping isn't immediate. The software sends the end of the audio, and the
+  service sends its last lines before it closes the connection, so there is a
+  stretch where lines still arrive after the staff member pressed Stop.
+- A connection that can't be restored has to look different from one that
+  ended normally. The transcript is still open, and the staff member can
+  start a new session and carry on.
+- The contracts have to stay vendor-neutral, so a page and its client
+  adapters work the same whichever service a state chose. Each vendor's SDK
+  names its own events (Azure's `sessionStarted` and `canceled`, the Web Speech
+  API's `start` and `end`); a browser standard belongs to none of them.
+- The repo's standards say to use XState's and SCXML's terms for state machine
+  concepts, such as a final state. They don't name a connection's states.
+
+**Options:**
+- **(A)** Names of our own: idle, connecting, live, interrupted, stopping,
+  ended.
+- **(B)** WebSocket's four states: `CONNECTING`, `OPEN`, `CLOSING`, `CLOSED`.
+  They describe one socket, which can't recover once closed, while a session
+  spans a connection per reconnect and resume; and they have nothing for not
+  started yet, or for giving up. Not every service is reached over a
+  WebSocket either.
+- **(C)** WebRTC's six states as they are, which describe a connection that
+  can drop and recover, with no state for stopping: the session stays
+  `connected` until the last lines are in, and the page can't show that it's
+  finishing.
+- **(D) ✓** WebRTC's six states, and `closing`, the one state borrowed from
+  WebSocket, for the stretch after Stop.
+
+**Decision:** `new` → `connecting` → `connected`; `connected` →
+`disconnected` when the connection drops, and back to `connecting` to try
+again; `closing` after Stop, then `closed`. `failed` when the software gives up
+reconnecting. `closed` and `failed` are final states: a staff member who wants
+to carry on starts a new session under the same transcript. A pause adds one
+more state ([Decision 16](#decision-16-going-off-the-record-stops-the-audio)).
+When the software gives up is still to decide.
+
+### Decision 16: Going off the record stops the audio
+
+**Status:** Decided: B
+
+**What's being decided:** A paused transcript refuses any line that starts
+while paused ([Decision 5](#decision-5-an-entry-is-judged-by-when-it-started)),
+so nothing said off the record is kept. But the software could still be sending
+the audio to the transcription service. Whether "off the record" also means the
+service doesn't hear it decides what pausing has to do to the connection.
+
+**Considerations:**
+- Someone who asks to go off the record expects not to be heard, not only not
+  to be written down. A vendor that receives the audio may keep or log it,
+  whatever the blueprint does with the text.
+- Services close a connection that goes quiet: Amazon Transcribe after 15
+  seconds without audio, Deepgram after 10 unless sent a keepalive. A pause
+  can last much longer.
+- The contracts have to work the same with every service, so a page and its
+  client adapters don't depend on which vendor a state chose. Keeping a quiet
+  connection open is done differently by each vendor; disconnecting and
+  connecting again is the same for all of them.
+- The software already knows how to reconnect: it asks how to stream again
+  ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)),
+  as it does after a dropped connection.
+
+**Options:**
+- **(A)** Stay connected and stop sending audio. No new state, but every
+  service needs keeping alive in its own way, and nothing in the record shows
+  the audio stopped.
+- **(B) ✓** Disconnect when the transcript is paused, and connect again when it
+  resumes. The session gets a `paused` state, distinct from `disconnected`
+  because nothing tries to reconnect.
+
+**Decision:** No audio leaves the page while the transcript is paused, with any
+service, and resuming reuses the reconnect path. Resuming takes as long as
+connecting, about a second.
 
 ## Key design questions
 
