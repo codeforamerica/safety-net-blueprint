@@ -411,6 +411,7 @@ In the safety net contract set, `safety-net-contracts/src/domains/communication/
 | 14 | [The audio contract takes the services' common pattern and the standard result names](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
 | 15 | [The session's states are WebRTC's connection states](#decision-15-the-sessions-states-are-webrtcs-connection-states) | `new`, `connecting`, `connected`, `disconnected`, `closing`, `closed` and `failed`, and `paused` from Decision 16 |
 | 16 | [Going off the record stops the audio](#decision-16-going-off-the-record-stops-the-audio) | Pausing disconnects from the service, and resuming connects again |
+| 17 | [Every report goes in as a session action, and each action sends an event out](#decision-17-every-report-goes-in-as-a-session-action-and-each-action-sends-an-event-out) | The client adapter talks only to the session; whoever follows along listens to its events |
 
 ### Decision 1: A framework domain of its own
 
@@ -963,6 +964,54 @@ service doesn't hear it decides what pausing has to do to the connection.
 **Decision:** No audio leaves the page while the transcript is paused, with any
 service, and resuming reuses the reconnect path. Resuming takes as long as
 connecting, about a second.
+
+### Decision 17: Every report goes in as a session action, and each action sends an event out
+
+**Status:** Decided: B
+
+**What's being decided:** The client adapter reports what happens to its
+connection and what the service heard: connected, interrupted, a line in
+progress, a finished line, ended. Each report could reach the blueprint as an
+action on the session, or only as an event for whoever follows along, since
+some, like a line in progress, change nothing that's kept.
+
+**Considerations:**
+- A state machine's job is to take actions in, check them against its state,
+  change the record, and send events out. An action is the only way into the
+  session that its contract defines and its guards check.
+- A report sent only as an event would go straight to the event stream,
+  outside the session's contract, so nothing would refuse a line that arrives
+  after the session failed.
+- Whoever follows along, the page or another tab, needs every report, so each
+  one has to reach them as an event either way.
+- One API for every client adapter, whatever its service, keeps the contracts
+  vendor-neutral.
+
+**Options:**
+- **(A)** Reports that change state are actions; the rest, such as a line in
+  progress, are events the client sends directly.
+- **(B) ✓** Every report is an action on the session, and every action emits
+  an event. An action that changes nothing kept, such as a line in progress,
+  stores nothing and only sends its event.
+
+**Decision:** The client adapter talks only to the session, never to the
+transcript; the session's actions call the transcript. The starting point:
+
+| Report | Sent by | State | What it does to the transcript |
+|---|---|---|---|
+| Start | The page, creating the session | → `new` | Starts it |
+| How do I stream? | Client | `new`, `disconnected` or `paused` → `connecting` | Calls its `connect` and answers with the connection |
+| Connected | Client | `connecting` → `connected` | After a reconnect, records the lost stretch as a gap ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) |
+| Interrupted | Client | `connected` → `disconnected` | Nothing |
+| A line in progress | Client | No change, while `connected` or `closing` | Nothing; the line is only shown |
+| A finished line | Client | No change, while `connected` or `closing`, or while the last lines arrive on a pause | Adds it, with the line's id as its key ([Decision 8](#decision-8-a-retry-is-recognized-by-a-key)) |
+| Stop | The page | `connected` → `closing` | Nothing |
+| Ended | Client | `closing` → `closed` | Closes it |
+| Gave up | Client | `disconnected` → `failed` | Nothing; it stays open |
+
+Each emits an event of the same name. Still to decide: how the session moves
+through a pause while the last lines arrive, the actions' names, and whether
+line ids come from the client.
 
 ## Key design questions
 
