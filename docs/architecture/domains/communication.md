@@ -98,7 +98,7 @@ flowchart LR
     session -- events --> page
     session -- events --> client
   end
-  client -- audio --> relay[Relay, optional]
+  client -- audio --> relay[Relay, optional:<br/>speaks the blueprint's<br/>audio contract]
   relay -- audio --> service[(Transcription service)]
   service -- text --> relay
   relay -- text --> client
@@ -115,7 +115,7 @@ flowchart LR
 | Blueprint, on the server: the transcript | Keeps the transcript and its rules, and sends every change as an event. |
 | Server adapter | A state's service beside the blueprint. It holds the transcription service's secret and issues a credential that lasts minutes ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
 | Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. |
-| Relay | Only for a service a browser can't reach, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself. A server the state runs, between the client adapter and the service: it speaks the blueprint's audio contract to the client and the service's own protocol to the service ([Decisions 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) and [14](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names)). |
+| Relay | Only for a service a browser can't reach, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself. A server the state runs, between the client adapter and the service: it speaks the blueprint's audio contract, `communication-transcripts-audio-asyncapi.yaml`, to the client and the service's own protocol to the service. Without a relay, the client speaks the service's own protocol ([Decisions 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) and [14](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names)). |
 
 The relay is only for a service a browser can't reach; otherwise the client
 adapter connects to the service directly. With a relay, the client adapter
@@ -1036,7 +1036,9 @@ again; `paused` while off the record
 `connecting` again on resume; `stopping` after Stop, then `closed`. `failed`
 when the software gives up reconnecting. `closed` and `failed` are final
 states: a staff member who wants to carry on starts a new session under the
-same transcript. When the software gives up is still to decide.
+same transcript. When to give up reconnecting is the client adapter's to
+decide, not the contract's: how many tries and how long depend on the service
+and the network, and the contract only needs `fail` for when it does.
 
 ### Decision 16: Going off the record stops the audio
 
@@ -1116,14 +1118,14 @@ session's events is `communication.transcription_session.<event>`.
 | What it says | Sent by | Action | State | What it calls on the server | Event |
 |---|---|---|---|---|---|
 | Start | Page | `create` | `created` | `createTranscript` | `created` |
-| How do I stream? | Client | `get-connection` | `created`, `disconnected` or `connecting` → `connecting` | `getConnectionTranscript`, and answers with what it gets | `connecting` |
+| How do I stream? | Client | `get-connection` | `created`, `disconnected` or `connecting` → `connecting`; while `connected`, no change, to renew the credential | `getConnectionTranscript`, and answers with what it gets | `connecting`, or none when renewing |
 | The connection is open | Client | `connect` | `connecting` → `connected` | After a reconnect, `addTranscriptEntry` for the lost stretch ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) | `connected` |
 | The connection dropped | Client | `disconnect` | `connected` → `disconnected` | Nothing | `disconnected` |
 | A line in progress | Client | `update-line` | No change, while `connected` or `stopping` | Nothing; the line is only shown | `line_updated` |
 | A finished line | Client | `add-line` | No change, while `connected`, `paused` or `stopping` | `addTranscriptEntry`, with the line's key ([Decision 18](#decision-18-a-line-in-progress-is-tied-to-its-finished-line-by-the-clients-key)) | `line_added` |
 | Pause | Page | `pause` | `connected` → `paused` | `pauseTranscript` | `paused` |
 | Resume | Page | `resume` | `paused` → `connecting` | `resumeTranscript` | `connecting` |
-| Stop | Page | `stop` | `connected` → `stopping` | Nothing | `stopping` |
+| Stop | Page | `stop` | `connected` → `stopping`; `paused` or `disconnected` → `closed`, since there's no connection to finish | Nothing; from `paused` or `disconnected`, `closeTranscript` | `stopping`, or `closed` |
 | Done with the service | Client | `close` | `stopping` → `closed` | `closeTranscript` | `closed` |
 | Gave up | Client | `fail` | `disconnected` → `failed` | Nothing; the transcript stays open | `failed` |
 
