@@ -1,4 +1,4 @@
-# The audio contract: what a relay speaks. A relay is a service the state runs
+# The relay contract: what a relay implements. A relay is a service the state runs
 # in front of a transcription service a browser can't reach — Google Cloud
 # Speech-to-Text, which takes only gRPC, or a model the state runs itself. The
 # software streams audio to the relay and gets back what the service heard;
@@ -11,14 +11,14 @@
 # docs/architecture/domains/communication.md, Decisions 13 and 14.
 asyncapi: 3.0.0
 info:
-  title: Transcription audio
+  title: Transcription relay
   version: 0.1.0
   x-domain: communication
   x-capability: transcripts
   x-status: alpha
   description: |
     One WebSocket connection per stream, speaking the subprotocol
-    `blueprint.transcripts.audio.v1`. The software gets the relay's URL and a
+    `blueprint.transcripts.relay.v1`. The software gets the relay's URL and a
     token from the transcript's get-connection action, and opens the connection
     asking for the subprotocol and presenting the token beside it, in the
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
