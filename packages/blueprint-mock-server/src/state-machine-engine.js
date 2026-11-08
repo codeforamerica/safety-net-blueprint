@@ -109,9 +109,8 @@ export function lookupValue(value, context) {
     }
 
     if (value.startsWith('$request.')) {
-      const field = value.slice('$request.'.length);
-      const req = context.request;
-      return req && Object.prototype.hasOwnProperty.call(req, field) ? req[field] : undefined;
+      // A nested path, $request.lostStretch.startedAt, as $object's are.
+      return lookupPath(context.request, value.slice('$request.'.length));
     }
 
     if (value.startsWith('$this.')) {
