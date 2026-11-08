@@ -501,8 +501,7 @@ workflows:
             key: line-2
             startedAt: "2026-10-12T10:00:38Z"
             endedAt: "2026-10-12T10:00:41Z"
-            text: Thank you
-            that's everything.: null
+            text: Thank you, that's everything.
             speaker: staff
         successCriteria:
           - condition: $statusCode == 200

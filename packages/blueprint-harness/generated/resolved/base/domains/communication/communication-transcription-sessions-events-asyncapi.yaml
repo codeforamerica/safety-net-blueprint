@@ -170,7 +170,7 @@ components:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionClosedEvent"
     CommunicationTranscriptionSessionFailed:
       name: communication.transcription_session.failed
-      summary: The software gave up reconnecting. The transcript is still open.
+      summary: The software gave up connecting or reconnecting. The transcript is still open.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:

@@ -527,7 +527,7 @@ paths:
       - $ref: "#/components/parameters/TranscriptionSessionIdParam"
     post:
       summary: Fail transcriptionsession
-      description: The software gave up reconnecting. The transcript stays open.
+      description: The software gave up connecting or reconnecting. The transcript stays open.
       operationId: failTranscriptionSession
       responses:
         "200":

@@ -238,7 +238,7 @@ export const closeTranscriptionSession = <ThrowOnError extends boolean = false>(
 /**
  * Fail transcriptionsession
  *
- * The software gave up reconnecting. The transcript stays open.
+ * The software gave up connecting or reconnecting. The transcript stays open.
  */
 export const failTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<FailTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<FailTranscriptionSessionResponses, FailTranscriptionSessionErrors, ThrowOnError>({
     requestValidator: async (data) => await zFailTranscriptionSessionData.parseAsync(data),
