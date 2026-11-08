@@ -115,7 +115,7 @@ export type ConnectionResponse = {
     };
 };
 
-export type ConnectTranscriptAdapterData = {
+export type IssueTranscriptConnectionData = {
     /**
      * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
      *
@@ -172,10 +172,10 @@ export type ConnectTranscriptAdapterData = {
     };
     path?: never;
     query?: never;
-    url: '/connect';
+    url: '/issue-connection';
 };
 
-export type ConnectTranscriptAdapterErrors = {
+export type IssueTranscriptConnectionErrors = {
     /**
      * The request is malformed or contains invalid parameters.
      */
@@ -236,9 +236,9 @@ export type ConnectTranscriptAdapterErrors = {
     };
 };
 
-export type ConnectTranscriptAdapterError = ConnectTranscriptAdapterErrors[keyof ConnectTranscriptAdapterErrors];
+export type IssueTranscriptConnectionError = IssueTranscriptConnectionErrors[keyof IssueTranscriptConnectionErrors];
 
-export type ConnectTranscriptAdapterResponses = {
+export type IssueTranscriptConnectionResponses = {
     /**
      * Where and how the software connects, with metadata echoed back.
      */
@@ -296,4 +296,4 @@ export type ConnectTranscriptAdapterResponses = {
     };
 };
 
-export type ConnectTranscriptAdapterResponse = ConnectTranscriptAdapterResponses[keyof ConnectTranscriptAdapterResponses];
+export type IssueTranscriptConnectionResponse = IssueTranscriptConnectionResponses[keyof IssueTranscriptConnectionResponses];

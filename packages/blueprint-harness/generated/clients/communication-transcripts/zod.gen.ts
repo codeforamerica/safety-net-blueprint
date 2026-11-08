@@ -449,7 +449,7 @@ export const zAtRequest = z.object({
     at: z.iso.datetime({ offset: true })
 });
 
-export const zConnectRequest = z.object({
+export const zGetConnectionRequest = z.object({
     audio: z.object({
         encoding: z.enum([
             'linear16',
@@ -1496,7 +1496,7 @@ export const zResumeTranscriptResponse = z.object({
     })))
 }));
 
-export const zConnectTranscriptData = z.object({
+export const zGetConnectionTranscriptData = z.object({
     body: z.object({
         audio: z.object({
             encoding: z.enum([
@@ -1526,7 +1526,7 @@ export const zConnectTranscriptData = z.object({
  * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
  *
  */
-export const zConnectTranscriptResponse = z.object({
+export const zGetConnectionTranscriptResponse = z.object({
     provider: z.enum([
         'assemblyai',
         'aws-transcribe',

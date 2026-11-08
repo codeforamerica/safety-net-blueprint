@@ -73,7 +73,7 @@ export const zConnectionResponse = z.object({
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
 
-export const zConnectTranscriptAdapterData = z.object({
+export const zIssueTranscriptConnectionData = z.object({
     body: z.object({
         metadata: z.optional(z.record(z.string(), z.unknown()))
     }).and(z.object({
@@ -118,7 +118,7 @@ export const zConnectTranscriptAdapterData = z.object({
 /**
  * Where and how the software connects, with metadata echoed back.
  */
-export const zConnectTranscriptAdapterResponse = z.object({
+export const zIssueTranscriptConnectionResponse = z.object({
     metadata: z.record(z.string(), z.unknown())
 }).and(z.object({
     provider: z.enum([

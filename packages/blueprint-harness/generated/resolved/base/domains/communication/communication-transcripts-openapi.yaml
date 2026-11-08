@@ -541,22 +541,22 @@ paths:
         type: state-machine-action
         domain: communication
         id: resume
-  /transcripts/{transcriptId}/connect:
+  /transcripts/{transcriptId}/get-connection:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Connect transcript
+      summary: Get connection transcript
       description: |-
         Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
-      operationId: connectTranscript
+      operationId: getConnectionTranscript
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectRequest"
+              $ref: "#/components/schemas/GetConnectionRequest"
       responses:
         "200":
           description: Transition applied successfully.
@@ -585,7 +585,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
-        id: connect
+        id: get-connection
   /transcripts/{transcriptId}/close:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
@@ -1177,7 +1177,7 @@ components:
           type: string
           format: date-time
           description: When it happened, by the client's clock.
-    ConnectRequest:
+    GetConnectionRequest:
       type: object
       additionalProperties: false
       required:

@@ -146,14 +146,14 @@ workflows:
         description: |
           Stand in for the transcripts adapter
 
-          - The state's transcripts adapter holds the transcription service's secret and issues the short-lived credential the interview software streams with. The mock can't issue one itself: it answers `POST /connect`, a call rather than a resource, with `501`.
-          - This stub, on the mock server's own route, answers the next `POST /connect` with what Amazon Transcribe's adapter would: a presigned URL that carries the credential, good for five minutes, and the `metadata` the request sent.
+          - The state's transcripts adapter holds the transcription service's secret and issues the short-lived credential the interview software streams with. The mock can't issue one itself: it answers `POST /issue-connection`, a call rather than a resource, with `501`.
+          - This stub, on the mock server's own route, answers the next `POST /issue-connection` with what Amazon Transcribe's adapter would: a presigned URL that carries the credential, good for five minutes, and the `metadata` the request sent.
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
             match:
               method: POST
-              url: /connect
+              url: /issue-connection
             response:
               status: 200
               body:
@@ -165,17 +165,17 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: connect
+      - stepId: getConnection
         x-actors:
           - software
           - server
         description: |
           Ask how to stream the audio
 
-          - `connect` is an action of the transcript's state machine, from `recording`. The interview software says what audio it will send and what it can connect over; the server calls the transcripts adapter with those, and with the profile's `provider` and `languages` and the transcript's `model`.
+          - `get-connection` is an action of the transcript's state machine, from `recording`. The interview software says what audio it will send and what it can connect over; the server calls the transcripts adapter with those, and with the profile's `provider` and `languages` and the transcript's `model`.
           - The answer is a `StreamConnection`: the action's `response` maps it from what the adapter answered, leaving out the adapter's `metadata`. There is no `accessToken` here, since Amazon Transcribe's credential is in the URL.
           - The interview software streams audio straight to the service; it never passes through the server. Asking again issues a fresh credential, which is how the software renews one, and how it reconnects.
-        operationId: $sourceDescriptions.transcripts.connectTranscript
+        operationId: $sourceDescriptions.transcripts.getConnectionTranscript
         parameters:
           - reference: $components.parameters.caller
           - reference: $components.parameters.transcript
@@ -337,14 +337,14 @@ workflows:
             cause: connection
         successCriteria:
           - condition: $statusCode == 409
-      - stepId: connectWhilePaused
+      - stepId: getConnectionWhilePaused
         x-actors:
           - software
         description: |
           Ask how to stream during the pause
 
-          - Refused with `409`: `connect` goes only from `recording`. Off the record, there is nothing to stream, so the server issues no credential and doesn't call the adapter.
-        operationId: $sourceDescriptions.transcripts.connectTranscript
+          - Refused with `409`: `get-connection` goes only from `recording`. Off the record, there is nothing to stream, so the server issues no credential and doesn't call the adapter.
+        operationId: $sourceDescriptions.transcripts.getConnectionTranscript
         parameters:
           - reference: $components.parameters.caller
           - reference: $components.parameters.transcript

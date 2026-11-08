@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConnectTranscriptAdapterData, ConnectTranscriptAdapterErrors, ConnectTranscriptAdapterResponses } from './types.gen';
-import { zConnectTranscriptAdapterData, zConnectTranscriptAdapterResponse } from './zod.gen';
+import type { IssueTranscriptConnectionData, IssueTranscriptConnectionErrors, IssueTranscriptConnectionResponses } from './types.gen';
+import { zIssueTranscriptConnectionData, zIssueTranscriptConnectionResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -33,11 +33,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * renews one, and how it reconnects.
  *
  */
-export const connectTranscriptAdapter = <ThrowOnError extends boolean = false>(options: Options<ConnectTranscriptAdapterData, ThrowOnError>) => (options.client ?? client).post<ConnectTranscriptAdapterResponses, ConnectTranscriptAdapterErrors, ThrowOnError>({
-    requestValidator: async (data) => await zConnectTranscriptAdapterData.parseAsync(data),
+export const issueTranscriptConnection = <ThrowOnError extends boolean = false>(options: Options<IssueTranscriptConnectionData, ThrowOnError>) => (options.client ?? client).post<IssueTranscriptConnectionResponses, IssueTranscriptConnectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zIssueTranscriptConnectionData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zConnectTranscriptAdapterResponse.parseAsync(data),
-    url: '/connect',
+    responseValidator: async (data) => await zIssueTranscriptConnectionResponse.parseAsync(data),
+    url: '/issue-connection',
     ...options,
     headers: {
         'Content-Type': 'application/json',

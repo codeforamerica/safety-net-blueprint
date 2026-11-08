@@ -8,7 +8,7 @@ info:
   x-visibility: external
   description: |
     Contracted interface for the state-provided transcripts adapter. The
-    blueprint calls it when transcription software asks to connect, and the
+    blueprint calls it when transcription software asks how to connect, and the
     adapter answers with where the software connects and a short-lived
     credential — from the transcription service, or one it signs for a relay
     the state runs in front of a service a browser can't reach.
@@ -24,10 +24,10 @@ servers:
   - url: http://localhost:9090
     description: Local stub server
 tags:
-  - name: Connect
+  - name: Connections
     description: Issuing what transcription software connects with.
 paths:
-  /connect:
+  /issue-connection:
     post:
       summary: Issue a connection to a transcription service
       description: |
@@ -40,9 +40,9 @@ paths:
 
         Asked again, it issues a fresh credential: that is how software
         renews one, and how it reconnects.
-      operationId: connectTranscriptAdapter
+      operationId: issueTranscriptConnection
       tags:
-        - Connect
+        - Connections
       requestBody:
         required: true
         content:

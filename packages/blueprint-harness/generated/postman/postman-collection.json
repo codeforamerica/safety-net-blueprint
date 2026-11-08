@@ -7,7 +7,7 @@
   },
   "item": [
     {
-      "name": "Connect",
+      "name": "Issue-connection",
       "item": [],
       "description": "Transcripts Adapter API"
     },
@@ -1844,7 +1844,7 @@
           ]
         },
         {
-          "name": "Connect Transcript",
+          "name": "Get-connection Transcript",
           "request": {
             "method": "POST",
             "header": [
@@ -1855,7 +1855,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcripts/7a1e0c2d-0000-4000-8000-000000000001/connect",
+              "raw": "{{baseUrl}}/communication/transcripts/7a1e0c2d-0000-4000-8000-000000000001/get-connection",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1863,13 +1863,13 @@
                 "communication",
                 "transcripts",
                 "7a1e0c2d-0000-4000-8000-000000000001",
-                "connect"
+                "get-connection"
               ],
               "variables": [
                 "transcriptId"
               ]
             },
-            "description": "Trigger the connect transition"
+            "description": "Trigger the get-connection transition"
           },
           "event": [
             {

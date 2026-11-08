@@ -4,7 +4,7 @@ title: Transcription streaming
 domain: communication
 capability: transcripts
 description: |
-  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's connect action, the transcripts adapter and the relay's audio contract, so all three agree. See docs/architecture/domains/communication.md, Decisions 12 to 14.
+  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcripts adapter and the relay's audio contract, so all three agree. See docs/architecture/domains/communication.md, Decisions 12 to 14.
 $defs:
   AudioEncoding:
     type: string

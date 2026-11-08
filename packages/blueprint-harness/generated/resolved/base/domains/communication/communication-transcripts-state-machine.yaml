@@ -103,16 +103,16 @@ machines:
           - emit:
               event: resumed
               type: communication.transcript.resumed
-      - id: connect
+      - id: get-connection
         description: Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
         transition:
           from: recording
         schema:
           request:
-            $ref: "#/$defs/ConnectRequest"
+            $ref: "#/$defs/GetConnectionRequest"
         steps:
           - call:
-              operationId: connectTranscriptAdapter
+              operationId: issueTranscriptConnection
               requestBody:
                 payload:
                   provider: $profile.provider
@@ -253,7 +253,7 @@ machines:
             - actors:
                 - system
 $defs:
-  ConnectRequest:
+  GetConnectionRequest:
     type: object
     additionalProperties: false
     required:

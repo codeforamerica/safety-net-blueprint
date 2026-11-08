@@ -920,7 +920,7 @@ export type AtRequest = {
     at: string;
 };
 
-export type ConnectRequest = {
+export type GetConnectionRequest = {
     /**
      * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
      *
@@ -4573,7 +4573,7 @@ export type ResumeTranscriptResponses = {
 
 export type ResumeTranscriptResponse = ResumeTranscriptResponses[keyof ResumeTranscriptResponses];
 
-export type ConnectTranscriptData = {
+export type GetConnectionTranscriptData = {
     body: {
         /**
          * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
@@ -4607,10 +4607,10 @@ export type ConnectTranscriptData = {
         transcriptId: string;
     };
     query?: never;
-    url: '/transcripts/{transcriptId}/connect';
+    url: '/transcripts/{transcriptId}/get-connection';
 };
 
-export type ConnectTranscriptErrors = {
+export type GetConnectionTranscriptErrors = {
     /**
      * The request is malformed or contains invalid parameters.
      */
@@ -4727,9 +4727,9 @@ export type ConnectTranscriptErrors = {
     };
 };
 
-export type ConnectTranscriptError = ConnectTranscriptErrors[keyof ConnectTranscriptErrors];
+export type GetConnectionTranscriptError = GetConnectionTranscriptErrors[keyof GetConnectionTranscriptErrors];
 
-export type ConnectTranscriptResponses = {
+export type GetConnectionTranscriptResponses = {
     /**
      * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
      *
@@ -4777,7 +4777,7 @@ export type ConnectTranscriptResponses = {
     };
 };
 
-export type ConnectTranscriptResponse = ConnectTranscriptResponses[keyof ConnectTranscriptResponses];
+export type GetConnectionTranscriptResponse = GetConnectionTranscriptResponses[keyof GetConnectionTranscriptResponses];
 
 export type CloseTranscriptData = {
     body: {
