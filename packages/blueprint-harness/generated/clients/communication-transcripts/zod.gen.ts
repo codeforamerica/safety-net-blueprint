@@ -449,6 +449,10 @@ export const zAtRequest = z.object({
     at: z.iso.datetime({ offset: true })
 });
 
+/**
+ * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ *
+ */
 export const zGetConnectionRequest = z.object({
     audio: z.object({
         encoding: z.enum([

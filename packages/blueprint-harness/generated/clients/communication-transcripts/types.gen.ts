@@ -920,6 +920,10 @@ export type AtRequest = {
     at: string;
 };
 
+/**
+ * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ *
+ */
 export type GetConnectionRequest = {
     /**
      * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
@@ -4574,6 +4578,10 @@ export type ResumeTranscriptResponses = {
 export type ResumeTranscriptResponse = ResumeTranscriptResponses[keyof ResumeTranscriptResponses];
 
 export type GetConnectionTranscriptData = {
+    /**
+     * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+     *
+     */
     body: {
         /**
          * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.

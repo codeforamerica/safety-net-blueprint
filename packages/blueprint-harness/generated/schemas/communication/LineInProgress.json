@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key",
+    "text",
+    "startedAt"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "maxLength": 255,
+      "description": "The line's key, the same on every update and on the finished line — the service's own result id where it has one, else one the client makes."
+    },
+    "text": {
+      "type": "string"
+    },
+    "speaker": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "client",
+        "unknown"
+      ],
+      "description": "Who said a line, as a role. A contract set replaces these by overlay —\nsafety-net-contracts might say `worker` and `applicant`.\n"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it began",
+      "by the client's clock.": null
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/LineInProgress"
+}

@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key",
+    "startedAt",
+    "endedAt",
+    "text",
+    "speaker"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "maxLength": 255,
+      "description": "The line's key, as on its updates. Sent as the entry's Idempotency-Key, so a retry adds the line once."
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it began",
+      "by the client's clock.": null
+    },
+    "endedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it ended."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "speaker": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "client",
+        "unknown"
+      ],
+      "description": "Who said a line, as a role. A contract set replaces these by overlay —\nsafety-net-contracts might say `worker` and `applicant`.\n"
+    },
+    "speakerLabel": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "language": {
+      "type": "string",
+      "description": "Preferred language (BCP 47 language tag).",
+      "pattern": "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/FinishedLine"
+}
