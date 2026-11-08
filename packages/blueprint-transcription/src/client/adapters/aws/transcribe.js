@@ -11,7 +11,7 @@
  * frames it and sends it, nothing more.
  */
 
-import { encodeMessage, decodeMessage } from './eventstream.js';
+import { encodeMessage, decodeMessages } from './eventstream.js';
 
 const AUDIO_HEADERS = { ':content-type': 'application/octet-stream', ':event-type': 'AudioEvent', ':message-type': 'event' };
 const decoder = new TextDecoder();
@@ -85,21 +85,28 @@ export function createAwsTranscribeAdapter({ WebSocket: Socket = globalThis.WebS
         });
 
         socket.addEventListener('message', (event) => {
-          let message;
+          let messages;
           try {
-            message = decodeMessage(event.data);
+            messages = decodeMessages(event.data);
           } catch (error) {
             console.error('Transcribe: a message couldn\'t be read', error);
             return;
           }
-          const type = message.headers[':message-type'];
-          if (type === 'exception') {
-            console.error(`Transcribe: ${message.headers[':exception-type']}: ${decoder.decode(message.payload)}`);
-            return;
+          for (const message of messages) {
+            const type = message.headers[':message-type'];
+            // Transcribe ends the stream after an exception; closing makes it
+            // a drop, which the driver reconnects from.
+            if (type === 'exception') {
+              console.error(`Transcribe: ${message.headers[':exception-type']}: ${decoder.decode(message.payload)}`);
+              socket.close();
+              return;
+            }
+            if (type === 'event' && message.headers[':event-type'] === 'TranscriptEvent') results(message);
           }
-          if (type !== 'event' || message.headers[':event-type'] !== 'TranscriptEvent') return;
-          const results = JSON.parse(decoder.decode(message.payload))?.Transcript?.Results ?? [];
-          for (const result of results) {
+        });
+
+        function results(message) {
+          for (const result of JSON.parse(decoder.decode(message.payload))?.Transcript?.Results ?? []) {
             const alternative = result.Alternatives?.[0];
             if (!alternative?.Transcript) continue;
             const line = {
@@ -121,7 +128,7 @@ export function createAwsTranscribeAdapter({ WebSocket: Socket = globalThis.WebS
               });
             }
           }
-        });
+        }
 
         socket.addEventListener('error', (error) => {
           if (!opened) reject(new Error(`Transcribe: the connection didn't open${error?.message ? `: ${error.message}` : ''}`));

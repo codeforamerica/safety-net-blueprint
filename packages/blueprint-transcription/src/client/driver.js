@@ -10,9 +10,10 @@
  * wherever each operation is answered.
  *
  * A client adapter is an object with:
- *   - `open({ connection, audio, report })`: open a connection with what
- *     get-connection answered, stream `audio` (whatever the page captured,
- *     passed through untouched), and resolve with a handle once it's open.
+ *   - `open({ connection, format, audio, report })`: open a connection with
+ *     what get-connection answered, stream `audio` (whatever the page
+ *     captured, passed through untouched, in the AudioFormat `format`), and
+ *     resolve with a handle once it's open.
  *     `report` takes:
  *       - `update({ key, text, speaker?, speakerLabel?, start })`, a line in progress
  *       - `add({ key, text, speaker?, speakerLabel?, confidence?, language?, start, end })`, a finished line
@@ -40,8 +41,9 @@ export class SessionError extends Error {
 /**
  * @param {object} options
  * @param {object} options.adapters - client adapters by the service they speak
- *   (a transcription-services entry, such as `aws-transcribe`); `default`
- *   answers for any other.
+ *   (a transcription-services entry, such as `aws-transcribe`), or by the
+ *   subprotocol, for a relay (`RELAY_PROTOCOL`), which is chosen first;
+ *   `default` answers for any other.
  * @param {object} options.audio - the AudioFormat the software sends.
  * @param {string[]} [options.protocols] - what it can connect over.
  * @param {Function} [options.fetch] - `fetch`'s signature; the in-page mock's in a page.
@@ -186,7 +188,9 @@ class Session {
   async #open(lostSince) {
     const { audio, protocols, adapters } = this.#o;
     const connection = await this.#act('get-connection', { audio, protocols });
-    const adapter = adapters[connection.provider] ?? adapters.default;
+    // A relay speaks the same subprotocol whatever service is behind it, so
+    // it's chosen by that before the service.
+    const adapter = (connection.subprotocol && adapters[connection.subprotocol]) ?? adapters[connection.provider] ?? adapters.default;
     if (!adapter) throw new Error(`No client adapter for ${connection.provider}`);
     let opened;
     const open = new Promise((resolve) => { opened = resolve; });
@@ -194,7 +198,7 @@ class Session {
     this.#openedAt = this.#o.now();
     let handle;
     try {
-      handle = await adapter.open({ connection, audio: this.#audio, report: this.#report() });
+      handle = await adapter.open({ connection, format: audio, audio: this.#audio, report: this.#report() });
       this.#handle = handle;
       await this.#act('connect', lostSince
         ? { lostStretch: { startedAt: lostSince.toISOString(), endedAt: this.#o.now().toISOString() } }

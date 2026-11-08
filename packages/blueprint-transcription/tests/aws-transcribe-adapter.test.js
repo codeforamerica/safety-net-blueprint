@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { EventStreamCodec } from '@smithy/eventstream-codec';
 import { toUtf8, fromUtf8 } from '@smithy/util-utf8';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
-import { encodeMessage, decodeMessage } from '../src/client/adapters/aws/eventstream.js';
+import { encodeMessage, decodeMessage, decodeMessages } from '../src/client/adapters/aws/eventstream.js';
 import { createAwsTranscribeAdapter, createTranscriptionClient } from '../src/client/index.js';
 import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
 
@@ -35,6 +35,16 @@ test('a message AWS\'s codec encodes is what the package reads', () => {
   const { headers, payload } = decodeMessage(transcriptEvent(RESULTS[1]));
   assert.strictEqual(headers[':event-type'], 'TranscriptEvent');
   assert.deepStrictEqual(JSON.parse(new TextDecoder().decode(payload)), RESULTS[1]);
+});
+
+test('a frame carrying several messages is read as all of them', () => {
+  const first = transcriptEvent(RESULTS[0]);
+  const second = transcriptEvent(RESULTS[1]);
+  const frame = new Uint8Array(first.length + second.length);
+  frame.set(first);
+  frame.set(second, first.length);
+  const read = decodeMessages(frame).map((m) => JSON.parse(new TextDecoder().decode(m.payload)));
+  assert.deepStrictEqual(read, [RESULTS[0], RESULTS[1]]);
 });
 
 test('a message with a wrong checksum is refused', () => {
@@ -71,7 +81,20 @@ class FakeTranscribe extends EventTarget {
     this.sent.push(aws.decode(data));
     if (this.sent.at(-1).body.length === 0) setTimeout(() => this.close());
   }
-  results(payload) { this.dispatchEvent(new MessageEvent('message', { data: transcriptEvent(payload).buffer })); }
+  results(...payloads) {
+    const frames = payloads.map(transcriptEvent);
+    const data = new Uint8Array(frames.reduce((n, f) => n + f.length, 0));
+    let offset = 0;
+    for (const f of frames) { data.set(f, offset); offset += f.length; }
+    this.dispatchEvent(new MessageEvent('message', { data: data.buffer }));
+  }
+  exception(type, message) {
+    const data = aws.encode({
+      headers: strings({ ':exception-type': type, ':message-type': 'exception', ':content-type': 'application/json' }),
+      body: fromUtf8(JSON.stringify({ Message: message })),
+    });
+    this.dispatchEvent(new MessageEvent('message', { data: data.buffer }));
+  }
   close() {
     if (this.readyState === 3) return;
     this.readyState = 3;
@@ -112,6 +135,25 @@ test('audio goes out as AudioEvent messages, and finishing sends an empty one', 
   assert.deepStrictEqual(sent.map((m) => [...m.body]), [[1, 2], [3, 4, 5], []]);
   assert.strictEqual(sent[0].headers[':event-type'].value, 'AudioEvent');
   assert.strictEqual(FakeTranscribe.last.url, CONNECTION.url);
+});
+
+test('results that arrive together in one frame are all reported', async () => {
+  const { told, report } = recorder();
+  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+  FakeTranscribe.last.results(RESULTS[1], RESULTS[3]);
+  await handle.finish();
+  assert.deepStrictEqual(told.add.map((l) => l.text), ['Who lives with you?', 'My two kids.']);
+});
+
+test('an exception from Transcribe closes the connection, which is a drop', async () => {
+  const { told, report } = recorder();
+  const { error } = console;
+  console.error = () => {};
+  try {
+    await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+    FakeTranscribe.last.exception('BadRequestException', 'Your request timed out because no new audio was received for 15 seconds.');
+  } finally { console.error = error; }
+  assert.strictEqual(told.dropped, 1);
 });
 
 test('a close nobody asked for is reported as a drop', async () => {

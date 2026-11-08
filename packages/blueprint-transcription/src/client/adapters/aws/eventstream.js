@@ -67,7 +67,27 @@ export function encodeMessage(headers, payload) {
 }
 
 /**
+ * Every message in a frame: one WebSocket frame can carry several.
+ *
  * @param {ArrayBuffer|Uint8Array} data
+ * @returns {{ headers: Record<string, string>, payload: Uint8Array }[]}
+ */
+export function decodeMessages(data) {
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const messages = [];
+  let offset = 0;
+  while (offset < bytes.length) {
+    if (bytes.length - offset < 16) throw new Error('An event stream frame ends partway through a message');
+    const total = new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0);
+    if (total < 16 || offset + total > bytes.length) throw new Error(`An event stream message says it's ${total} bytes, and the frame has ${bytes.length - offset} left`);
+    messages.push(decodeMessage(bytes.subarray(offset, offset + total)));
+    offset += total;
+  }
+  return messages;
+}
+
+/**
+ * @param {ArrayBuffer|Uint8Array} data - exactly one message
  * @returns {{ headers: Record<string, string>, payload: Uint8Array }}
  */
 export function decodeMessage(data) {

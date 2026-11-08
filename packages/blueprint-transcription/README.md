@@ -25,8 +25,8 @@ It has two entry points, one for each place it runs:
 
 | Entry point | Runs | What it has |
 |---|---|---|
-| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, and a fake one with no service behind it |
-| `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with, and an issuer for Amazon Transcribe |
+| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, one for any relay, and a fake one with no service behind it |
+| `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with; an issuer for Amazon Transcribe; and a fake relay |
 
 Never import `./server` into a page: it's where secrets are used.
 
@@ -54,8 +54,9 @@ await session.resume();
 await session.stop();                     // the last text comes in, and the transcript closes
 ```
 
-The driver asks the session how to stream, picks the adapter for the service
-the server answered with, and turns everything the adapter reports into the
+The driver asks the session how to stream, picks the adapter for what the
+server answered with — the relay's subprotocol, if the connection is to a
+relay, or else the service — and turns everything the adapter reports into the
 session's actions: lines in progress, finished lines, a dropped connection. A
 drop is reconnected, and the stretch it lost is recorded on the transcript as
 a gap; after `retries` failed attempts the session fails, and the transcript
@@ -67,9 +68,10 @@ An adapter speaks one service's protocol and holds no session logic:
 
 ```js
 const adapter = {
-  async open({ connection, audio, report }) {
+  async open({ connection, format, audio, report }) {
     // Connect with what get-connection answered: connection.url, and
-    // connection.accessToken where the service takes one. Stream `audio`.
+    // connection.accessToken where the service takes one. Stream `audio`,
+    // which is in the AudioFormat `format`.
     // Report as text comes back, with times in seconds from opening:
     //   report.update({ key, text, speakerLabel, start })
     //   report.add({ key, text, speakerLabel, start, end, confidence })
@@ -101,12 +103,29 @@ an async iterable of chunks in the format the session asked for — 16-bit PCM
 for `linear16`. Messages are framed in AWS's event stream format, implemented
 here and checked against AWS's own codec.
 
+### A relay
+
+```js
+import { createRelayAdapter, RELAY_PROTOCOL } from '@codeforamerica/blueprint-transcription/client';
+
+adapters: { [RELAY_PROTOCOL]: createRelayAdapter() }
+```
+
+A state runs a relay in front of a service a browser can't reach, such as
+Google Cloud Speech-to-Text, which takes only gRPC. Every relay speaks the
+relay contract (`communication-transcripts-relay-asyncapi.yaml`), so this one
+adapter works with any of them, whatever service is behind it. It asks for the
+contract's subprotocol with the relay's token beside it, sends `start`, the
+audio as binary frames and `end`, keeps a quiet connection open with
+`keepalive`, and reports the relay's results.
+
 ### The fake adapter
 
 A fake in the testing sense: a working adapter with no transcription service
 behind it. It plays back a recording instead of streaming, for demos and
-tests: no service, no credential, no audio. A recording lists what an adapter would report, each
-at a time in seconds:
+tests: no service, no credential, no audio. A recording lists what a
+service reports, each at a time in seconds; the fake relay plays the same
+recordings:
 
 ```json
 { "events": [
@@ -144,12 +163,34 @@ Crypto and no dependencies. Its tests check it against AWS's own signer, with
 AWS's example key: signing is a local calculation, so no AWS account is
 needed to test it.
 
+### The fake relay
+
+A fake relay, likewise: it speaks the relay contract with no service behind
+it, playing back a recording as the service's results, for demos and tests of
+software that talks to a relay. It's given each connection's socket rather
+than running a server, so it works with whatever WebSocket server the host
+has:
+
+```js
+import { createFakeRelay } from '@codeforamerica/blueprint-transcription/server';
+
+const relay = createFakeRelay(recording);
+// On an upgrade request: answer with relay.protocolFor(offeredProtocols), or refuse when it's null.
+// Once the connection is open: relay.accept(socket).
+```
+
+A real relay checks the token as a JWT the transcripts adapter signed; the
+fake takes any token its `verifyToken` option accepts. Its tests check every
+message either side sends against the relay contract's schemas.
+
 ## Adding a service
 
 Amazon Transcribe is the example; another service is added the same way, and
 contributions are welcome. Put its files in a folder for its vendor, named for
 the service, as `aws/transcribe.js` is for the registry's `aws-transcribe`;
-what a vendor's services share, such as AWS's signing, sits beside them. The transcription services
+what a vendor's services share, such as AWS's signing, sits beside them. A
+service a browser can't reach needs no client adapter of its own: it sits
+behind a relay, which the relay adapter speaks to. The transcription services
 the contracts name are in the `transcription-services` registry
 (`communication-transcripts-registry-transcription-services.yaml`), with how a
 browser reaches each in `docs/architecture/domains/communication.md`,
@@ -166,10 +207,6 @@ Decision 12.
   SDK or documented examples with a made-up key, as the Transcribe signer is
   checked; check a client adapter by playing back messages recorded from one
   real session.
-
-A service a browser can't reach, such as one that takes only gRPC, sits behind
-a relay that implements the relay contract instead
-(`communication-transcripts-relay-asyncapi.yaml`).
 
 ## License
 
