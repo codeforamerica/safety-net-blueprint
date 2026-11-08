@@ -57,9 +57,34 @@ without taking anything else the framework adds to the domain.
 ## How the parts work together
 
 This is where transcription is headed. Some of it is built: the transcript,
-asking how to stream, and the server adapter. The session, which keeps track
-of the software's connection in the page, is planned. Steps that depend on it
-say so.
+asking how to stream, the server adapter, and routing, which decides where
+each part runs. The session, which keeps track of the software's connection,
+is planned; the diagrams mark it so.
+
+### Where each part runs: routing
+
+The blueprint runs in two places at once, and routing is what makes that
+possible. Its contracts are the same everywhere; routing is per-environment
+configuration that says which domain, API or operation is answered where, so
+no contract has to say where it runs.
+
+- **The session runs in the page.** It's designed to: it keeps track of one
+  browser tab's connection and doesn't outlive the tab, and lines in progress
+  have to stay in the browser
+  ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
+- **Everything that's kept runs on the server:** the transcript, its events,
+  and asking how to stream, which reaches the server adapter.
+- **One routing entry does it:** route the communication domain to the server,
+  except the session's API, which stays in the page. The session's actions
+  call the transcript's operations by their ids, so routing carries those calls
+  to the server too.
+- **A demo with no backend** routes nothing: the mock serves everything in the
+  page. It answers the server adapter's operation with a routing `handler` in
+  the page, or a test answers it with an HTTP stub.
+
+The [mock guide's routing section](../../guides/mock-server.md#routing-to-a-real-service)
+has the configuration. The diagrams below show the end state, with the
+blueprint in both places.
 
 ### The parts
 
@@ -68,29 +93,31 @@ flowchart LR
   staff([Staff member]) --> page
   subgraph browser [The staff member's browser]
     page[Page] -- audio --> client[Client adapter]
+    page -- start, pause, resume, stop --> session[Blueprint, in the page:<br/>the session]
+    client -- connection changes, lines --> session
+    session -- events --> page
+    session -- events --> client
   end
   client -- audio --> service[(Transcription service)]
   service -- what it heard --> client
-  client -- finished lines, lost stretches --> blueprint[Blueprint]
-  page -- start, pause, resume, stop --> blueprint
-  blueprint -- every change, as events --> page
-  client -- how do I stream? --> blueprint
-  blueprint -- asks for a connection --> adapter[Server adapter]
-  adapter -- holds the service's secret --> service
+  session -- start, get a connection, lines,<br/>pause, resume, close --> server[Blueprint, on the server:<br/>the transcript]
+  server -- get a connection --> adapter[Server adapter]
+  adapter -- ask for a credential,<br/>with the secret it holds --> service
 ```
 
 | Part | What it does |
 |---|---|
 | Page | The staff member's screen. It captures audio and calls only the blueprint, except to hand audio to the client adapter. |
-| Client adapter | Code in the page that speaks one transcription service's protocol. The only part of the page that knows which service it is. |
-| Blueprint | Keeps the transcript and its rules, and sends every change as an event. |
+| Client adapter | Code in the page that speaks one transcription service's protocol. The only part of the page that knows which service it is. It tells the session about its connection and the lines it hears ([Decision 17](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)). |
+| Blueprint, in the page: the session | Keeps track of the connection, shows lines in progress, and calls the server for everything that's kept. Kept in the page by routing. Planned. |
+| Blueprint, on the server: the transcript | Keeps the transcript and its rules, and sends every change as an event. |
 | Server adapter | A state's service beside the blueprint. It holds the transcription service's secret and issues a credential that lasts minutes ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
 | Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. One a browser can't reach sits behind a relay the state runs ([Decision 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract)). |
 
 Audio goes from the page straight to the service and never through the
-blueprint ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
-The secret never reaches the page. Every diagram below starts with the staff
-member signed in; how they sign in is part of the security model in
+blueprint. Lines in progress stay in the browser; only finished lines reach the
+server. The secret never reaches the page. Every diagram below starts with the
+staff member signed in; how they sign in is part of the security model in
 [Identity & Access](../cross-cutting/identity-access.md).
 
 In the diagrams, a solid arrow is a request and a dotted one its answer. A
@@ -98,51 +125,71 @@ dotted, open-headed arrow is an event, sent to whoever follows along; a solid,
 open-headed one is a frame on an open connection. Neither is answered. An
 arrow ending in an x is a connection closing.
 
+Arrows are labeled with what the contracts name them
+([Decision 17](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)):
+a request to the session with its action, a request to the server with its
+operation, and an event with its name. The session's events are
+`communication.transcription_session.<event>`, written here by their last
+part; the transcript's are written in full. Arrows to and from the service,
+and the audio, describe what passes, since those aren't the blueprint's.
+
 ### Starting and connecting
 
 ```mermaid
 sequenceDiagram
     actor Staff as Staff member
-    participant Page
-    participant Client as Client adapter
-    participant Blueprint
+    box The staff member's browser
+        participant Page
+        participant Client as Client adapter
+        participant Session as Blueprint, in the page (planned)
+    end
+    participant Server as Blueprint, on the server
     participant Adapter as Server adapter
     participant Service as Transcription service
 
     Staff->>Page: Start
-    Page->>Blueprint: Start a session (planned)
-    Note over Blueprint: Starts the transcript
-    Blueprint--)Client: The session started (planned)
-    Client->>Blueprint: How do I stream, with this audio?
-    Blueprint->>Adapter: A connection for this service, model and languages
+    Page->>Session: create
+    Session->>Server: createTranscript
+    Session--)Client: created
+    Client->>Session: get-connection, with the audio
+    Session->>Server: getConnectionTranscript
+    Server->>Adapter: issueTranscriptConnection
     Note over Adapter: Asks the service for a credential,<br/>with the secret it holds
-    Adapter-->>Blueprint: Where to connect, and a credential
-    Blueprint-->>Client: Where to connect, and a credential
-    Client->>Service: Connect
-    Client->>Blueprint: Connected (planned)
-    Blueprint--)Page: Connected
+    Adapter-->>Server: Where to connect, and a credential
+    Server-->>Session: Where to connect, and a credential
+    Session-->>Client: Where to connect, and a credential
+    Session--)Page: connecting
+    Client->>Service: Open the connection
+    Client->>Session: connect
+    Session--)Page: connected
 ```
 
 ### Each line spoken
 
 ```mermaid
 sequenceDiagram
-    participant Page
-    participant Client as Client adapter
+    box The staff member's browser
+        participant Page
+        participant Client as Client adapter
+        participant Session as Blueprint, in the page (planned)
+    end
     participant Service as Transcription service
-    participant Blueprint
+    participant Server as Blueprint, on the server
 
     loop While recording
         Page->>Client: Audio
         Client-)Service: Audio
     end
     Service-)Client: What it heard so far
-    Client->>Blueprint: A line in progress (planned)
-    Blueprint--)Page: Show it, not kept
+    Client->>Session: update-line, with its key
+    Session--)Page: line_updated
+    Note over Session: Stays in the browser, and nothing is kept
     Service-)Client: The finished line
-    Client->>Blueprint: Add the finished line
-    Note over Blueprint: Added once, even if the request is sent again
-    Blueprint--)Page: The line was added
+    Client->>Session: add-line, with its key
+    Session->>Server: addTranscriptEntry, with the key
+    Note over Server: Added once, even if the request is sent again
+    Server-->>Session: The new entry
+    Session--)Page: line_added, with the key and the entry
 ```
 
 ### Going off the record
@@ -150,26 +197,36 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Staff as Staff member
-    participant Page
-    participant Client as Client adapter
-    participant Blueprint
+    box The staff member's browser
+        participant Page
+        participant Client as Client adapter
+        participant Session as Blueprint, in the page (planned)
+    end
+    participant Server as Blueprint, on the server
     participant Service as Transcription service
 
     Staff->>Page: Pause
-    Page->>Blueprint: Pause the transcript
-    Note over Blueprint: A line that starts while paused is refused
-    Blueprint--)Client: Paused (planned)
+    Page->>Session: pause
+    Session->>Server: pauseTranscript
+    Note over Server: Keeps the pause, and refuses<br/>a line that starts during it
+    Session--)Client: paused
     Client-)Service: The end of the audio
     Service-)Client: The last lines
-    Client->>Blueprint: Add each finished line
-    Note over Blueprint: Kept if it started before the pause
+    Client->>Session: add-line, for each
+    Session->>Server: addTranscriptEntry, for each
+    Note over Server: Kept if it started before the pause
     Service--xClient: The connection closes
     Staff->>Page: Resume
-    Page->>Blueprint: Resume the transcript
-    Blueprint--)Client: Resumed (planned)
-    Client->>Blueprint: How do I stream?
-    Blueprint-->>Client: Where to connect, and a new credential
-    Client->>Service: Connect again
+    Page->>Session: resume
+    Session->>Server: resumeTranscript
+    Session--)Client: connecting
+    Client->>Session: get-connection
+    Session->>Server: getConnectionTranscript
+    Server-->>Session: Where to connect, and a new credential
+    Session-->>Client: Where to connect, and a new credential
+    Client->>Service: Open the connection again
+    Client->>Session: connect
+    Session--)Page: connected
 ```
 
 No audio leaves the page while the transcript is paused ([Decision 16](#decision-16-going-off-the-record-stops-the-audio)).
@@ -178,45 +235,57 @@ No audio leaves the page while the transcript is paused ([Decision 16](#decision
 
 ```mermaid
 sequenceDiagram
-    participant Page
-    participant Client as Client adapter
-    participant Blueprint
+    box The staff member's browser
+        participant Page
+        participant Client as Client adapter
+        participant Session as Blueprint, in the page (planned)
+    end
+    participant Server as Blueprint, on the server
     participant Adapter as Server adapter
     participant Service as Transcription service
 
     Service--xClient: The connection closes
-    Client->>Blueprint: Interrupted (planned)
-    Blueprint--)Page: Interrupted
-    Client->>Blueprint: How do I stream?
-    Blueprint->>Adapter: A connection
-    Adapter-->>Blueprint: Where to connect, and a new credential
-    Blueprint-->>Client: Where to connect, and a new credential
-    Client->>Service: Connect again
-    Client->>Blueprint: Connected, and the stretch that was lost (planned)
-    Note over Blueprint: Records the lost stretch on the transcript
-    Blueprint--)Page: Connected
+    Client->>Session: disconnect
+    Session--)Page: disconnected
+    Client->>Session: get-connection
+    Session->>Server: getConnectionTranscript
+    Server->>Adapter: issueTranscriptConnection
+    Adapter-->>Server: Where to connect, and a new credential
+    Server-->>Session: Where to connect, and a new credential
+    Session-->>Client: Where to connect, and a new credential
+    Client->>Service: Open the connection again
+    Client->>Session: connect, with the stretch that was lost
+    Session->>Server: addTranscriptEntry, for the lost stretch
+    Session--)Page: connected
 ```
+
+If it can't connect again, the client adapter calls `fail`, and the session is
+`failed`; the transcript stays open.
 
 ### Stopping
 
 ```mermaid
 sequenceDiagram
     actor Staff as Staff member
-    participant Page
-    participant Client as Client adapter
+    box The staff member's browser
+        participant Page
+        participant Client as Client adapter
+        participant Session as Blueprint, in the page (planned)
+    end
     participant Service as Transcription service
-    participant Blueprint
+    participant Server as Blueprint, on the server
 
     Staff->>Page: Stop
-    Page->>Blueprint: Stop the session (planned)
-    Blueprint--)Client: Stopping (planned)
+    Page->>Session: stop
+    Session--)Client: stopping
     Client-)Service: The end of the audio
     Service-)Client: The last lines
-    Client->>Blueprint: Add each finished line
+    Client->>Session: add-line, for each
+    Session->>Server: addTranscriptEntry, for each
     Service--xClient: The connection closes
-    Client->>Blueprint: Ended (planned)
-    Note over Blueprint: Closes the transcript
-    Blueprint--)Page: Ended
+    Client->>Session: close
+    Session->>Server: closeTranscript
+    Session--)Page: closed
 ```
 
 ## Entity model
@@ -409,9 +478,10 @@ In the safety net contract set, `safety-net-contracts/src/domains/communication/
 | 12 | [The software asks the server how to stream, in one shape for every service](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
 | 13 | [A service with no browser path sits behind a relay that speaks the blueprint's audio contract](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract) | Google, a self-hosted model, or any service a state fronts itself |
 | 14 | [The audio contract takes the services' common pattern and the standard result names](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
-| 15 | [The session's states are WebRTC's connection states](#decision-15-the-sessions-states-are-webrtcs-connection-states) | `new`, `connecting`, `connected`, `disconnected`, `closing`, `closed` and `failed`, and `paused` from Decision 16 |
+| 15 | [The session's states follow WebRTC's, named to match its actions](#decision-15-the-sessions-states-follow-webrtcs-named-to-match-its-actions) | `created`, `connecting`, `connected`, `disconnected`, `paused`, `stopping`, `closed` and `failed`; each action's state and event are the same word |
 | 16 | [Going off the record stops the audio](#decision-16-going-off-the-record-stops-the-audio) | Pausing disconnects from the service, and resuming connects again |
-| 17 | [Every report goes in as a session action, and each action sends an event out](#decision-17-every-report-goes-in-as-a-session-action-and-each-action-sends-an-event-out) | The client adapter talks only to the session; whoever follows along listens to its events |
+| 17 | [Everything the client adapter tells the session goes in as an action, and each action sends an event out](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out) | The client adapter talks only to the session; whoever follows along listens to its events |
+| 18 | [A line in progress is tied to its finished line by the client's key](#decision-18-a-line-in-progress-is-tied-to-its-finished-line-by-the-clients-key) | The entry is created once, when the line is finished, with an id from the server |
 
 ### Decision 1: A framework domain of its own
 
@@ -491,9 +561,27 @@ decides what the blueprint has to understand.
   machines runs a service that implements the transcript contract and
   transcribes on its side.
 
-**Decision:** Only finished lines reach the blueprint. Lines still being
-revised arrive several times a second, and the staff member's own screen gets them
-from the software directly.
+**Decision:** Only finished lines reach the blueprint's server. Lines still
+being revised stay in the page: the staff member's screen gets them through the
+session, which runs there
+([Decision 17](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)).
+Only finished lines, because:
+
+- A line in progress is revised, often several times a second, and its text is
+  the least reliable there is. Keeping it would fill the record with words the
+  service later corrected.
+- Some lines never finish: the connection drops, the service drops a fragment,
+  the conversation goes off the record mid-sentence. Kept, they'd be text
+  nobody confirmed, left for something to clean up.
+- Whatever reads the transcript, such as analysis and the suggestions that cite
+  lines, should see only what was finally heard, without waiting for or
+  filtering out drafts.
+- Entries don't change ([Decision 7](#decision-7-entries-do-not-change)), and a
+  stored, checked write for every revision would cost far more than one per
+  sentence.
+
+How a line in progress is tied to the finished line it becomes is
+[Decision 18](#decision-18-a-line-in-progress-is-tied-to-its-finished-line-by-the-clients-key).
 
 ### Decision 4: One timeline of entries
 
@@ -717,8 +805,8 @@ documentation, November 2026:
   server adapter holds the service's secret and issues the credential.
 
 **Decision:** OAuth's names, with its meaning and in the blueprint's camelCase.
-The operation is the transcript's `connect` action,
-`POST /transcripts/{transcriptId}/connect`: an action, so its guards say who may
+The operation is the transcript's `get-connection` action,
+`POST /transcripts/{transcriptId}/get-connection`: an action, so its guards say who may
 ask and that the transcript is recording, as `pause`'s do. Its steps call the
 server adapter, and it answers with the connection, not the transcript, by
 naming its response's schema and payload together (see the
@@ -726,8 +814,8 @@ naming its response's schema and payload together (see the
 stored, and each call issues a fresh credential.
 
 The server adapter, `communication-transcripts-adapter-openapi.yaml` beside the
-transcripts API, has one operation, `connectTranscriptAdapter`
-(`POST /connect`). It takes what any service needs to issue a credential:
+transcripts API, has one operation, `issueTranscriptConnection`
+(`POST /issue-connection`). It takes what any service needs to issue a credential:
 
 - the service and its languages, from the transcript's profile, and the model,
   from the transcript. Each adapter maps the languages to what its service
@@ -857,9 +945,9 @@ labels are strings — Riva's are numbers, Google's and Gladia's strings.
 The connection is a WebSocket, the one way to stream both ways that every
 browser has and a state can run simply; WebRTC or WebTransport would be another
 server in the AsyncAPI document, offered only to software that names it in
-`connect`'s protocols. The relay speaks the subprotocol
+`get-connection`'s protocols. The relay speaks the subprotocol
 `blueprint.transcripts.audio.v1` ([RFC 6455](https://www.rfc-editor.org/rfc/rfc6455)'s
-way for a WebSocket to say what it speaks), which `connect` answers with, so
+way for a WebSocket to say what it speaks), which `get-connection` answers with, so
 the software knows to use its relay adapter.
 
 The relay accepts a signed, short-lived JWT ([RFC 7519](https://www.rfc-editor.org/rfc/rfc7519),
@@ -877,27 +965,34 @@ the subprotocol's name, not in the URL: RFC 6750 says to avoid tokens in URLs,
 which are logged. A deployment with no backend of its own still has the relay's,
 so the relay's deployment runs the server adapter that signs.
 
-### Decision 15: The session's states are WebRTC's connection states
+### Decision 15: The session's states follow WebRTC's, named to match its actions
 
-**Status:** Decided: D
+**Status:** Decided: E
 
 **What's being decided:** The session keeps track of the software's
 connection to its transcription service, in the page, so its states are what a
 page shows the staff member and what decides which of its actions can happen
-when. They need names a developer already knows, and a state for every
-situation the page has to show differently.
+when. They need names a developer already knows, a state for every situation
+the page has to show differently, and names that agree with the session's
+actions and events
+([Decision 17](#decision-17-everything-the-client-adapter-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)).
 
 **Considerations:**
 - A browser already names the states of a live media connection: W3C WebRTC's
   `RTCPeerConnection.connectionState` is `new`, `connecting`, `connected`,
-  `disconnected`, `failed` and `closed`. WebSocket's `readyState` adds
-  `CLOSING`, between asking to close and being closed.
+  `disconnected`, `failed` and `closed`, and its `connectionstatechange` event
+  reports the state entered. WebSocket's `readyState` adds `CLOSING`, between
+  asking to close and being closed.
 - Stopping isn't immediate. The software sends the end of the audio, and the
   service sends its last lines before it closes the connection, so there is a
   stretch where lines still arrive after the staff member pressed Stop.
 - A connection that can't be restored has to look different from one that
   ended normally. The transcript is still open, and the staff member can
   start a new session and carry on.
+- An action, the state it leads to, and the event it sends should be the same
+  word, so a developer who knows one knows the others: `pause` → `paused`.
+  Every resource in the blueprint already gets a `created` event when it's
+  made, generated by resolve.
 - The contracts have to stay vendor-neutral, so a page and its client
   adapters work the same whichever service a state chose. Each vendor's SDK
   names its own events (Azure's `sessionStarted` and `canceled`, the Web Speech
@@ -913,20 +1008,24 @@ situation the page has to show differently.
   spans a connection per reconnect and resume; and they have nothing for not
   started yet, or for giving up. Not every service is reached over a
   WebSocket either.
-- **(C)** WebRTC's six states as they are, which describe a connection that
-  can drop and recover, with no state for stopping: the session stays
-  `connected` until the last lines are in, and the page can't show that it's
-  finishing.
-- **(D) ✓** WebRTC's six states, and `closing`, the one state borrowed from
-  WebSocket, for the stretch after Stop.
+- **(C)** WebRTC's six states as they are, with no state for stopping: the
+  session stays `connected` until the last lines are in, and the page can't
+  show that it's finishing.
+- **(D)** WebRTC's six states, and `closing` from WebSocket for the stretch
+  after Stop. Two names then disagree with what goes with them: `new` with the
+  generated `created` event, and `closing` with the `stop` action.
+- **(E) ✓** WebRTC's names where they agree with the session's actions —
+  `connecting`, `connected`, `disconnected`, `closed`, `failed` — and
+  `created` and `stopping` where they don't.
 
-**Decision:** `new` → `connecting` → `connected`; `connected` →
+**Decision:** `created` → `connecting` → `connected`; `connected` →
 `disconnected` when the connection drops, and back to `connecting` to try
-again; `closing` after Stop, then `closed`. `failed` when the software gives up
-reconnecting. `closed` and `failed` are final states: a staff member who wants
-to carry on starts a new session under the same transcript. A pause adds one
-more state ([Decision 16](#decision-16-going-off-the-record-stops-the-audio)).
-When the software gives up is still to decide.
+again; `paused` while off the record
+([Decision 16](#decision-16-going-off-the-record-stops-the-audio)), and
+`connecting` again on resume; `stopping` after Stop, then `closed`. `failed`
+when the software gives up reconnecting. `closed` and `failed` are final
+states: a staff member who wants to carry on starts a new session under the
+same transcript. When the software gives up is still to decide.
 
 ### Decision 16: Going off the record stops the audio
 
@@ -965,13 +1064,13 @@ service doesn't hear it decides what pausing has to do to the connection.
 service, and resuming reuses the reconnect path. Resuming takes as long as
 connecting, about a second.
 
-### Decision 17: Every report goes in as a session action, and each action sends an event out
+### Decision 17: Everything the client adapter tells the session goes in as an action, and each action sends an event out
 
 **Status:** Decided: B
 
-**What's being decided:** The client adapter reports what happens to its
-connection and what the service heard: connected, interrupted, a line in
-progress, a finished line, ended. Each report could reach the blueprint as an
+**What's being decided:** The client adapter tells the session what happens to
+its connection and what the service heard: connected, disconnected, a line in
+progress, a finished line, done, gave up. Each of these could reach the blueprint as an
 action on the session, or only as an event for whoever follows along, since
 some, like a line in progress, change nothing that's kept.
 
@@ -979,39 +1078,105 @@ some, like a line in progress, change nothing that's kept.
 - A state machine's job is to take actions in, check them against its state,
   change the record, and send events out. An action is the only way into the
   session that its contract defines and its guards check.
-- A report sent only as an event would go straight to the event stream,
+- Something sent only as an event would go straight to the event stream,
   outside the session's contract, so nothing would refuse a line that arrives
   after the session failed.
-- Whoever follows along, the page or another tab, needs every report, so each
+- Whoever follows along, the page or another tab, needs every one of them, so each
   one has to reach them as an event either way.
 - One API for every client adapter, whatever its service, keeps the contracts
   vendor-neutral.
 
 **Options:**
-- **(A)** Reports that change state are actions; the rest, such as a line in
+- **(A)** What changes state goes in as an action; the rest, such as a line in
   progress, are events the client sends directly.
-- **(B) ✓** Every report is an action on the session, and every action emits
+- **(B) ✓** Everything goes in as an action on the session, and every action emits
   an event. An action that changes nothing kept, such as a line in progress,
   stores nothing and only sends its event.
 
-**Decision:** The client adapter talks only to the session, never to the
-transcript; the session's actions call the transcript. The starting point:
+**Decision:** The page and the client adapter talk only to the session, never
+to the transcript; the session's actions call the transcript's operations on
+the server. An action is named for what happens. One that changes the
+session's state leads to the state of the same word, and sends the event of
+that name, as WebRTC's `connectionstatechange` reports the state entered
+([Decision 15](#decision-15-the-sessions-states-follow-webrtcs-named-to-match-its-actions)).
+One that doesn't change it sends an event named for what happened. Each of the
+session's events is `communication.transcription_session.<event>`.
 
-| Report | Sent by | State | What it does to the transcript |
-|---|---|---|---|
-| Start | The page, creating the session | → `new` | Starts it |
-| How do I stream? | Client | `new`, `disconnected` or `paused` → `connecting` | Calls its `connect` and answers with the connection |
-| Connected | Client | `connecting` → `connected` | After a reconnect, records the lost stretch as a gap ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) |
-| Interrupted | Client | `connected` → `disconnected` | Nothing |
-| A line in progress | Client | No change, while `connected` or `closing` | Nothing; the line is only shown |
-| A finished line | Client | No change, while `connected` or `closing`, or while the last lines arrive on a pause | Adds it, with the line's id as its key ([Decision 8](#decision-8-a-retry-is-recognized-by-a-key)) |
-| Stop | The page | `connected` → `closing` | Nothing |
-| Ended | Client | `closing` → `closed` | Closes it |
-| Gave up | Client | `disconnected` → `failed` | Nothing; it stays open |
+| What it says | Sent by | Action | State | What it calls on the server | Event |
+|---|---|---|---|---|---|
+| Start | Page | `create` | `created` | `createTranscript` | `created` |
+| How do I stream? | Client | `get-connection` | `created`, `disconnected` or `connecting` → `connecting` | `getConnectionTranscript`, and answers with what it gets | `connecting` |
+| The connection is open | Client | `connect` | `connecting` → `connected` | After a reconnect, `addTranscriptEntry` for the lost stretch ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) | `connected` |
+| The connection dropped | Client | `disconnect` | `connected` → `disconnected` | Nothing | `disconnected` |
+| A line in progress | Client | `update-line` | No change, while `connected` or `stopping` | Nothing; the line is only shown | `line_updated` |
+| A finished line | Client | `add-line` | No change, while `connected`, `paused` or `stopping` | `addTranscriptEntry`, with the line's key ([Decision 18](#decision-18-a-line-in-progress-is-tied-to-its-finished-line-by-the-clients-key)) | `line_added` |
+| Pause | Page | `pause` | `connected` → `paused` | `pauseTranscript` | `paused` |
+| Resume | Page | `resume` | `paused` → `connecting` | `resumeTranscript` | `connecting` |
+| Stop | Page | `stop` | `connected` → `stopping` | Nothing | `stopping` |
+| Done with the service | Client | `close` | `stopping` → `closed` | `closeTranscript` | `closed` |
+| Gave up | Client | `fail` | `disconnected` → `failed` | Nothing; the transcript stays open | `failed` |
 
-Each emits an event of the same name. Still to decide: how the session moves
-through a pause while the last lines arrive, the actions' names, and whether
-line ids come from the client.
+Why `get-connection` and `connect` are two actions: the blueprint never touches
+the connection to the service
+([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
+`get-connection` gets where to connect and a credential; the client adapter
+opens the connection itself; `connect` tells the session it worked, since only
+the client knows whether the service accepted it. Between them the session is
+`connecting`, so a connection that fails to open has somewhere to land. The
+transcript's own action is `get-connection` too, and the server adapter's
+operation is `issueTranscriptConnection`, so "connect" always means the
+connection is open, and never issuing a credential.
+
+Pausing goes through the session because it does two things in two places: the
+transcript keeps the pause and refuses what's said during it, on the server,
+and the connection has to close so no audio leaves the page
+([Decision 16](#decision-16-going-off-the-record-stops-the-audio)). The session
+goes straight to `paused`; the last lines still arrive, and `add-line` is
+allowed while `paused`, because the transcript decides which to keep by when
+each started ([Decision 5](#decision-5-an-entry-is-judged-by-when-it-started)).
+If something else pauses the transcript, another tab say, the session follows
+by reacting to `communication.transcript.paused`.
+
+### Decision 18: A line in progress is tied to its finished line by the client's key
+
+**Status:** Decided: C
+
+**What's being decided:** The page shows a line as it's spoken, then replaces
+it with the finished line. Each update to a line in progress has to say which
+line it is, before the line is stored. Some services number their results;
+ElevenLabs' lines in progress carry no id at all.
+
+**Considerations:**
+- Every record in the blueprint gets its id from the server, and a retry is
+  already recognized by a key the client sends
+  ([Decision 8](#decision-8-a-retry-is-recognized-by-a-key)).
+- Only finished lines reach the blueprint's server, for the reasons in
+  [Decision 3](#decision-3-audio-never-passes-through-the-blueprint). The
+  session runs in the page, so a line in progress goes through it without
+  leaving the browser.
+- The audio contract already gives each result an id
+  ([Decision 14](#decision-14-the-audio-contract-takes-the-services-common-pattern-and-the-standard-result-names)).
+
+**Options:**
+- **(A)** The client chooses the entry's id. The one record whose id wouldn't
+  come from the server; Decision 8 rejected it.
+- **(B)** The server creates the entry at the first word, and the client
+  updates it until the line is finished. One id throughout, and a line in
+  progress would survive the page crashing. But the record fills with
+  revisions the service later corrected; a line that never finishes leaves an
+  entry for something to clean up; everything that listens sees unfinished
+  lines; the client can't send its second update until the first comes back,
+  so updates race on a slow connection; and every revision is a stored,
+  checked write.
+- **(C) ✓** The client gives each line a key. Every line-in-progress event
+  carries it; it's the line's idempotency key when the finished line is added;
+  and the line-finished event carries both the key and the new entry's id, so
+  the page swaps one for the other.
+
+**Decision:** The client adapter uses the service's own result id as the key
+where there is one, as there is on a relay, and makes one, such as a UUID,
+where there isn't. A line in progress is only an event; the entry is created
+once, when the line is finished, with an id from the server.
 
 ## Key design questions
 
