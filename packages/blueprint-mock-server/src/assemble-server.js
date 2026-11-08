@@ -25,6 +25,7 @@ import { operationsOf } from './operation-calls.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { createStepCalls } from './step-calls.js';
+import { rememberMachineFiles } from './state-machine-runner.js';
 import { initRulesIndex } from './state-machine-engine.js';
 
 /**
@@ -56,6 +57,7 @@ export function assembleServer(
   // composition's patch — means what the API's route at that method and path
   // means.
   const docs = readDocs();
+  rememberMachineFiles(stateMachines);
   const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store, docs });
   // Every operation the set has, as core finds them: the events documents'
   // receive operations included, which routing a domain or API covers.
@@ -133,7 +135,10 @@ export function assembleServer(
       const operation = byApiAndId.get(`${route.api}#${route.operationId}`);
       const response = operation && operation.follow(operation.responses?.[status] ?? operation.responses?.default);
       const schema = response?.content?.['application/json']?.schema;
-      return schema ? { schema: operation.follow(schema), key: `${operation.api}-${operation.id}-response-${status}` } : null;
+      if (!schema) return null;
+      // Where the schema was declared, so its refs into other files resolve.
+      const source = typeof schema.$ref === 'string' ? { relativePath: operation.relativePath, ref: schema.$ref } : null;
+      return { schema: operation.follow(schema), key: `${operation.api}-${operation.id}-response-${status}`, source };
     },
   });
   routedEvents.receives = receives;

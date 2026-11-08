@@ -77,6 +77,19 @@ const listed = (items, conjunction) => (items.length < 2 ? items.join('')
   : `${items.slice(0, -1).join(', ')} ${conjunction} ${items.at(-1)}`);
 
 /** `TranscriptEntry` → `transcript entry`, for a refusal a person reads. */
+/**
+ * The file each state machine was read from, so an action's request schema is
+ * checked as declared there: its refs into other files resolve from it.
+ */
+const declaredIn = new WeakMap();
+
+/** @param {{ stateMachine: object, relativePath?: string }[]} entries */
+export function rememberMachineFiles(entries) {
+  for (const entry of entries ?? []) {
+    if (entry?.stateMachine && entry.relativePath) declaredIn.set(entry.stateMachine, entry.relativePath);
+  }
+}
+
 export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
 
 /**
@@ -162,7 +175,9 @@ export async function executeTransition({
 
   const checkBody = () => {
     if (!operation?.schema?.request) return null;
-    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
+    const relativePath = declaredIn.get(stateMachine);
+    const source = relativePath ? { relativePath, defs: stateMachine.$defs } : null;
+    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`, source);
     return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
   };
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });

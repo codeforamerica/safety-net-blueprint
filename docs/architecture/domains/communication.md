@@ -1048,7 +1048,7 @@ actions and events
 again; `paused` while off the record
 ([Decision 16](#decision-16-going-off-the-record-stops-the-audio)), and
 `connecting` again on resume; `stopping` after Stop, then `closed`. `failed`
-when the software gives up reconnecting. `closed` and `failed` are final
+when the software gives up connecting or reconnecting. `closed` and `failed` are final
 states: a staff member who wants to carry on starts a new session under the
 same transcript. When to give up reconnecting is the client adapter's to
 decide, not the contract's: how many tries and how long depend on the service

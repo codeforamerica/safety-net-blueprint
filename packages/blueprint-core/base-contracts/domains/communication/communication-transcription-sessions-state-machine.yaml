@@ -44,7 +44,7 @@ machines:
         description: Done, and the transcript is closed. Terminal.
       - id: failed
         slaClock: stopped
-        description: The software gave up reconnecting. The transcript stays open; a new session can carry on under it. Terminal.
+        description: The software gave up connecting or reconnecting. The transcript stays open; a new session can carry on under it. Terminal.
     initialState: created
     guards:
       - id: transcriptOrStart
@@ -69,7 +69,7 @@ machines:
       - id: closed
         description: The session is done and the transcript closed.
       - id: failed
-        description: The software gave up reconnecting. The transcript is still open.
+        description: The software gave up connecting or reconnecting. The transcript is still open.
       - id: line_updated
         description: A line in progress, to show. Not kept.
         schema:
@@ -289,10 +289,12 @@ machines:
               requestBody:
                 payload: {at: $request.at}
           - emit: closed
+      # From connecting too, as WebRTC goes from connecting to failed: a
+      # connection that won't open lands there.
       - id: fail
-        description: The software gave up reconnecting. The transcript stays open.
+        description: The software gave up connecting or reconnecting. The transcript stays open.
         transition:
-          from: disconnected
+          from: [connecting, disconnected]
           to: failed
         steps:
           - emit: failed

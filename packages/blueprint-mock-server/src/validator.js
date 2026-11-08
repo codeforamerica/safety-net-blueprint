@@ -4,7 +4,7 @@
 
 import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { createAjv, registerDocuments, validatorForRef } from './schema-registry.js';
+import { createAjv, registerDocuments, validatorForRef, schemaIdFor } from './schema-registry.js';
 
 // The 2020-12 build: OpenAPI 3.1's schema dialect
 const ajv = new Ajv({
@@ -169,15 +169,34 @@ const uncompilable = new Set();
  * ordinary URI arithmetic and will not find it. That set is malformed either
  * way, but it reaches this function rather than failing earlier.
  *
+ * A schema written inside a document ajv can't register — a state machine's
+ * action schema — comes with that document's path and its `$defs` instead of
+ * a ref, and is compiled as though it sat there, so its refs resolve the same.
+ *
  * @param {object} schema
  * @param {string} schemaKey
- * @param {{ relativePath?: string, ref?: string|null }|null} source
+ * @param {{ relativePath?: string, ref?: string|null, defs?: object }|null} source
  * @returns {import('ajv').ValidateFunction|null}
  */
 function resolveValidator(schema, schemaKey, source) {
   if (registryAjv && source?.relativePath && source?.ref) {
     const fromRegistry = validatorForRef(registryAjv, source.relativePath, source.ref);
     if (fromRegistry) return fromRegistry;
+  }
+  if (registryAjv && source?.relativePath && !source.ref) {
+    // A query keeps the document's directory as the base for relative refs,
+    // and keeps this schema apart from the document's own identifier.
+    const $id = `${schemaIdFor(source.relativePath)}?schema=${encodeURIComponent(schemaKey)}`;
+    try {
+      const prepared = prepareSchemaForValidation(schema);
+      return registryAjv.getSchema($id) ?? registryAjv.compile({
+        ...prepared,
+        $id,
+        ...(source.defs && { $defs: { ...source.defs, ...prepared.$defs } }),
+      });
+    } catch {
+      // Falls through to compiling the object alone, which reports it.
+    }
   }
 
   try {
