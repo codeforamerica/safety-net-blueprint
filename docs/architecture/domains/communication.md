@@ -1,9 +1,11 @@
 # Communication Domain
 
 > **Status:** Transcripts are built: the transcript, its lifecycle, its
-> timeline, the profiles it is started under, and closing an abandoned one, in
-> the framework's `communication` domain
-> (`blueprint-core/base-contracts/domains/communication/`). Notices have minimal
+> timeline, the profiles it is started under, closing an abandoned one, and
+> asking how to stream to a transcription service, through a server adapter a
+> state runs, with the audio contract a relay speaks, in the framework's
+> `communication` domain (`blueprint-core/base-contracts/domains/communication/`).
+> The session that keeps track of the software's connection is planned. Notices have minimal
 > contracts, for document request notices; their full lifecycle is TBD.
 
 See [Domain Design Overview](domain-design.md) for context, [AI Services](../cross-cutting/ai-services.md)
@@ -916,7 +918,9 @@ until they are closed; the profiles the framework provides set 30 minutes.
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Live transcription of a conversation | Contact-center and meeting platforms transcribe calls as they happen | partial — the record and its rules; the software is out of scope |
+| Live transcription of a conversation | Contact-center and meeting platforms transcribe calls as they happen | partial — the record and its rules, and how the software connects to a service; the software's own code is out of scope, and the session is planned |
+| Short-lived credentials for streaming | Services issue temporary tokens or signed URLs so a browser never holds the key | built — a server adapter issues one, in one shape for every service |
+| A service a browser can't reach | Speech services that take only gRPC, or a model run in-house | built — the audio contract a relay speaks; the relay is the state's to run |
 | Telling speakers apart | Transcription services label speakers or channels | partial — each line keeps the service's label and a role mapped from it |
 | Going off the record | Recording controls pause and resume | partial — pauses are kept in the timeline and enforced |
 | Removing sensitive details from the text | Many services can redact personal information | gap |
