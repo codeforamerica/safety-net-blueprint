@@ -26,7 +26,9 @@
   "devDependencies": {
     "@codeforamerica/blueprint-mock-server": "^0.3.0",
     "@smithy/signature-v4": "^5.0.0",
-    "@aws-crypto/sha256-js": "^5.2.0"
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@smithy/eventstream-codec": "^4.0.0",
+    "@smithy/util-utf8": "^4.0.0"
   },
   "publishConfig": {
     "access": "public"

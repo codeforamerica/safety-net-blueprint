@@ -30,7 +30,7 @@ const error = (status, code, message, details) => Response.json(
  * @param {object} options
  * @param {Record<string, Function>} options.issuers - by transcription
  *   service, a function from a ConnectionRequest to a StreamConnection, such
- *   as `transcribeIssuer(...)` for `aws-transcribe`
+ *   as `awsTranscribeIssuer(...)` for `aws-transcribe`
  * @returns {(request: Request) => Promise<Response>}
  */
 export function createTranscriptsAdapter({ issuers }) {

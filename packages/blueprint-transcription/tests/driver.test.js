@@ -1,5 +1,5 @@
 /**
- * The driver and the replay adapter, run against the harness's contracts in
+ * The driver and the fake adapter, run against the harness's contracts in
  * the in-page mock, with a routing handler standing in for the transcripts
  * adapter, as a demo with no backend answers it.
  */
@@ -8,7 +8,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
-import { createTranscriptionClient, createReplayAdapter } from '../src/client/index.js';
+import { createTranscriptionClient, createFakeAdapter } from '../src/client/index.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 
@@ -78,7 +78,7 @@ const LINES = {
 };
 
 test('a session streams a recording, adds its finished lines, and closes the transcript', async () => {
-  const session = await startSession({ adapters: { default: createReplayAdapter(LINES, { sleep: immediately }) } });
+  const session = await startSession({ adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) } });
   await session.connect(null);
   assert.strictEqual(session.status, 'connected');
   await session.stop();
@@ -92,7 +92,7 @@ test('a session streams a recording, adds its finished lines, and closes the tra
 
 test('a line\'s times are from when its connection opened, by the client\'s clock', async () => {
   const opened = new Date('2026-10-12T10:00:00Z');
-  const session = await startSession({ now: () => opened, adapters: { default: createReplayAdapter(LINES, { sleep: immediately }) } });
+  const session = await startSession({ now: () => opened, adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) } });
   await session.connect(null);
   await session.stop();
   const [first] = (await entriesOf(session)).filter((e) => e.kind === 'line');
@@ -102,7 +102,7 @@ test('a line\'s times are from when its connection opened, by the client\'s cloc
 
 test('the adapter is chosen by the service the server answered with', async () => {
   const used = [];
-  const named = (name) => ({ open: async (args) => { used.push(name); return createReplayAdapter(LINES, { sleep: immediately }).open(args); } });
+  const named = (name) => ({ open: async (args) => { used.push(name); return createFakeAdapter(LINES, { sleep: immediately }).open(args); } });
   const session = await startSession({ adapters: { 'aws-transcribe': named('transcribe'), default: named('default') } });
   await session.connect(null);
   await session.stop();
@@ -111,7 +111,7 @@ test('the adapter is chosen by the service the server answered with', async () =
 
 test('a speaker is told by its label, when the adapter gives no speaker', async () => {
   const session = await startSession({
-    adapters: { default: createReplayAdapter(LINES, { sleep: immediately }) },
+    adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
   });
   await session.connect(null);
@@ -128,7 +128,7 @@ test('a dropped connection reconnects, and the transcript records the gap', asyn
       { at: 3, type: 'add', key: 'l2', text: 'After it.', start: 3, end: 3.5 },
     ],
   };
-  const session = await startSession({ adapters: { default: createReplayAdapter(recording, { sleep: immediately }) } });
+  const session = await startSession({ adapters: { default: createFakeAdapter(recording, { sleep: immediately }) } });
   await session.connect(null);
   await until(async () => (await entriesOf(session)).some((e) => e.text === 'After it.'));
   await session.stop();
@@ -151,7 +151,7 @@ test('pause closes the connection, and resume carries on with the recording on a
   // The first wait passes at once; the one before the second line waits for the gate.
   let waits = 0;
   const sleep = () => (waits++ === 0 ? Promise.resolve() : gate);
-  const session = await startSession({ adapters: { default: createReplayAdapter(recording, { sleep }) } });
+  const session = await startSession({ adapters: { default: createFakeAdapter(recording, { sleep }) } });
   await session.connect(null);
   await until(async () => (await entriesOf(session)).length === 1);
 

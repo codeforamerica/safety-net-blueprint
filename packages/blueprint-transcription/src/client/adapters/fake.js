@@ -1,6 +1,7 @@
 /**
- * A client adapter that plays back a recorded session instead of streaming
- * to a service, for demos and tests: no service, no credential, no audio.
+ * A fake client adapter, in the testing sense: a working adapter with no
+ * transcription service behind it. It plays back a recording instead of
+ * streaming, for demos and tests: no service, no credential, no audio.
  * It takes whatever connection get-connection answered and ignores it.
  *
  * A recording is a list of what an adapter reports, each at a time in seconds
@@ -24,7 +25,7 @@
  * @param {number} [options.speed] - 2 plays twice as fast.
  * @param {Function} [options.sleep] - waits a number of milliseconds.
  */
-export function createReplayAdapter(recording, {
+export function createFakeAdapter(recording, {
   speed = 1,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 } = {}) {

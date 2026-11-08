@@ -4,4 +4,5 @@
  * plugs in, one per transcription service.
  */
 export { createTranscriptionClient, SessionError } from './driver.js';
-export { createReplayAdapter } from './replay-adapter.js';
+export { createFakeAdapter } from './adapters/fake.js';
+export { createAwsTranscribeAdapter } from './adapters/aws/transcribe.js';

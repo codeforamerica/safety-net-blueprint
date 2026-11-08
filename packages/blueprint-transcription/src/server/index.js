@@ -4,4 +4,4 @@
  * page streams with. Never import this into a page.
  */
 export { createTranscriptsAdapter, CantIssue } from './adapter.js';
-export { transcribeIssuer } from './transcribe.js';
+export { awsTranscribeIssuer } from './issuers/aws/transcribe.js';

@@ -25,7 +25,7 @@ It has two entry points, one for each place it runs:
 
 | Entry point | Runs | What it has |
 |---|---|---|
-| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, and a replay adapter |
+| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, and a fake one with no service behind it |
 | `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with, and an issuer for Amazon Transcribe |
 
 Never import `./server` into a page: it's where secrets are used.
@@ -37,13 +37,13 @@ server; see the mock server's guide.
 ## The client
 
 ```js
-import { createTranscriptionClient, createReplayAdapter } from '@codeforamerica/blueprint-transcription/client';
+import { createTranscriptionClient, createFakeAdapter } from '@codeforamerica/blueprint-transcription/client';
 
 const client = createTranscriptionClient({
   fetch: mock.fetch,                      // the in-page mock's, which routing forwards
   headers: { 'x-caller-id': staffId },
   audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 },
-  adapters: { default: createReplayAdapter(recording) },
+  adapters: { default: createFakeAdapter(recording) },
   speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
 });
 
@@ -84,10 +84,28 @@ const adapter = {
 `key` ties a line in progress to its finished line: the service's own result
 id where it has one.
 
-### The replay adapter
+### Amazon Transcribe
 
-Plays back a recording instead of streaming, for demos and tests: no service,
-no credential, no audio. A recording lists what an adapter would report, each
+```js
+import { createAwsTranscribeAdapter } from '@codeforamerica/blueprint-transcription/client';
+
+adapters: { 'aws-transcribe': createAwsTranscribeAdapter() }
+```
+
+Opens the presigned URL the server adapter issued, sends the audio as
+Transcribe's `AudioEvent` messages, and reports its results: a partial
+result as a line in progress, a final one as a finished line, tied by
+Transcribe's `ResultId`. Speaker labels (`spk_0`, or `ch_0` with two
+channels) are passed to `speakerFor`. The audio is the page's to capture, as
+an async iterable of chunks in the format the session asked for — 16-bit PCM
+for `linear16`. Messages are framed in AWS's event stream format, implemented
+here and checked against AWS's own codec.
+
+### The fake adapter
+
+A fake in the testing sense: a working adapter with no transcription service
+behind it. It plays back a recording instead of streaming, for demos and
+tests: no service, no credential, no audio. A recording lists what an adapter would report, each
 at a time in seconds:
 
 ```json
@@ -103,11 +121,11 @@ After a pause or a drop, playback carries on from where it stopped.
 ## The server
 
 ```js
-import { createTranscriptsAdapter, transcribeIssuer } from '@codeforamerica/blueprint-transcription/server';
+import { createTranscriptsAdapter, awsTranscribeIssuer } from '@codeforamerica/blueprint-transcription/server';
 
 const adapter = createTranscriptsAdapter({
   issuers: {
-    'aws-transcribe': transcribeIssuer({ region: 'us-east-1', settings: { 'show-speaker-label': 'true' } }),
+    'aws-transcribe': awsTranscribeIssuer({ region: 'us-east-1', settings: { 'show-speaker-label': 'true' } }),
   },
 });
 
@@ -128,17 +146,19 @@ needed to test it.
 
 ## Adding a service
 
-Amazon Transcribe and the replay adapter are examples; another service is
-added the same way, and contributions are welcome. The transcription services
+Amazon Transcribe is the example; another service is added the same way, and
+contributions are welcome. Put its files in a folder for its vendor, named for
+the service, as `aws/transcribe.js` is for the registry's `aws-transcribe`;
+what a vendor's services share, such as AWS's signing, sits beside them. The transcription services
 the contracts name are in the `transcription-services` registry
 (`communication-transcripts-registry-transcription-services.yaml`), with how a
 browser reaches each in `docs/architecture/domains/communication.md`,
 Decision 12.
 
-- **A client adapter** in `src/client/`, exported from `./client`: an object
+- **A client adapter** in `src/client/adapters/`, exported from `./client`: an object
   with `open`, as above. It speaks only the service's protocol; the driver
   does the rest.
-- **An issuer** in `src/server/`, exported from `./server`: a function from a
+- **An issuer** in `src/server/issuers/`, exported from `./server`: a function from a
   `ConnectionRequest` to a `StreamConnection`, given to
   `createTranscriptsAdapter` under the service's registry name. Throw
   `CantIssue` for a request the service can't take, naming the field.

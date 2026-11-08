@@ -9,8 +9,8 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { SignatureV4 } from '@smithy/signature-v4';
 import { Sha256 } from '@aws-crypto/sha256-js';
-import { createTranscriptsAdapter, transcribeIssuer } from '../src/server/index.js';
-import { presignUrl } from '../src/server/sigv4.js';
+import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
+import { presignUrl } from '../src/server/issuers/aws/sigv4.js';
 
 // AWS's documented example key, not a real one.
 const CREDENTIALS = { accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY' };
@@ -43,7 +43,7 @@ for (const [name, credentials] of [
 }
 
 const issue = (body, options = {}) => createTranscriptsAdapter({
-  issuers: { 'aws-transcribe': transcribeIssuer({ region: 'us-east-1', credentials: CREDENTIALS, now: () => NOW, ...options }) },
+  issuers: { 'aws-transcribe': awsTranscribeIssuer({ region: 'us-east-1', credentials: CREDENTIALS, now: () => NOW, ...options }) },
 })(new Request('https://adapter.example/issue-connection', { method: 'POST', body: JSON.stringify(body) }));
 
 test('issue-connection answers with a presigned URL, and echoes metadata', async () => {

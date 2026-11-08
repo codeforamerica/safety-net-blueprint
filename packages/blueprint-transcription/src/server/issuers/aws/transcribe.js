@@ -5,7 +5,7 @@
  */
 
 import { presignUrl } from './sigv4.js';
-import { CantIssue } from './adapter.js';
+import { CantIssue } from '../../adapter.js';
 
 /** Transcribe's names for the encodings it streams. */
 const ENCODINGS = { linear16: 'pcm', ogg_opus: 'ogg-opus', flac: 'flac' };
@@ -33,7 +33,7 @@ const fromEnvironment = () => {
  * @param {Function} [options.now]
  * @returns {(request: object) => Promise<object>} from a ConnectionRequest to a StreamConnection
  */
-export function transcribeIssuer({
+export function awsTranscribeIssuer({
   region,
   credentials = fromEnvironment,
   languageCode,
@@ -41,8 +41,8 @@ export function transcribeIssuer({
   settings = {},
   now = () => new Date(),
 }) {
-  if (!region) throw new Error('transcribeIssuer: give a region');
-  if (expiresIn > MOST) throw new Error(`transcribeIssuer: Transcribe takes expiresIn up to ${MOST} seconds`);
+  if (!region) throw new Error('awsTranscribeIssuer: give a region');
+  if (expiresIn > MOST) throw new Error(`awsTranscribeIssuer: Transcribe takes expiresIn up to ${MOST} seconds`);
 
   return async ({ audio, protocols, languages }) => {
     if (!protocols.includes('websocket')) throw new CantIssue('Amazon Transcribe streams to a browser over a WebSocket only', 'protocols');
