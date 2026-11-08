@@ -59,6 +59,26 @@ $defs:
     description: How the software connects to the service.
     enum: [websocket, webrtc]
 
+  GetConnectionRequest:
+    type: object
+    description: >
+      What the software will stream, so the server adapter can issue a
+      connection for it: the audio, and the protocols the software can connect
+      over. The transcript's get-connection takes it, and the session's passes
+      it on.
+    additionalProperties: false
+    required: [audio, protocols]
+    properties:
+      audio:
+        $ref: "#/$defs/AudioFormat"
+      protocols:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/StreamProtocol"
+        description: The protocols the software can connect over. The adapter picks one of them.
+
   StreamConnection:
     description: How the software connects, and nothing else.
     unevaluatedProperties: false
