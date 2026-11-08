@@ -1,0 +1,77 @@
+# Pattern — Analysis
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Analysis
+summary: >
+  A model or a vendor's service reads loose content — a conversation, a
+  document — beside the record it bears on, and proposes changes and things
+  for a worker to look into. It sits behind an adapter the state runs, as a
+  capability in the domain that owns the content, and everything it produces
+  is a Suggestion a worker or a rule accepts before any record changes.
+
+use_when:
+  - >-
+    Getting the answer takes judging what loose content means: what an
+    applicant said, what a pay stub shows, whether a document is legible.
+  - >-
+    The answer may differ from one run to the next, or from one model or
+    vendor to another, and that's acceptable because a person or a rule
+    checks it before it counts.
+
+do_not_use_when:
+  - case: >-
+      The answer follows from structured data by a rule that has to give the
+      same answer every time, such as which interview requirements apply or
+      whether income is below expenses.
+    use_instead: >-
+      A ruleset, run by a state machine's evaluate: step, with no adapter. The
+      policy is the blueprint's and lives in the contracts; analysis is the
+      state's service.
+  - case: Checking a fact about a person with an outside authority, such as income or immigration status.
+    use_instead: A Data Exchange service call (patterns/cross-domain-communication.yaml, async_command).
+  - case: Turning a live stream into its content, such as speech into transcript lines.
+    use_instead: The browser-to-vendor stream (patterns/browser-vendor-stream.yaml); analysis reads what that produces.
+
+rules:
+  - >-
+    Never let analysis change a record. Its results become Suggestions: a
+    proposed change carries the call that would make it, and a flag informs
+    without proposing anything. A worker or a rule accepts a proposed change
+    before it runs, through the record's own operation.
+  - >-
+    Make it a capability in the domain that owns what it reads — transcript
+    analysis in communication beside transcripts, document analysis in
+    document-management — so a contract set lists it to opt in. Don't make
+    analysis a domain of its own: it has no subject of its own, only the
+    transcript or document version it read.
+  - >-
+    Give each kind of content its own capability and adapter, not each domain
+    and not each technique. A transcript and a document differ in timing, in
+    what a result cites and in what a state runs behind them; filling a
+    schema, asking a language model and running a document service are ways
+    to implement one capability, and the contract doesn't say which a state
+    chose. A state may point several adapters at one model.
+  - >-
+    Keep the model or vendor behind the adapter (patterns/adapter.yaml); no
+    contract names one. A state that runs two services for one capability,
+    such as one for changes and one for flags, combines them behind its
+    adapter.
+  - >-
+    Tie every result to where it came from — the transcript lines, or the
+    document version and place on the page — so a worker can check it.
+  - >-
+    Put deterministic checks beside it, not inside it. A ruleset's flags and
+    an analysis's flags land in the same Suggestions, each saying where it
+    came from, so a worker sees both in one place.
+
+example: >
+  During an interview, transcript analysis reads the conversation so far and
+  the application, and proposes adding a household member, citing the lines
+  that said so; the worker accepts it, and the application's own operation
+  makes the change. The interview flags ruleset, run by the interview's state
+  machine, flags income below expenses in the same list of Suggestions.
+
+rationale: docs/architecture/cross-cutting/ai-services.md

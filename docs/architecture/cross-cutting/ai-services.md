@@ -59,8 +59,8 @@ The work splits by layer, not by feature:
 
 | Layer | What goes there |
 |---|---|
-| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (the `transcripts` capability, in `communication`), Suggestion (the `suggestions` capability, in `decision-support`, which every domain contributes categories to), the AI service types such as fact extraction (each a capability, in `data-exchange`), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. A contract set includes each capability it lists. |
-| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the catalog entry configuring its `fact_extraction` service. This is program policy, and belongs with the real domain contracts. |
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (the `transcripts` capability, in `communication`), Suggestion (the `suggestions` capability, in `decision-support`, which every domain contributes categories to), analysis beside what it reads (transcript analysis in `communication`, document analysis in `document-management`, each a capability with its adapter), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. A contract set includes each capability it lists. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the interview's use of transcript analysis. This is program policy, and belongs with the real domain contracts. |
 | **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises routing and stubs. Not policy. |
 
@@ -197,8 +197,20 @@ reduce.
 
 ### AI calls, as Data Exchange services
 
-A call to a model to do a job — extract facts from a transcript, classify a
-document, draft a notice — has the shape of a Data Exchange call: a configured
+**Analysis isn't one of these.** Reading a transcript or a document and
+proposing changes to the record it bears on is analysis: a capability in the
+domain that owns what it reads, behind an adapter the state runs, with its
+results as Suggestions — see the [analysis pattern](../../conventions/patterns/analysis.yaml).
+Extracting facts from a transcript, classifying a document and extracting its
+fields, which this section first had as Data Exchange service types, are
+analysis. Data Exchange checks facts about a person with an outside authority;
+analysis's results have to stay tied to the lines, or the place on the page,
+they came from, and a Data Exchange call has no such link.
+
+What follows applies to a call that isn't analysis.
+
+A call to a model to do a job — draft a notice, say — has the shape of a Data
+Exchange call: a configured
 service, a call with a lifecycle, a result announced as an event. Data
 Exchange already has the pieces:
 
@@ -215,22 +227,15 @@ and nothing else new:
 
 | Service type | Input | Result | Status |
 |---|---|---|---|
-| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the transcript lines it came from | To define |
-| `document_classification` | A document | Its type, with a confidence | To define |
-| `document_extraction` | A document and the schema to fill | Values matching it | To define |
 | `notice_drafting` | The notice's facts and template | Draft text | To define |
 
-**Who translates speech into the data model** is the `fact_extraction` call:
-the blueprint supplies the target schema, the model fills it with only what was
-said, and the blueprint validates the result. From "it's me, my two kids and my
-mom" a model can propose four members and their relationships, but not names or
-birth dates, because nobody said them — and partial evaluation then reports
-those as missing.
-
-The inputs and results in the table are a first guess, not a decision. What a
-call receives — one turn, the conversation so far, the current application —
-and what it returns — values, a patch to the application, flags for the worker
-to ask about — are open; see [Open questions](#open-questions).
+**Who translates speech into the data model** is transcript analysis: it reads
+the conversation and the current application, and proposes changes with only
+what was said. From "it's me, my two kids and my mom" it can propose four
+members and their relationships, but not names or birth dates, because nobody
+said them — and partial evaluation then reports those as missing. What it
+receives and returns in detail, such as a patch to the application with a
+citation for each change, is still open; see [Open questions](#open-questions).
 
 **Data Exchange moves into the framework first.** Each AI service type is a
 framework capability a set can leave out, but today the catalog, the call and
@@ -253,7 +258,10 @@ have nothing to plug into. Built with the first AI service type:
 The catalog entry for each AI service declares how to call its provider: a
 **request template** and a **response template**, in the same shape a state
 machine `call:` step already uses — a method, a path, and a body built from
-`$`-references and CEL. Fact extraction through Bedrock, for example:
+`$`-references and CEL. The example below was written for fact extraction
+when it was a Data Exchange service type; it's analysis now, behind an adapter
+the state runs, so read it for how a template works, not for where fact
+extraction goes. Fact extraction through Bedrock:
 
 ```yaml
 # data-exchange-config.yaml — endpoint and model overlaid per environment
@@ -463,11 +471,11 @@ conversation, or returning a patch or flags would travel the same path.
    to the provider, and adds each finished line to the interview's transcript;
    each arrives on the bus as an event.
 3. **A turn finishes** — the applicant's lines are followed by the worker's. The
-   `Interview` state machine reacts by creating a
-   `fact_extraction` service call, with the turn's text and the schema of what
-   it is filling in.
-4. **The mock makes the call** to the model, from the catalog entry, and
-   completes it. A declared step turns the result into suggestions — one per
+   `Interview` state machine reacts by calling transcript analysis's adapter,
+   with the conversation and the current application.
+4. **The adapter answers** — in the mock, an HTTP stub or a routing handler in
+   the page stands in for the state's service. A declared step turns the
+   result into suggestions — one per
    household member, each a JSON Patch to the application's editable
    composition that adds the member and their income together, citing the
    lines each change came from.
@@ -911,11 +919,9 @@ the mock serves a contract the moment it is declared.
    `interview-requirements` registry, the ruleset deciding which apply, and
    complete guarded on them. Useful alone, and it can start before any ruleset
    exists: requirements that always apply need no condition.
-4. **The mock calling services from the catalog** — templates, signing and the
-   adapter role, in the framework — **and the `fact_extraction` service**, a
-   framework capability once Data Exchange's general part has moved there,
-   configured in `safety-net-contracts` to read the transcript. The first
-   working assistant end to end.
+4. **Transcript analysis**, a framework capability in `communication` with its
+   adapter contract, which the interview in `safety-net-contracts` calls. The
+   first working assistant end to end.
 5. **The risk ruleset**, in `safety-net-contracts`, with severity and probes in
    its annotations.
 6. **The operation extension and toolsets**, then the generator for tool
