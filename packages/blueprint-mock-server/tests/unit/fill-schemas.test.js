@@ -34,7 +34,7 @@ describe('the schemas a transcript\'s steps fill values into', () => {
   });
 
   test('a call by operationId: the operation\'s request schema', () => {
-    assert.deepStrictEqual(schemas.call('connectTranscriptAdapter', undefined, { provider: 'deepgram', languages: null }), { provider: 'deepgram' });
+    assert.deepStrictEqual(schemas.call('issueTranscriptConnection', undefined, { provider: 'deepgram', languages: null }), { provider: 'deepgram' });
   });
 
   test('an event\'s data: its schema in the events document, past the envelope\'s', () => {

@@ -1,5 +1,5 @@
 /**
- * A transcript's connect answers with what its transcripts adapter issued,
+ * A transcript's get-connection answers with what its transcripts adapter issued,
  * fitted to StreamConnection — run against the harness's contracts, with an
  * HTTP stub standing in for the adapter.
  *
@@ -39,32 +39,32 @@ const recording = async () => {
   });
   return transcript;
 };
-const adapterAnswers = (body) => send('POST', '/mock/stubs/http', { match: { method: 'POST', url: '/connect' }, response: { status: 200, body } });
-const connect = (transcript) => send('POST', `/communication/transcripts/${transcript.id}/connect`, {
+const adapterAnswers = (body) => send('POST', '/mock/stubs/http', { match: { method: 'POST', url: '/issue-connection' }, response: { status: 200, body } });
+const getConnection = (transcript) => send('POST', `/communication/transcripts/${transcript.id}/get-connection`, {
   audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'],
 });
 
 const PRESIGNED = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://transcribe.example/stream?X-Amz-Expires=300', expiresIn: 300 };
 
-test('connect leaves out what the adapter didn\'t send, and its metadata', async () => {
+test('get-connection leaves out what the adapter didn\'t send, and its metadata', async () => {
   const transcript = await recording();
   await adapterAnswers({ ...PRESIGNED, metadata: { transcriptId: transcript.id } });
-  const { status, body } = await connect(transcript);
+  const { status, body } = await getConnection(transcript);
   assert.strictEqual(status, 200);
   assert.deepStrictEqual(body, PRESIGNED);
 });
 
-test('connect leaves out a null the adapter sent where StreamConnection takes none', async () => {
+test('get-connection leaves out a null the adapter sent where StreamConnection takes none', async () => {
   const transcript = await recording();
   await adapterAnswers({ ...PRESIGNED, subprotocol: null, accessToken: null });
-  const { body } = await connect(transcript);
+  const { body } = await getConnection(transcript);
   assert.deepStrictEqual(body, PRESIGNED);
 });
 
-test('connect passes on a token the adapter issued', async () => {
+test('get-connection passes on a token the adapter issued', async () => {
   const transcript = await recording();
   const token = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://relay.example', subprotocol: 'blueprint.audio.v1', accessToken: 'jwt', tokenType: 'Bearer', expiresIn: 60 };
   await adapterAnswers(token);
-  const { body } = await connect(transcript);
+  const { body } = await getConnection(transcript);
   assert.deepStrictEqual(body, token);
 });

@@ -195,16 +195,16 @@ test('generateOverlay — an action that says what it answers with declares that
     machines: [{
       object: 'Transcript', states: [{ id: 'recording' }], initialState: 'recording',
       actions: [{
-        id: 'connect',
+        id: 'get-connection',
         transition: { from: 'recording' },
-        steps: [{ call: { operationId: 'connectTranscriptAdapter' }, bind: '$connection' }],
+        steps: [{ call: { operationId: 'issueTranscriptConnection' }, bind: '$connection' }],
         response: { schema: { $ref: '#/$defs/StreamConnection' }, payload: { url: '$connection.url' } },
       }],
     }],
     $defs: { StreamConnection: { type: 'object', required: ['url'], properties: { url: { type: 'string' } } } },
   };
   const overlay = generateOverlay(stateMachine, { ...sampleEndpointInfo, basePath: '/transcripts', paramName: 'transcriptId', schemaRef: '#/components/schemas/Transcript' });
-  const path = Object.keys(overlay.actions[0].update).find((p) => p.endsWith('/connect'));
+  const path = Object.keys(overlay.actions[0].update).find((p) => p.endsWith('/get-connection'));
   const schema = overlay.actions[0].update[path].post.responses['200'].content['application/json'].schema;
   assert.strictEqual(schema.$ref, '#/components/schemas/StreamConnection');
   const hoisted = overlay.actions.find((a) => a.target === '$.components.schemas');

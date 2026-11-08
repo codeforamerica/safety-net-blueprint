@@ -1066,7 +1066,7 @@ function loadedFrom(apiSpecs, api) {
  * resolver for its refs: what an action's `response.payload` is fitted to.
  *
  * @param {object|undefined} api - The loaded API the machine's resource is in
- * @param {string} path - The action's path in that API, e.g. /transcripts/{transcriptId}/connect
+ * @param {string} path - The action's path in that API, e.g. /transcripts/{transcriptId}/get-connection
  * @returns {{ schema: object, follow: Function }|null}
  */
 function actionResponseSchema(api, path) {

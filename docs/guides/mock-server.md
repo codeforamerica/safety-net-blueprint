@@ -319,13 +319,13 @@ Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` 
 
 ### Answering in a page
 
-A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcript's `connect` action calls the transcripts adapter's `connectTranscriptAdapter`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
+A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcript's `get-connection` action calls the transcripts adapter's `issueTranscriptConnection`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
 
 ```js
 const mock = await createMockServer({
   contracts,
   routing: [{
-    operation: 'connectTranscriptAdapter',
+    operation: 'issueTranscriptConnection',
     handler: async (request) => {
       const { metadata, ...asked } = await request.json();
       return Response.json({ metadata, ...await connectionFromCognito(asked) });
@@ -334,7 +334,7 @@ const mock = await createMockServer({
 });
 ```
 
-A test answers it with an [HTTP stub](#http-stubs) on `POST /connect` instead, as the harness's transcript scenario does.
+A test answers it with an [HTTP stub](#http-stubs) on `POST /issue-connection` instead, as the harness's transcript scenario does.
 
 What a handler answers is checked against the operation's response schema. One the schema doesn't allow is answered `502`, naming what is wrong, and logged, so a broken handler shows at once.
 

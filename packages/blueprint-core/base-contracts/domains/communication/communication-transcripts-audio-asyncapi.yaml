@@ -19,7 +19,7 @@ info:
   description: |
     One WebSocket connection per stream, speaking the subprotocol
     `blueprint.transcripts.audio.v1`. The software gets the relay's URL and a
-    token from the transcript's connect action, and opens the connection
+    token from the transcript's get-connection action, and opens the connection
     asking for the subprotocol and presenting the token beside it, in the
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
     6750). The relay answers with the subprotocol's name only, never the token.
@@ -34,17 +34,17 @@ servers:
   relay:
     host: "{relayHost}"
     protocol: wss
-    description: The relay a state runs. Its URL comes from the transcript's connect action.
+    description: The relay a state runs. Its URL comes from the transcript's get-connection action.
     variables:
       relayHost:
-        description: The relay's host, as connect answers with it.
+        description: The relay's host, as get-connection answers with it.
     security:
       - $ref: "#/components/securitySchemes/relayToken"
 channels:
   audio:
     address: null
     description: >
-      The connection, at the URL connect answers with. Everything for one stream
+      The connection, at the URL get-connection answers with. Everything for one stream
       travels on it, both ways.
     messages:
       start: {$ref: "#/components/messages/start"}
@@ -123,10 +123,10 @@ components:
             minItems: 1
             items:
               $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
-            description: The languages the conversation may be in, as connect's connectionParameters gave them. Absent, the service detects the language, if it can.
+            description: The languages the conversation may be in, as get-connection's connectionParameters gave them. Absent, the service detects the language, if it can.
           model:
             type: string
-            description: The service's model, as connect's connectionParameters gave it.
+            description: The service's model, as get-connection's connectionParameters gave it.
           interimResults:
             type: boolean
             default: true
