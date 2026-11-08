@@ -7,6 +7,8 @@
 
 > **Pre-release:** This package is at `0.x`. Until `1.0.0`, minor versions may include breaking changes. Pin your version if stability matters.
 
+> **Reference implementation.** One way to do this, not the only one: use it as is, adapt it, or replace it. The contracts are the authority; anything that satisfies them works the same. The mock is for development and demos, not production.
+
 ## Installation
 
 ```bash

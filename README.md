@@ -10,10 +10,11 @@ A systems integration blueprint for safety net benefits programs, built on a reu
 
 ## About This Repository
 
-This repository has two layers:
+This repository has three kinds of package:
 
-- **The Blueprint Framework** — domain-agnostic tooling for contract-driven API development: overlay resolution, validation, state machine engine, mock server, client generation, and explorer. The framework packages (`blueprint-core`, `blueprint-cli`, `blueprint-mock-server`, `blueprint-explorer`) can be used independently to build contract-driven systems for any domain.
-- **The Safety Net Contracts** — the reference implementation of the framework for safety net benefits programs: OpenAPI specs, state machines, annotations, and overlays across a dozen domains.
+- **Tooling** — domain-agnostic tooling for contract-driven API development: overlay resolution, validation, client generation, and the explorer. These packages (`blueprint-core`, `blueprint-cli`, `blueprint-explorer`) can be used independently to build contract-driven systems for any domain.
+- **Reference contracts** — the Safety Net Contracts, an example contract set for safety net benefits programs: OpenAPI specs, state machines, annotations, and overlays across a dozen domains. A state adapts them with overlays.
+- **Reference implementations** — code that does what the contracts say: the mock server, the rules engine, and transcription. Each is one way to do it; anything that satisfies the contracts can replace it.
 
 Together they provide:
 
@@ -28,14 +29,16 @@ Together they provide:
 
 The monorepo separates domain-agnostic framework tooling from safety-net-specific contracts:
 
-| Package | npm name | Purpose |
-|---------|----------|---------|
-| `packages/blueprint-core` | `@codeforamerica/blueprint-core` | Framework library: overlay resolution, validation, state machines, annotations |
-| `packages/blueprint-cli` | `@codeforamerica/blueprint-cli` | CLI scripts: `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, etc. |
-| `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server: `blueprint-mock`, `blueprint-swagger` |
-| `packages/blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build tooling (outputs to `packages/safety-net-explorer/`) |
-| `packages/safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Safety-net domain contracts: OpenAPI specs, state machines, overlays |
-| `packages/generated` | — | Generated artifacts: resolved specs, TypeScript clients, Postman collection (gitignored) |
+| Package | npm name | Role | Purpose |
+|---------|----------|------|---------|
+| `packages/blueprint-core` | `@codeforamerica/blueprint-core` | Tooling | Framework library: overlay resolution, validation, state machines, annotations |
+| `packages/blueprint-cli` | `@codeforamerica/blueprint-cli` | Tooling | CLI scripts: `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, etc. |
+| `packages/blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Tooling | Explorer build tooling (outputs to `packages/safety-net-explorer/`) |
+| `packages/safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Reference contracts | Safety-net domain contracts: OpenAPI specs, state machines, overlays |
+| `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Reference implementation | Mock API server: `blueprint-mock`, `blueprint-swagger`. For development and demos, not production |
+| `packages/blueprint-rules-engine` | `@codeforamerica/blueprint-rules-engine` | Reference implementation | Evaluates rulesets, in Node or the browser |
+| `packages/blueprint-transcription` | `@codeforamerica/blueprint-transcription` | Reference implementation | Transcription software: the driver and client adapters for the page, and the transcripts adapter for the server |
+| `packages/generated` | — | — | Generated artifacts: resolved specs, TypeScript clients, Postman collection (gitignored) |
 
 `blueprint-core` and `blueprint-cli` are domain-agnostic — they can be used for any contract-driven project. `safety-net-contracts` depends on `blueprint-cli` and uses `blueprint-core` as its framework.
 
