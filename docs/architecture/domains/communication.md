@@ -52,6 +52,157 @@ without taking anything else the framework adds to the domain.
 6. When the conversation ends, the staff member closes the transcript. Nothing more is
    added after that.
 
+## How the parts work together
+
+This is where transcription is headed. Some of it is built: the transcript,
+asking how to stream, and the server adapter. The session, which keeps track
+of the software's connection in the page, is planned. Steps that depend on it
+say so.
+
+### The parts
+
+```mermaid
+flowchart LR
+  staff([Staff member]) --> page
+  subgraph browser [The staff member's browser]
+    page[Page] -- audio --> client[Client adapter]
+  end
+  client -- audio --> service[(Transcription service)]
+  service -- what it heard --> client
+  client -- finished lines, lost stretches --> blueprint[Blueprint]
+  page -- start, pause, resume, stop --> blueprint
+  blueprint -- every change, as events --> page
+  client -- how do I stream? --> blueprint
+  blueprint -- asks for a connection --> adapter[Server adapter]
+  adapter -- holds the service's secret --> service
+```
+
+| Part | What it does |
+|---|---|
+| Page | The staff member's screen. It captures audio and calls only the blueprint, except to hand audio to the client adapter. |
+| Client adapter | Code in the page that speaks one transcription service's protocol. The only part of the page that knows which service it is. |
+| Blueprint | Keeps the transcript and its rules, and sends every change as an event. |
+| Server adapter | A state's service beside the blueprint. It holds the transcription service's secret and issues a credential that lasts minutes ([Decision 12](#decision-12-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
+| Transcription service | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. One a browser can't reach sits behind a relay the state runs ([Decision 13](#decision-13-a-service-with-no-browser-path-sits-behind-a-relay-that-speaks-the-blueprints-audio-contract)). |
+
+Audio goes from the page straight to the service and never through the
+blueprint ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
+The secret never reaches the page. Every diagram below starts with the staff
+member signed in; how they sign in is part of the security model in
+[Identity & Access](../cross-cutting/identity-access.md).
+
+In the diagrams, a solid arrow is a request and a dotted one its answer. A
+dotted, open-headed arrow is an event, sent to whoever follows along; a solid,
+open-headed one is a frame on an open connection. Neither is answered. An
+arrow ending in an x is a connection closing.
+
+### Starting and connecting
+
+```mermaid
+sequenceDiagram
+    actor Staff as Staff member
+    participant Page
+    participant Client as Client adapter
+    participant Blueprint
+    participant Adapter as Server adapter
+    participant Service as Transcription service
+
+    Staff->>Page: Start
+    Page->>Blueprint: Start a session (planned)
+    Note over Blueprint: Starts the transcript
+    Blueprint--)Client: The session started (planned)
+    Client->>Blueprint: How do I stream, with this audio?
+    Blueprint->>Adapter: A connection for this service, model and languages
+    Note over Adapter: Asks the service for a credential,<br/>with the secret it holds
+    Adapter-->>Blueprint: Where to connect, and a credential
+    Blueprint-->>Client: Where to connect, and a credential
+    Client->>Service: Connect
+    Client->>Blueprint: Connected (planned)
+    Blueprint--)Page: Connected
+```
+
+### Each line spoken
+
+```mermaid
+sequenceDiagram
+    participant Page
+    participant Client as Client adapter
+    participant Service as Transcription service
+    participant Blueprint
+
+    loop While recording
+        Page->>Client: Audio
+        Client-)Service: Audio
+    end
+    Service-)Client: What it heard so far
+    Client->>Blueprint: A line in progress (planned)
+    Blueprint--)Page: Show it, not kept
+    Service-)Client: The finished line
+    Client->>Blueprint: Add the finished line
+    Note over Blueprint: Added once, even if the request is sent again
+    Blueprint--)Page: The line was added
+```
+
+### Going off the record
+
+```mermaid
+sequenceDiagram
+    actor Staff as Staff member
+    participant Page
+    participant Blueprint
+
+    Staff->>Page: Pause
+    Page->>Blueprint: Pause the transcript
+    Note over Blueprint: A line that starts while paused is refused
+    Staff->>Page: Resume
+    Page->>Blueprint: Resume the transcript
+```
+
+### When the connection drops
+
+```mermaid
+sequenceDiagram
+    participant Page
+    participant Client as Client adapter
+    participant Blueprint
+    participant Adapter as Server adapter
+    participant Service as Transcription service
+
+    Service--xClient: The connection closes
+    Client->>Blueprint: Interrupted (planned)
+    Blueprint--)Page: Interrupted
+    Client->>Blueprint: How do I stream?
+    Blueprint->>Adapter: A connection
+    Adapter-->>Blueprint: Where to connect, and a new credential
+    Blueprint-->>Client: Where to connect, and a new credential
+    Client->>Service: Connect again
+    Client->>Blueprint: Connected, and the stretch that was lost (planned)
+    Note over Blueprint: Records the lost stretch on the transcript
+    Blueprint--)Page: Connected
+```
+
+### Stopping
+
+```mermaid
+sequenceDiagram
+    actor Staff as Staff member
+    participant Page
+    participant Client as Client adapter
+    participant Service as Transcription service
+    participant Blueprint
+
+    Staff->>Page: Stop
+    Page->>Blueprint: Stop the session (planned)
+    Blueprint--)Client: Stopping (planned)
+    Client-)Service: The end of the audio
+    Service-)Client: The last lines
+    Client->>Blueprint: Add each finished line
+    Service--xClient: The connection closes
+    Client->>Blueprint: Ended (planned)
+    Note over Blueprint: Closes the transcript
+    Blueprint--)Page: Ended
+```
+
 ## Entity model
 
 ### Notice
