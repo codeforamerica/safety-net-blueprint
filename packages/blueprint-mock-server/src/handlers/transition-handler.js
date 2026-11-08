@@ -14,9 +14,12 @@ import { assertFetchShaped, jsonBody } from '../http/request.js';
  * @param {string} trigger - Transition trigger name (e.g., "claim")
  * @param {string} paramName - URL parameter name for the resource ID
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
+ * @param {Object|null} [machine] - The machine entry
+ * @param {Object} [deps] - The store, and stepCalls for calls the steps make
+ * @param {{ schema: Object, follow: Function }|null} [responseSchema] - The 200 response schema the endpoint declares
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Promise<Response>}
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store, stepCalls = null } = {}) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store, stepCalls = null } = {}, responseSchema = null) {
   return async (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createTransitionHandler').url);
 
@@ -55,6 +58,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       requestBody: await jsonBody(request),
       traceparent,
       causationid: causationOf(request),
+      responseSchema,
     });
 
     if (!success) {

@@ -40,6 +40,9 @@ export function propertiesOf(schema, follow = (x) => x, seen = new Set()) {
   const resolved = follow(schema);
   if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) return [];
   seen.add(resolved);
+  // A ref to a ref — a component that names a schema in another file — is
+  // followed on to the schema.
+  if (resolved !== schema && typeof resolved.$ref === 'string') return propertiesOf(resolved, follow, seen);
 
   const sources = [];
   if (resolved.properties) sources.push(resolved.properties);

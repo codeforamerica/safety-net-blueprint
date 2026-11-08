@@ -1062,6 +1062,19 @@ function loadedFrom(apiSpecs, api) {
 }
 
 /**
+ * The 200 response schema the API declares for an action's endpoint, with the
+ * resolver for its refs: what an action's `response.payload` is fitted to.
+ *
+ * @param {object|undefined} api - The loaded API the machine's resource is in
+ * @param {string} path - The action's path in that API, e.g. /transcripts/{transcriptId}/connect
+ * @returns {{ schema: object, follow: Function }|null}
+ */
+function actionResponseSchema(api, path) {
+  const schema = api?.doc?.content?.paths?.[path]?.post?.responses?.['200']?.content?.['application/json']?.schema;
+  return schema ? { schema, follow: api.resolve?.schema ?? ((x) => x) } : null;
+}
+
+/**
  * Register state machine RPC routes (e.g., POST /tasks/:taskId/claim).
  * @param {Map<string, object>} routes - Route table to populate
  * @param {Array} stateMachines - Array from discoverStateMachines()
@@ -1080,7 +1093,8 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
     }
 
     // Served at the base the mock serves the machine's API at, like the rest of it.
-    const serverBase = loadedFrom(apiSpecs, sm.api)?.serverBasePath ?? '';
+    const loaded = loadedFrom(apiSpecs, sm.api);
+    const serverBase = loaded?.serverBasePath ?? '';
     const basePath = `${serverBase}${sm.resource.path('item')}`; // e.g., /workflow/tasks/{taskId}
     const paramName = sm.resource.item.parameter;
 
@@ -1115,7 +1129,8 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
         paramName,
         domainSlaTypes,
         sm.machine,
-        deps
+        deps,
+        actionResponseSchema(loaded, `${sm.resource.path('item')}/${entry.id}`)
       );
 
       addRoute(routesFrom(routes, sm.relativePath ?? `${sm.domain} state machine`), 'POST', expressPath, handler, {

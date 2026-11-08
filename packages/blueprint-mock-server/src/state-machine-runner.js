@@ -5,6 +5,7 @@
  */
 
 import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities, resolveBodyValue } from './state-machine-engine.js';
+import { fitToSchema } from './payload-fit.js';
 import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
@@ -94,6 +95,8 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
+ * @param {{ schema: Object, follow: Function }|null} [options.responseSchema] - The 200 response schema
+ *   the action's endpoint declares, which an action's `response.payload` is fitted to
  * Steps run in order; a call to an operation is made as it is reached. When
  * one fails, its `catch:` runs instead of the action's steps and names the
  * state the action ends in, and the action answers with the call's failure
@@ -116,7 +119,8 @@ export async function executeTransition({
   traceparent = null,
   causationid = null,
   store,
-  stepCalls = null
+  stepCalls = null,
+  responseSchema = null
 }) {
   const timestamp = now || new Date().toISOString();
 
@@ -152,7 +156,9 @@ export async function executeTransition({
   if (entities === null) {
     return { success: false, status: 409, error: `Context binding failed for action "${trigger}"` };
   }
-  const context = { ...baseContext, entities };
+  // The schemas the steps' values go into, so a null one doesn't accept is
+  // left out (step-calls.js, schemasFor).
+  const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(machine) };
 
   const checkBody = () => {
     if (!operation?.schema?.request) return null;
@@ -313,8 +319,11 @@ export async function executeTransition({
   // An action that says what it answers with answers with that — a value a
   // step's call bound, say — read once the steps have run and the record is
   // saved; one that doesn't answers with the record.
+  // A null the response schema the action's endpoint declares doesn't accept
+  // is left out (payload-fit.js).
   if (operation.response?.payload !== undefined) {
-    return { success: true, result: resolveBodyValue(operation.response.payload, { ...context, object: result }) };
+    const payload = resolveBodyValue(operation.response.payload, { ...context, object: result });
+    return { success: true, result: fitToSchema(payload, responseSchema?.schema, responseSchema?.follow) };
   }
   return { success: true, result };
 }

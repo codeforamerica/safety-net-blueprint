@@ -402,7 +402,11 @@ $defs:
             description: JSON Schema for the 200 response body, or a `$ref` to one in `$defs`.
             additionalProperties: true
           payload:
-            description: The response body, as value expressions — an object of them, or one naming the whole value.
+            description: >
+              The response body, as value expressions — an object of them, or
+              one naming the whole value. What an expression finds nothing for
+              is left out, and a null too where `schema` doesn't accept one
+              (docs/conventions/resources.yaml, null_and_absent).
 
   GovernedResource:
     type: object
@@ -530,6 +534,21 @@ $defs:
   # only ever looked up — so there is no operator syntax, and a missing value
   # contributes nothing.
   #   timerId: "workflow.{$params.timerType}.{$object.id}"
+  #
+  # NULL AND ABSENT (docs/conventions/resources.yaml, null_and_absent)
+  # A lone expression finds a value, finds a null, or finds nothing. Wherever
+  # one fills something in — a call's request body, by method and path or by
+  # operationId; emit data; an action's response.payload; set:; a ruleset's
+  # inputs; a procedure's with: —
+  #   what finds nothing is left out, and a set: sets nothing;
+  #   a null, found or written, is sent, unless the schema the value goes
+  #   into doesn't accept null there — the operation's request schema, the
+  #   event's data schema, the action's response.schema, the field on the
+  #   machine's resource — and then it's left out too.
+  # So a PATCH leaves a property it leaves out as it was; to clear one, write
+  # a literal null. A required property left out fails the schema, which
+  # names it. A where: or a guard looks a value up rather than filling one in,
+  # and isn't covered.
   #
   # Value expressions are not CEL. Conditions (a guard's condition, if:,
   # match:, a where: string) are CEL, with unprefixed names.
@@ -808,7 +827,10 @@ $defs:
           - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
             description: >
               A call to an operation by its operationId, as an Arazzo step
-              names one. Parameter values and the payload are value expressions.
+              names one. Parameter values and the payload are value
+              expressions. What an expression finds nothing for is left out,
+              and a null too where the operation's request schema doesn't
+              accept one (docs/conventions/resources.yaml, null_and_absent).
           - type: object
             description: >
               HTTP call — one key is the method (POST, PATCH, GET, DELETE) and

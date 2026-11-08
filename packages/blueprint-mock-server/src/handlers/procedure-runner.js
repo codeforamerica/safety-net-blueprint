@@ -5,7 +5,7 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
-import { applySteps, applyStepsWithCalls, resolveValue, whenReady, caughtEntities } from '../state-machine-engine.js';
+import { applySteps, applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
@@ -218,12 +218,16 @@ function resolveWithArgValue(val, context) {
   if (val === null || val === undefined) return val;
   if (typeof val === 'object' && !Array.isArray(val)) {
     const result = {};
-    for (const [k, v] of Object.entries(val)) result[k] = resolveWithArgValue(v, context);
+    for (const [k, v] of Object.entries(val)) {
+      const value = resolveWithArgValue(v, context);
+      if (value !== undefined) result[k] = value;
+    }
     return result;
   }
   // A value expression, a string with value expressions embedded in braces,
-  // or a literal: all resolved the same way as any step value.
-  return resolveValue(val, context);
+  // or a literal: filled in the same way as any step value, so one that
+  // finds nothing is left out.
+  return fillValue(val, context);
 }
 
 /**
@@ -239,7 +243,8 @@ function resolveWithArgs(withArgs, context) {
         Object.assign(params, merged);
       }
     } else {
-      params[key] = resolveWithArgValue(val, context);
+      const value = resolveWithArgValue(val, context);
+      if (value !== undefined) params[key] = value;
     }
   }
   return params;

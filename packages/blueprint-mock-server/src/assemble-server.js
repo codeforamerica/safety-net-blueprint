@@ -55,10 +55,10 @@ export function assembleServer(
   // A step's call to a record — a nested create, an update, another action, a
   // composition's patch — means what the API's route at that method and path
   // means.
-  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
+  const docs = readDocs();
+  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store, docs });
   // Every operation the set has, as core finds them: the events documents'
   // receive operations included, which routing a domain or API covers.
-  const docs = readDocs();
   const operations = extract(docs, 'operations');
   const domainOfFile = new Map(docs.map((doc) => [doc.relativePath, doc.domain]));
   const apiOfFile = new Map((operations?.all ?? []).map((operation) => [operation.file, operation.api]));

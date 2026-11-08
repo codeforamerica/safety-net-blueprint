@@ -431,6 +431,8 @@ When the mock stores a newly created resource, it applies the following defaults
 
 This aligns with Stripe's behavior (they emit `null` for unset fields, but mark those fields `nullable` in their spec) and the Zalando REST guidelines (which treat null and absent identically only when a field is both optional *and* nullable).
 
+The same rule applies wherever a state machine's value expression fills something in: a call's body, an event's data, an action's response or a `set:`. An expression that finds nothing leaves its field out, and a `null` is left out where the schema it goes into doesn't accept one. The rule is in [`docs/conventions/resources.yaml`](../conventions/resources.yaml), under `null_and_absent`.
+
 ## Sorting (`?sort=`)
 
 The mock server honors the `x-sortable` extension on every list endpoint:

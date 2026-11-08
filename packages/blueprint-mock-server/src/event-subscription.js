@@ -342,7 +342,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
         return;
       }
-      const context = { ...baseContext, entities };
+      // The schemas the steps' values go into, so a null one doesn't accept is
+      // left out (step-calls.js, schemasFor).
+      const context = { ...baseContext, entities, schemas: currentStepCalls?.schemasFor?.(smEntry.machine) };
 
       // Evaluate guards if defined on this onEvent entry
       const guardConditions = entry.guards?.conditions || [];

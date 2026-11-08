@@ -801,6 +801,52 @@ schema_patterns:
       is for. Applies to event data payloads, request bodies, and responses.
     examples: [taskType, disposition, serviceType, failureReason, callMode]
 
+  null_and_absent:
+    description: |
+      Treat null and absent as different values. A property typed `string`
+      can't hold null; only `type: [string, "null"]` can. Sending null where
+      the schema doesn't accept it makes the body invalid, and breaks
+      generated clients (a Zod `.optional()` rejects null; only `.nullable()`
+      accepts it).
+      - Leave out a property that has no value. Never fill one in as null.
+      - Send null only where the property's schema accepts null.
+      - On create, default a property that is required and accepts null to
+        null, and a required array to []; leave out an optional property
+        nobody gave.
+    value_expressions: |
+      Wherever a value expression fills something in — a call's request body,
+      by method and path or by operationId; an emit's data; an action's
+      response.payload; a set:; a ruleset's inputs; a procedure's with: —
+      apply the same rule:
+      - An expression that finds nothing leaves its property out. A set: sets
+        nothing.
+      - An expression that finds null, or a literal null, is sent, unless the
+        schema the value goes into doesn't accept null there; then the
+        property is left out. That schema is the operation's request schema,
+        the event's data schema, the action's response.schema, or the field
+        on the machine's resource. Where none is declared, null is sent.
+      - A PATCH therefore leaves a property it leaves out as it was. To clear
+        one, write a literal null where the property accepts it.
+      - A required property left out fails the schema, which names it.
+    exceptions: |
+      Apply the rule only where a value is filled in. Don't apply it where one
+      is looked up — a where: in a context binding or forEach, a guard's field
+      or value: leaving a condition out of a where: would match every record.
+      What a missing value means in a lookup isn't settled yet, and differs by
+      where it comes from: in a binding, a missing $object field finds no
+      record while a missing $this or $alias field matches null; in forEach,
+      a missing $request field skips the loop while any other matches null.
+      Data a client wrote — a composition's patch, a stored call such as a
+      suggestion's — is sent as written.
+    why: |
+      Decided for records the mock creates (July 2026), after null-filling
+      optional fields gave invalid responses; extended to value expressions
+      (November 2026) when an action's response came back with nulls its
+      schema refused.
+    prior_art:
+      - Zalando RESTful API Guidelines, which treat null and absent alike only for a property that is both optional and nullable
+      - Stripe, which sends null for unset properties and marks each one nullable in its spec
+
 # =============================================================================
 # File Structure# =============================================================================
 # API specs are organized flat with x-extensions for classification.

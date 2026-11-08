@@ -36,8 +36,41 @@ export function initRulesIndex(index) {
  * @returns {*} Resolved value
  */
 export function resolveValue(value, context) {
+  const found = lookupValue(value, context);
+  if (found !== undefined) return found;
+  // Where a value is looked up rather than filled in — a guard, a where: —
+  // a missing $request field is undefined and anything else missing is null,
+  // as it always has been. Filling in uses fillValue instead.
+  return typeof value === 'string' && value.startsWith('$request.') ? undefined : null;
+}
+
+/**
+ * `a.b[0].c` read as resolveDotPath reads it, but undefined when any of it
+ * isn't there and a null at the end kept as null.
+ */
+function lookupPath(obj, path) {
+  if (obj === null || obj === undefined || !path) return undefined;
+  let current = obj;
+  for (const key of path.replace(/\[(\d+)\]/g, '.$1').split('.')) {
+    if (current === null || current === undefined) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+/**
+ * Look up a value expression as resolveValue does, but tell a value that is
+ * null from one that isn't there: undefined when the expression finds
+ * nothing, null when what it finds is null. Filling a body to a schema needs
+ * the difference (fitToSchema).
+ *
+ * @param {*} value - The value or expression to resolve
+ * @param {Object} context
+ * @returns {*} The value, or undefined when there is none
+ */
+export function lookupValue(value, context) {
   if (value === null || value === undefined) {
-    return null;
+    return value === null ? null : undefined;
   }
 
   if (typeof value === 'string') {
@@ -61,37 +94,32 @@ export function resolveValue(value, context) {
       return resolveTimeToken(value, now);
     }
 
-    if (value === '$object') return context.object ?? null;
-    if (value === '$caller') return context.caller ?? null;
-    if (value === '$request') return context.request ?? null;
+    if (value === '$object') return context.object ?? undefined;
+    if (value === '$caller') return context.caller ?? undefined;
+    if (value === '$request') return context.request ?? undefined;
 
     if (value.startsWith('$caller.')) {
       const field = value.slice('$caller.'.length);
-      return context.caller?.[field] ?? null;
+      return lookupPath(context.caller, field);
     }
 
     if (value.startsWith('$object.')) {
       const field = value.slice('$object.'.length);
-      return context.object?.[field] ?? null;
+      return lookupPath(context.object, field);
     }
 
     if (value.startsWith('$request.')) {
       const field = value.slice('$request.'.length);
-      // Return undefined (not null) when the field is absent from the request body.
-      // applySetEffect skips undefined values so optional fields like completionNotes
-      // are not written as null when the caller didn't provide them.
       const req = context.request;
       return req && Object.prototype.hasOwnProperty.call(req, field) ? req[field] : undefined;
     }
 
     if (value.startsWith('$this.')) {
-      const field = value.slice('$this.'.length);
-      return resolveDotPath(context.this, field) ?? null;
+      return lookupPath(context.this, value.slice('$this.'.length));
     }
 
     if (value.startsWith('$params.')) {
-      const field = value.slice('$params.'.length);
-      return resolveDotPath(context.params, field) ?? null;
+      return lookupPath(context.params, value.slice('$params.'.length));
     }
 
     // Entity alias: $alias.field from context.entities
@@ -101,10 +129,8 @@ export function resolveValue(value, context) {
       const alias = value.slice(1, dot);
       const field = value.slice(dot + 1);
       if (context.entities !== undefined) {
-        if (alias in context.entities) {
-          return resolveDotPath(context.entities[alias], field) ?? null;
-        }
-        return null; // entities map is defined but alias not found
+        // An alias the entities map doesn't have finds nothing.
+        return alias in context.entities ? lookupPath(context.entities[alias], field) : undefined;
       }
     }
 
@@ -112,7 +138,7 @@ export function resolveValue(value, context) {
     if (value.startsWith('$') && !value.includes('.')) {
       const alias = value.slice(1);
       if (context.entities !== undefined) {
-        return context.entities[alias] ?? null;
+        return context.entities[alias] ?? undefined;
       }
     }
   }
@@ -180,8 +206,40 @@ function resolveBody(body, context) {
     if (val && typeof val === 'object' && '$push' in val) {
       result[key] = { $push: resolveBodyValue(val['$push'], context) };
     } else {
-      result[key] = resolveBodyValue(val, context);
+      const value = resolveBodyValue(val, context);
+      if (value !== undefined) result[key] = value;
     }
+  }
+  return result;
+}
+
+/**
+ * Fill in a value from a value expression: what it finds, a null it finds, or
+ * undefined when it finds nothing — which the caller leaves out
+ * (docs/conventions/resources.yaml, null_and_absent).
+ *
+ * @param {*} value
+ * @param {Object} context
+ * @returns {*}
+ */
+export function fillValue(value, context) {
+  return lookupValue(value, context);
+}
+
+/**
+ * A call's body with each null its route's request schema doesn't accept
+ * left out, where the context carries the schemas (step-calls.js, schemasFor).
+ */
+function fitBody(method, path, body, context) {
+  return context.schemas?.body(method, path, body) ?? body;
+}
+
+/** An object of value expressions filled in, leaving out what found nothing. */
+function fillFields(fields, context) {
+  const result = {};
+  for (const [key, value] of Object.entries(fields ?? {})) {
+    const filled = fillValue(value, context);
+    if (filled !== undefined) result[key] = filled;
   }
   return result;
 }
@@ -189,14 +247,18 @@ function resolveBody(body, context) {
 /**
  * Resolve a single body value that may be a string expression, literal, array, or nested object.
  * Recurses into nested objects so expressions like { status: "confirmed", ids: "$this.data.ids" }
- * have their string fields resolved.
+ * have their string fields resolved. A field whose expression finds nothing
+ * is left out; an item of a list, which has no place to leave out, is null.
  */
 export function resolveBodyValue(val, context) {
-  if (typeof val === 'string') return resolveValue(val, context);
-  if (Array.isArray(val)) return val.map(item => resolveBodyValue(item, context));
+  if (typeof val === 'string') return fillValue(val, context);
+  if (Array.isArray(val)) return val.map(item => resolveBodyValue(item, context) ?? null);
   if (val && typeof val === 'object') {
     const result = {};
-    for (const [k, v] of Object.entries(val)) result[k] = resolveBodyValue(v, context);
+    for (const [k, v] of Object.entries(val)) {
+      const value = resolveBodyValue(v, context);
+      if (value !== undefined) result[k] = value;
+    }
     return result;
   }
   return val;
@@ -444,7 +506,7 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
   const rawPath = spec[method];
   const path = interpolatePath(rawPath, context);
   if (spec.body !== undefined && spec.requestBody === undefined) warnDeprecatedBody(method, rawPath);
-  const body = resolveBody(spec.requestBody?.payload ?? spec.body, context);
+  const body = fitBody(method, path, resolveBody(spec.requestBody?.payload ?? spec.body, context), context);
 
   if (method === 'POST') {
     if (rawPath.includes('{') || rawPath.includes('$')) {
@@ -603,15 +665,17 @@ function* walkSteps(steps, resource, context, store, pending) {
     } else if (step.set) {
       // Later steps read $object as this step left it — a timer set for the
       // expiresAt just defaulted, say.
-      const value = resolveValue(step.set.value, context);
-      resource[step.set.field] = value;
-      if (context.object && context.object !== resource) context.object[step.set.field] = value;
+      // A value expression that finds nothing sets nothing, and a null sets
+      // nothing where the field doesn't accept one.
+      const value = fillValue(step.set.value, context);
+      if (value !== undefined && (value !== null || (context.schemas?.field(step.set.field, null) ?? true))) {
+        resource[step.set.field] = value;
+        if (context.object && context.object !== resource) context.object[step.set.field] = value;
+      }
     } else if (step.emit) {
       // An emit declaring no data carries none, rather than an empty object.
-      const data = step.emit.data ? {} : undefined;
-      for (const [key, value] of Object.entries(step.emit.data || {})) {
-        data[key] = resolveValue(value, context);
-      }
+      const filled = step.emit.data ? fillFields(step.emit.data, context) : undefined;
+      const data = context.schemas?.event(step.emit.type, filled) ?? filled;
       pendingEvents.push({ type: step.emit.type, data, subject: step.emit.subject ? resolveValue(step.emit.subject, context) : undefined, causationid: step.emit.causationid ? resolveValue(step.emit.causationid, context) : undefined });
     } else if (step.evaluate) {
       const graph = _rulesIndex[step.evaluate];
@@ -621,10 +685,7 @@ function* walkSteps(steps, resource, context, store, pending) {
       }
       // An input may be an object of value expressions, resolved as a call's
       // body is — a household assembled from the records it's read from.
-      const inputs = {};
-      for (const [key, val] of Object.entries(step.inputs || {})) {
-        inputs[key] = resolveBodyValue(val, context);
-      }
+      const inputs = resolveBodyValue(step.inputs || {}, context);
       const nodes = evaluateRules(graph, inputs);
       if (step.bind) {
         if (!context.entities) context.entities = {};
@@ -660,7 +721,7 @@ function* walkSteps(steps, resource, context, store, pending) {
         // Legacy string form: invoke: "path" with separate body:
         const rawPath = step.invoke;
         const path = interpolatePath(rawPath, context);
-        const body = resolveBody(step.body, context);
+        const body = fitBody('POST', path, resolveBody(step.body, context), context);
         if (rawPath.includes('{')) {
           pendingOperations.push({ path, rawPath, body });
         } else {
@@ -715,7 +776,10 @@ export function operationCallOf(call, context) {
   }
   if (call.requestBody !== undefined) {
     resolved.requestBody = { ...call.requestBody };
-    if (call.requestBody.payload !== undefined) resolved.requestBody.payload = resolveBody(call.requestBody.payload, context);
+    if (call.requestBody.payload !== undefined) {
+      const payload = resolveBodyValue(call.requestBody.payload, context);
+      resolved.requestBody.payload = context.schemas?.call(call.operationId, call.requestBody.contentType, payload) ?? payload;
+    }
   }
   return resolved;
 }
@@ -882,7 +946,7 @@ export function whenReady(value, next) {
  * @param {Object} context - Context with caller info
  */
 export function applySetEffect(effect, resource, context) {
-  const value = resolveValue(effect.value, context);
+  const value = fillValue(effect.value, context);
   if (value !== undefined) {
     resource[effect.field] = value;
   }
@@ -896,11 +960,7 @@ export function applySetEffect(effect, resource, context) {
  * @returns {{ entity: string, data: Object }}
  */
 export function applyCreateEffect(effect, context) {
-  const data = {};
-  for (const [key, value] of Object.entries(effect.fields || {})) {
-    data[key] = resolveValue(value, context);
-  }
-  return { entity: effect.entity, data };
+  return { entity: effect.entity, data: fillFields(effect.fields, context) };
 }
 
 /**
@@ -912,11 +972,7 @@ export function applyCreateEffect(effect, context) {
  * @returns {{ action: string, data: Object }}
  */
 export function applyEventEffect(effect, context) {
-  const data = {};
-  for (const [key, value] of Object.entries(effect.data || {})) {
-    data[key] = resolveValue(value, context);
-  }
-  return { action: effect.action, data };
+  return { action: effect.action, data: fillFields(effect.data, context) };
 }
 
 /**
