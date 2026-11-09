@@ -5,4 +5,4 @@
  */
 export { createFakeAdapter } from './adapter.js';
 export { createFakeRelay } from './relay.js';
-export { createInPageSocket } from './socket.js';
+export { createWorkerWebSocket, serveWebSocketOverPort } from './socket.js';

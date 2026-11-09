@@ -169,17 +169,28 @@ needed to test it.
 
 A fake relay, likewise: it speaks the relay contract with no service behind
 it, playing back a recording as the service's results, for demos and tests of
-software that talks to a relay. It's given each connection's socket rather
-than running a server, so it works with whatever WebSocket server the host
-has:
+software that talks to a relay. It runs in whatever WebSocket server the host
+has, by the two hooks the `ws` package names: `handleProtocols`, which chooses
+the subprotocol or refuses, and `handleConnection`, for each open socket.
 
 ```js
 import { createFakeRelay } from '@codeforamerica/blueprint-transcription/fakes';
 
 const relay = createFakeRelay(recording);
-// On an upgrade request: answer with relay.protocolFor(offeredProtocols), or refuse when it's null.
-// Once the connection is open: relay.accept(socket).
+
+// Node, with ws
+const wss = new WebSocketServer({ port, handleProtocols: relay.handleProtocols });
+wss.on('connection', relay.handleConnection);
+
+// In a page, with mock-socket; give the relay adapter mock-socket's WebSocket
+const server = new Server(url, { selectProtocol: relay.handleProtocols });
+server.on('connection', relay.handleConnection);
 ```
+
+In a worker, apart from the page, the connection goes over a `MessagePort`:
+`serveWebSocketOverPort(port, relay)` in the worker, and in the page
+`createWorkerWebSocket(() => server.connect('relay'))`, a class with the
+standard WebSocket interface to give the relay adapter.
 
 A real relay checks the token as a JWT the transcripts adapter signed; the
 fake takes any token its `verifyToken` option accepts. Its tests check every

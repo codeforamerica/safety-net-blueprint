@@ -15,7 +15,8 @@ import addFormats from 'ajv-formats';
 import yaml from 'js-yaml';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
 import { createRelayAdapter, createTranscriptionClient, RELAY_PROTOCOL } from '../src/client/index.js';
-import { createFakeRelay, createInPageSocket } from '../src/fakes/index.js';
+import { Server, WebSocket as MockWebSocket } from 'mock-socket';
+import { createFakeRelay, createWorkerWebSocket, serveWebSocketOverPort } from '../src/fakes/index.js';
 import { sdkFor } from './sdk.js';
 
 // The relay contract and the files it refers to, each under the address its
@@ -40,19 +41,24 @@ const check = (message) => {
 };
 
 /**
- * The package's in-page socket to the relay, with every message logged by who
- * sent it, and JSON ones checked against the contract as they're sent.
+ * A WebSocket to the relay as a demo reaches one in its worker: over a
+ * MessagePort, with every message logged by who sent it, and JSON ones
+ * checked against the contract as they're sent.
  */
 function socketsTo(relay) {
   const log = [];
-  const Base = createInPageSocket(relay, {
+  const Base = createWorkerWebSocket(() => {
+    const { port1, port2 } = new MessageChannel();
+    serveWebSocketOverPort(port2, relay);
+    return port1;
+  }, {
     tap: (from, data) => {
       if (typeof data === 'string') check(JSON.parse(data));
       log.push({ from, data });
     },
   });
   class WebSocket extends Base {
-    constructor(...args) { super(...args); WebSocket.last = this; }
+    constructor(url, protocols) { super(url, protocols); this.offered = protocols; WebSocket.last = this; }
   }
   return { WebSocket, log };
 }
@@ -85,10 +91,22 @@ test('the relay\'s subprotocol is asked for, with the token beside it', async ()
 
 test('a relay refuses a connection without its subprotocol, or with a token it won\'t take', () => {
   const relay = createFakeRelay(LINES, { verifyToken: (token) => token === 'good' });
-  assert.strictEqual(relay.protocolFor([RELAY_PROTOCOL, 'good']), RELAY_PROTOCOL);
-  assert.strictEqual(relay.protocolFor([RELAY_PROTOCOL, 'bad']), null);
-  assert.strictEqual(relay.protocolFor([RELAY_PROTOCOL]), null);
-  assert.strictEqual(relay.protocolFor(['something-else', 'good']), null);
+  assert.strictEqual(relay.handleProtocols(new Set([RELAY_PROTOCOL, 'good'])), RELAY_PROTOCOL);
+  assert.strictEqual(relay.handleProtocols([RELAY_PROTOCOL, 'bad']), false);
+  assert.strictEqual(relay.handleProtocols([RELAY_PROTOCOL]), false);
+  assert.strictEqual(relay.handleProtocols(['something-else', 'good']), false);
+});
+
+test('in a page, the relay runs behind mock-socket by the same two hooks', async () => {
+  const relay = createFakeRelay(LINES, { sleep: immediately });
+  const server = new Server('wss://relay.example', { selectProtocol: relay.handleProtocols });
+  server.on('connection', relay.handleConnection);
+  const { told, report } = recorder();
+  const handle = await createRelayAdapter({ WebSocket: MockWebSocket }).open({ connection: CONNECTION, format: FORMAT, audio: chunks([1, 2]), report });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await handle.finish();
+  server.stop();
+  assert.deepStrictEqual(told.add.map((line) => line.text), ['Who lives with you?', 'My two kids.']);
 });
 
 test('start, audio and end go one way; started, results and ended come back, all as the contract says', async () => {

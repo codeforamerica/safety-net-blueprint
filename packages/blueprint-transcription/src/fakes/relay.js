@@ -5,16 +5,23 @@
  * as the service's results, for demos and tests of software that talks to a
  * relay. The recording's format is in src/recording.js.
  *
- * It's given each connection's socket rather than running a server, so it
- * works with whatever WebSocket server the host has — the `ws` package in
- * Node, Deno's or Bun's, a worker's — as long as the socket has `send`,
- * `close`, `readyState` and `addEventListener('message' | 'close')`:
+ * It runs in whatever WebSocket server the host has, by the two hooks the `ws`
+ * package names: `handleProtocols`, which chooses the subprotocol or refuses
+ * the connection, and `handleConnection`, for each socket once it's open — a
+ * socket as `ws` gives it, with `send`, `close`, `readyState` and
+ * `on('message' | 'close')`:
  *
  *   const relay = createFakeRelay(recording);
- *   // On an upgrade request, answer with the protocol it chooses, or refuse:
- *   const protocol = relay.protocolFor(offeredProtocols);
- *   // Once the connection is open:
- *   relay.accept(socket);
+ *
+ *   // Node, with ws
+ *   const wss = new WebSocketServer({ port, handleProtocols: relay.handleProtocols });
+ *   wss.on('connection', relay.handleConnection);
+ *
+ *   // In a page, with mock-socket
+ *   const server = new Server(url, { selectProtocol: relay.handleProtocols });
+ *   server.on('connection', relay.handleConnection);
+ *
+ *   // In a worker, from a page: serveWebSocketOverPort (socket.js)
  *
  * A real relay checks the token as a JWT the transcripts adapter signed; the
  * fake takes any token `verifyToken` accepts, by default any at all.
@@ -37,18 +44,20 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
 
   return {
     /**
-     * The subprotocol to answer an upgrade with, or null to refuse it: the
-     * relay's own, offered first, with a token after it that's accepted.
+     * The subprotocol to answer an upgrade with, or false to refuse it, as
+     * `ws`'s handleProtocols: the relay's own, offered first, with a token
+     * after it that's accepted.
      *
-     * @param {string[]} offered - the Sec-WebSocket-Protocol values, in order
+     * @param {Set<string>|string[]} offered - the Sec-WebSocket-Protocol values, in order
+     * @returns {string|false}
      */
-    protocolFor(offered) {
-      const [protocol, token] = offered ?? [];
-      return protocol === RELAY_PROTOCOL && verifyToken(token) ? RELAY_PROTOCOL : null;
+    handleProtocols(offered) {
+      const [protocol, token] = [...(offered ?? [])];
+      return protocol === RELAY_PROTOCOL && verifyToken(token) ? RELAY_PROTOCOL : false;
     },
 
-    /** Speak the relay contract on an open connection. */
-    accept(socket) {
+    /** Speak the relay contract on an open connection, as `ws`'s connection event gives it. */
+    handleConnection(socket) {
       let playing = null;
       let ended = false;
       const send = (message) => { if (socket.readyState === 1) socket.send(JSON.stringify(message)); };
@@ -69,15 +78,17 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
         alternatives: [{ transcript: line.text, ...(line.confidence !== undefined && { confidence: line.confidence }) }],
       });
 
-      socket.addEventListener('message', (event) => {
+      // ws gives text as a Buffer it marks not binary; mock-socket gives a string.
+      socket.on('message', (data, isBinary) => {
+        const text = typeof data === 'string' ? data : isBinary === false ? new TextDecoder().decode(data) : null;
         // Audio arrives as binary frames, and a fake has nothing to do with it.
-        if (typeof event.data !== 'string') {
+        if (text === null) {
           if (!playing) fail('bad-message', 'Audio came before start');
           return;
         }
         let message;
         try {
-          message = JSON.parse(event.data);
+          message = JSON.parse(text);
         } catch {
           fail('bad-message', 'A message isn\'t JSON');
           return;
@@ -108,7 +119,7 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
         }
       });
 
-      socket.addEventListener('close', () => { playing?.stop(); });
+      socket.on('close', () => { playing?.stop(); });
     },
   };
 }
