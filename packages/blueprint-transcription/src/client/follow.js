@@ -10,7 +10,7 @@
  * opened and offered a pull request for), unlike EventSource. So it's given a
  * `fetch` that watches each answer's status, and opened again when it ends,
  * with the last id. When hey-api fixes either, upgrade @hey-api/openapi-ts
- * and remove that part here.
+ * and remove that part here (#530).
  */
 
 const NO_STREAM = new Set([404, 405, 501]);
