@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetEventData, GetEventErrors, GetEventResponses, ListEventsData, ListEventsErrors, ListEventsResponses, PublishEventData, PublishEventErrors, PublishEventResponses, StreamEventsData, StreamEventsResponses } from './types.gen';
+import type { GetEventData, GetEventErrors, GetEventResponses, ListEventsData, ListEventsErrors, ListEventsResponses, PublishEventData, PublishEventErrors, PublishEventResponses, StreamEventsData, StreamEventsErrors, StreamEventsResponses } from './types.gen';
 import { zGetEventData, zGetEventResponse, zListEventsData, zListEventsResponse, zPublishEventData, zPublishEventResponse, zStreamEventsData, zStreamEventsResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
@@ -62,14 +62,29 @@ export const publishEvent = <ThrowOnError extends boolean = false>(options: Opti
  *
  * Real-time stream of domain events delivered as Server-Sent Events (SSE).
  *
- * Connect with `Accept: text/event-stream`. Each event is delivered as a
- * `data:` line containing a JSON-encoded `Event` object.
+ * Connect with `Accept: text/event-stream`. Each event is one SSE
+ * message: an `id:` line with the event's `id`, and a `data:` line with
+ * the JSON-encoded `Event`.
+ *
+ * To pick up after a dropped connection, reconnect with the last `id`
+ * received in `Last-Event-ID`, as a browser's `EventSource` does on its
+ * own: the stream first sends every matching event after that one, in
+ * the order they happened, then carries on live. An `id` the log no
+ * longer has is answered `410 Gone`, so a reader never quietly misses
+ * events; it reads what it needs afresh and connects again without one.
+ *
+ * The filters are the ones listing events takes.
+ *
+ * A server that can't hold a connection open — behind an API gateway
+ * that ends requests early, say — may leave the stream out and answer
+ * `501`. Readers then poll listing events, with the same filters and
+ * `start`, which every server serves.
  *
  * The stream stays open until the client disconnects. A `: heartbeat` comment
  * is sent every 30 seconds to prevent proxy timeouts.
  *
  */
-export const streamEvents = <ThrowOnError extends boolean = false>(options?: Options<StreamEventsData, ThrowOnError>) => (options?.client ?? client).sse.get<StreamEventsResponses, unknown, ThrowOnError>({
+export const streamEvents = <ThrowOnError extends boolean = false>(options?: Options<StreamEventsData, ThrowOnError>) => (options?.client ?? client).sse.get<StreamEventsResponses, StreamEventsErrors, ThrowOnError>({
     requestValidator: async (data) => await zStreamEventsData.parseAsync(data),
     responseType: 'text',
     responseValidator: async (data) => await zStreamEventsResponse.parseAsync(data),

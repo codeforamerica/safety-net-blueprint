@@ -56,6 +56,10 @@ channels:
     messages:
       CommunicationTranscriptionSessionLineAdded:
         $ref: "#/components/messages/CommunicationTranscriptionSessionLineAdded"
+  communication.transcript.paused:
+    $ref: ./communication-transcripts-events-asyncapi.yaml#/channels/communication.transcript.paused
+  communication.transcript.closed:
+    $ref: ./communication-transcripts-events-asyncapi.yaml#/channels/communication.transcript.closed
 operations:
   sendCommunicationTranscriptionSessionCreated:
     action: send
@@ -117,6 +121,18 @@ operations:
       $ref: "#/channels/communication.transcription_session.line_added"
     messages:
       - $ref: "#/channels/communication.transcription_session.line_added/messages/CommunicationTranscriptionSessionLineAdded"
+  receiveCommunicationTranscriptPaused:
+    action: receive
+    channel:
+      $ref: "#/channels/communication.transcript.paused"
+    messages:
+      - $ref: "#/channels/communication.transcript.paused/messages/CommunicationTranscriptPaused"
+  receiveCommunicationTranscriptClosed:
+    action: receive
+    channel:
+      $ref: "#/channels/communication.transcript.closed"
+    messages:
+      - $ref: "#/channels/communication.transcript.closed/messages/CommunicationTranscriptClosed"
 components:
   messages:
     CommunicationTranscriptionSessionCreated:

@@ -556,6 +556,74 @@ paths:
         type: state-machine-action
         domain: communication
         id: fail
+  /transcription-sessions/{transcriptionSessionId}/transcript-paused:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Transcript paused transcriptionsession
+      description: The transcript was paused by someone other than this session. The software closes the connection.
+      operationId: transcriptPausedTranscriptionSession
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: transcript-paused
+  /transcription-sessions/{transcriptionSessionId}/transcript-closed:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Transcript closed transcriptionsession
+      description: The transcript was closed by someone other than this session, or closed itself when idle. The software closes the connection.
+      operationId: transcriptClosedTranscriptionSession
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: transcript-closed
 components:
   parameters:
     TranscriptionSessionIdParam:

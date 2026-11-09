@@ -305,13 +305,19 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
     if (!byRoute.has(served[0])) byRoute.set(served[0], entry);
   }
 
+  // Events: the ones a routed API receives go to whoever answers it, and the
+  // ones a routed API sends come from there (routed-events.js).
   const receives = [];
+  const sends = [];
   for (const operation of operations?.all ?? []) {
-    if (operation.kind !== 'asyncapi' || operation.action !== 'receive' || !operation.event) continue;
+    if (operation.kind !== 'asyncapi' || !operation.event) continue;
     const chosen = covering({ domain: domainOfApi.get(operation.api), api: operation.api, id: operation.id });
-    if (chosen) receives.push({ api: operation.api, event: operation.event, id: operation.id, entry: chosen.entry });
+    if (!chosen) continue;
+    const routedEvent = { api: operation.api, event: operation.event, id: operation.id, entry: chosen.entry };
+    if (operation.action === 'receive') receives.push(routedEvent);
+    else if (operation.action === 'send') sends.push(routedEvent);
   }
-  return { byRoute, receives };
+  return { byRoute, receives, sends };
 }
 
 /**
@@ -362,11 +368,11 @@ function checkedHandler(handler, responseSchema, name) {
  * @param {Array} routing
  * @param {object} context - As for planRouting, and:
  * @param {(route: object, status: number) => { schema: object, key: string } | null} context.responseSchema
- * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }> }}
+ * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }> }}
  */
 export function applyRouting(routes, routing = [], context) {
-  if (routing.length === 0) return { routed: [], receives: [] };
-  const { byRoute, receives } = planRouting(routing, { ...context, routes });
+  if (routing.length === 0) return { routed: [], receives: [], sends: [] };
+  const { byRoute, receives, sends } = planRouting(routing, { ...context, routes });
 
   for (const [key, entry] of byRoute) {
     const route = routes.get(key);
@@ -376,7 +382,7 @@ export function applyRouting(routes, routing = [], context) {
     // Marked, so a check that reads the mock's records knows these aren't the ones that count.
     route.routed = true;
   }
-  return { routed: [...byRoute.keys()], receives };
+  return { routed: [...byRoute.keys()], receives, sends };
 }
 
 /**

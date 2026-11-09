@@ -94,6 +94,23 @@ export const zEventList = z.object({
     })))
 }));
 
+/**
+ * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+ *
+ */
+export const zTypeFilter = z.string();
+
+/**
+ * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+ */
+export const zSourceFilter = z.string();
+
+/**
+ * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+ *
+ */
+export const zSubjectFilter = z.uuid();
+
 export const zListEventsData = z.object({
     body: z.optional(z.never()),
     path: z.optional(z.never()),
@@ -255,11 +272,18 @@ export const zPublishEventResponse = z.object({
 export const zStreamEventsData = z.object({
     body: z.optional(z.never()),
     path: z.optional(z.never()),
-    query: z.optional(z.never())
+    query: z.optional(z.object({
+        type: z.optional(z.string()),
+        source: z.optional(z.string()),
+        subject: z.optional(z.uuid())
+    })),
+    headers: z.optional(z.object({
+        'Last-Event-ID': z.optional(z.string())
+    }))
 });
 
 /**
- * Newline-delimited SSE frames, each containing a JSON Event.
+ * SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
  */
 export const zStreamEventsResponse = z.string();
 

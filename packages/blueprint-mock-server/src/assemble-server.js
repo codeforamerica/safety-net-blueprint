@@ -23,6 +23,7 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 import { applyRouting } from './routing.js';
 import { operationsOf } from './operation-calls.js';
 import { registerEventSubscriptions } from './event-subscription.js';
+import { eventsToFollow, followRoutedEvents } from './routed-events.js';
 import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { createStepCalls } from './step-calls.js';
 import { rememberMachineFiles } from './state-machine-runner.js';
@@ -127,7 +128,7 @@ export function assembleServer(
   refuseOwnRouteCollisions(routes, apiSpecs);
   const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]));
   const byApiAndId = new Map(details.map((operation) => [`${operation.api}#${operation.id}`, operation]));
-  const { routed, receives } = applyRouting(routes, routing, {
+  const { routed, receives, sends } = applyRouting(routes, routing, {
     operations,
     domainOfApi,
     // What a routed handler's answer is checked against.
@@ -142,8 +143,10 @@ export function assembleServer(
     },
   });
   routedEvents.receives = receives;
+  // The events routed services send that reactions here need, read from them.
+  const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { store });
 
   // An action calling an operation as its caller sends the call through here.
   stepCalls.serve(createDispatcher(routes));
-  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives };
+  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop };
 }

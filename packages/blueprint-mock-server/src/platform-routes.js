@@ -203,7 +203,7 @@ export function contractOverrides({ store, registries = {} }) {
     ...registryHandlers(registries),
 
     // A stream, not a collection read.
-    streamEvents: createSseHandler(),
+    streamEvents: createSseHandler({ store }),
 
     // Publishing fires the event bus so event-triggered rules respond to it,
     // which is the point of injecting one — storing a row would not. Accepts a

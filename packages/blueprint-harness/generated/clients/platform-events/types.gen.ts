@@ -196,6 +196,23 @@ export type EventList = {
     }>;
 };
 
+/**
+ * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+ *
+ */
+export type TypeFilter = string;
+
+/**
+ * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+ */
+export type SourceFilter = string;
+
+/**
+ * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+ *
+ */
+export type SubjectFilter = string;
+
 export type ListEventsData = {
     body?: never;
     path?: never;
@@ -759,14 +776,78 @@ export type PublishEventResponse = PublishEventResponses[keyof PublishEventRespo
 
 export type StreamEventsData = {
     body?: never;
+    headers?: {
+        /**
+         * The `id` of the last event received, when reconnecting. Events after it are sent first.
+         */
+        'Last-Event-ID'?: string;
+    };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+         *
+         */
+        type?: string;
+        /**
+         * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+         */
+        source?: string;
+        /**
+         * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+         *
+         */
+        subject?: string;
+    };
     url: '/events/stream';
 };
 
+export type StreamEventsErrors = {
+    /**
+     * The log no longer has the event `Last-Event-ID` names, so the events after it can't be sent.
+     */
+    410: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * This server doesn't stream events; poll listing events instead.
+     */
+    501: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type StreamEventsError = StreamEventsErrors[keyof StreamEventsErrors];
+
 export type StreamEventsResponses = {
     /**
-     * Newline-delimited SSE frames, each containing a JSON Event.
+     * SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
      */
     200: string;
 };

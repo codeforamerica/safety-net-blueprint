@@ -50,7 +50,9 @@ describe('routing a domain to a real service', () => {
 
   before(async () => {
     standIn = createServer((req, res) => {
-      received.push({ method: req.method, url: req.url, headers: req.headers });
+      // The mock also reads the service's events, for reactions it keeps;
+      // those aren't the requests these tests count.
+      if (!req.url.includes('/platform/events')) received.push({ method: req.method, url: req.url, headers: req.headers });
       res.setHeader('content-type', 'application/json');
       res.setHeader('set-cookie', 'session=the-real-service');
       res.end(JSON.stringify({ from: 'stand-in', path: req.url }));

@@ -5,9 +5,9 @@ Auto-generated from state machine `emit` and subscription declarations.
 | Event | Published by | Subscribers |
 |---|---|---|
 | `communication.idle_check` | *(unknown)* | [Communication/Transcript](communication.md) |
-| `communication.transcript.closed` | [Communication/Transcript](communication.md) | *(none)* |
+| `communication.transcript.closed` | [Communication/Transcript](communication.md) | [Communication/TranscriptionSession](communication.md) |
 | `communication.transcript.created` | *(unknown)* | [Communication/Transcript](communication.md) |
-| `communication.transcript.paused` | [Communication/Transcript](communication.md) | *(none)* |
+| `communication.transcript.paused` | [Communication/Transcript](communication.md) | [Communication/TranscriptionSession](communication.md) |
 | `communication.transcript.resumed` | [Communication/Transcript](communication.md) | *(none)* |
 | `communication.transcript_entry.created` | *(unknown)* | [Communication/Transcript](communication.md) |
 | `communication.transcription_session.closed` | [Communication/TranscriptionSession](communication.md) | *(none)* |

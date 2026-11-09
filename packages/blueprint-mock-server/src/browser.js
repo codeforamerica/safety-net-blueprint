@@ -45,7 +45,9 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  *   else answers — a service at a URL, or a `handler` function this page
  *   passes — as `schemas/routing-schema.json` describes the entries.
  *   Configuration for this page, not part of the contract set.
- * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
+ * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void }>}
+ *   `stopFollowing` stops reading the events of services routing sends to,
+ *   which starts when a state machine here reacts to one (routed-events.js).
  */
 export async function createMockServer({
   contracts,
@@ -89,12 +91,12 @@ export async function createMockServer({
   seedConfigs(configs, store);
 
   // From here on, the same server the Node process builds.
-  const { fetch, routes, endpoints, routed } = assembleServer(
+  const { fetch, routes, endpoints, routed, stopFollowing } = assembleServer(
     { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
     // A page has no directory to re-read, so reseed restores the documents the
     // artifact carries. Node passes a function that walks the directory again.
     { store, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
   );
   for (const key of routed) console.log(`  ROUTE ${key}`);
-  return { fetch, routes, store, endpoints, routed };
+  return { fetch, routes, store, endpoints, routed, stopFollowing };
 }

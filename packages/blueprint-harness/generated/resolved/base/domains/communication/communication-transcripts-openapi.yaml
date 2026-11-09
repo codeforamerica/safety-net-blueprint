@@ -502,7 +502,7 @@ paths:
     post:
       summary: Resume transcript
       description: |-
-        Put the conversation back on the record, at the time the client says.
+        Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: resumeTranscript

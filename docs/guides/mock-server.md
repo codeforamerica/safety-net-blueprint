@@ -352,6 +352,17 @@ traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 
 It goes to `to` as written — CloudEvents defines no path, so it is the URL a webhook would be — or to a `handler` as that same request. An event is delivered once to each routed `receive` operation, however many of the API's machines react to it. A delivery that fails is logged and dropped; the mock has no queue to retry from.
 
+### Events a routed domain sends
+
+The other way round: when a state machine the mock keeps reacts to an event a routed API sends — a transcription session in a page following its transcript on the server — the mock reads that service's events and handles each as `POST /platform/events` would. It reads them the ways the platform contract offers, through the same `to` or `handler`:
+
+- `GET /platform/events/stream`, filtered to the events it needs, reconnecting with `Last-Event-ID` after a drop so nothing is missed;
+- `GET /platform/events`, polled every few seconds, when the service has no stream and answers `404`, `405` or `501`.
+
+It starts on its own when the mock is built, one reader per service, and logs `EVENTS <types> from <service>`. An event the mock already has — one it sent there itself — is skipped, and one that arrives isn't delivered back. In a page, `mock.stopFollowing()` stops reading.
+
+One mock per page or process: a second shares the first's event reactions and replaces them, and says so. Run a stand-in for the server in a worker or another process.
+
 ### Headers
 
 Only headers that describe the request are passed on by default: `Accept`, `Accept-Language`, `Content-Type`, `If-Match`, `If-None-Match`, `Idempotency-Key`, `traceparent` and `tracestate`. Everything else, credentials included, is dropped unless `includeHeaders` names it — so a service that needs the caller's token gets it only with `includeHeaders: [Authorization]`.
@@ -376,7 +387,7 @@ A page holds no secrets, so a route to a service from a page can reach only one 
 ### What routing does not reach
 
 - **Calls a state machine makes by path.** A call by `operationId` goes through the route table, so it is routed; a call written as a method and path is carried out inside the mock and is not. A machine uses one only for its own domain's records, which are routed with its reactions; `validate` warns about one into another domain.
-- **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
+- **The real service's events nothing here reacts to.** The mock reads only the events its own machines need ([above](#events-a-routed-domain-sends)). A service can publish others to it at `POST /platform/events`.
 
 ## Scenarios
 

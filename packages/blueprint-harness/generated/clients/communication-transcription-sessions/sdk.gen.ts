@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddLineTranscriptionSessionData, AddLineTranscriptionSessionErrors, AddLineTranscriptionSessionResponses, CloseTranscriptionSessionData, CloseTranscriptionSessionErrors, CloseTranscriptionSessionResponses, ConnectTranscriptionSessionData, ConnectTranscriptionSessionErrors, ConnectTranscriptionSessionResponses, CreateTranscriptionSessionData, CreateTranscriptionSessionErrors, CreateTranscriptionSessionResponses, DisconnectTranscriptionSessionData, DisconnectTranscriptionSessionErrors, DisconnectTranscriptionSessionResponses, FailTranscriptionSessionData, FailTranscriptionSessionErrors, FailTranscriptionSessionResponses, GetConnectionTranscriptionSessionData, GetConnectionTranscriptionSessionErrors, GetConnectionTranscriptionSessionResponses, GetTranscriptionSessionData, GetTranscriptionSessionErrors, GetTranscriptionSessionResponses, PauseTranscriptionSessionData, PauseTranscriptionSessionErrors, PauseTranscriptionSessionResponses, RenewConnectionTranscriptionSessionData, RenewConnectionTranscriptionSessionErrors, RenewConnectionTranscriptionSessionResponses, ResumeTranscriptionSessionData, ResumeTranscriptionSessionErrors, ResumeTranscriptionSessionResponses, StopTranscriptionSessionData, StopTranscriptionSessionErrors, StopTranscriptionSessionResponses, UpdateLineTranscriptionSessionData, UpdateLineTranscriptionSessionErrors, UpdateLineTranscriptionSessionResponses } from './types.gen';
-import { zAddLineTranscriptionSessionData, zAddLineTranscriptionSessionResponse, zCloseTranscriptionSessionData, zCloseTranscriptionSessionResponse, zConnectTranscriptionSessionData, zConnectTranscriptionSessionResponse, zCreateTranscriptionSessionData, zCreateTranscriptionSessionResponse, zDisconnectTranscriptionSessionData, zDisconnectTranscriptionSessionResponse, zFailTranscriptionSessionData, zFailTranscriptionSessionResponse, zGetConnectionTranscriptionSessionData, zGetConnectionTranscriptionSessionResponse, zGetTranscriptionSessionData, zGetTranscriptionSessionResponse, zPauseTranscriptionSessionData, zPauseTranscriptionSessionResponse, zRenewConnectionTranscriptionSessionData, zRenewConnectionTranscriptionSessionResponse, zResumeTranscriptionSessionData, zResumeTranscriptionSessionResponse, zStopTranscriptionSessionData, zStopTranscriptionSessionResponse, zUpdateLineTranscriptionSessionData, zUpdateLineTranscriptionSessionResponse } from './zod.gen';
+import type { AddLineTranscriptionSessionData, AddLineTranscriptionSessionErrors, AddLineTranscriptionSessionResponses, CloseTranscriptionSessionData, CloseTranscriptionSessionErrors, CloseTranscriptionSessionResponses, ConnectTranscriptionSessionData, ConnectTranscriptionSessionErrors, ConnectTranscriptionSessionResponses, CreateTranscriptionSessionData, CreateTranscriptionSessionErrors, CreateTranscriptionSessionResponses, DisconnectTranscriptionSessionData, DisconnectTranscriptionSessionErrors, DisconnectTranscriptionSessionResponses, FailTranscriptionSessionData, FailTranscriptionSessionErrors, FailTranscriptionSessionResponses, GetConnectionTranscriptionSessionData, GetConnectionTranscriptionSessionErrors, GetConnectionTranscriptionSessionResponses, GetTranscriptionSessionData, GetTranscriptionSessionErrors, GetTranscriptionSessionResponses, PauseTranscriptionSessionData, PauseTranscriptionSessionErrors, PauseTranscriptionSessionResponses, RenewConnectionTranscriptionSessionData, RenewConnectionTranscriptionSessionErrors, RenewConnectionTranscriptionSessionResponses, ResumeTranscriptionSessionData, ResumeTranscriptionSessionErrors, ResumeTranscriptionSessionResponses, StopTranscriptionSessionData, StopTranscriptionSessionErrors, StopTranscriptionSessionResponses, TranscriptClosedTranscriptionSessionData, TranscriptClosedTranscriptionSessionErrors, TranscriptClosedTranscriptionSessionResponses, TranscriptPausedTranscriptionSessionData, TranscriptPausedTranscriptionSessionErrors, TranscriptPausedTranscriptionSessionResponses, UpdateLineTranscriptionSessionData, UpdateLineTranscriptionSessionErrors, UpdateLineTranscriptionSessionResponses } from './types.gen';
+import { zAddLineTranscriptionSessionData, zAddLineTranscriptionSessionResponse, zCloseTranscriptionSessionData, zCloseTranscriptionSessionResponse, zConnectTranscriptionSessionData, zConnectTranscriptionSessionResponse, zCreateTranscriptionSessionData, zCreateTranscriptionSessionResponse, zDisconnectTranscriptionSessionData, zDisconnectTranscriptionSessionResponse, zFailTranscriptionSessionData, zFailTranscriptionSessionResponse, zGetConnectionTranscriptionSessionData, zGetConnectionTranscriptionSessionResponse, zGetTranscriptionSessionData, zGetTranscriptionSessionResponse, zPauseTranscriptionSessionData, zPauseTranscriptionSessionResponse, zRenewConnectionTranscriptionSessionData, zRenewConnectionTranscriptionSessionResponse, zResumeTranscriptionSessionData, zResumeTranscriptionSessionResponse, zStopTranscriptionSessionData, zStopTranscriptionSessionResponse, zTranscriptClosedTranscriptionSessionData, zTranscriptClosedTranscriptionSessionResponse, zTranscriptPausedTranscriptionSessionData, zTranscriptPausedTranscriptionSessionResponse, zUpdateLineTranscriptionSessionData, zUpdateLineTranscriptionSessionResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -245,5 +245,31 @@ export const failTranscriptionSession = <ThrowOnError extends boolean = false>(o
     responseType: 'json',
     responseValidator: async (data) => await zFailTranscriptionSessionResponse.parseAsync(data),
     url: '/transcription-sessions/{transcriptionSessionId}/fail',
+    ...options
+});
+
+/**
+ * Transcript paused transcriptionsession
+ *
+ * The transcript was paused by someone other than this session. The software closes the connection.
+ */
+export const transcriptPausedTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<TranscriptPausedTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<TranscriptPausedTranscriptionSessionResponses, TranscriptPausedTranscriptionSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zTranscriptPausedTranscriptionSessionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zTranscriptPausedTranscriptionSessionResponse.parseAsync(data),
+    url: '/transcription-sessions/{transcriptionSessionId}/transcript-paused',
+    ...options
+});
+
+/**
+ * Transcript closed transcriptionsession
+ *
+ * The transcript was closed by someone other than this session, or closed itself when idle. The software closes the connection.
+ */
+export const transcriptClosedTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<TranscriptClosedTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<TranscriptClosedTranscriptionSessionResponses, TranscriptClosedTranscriptionSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zTranscriptClosedTranscriptionSessionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zTranscriptClosedTranscriptionSessionResponse.parseAsync(data),
+    url: '/transcription-sessions/{transcriptionSessionId}/transcript-closed',
     ...options
 });

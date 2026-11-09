@@ -13,6 +13,7 @@
 
 import { eventBus } from './event-bus.js';
 import { deliverEvent } from './routing.js';
+import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
 import { executeTransition, performerFor } from './state-machine-runner.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
@@ -146,6 +147,7 @@ function executePendingAppend({ path, body }, store) {
  * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
  */
 let currentDispatch = null;
+let warnedReplaced = false;
 
 // The reactions still running for each partitionkey. One whose key has a
 // reaction running waits for it; one whose key has none runs at once, as it
@@ -243,6 +245,12 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
   if (currentDispatch) {
     eventBus.off('domain-event', currentDispatch);
     currentDispatch = null;
+    // Said once: two mocks in one page or process share these reactions, so
+    // the one built first stops reacting. Rebuilding one is fine.
+    if (!warnedReplaced) {
+      warnedReplaced = true;
+      console.warn('A new mock replaced the event reactions of the one before it in this page or process. If both are meant to run, run each in its own worker or process.');
+    }
   }
   running.clear();
 
@@ -272,7 +280,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
   // machines react to it.
   currentDispatch = (event) => {
     const routed = routedEvents.receives.filter((receive) => eventTypeMatches(event.type, receive.event));
-    for (const receive of routed) deliverEvent(event, receive);
+    // One that came from a service isn't sent back to it.
+    const from = arrivedThrough(event);
+    for (const receive of routed) if (receive.entry !== from) deliverEvent(event, receive);
     for (const { smEntry, entry } of machineEventSubs) {
       if (!eventTypeMatches(event.type, entry.type)) continue;
       const api = routedEvents.apiOfFile.get(smEntry.api?.relativePath);

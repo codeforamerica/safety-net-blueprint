@@ -366,7 +366,7 @@ workflows:
         description: |
           Go back on the record
 
-          - `resume` goes from `paused` to `recording`, guarded by `aPauseIsOpen` and `atAfterPauseBegan`.
+          - `resume` goes from `paused` to `recording`, guarded by `atAfterPauseBegan`. Resuming a transcript that's already recording succeeds and changes nothing.
           - It gives the open pause its `endedAt` with a `PATCH` the server makes itself, then calls `requestIdleCheck`, which does nothing here: this profile has no `idleTimeout`.
         operationId: $sourceDescriptions.transcripts.resumeTranscript
         parameters:
