@@ -248,6 +248,28 @@ batch_operations:
 # NOTE: States will use their own identity providers. This section defines the
 #       interface contract, not the specific provider implementation.
 
+streaming_responses:
+  description: |
+    A response that streams events uses text/event-stream (server-sent events).
+    Describe one message in its schema — the data of each event — not the
+    stream as a whole: OpenAPI 3.1 tools read a stream's schema that way, and
+    a generated client checks every event against it. OpenAPI 3.2 names this
+    itemSchema. Say the rest in the operation's description: the id line,
+    reconnecting with Last-Event-ID, and what a server that can't stream
+    answers.
+  rule: |
+    Give text/event-stream a schema that describes one event's data, usually
+    a $ref to it. Never `type: string`: it tells a reader nothing, and a
+    generated client refuses every event. validate reports it
+    (event-stream-message-schema).
+  example: |
+    responses:
+      "200":
+        content:
+          text/event-stream:
+            schema:
+              $ref: "#/components/schemas/Event"
+
 correlation_ids:
   description: |
     Unique identifier that follows a request through all services and logs.
