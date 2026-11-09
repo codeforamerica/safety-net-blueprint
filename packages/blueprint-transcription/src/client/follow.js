@@ -5,9 +5,12 @@
  * offers.
  *
  * The generated stream reconnects with Last-Event-ID on its own, but it also
- * retries HTTP errors forever and doesn't reopen a stream that ended, unlike
- * EventSource (hey-api/hey-api#4471). So it's given a `fetch` that watches
- * each answer's status, and opened again when it ends, with the last id.
+ * retries HTTP errors forever (hey-api/hey-api#4471, which we added 501 to)
+ * and doesn't reopen a stream that ended (hey-api/hey-api#4490, which we
+ * opened and offered a pull request for), unlike EventSource. So it's given a
+ * `fetch` that watches each answer's status, and opened again when it ends,
+ * with the last id. When hey-api fixes either, upgrade @hey-api/openapi-ts
+ * and remove that part here.
  */
 
 const NO_STREAM = new Set([404, 405, 501]);
