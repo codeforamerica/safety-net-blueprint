@@ -1,0 +1,2 @@
+version: 5.4.0
+LICENSE: the repository has no license file. Its README at https://github.com/chbrown/rfc6902/blob/v5.4.0/README.md#license says "Copyright 2014-2021 Christopher Brown. MIT Licensed" and links to https://chbrown.github.io/licenses/MIT/#2014-2021; this is the SPDX MIT text with that copyright line.
