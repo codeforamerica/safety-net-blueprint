@@ -14,6 +14,7 @@
   "scripts": {
     "test": "node --import tsx --test tests/*.test.js",
     "test:unit": "node --import tsx --test tests/*.test.js",
+    "build:demo": "node scripts/build-demo.js",
     "sdk": "node scripts/generate-sdk.js",
     "pretest": "node scripts/generate-sdk.js"
   },
@@ -34,6 +35,7 @@
     "@smithy/util-utf8": "^4.0.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
+    "esbuild": "^0.28.2",
     "js-yaml": "^4.1.0",
     "mock-socket": "^9.3.1",
     "tsx": "^4.23.15"
