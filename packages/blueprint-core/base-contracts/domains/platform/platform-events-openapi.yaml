@@ -179,9 +179,10 @@ paths:
           description: SSE stream of domain events.
           content:
             text/event-stream:
+              # Each message's data, as OpenAPI 3.1 tools read a stream's
+              # schema (3.2 names it itemSchema).
               schema:
-                type: string
-                description: SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
+                $ref: "#/components/schemas/Event"
         "501":
           description: This server doesn't stream events; poll listing events instead.
           content:

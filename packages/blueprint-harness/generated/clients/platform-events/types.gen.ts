@@ -847,9 +847,92 @@ export type StreamEventsError = StreamEventsErrors[keyof StreamEventsErrors];
 
 export type StreamEventsResponses = {
     /**
-     * SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
+     * SSE stream of domain events.
      */
-    200: string;
+    200: {
+        /**
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+         *
+         */
+        type: string;
+        /**
+         * Human-readable annotation for state machine authors. Not a CloudEvents field.
+         */
+        description?: string;
+    } & {
+        /**
+         * CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+         *
+         */
+        subject?: string;
+        /**
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         *
+         */
+        causationid?: string;
+        /**
+         * Event-specific payload. Field values are value expressions resolved at emit time.
+         */
+        data?: {
+            [key: string]: unknown;
+        };
+    } & {
+        /**
+         * CloudEvents specification version.
+         */
+        specversion: '1.0';
+        /**
+         * Unique event identifier.
+         */
+        id: string;
+        /**
+         * Domain base path that produced the event (e.g., /intake, /workflow).
+         */
+        source: string;
+        /**
+         * Entity ID the event pertains to.
+         */
+        subject: string;
+        /**
+         * When the event occurred.
+         */
+        time: string;
+        /**
+         * Media type of the event payload.
+         */
+        datacontenttype: 'application/json';
+        /**
+         * W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+         *
+         */
+        traceparent?: string | null;
+        /**
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         *
+         */
+        causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
+        /**
+         * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+         *
+         */
+        authid?: string | null;
+        /**
+         * CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+         *
+         */
+        authtype?: 'user' | 'service_account' | 'api_key' | 'system' | 'unauthenticated' | 'unknown' | null;
+        /**
+         * Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+         */
+        data?: {
+            [key: string]: unknown;
+        };
+    };
 };
 
 export type StreamEventsResponse = StreamEventsResponses[keyof StreamEventsResponses];

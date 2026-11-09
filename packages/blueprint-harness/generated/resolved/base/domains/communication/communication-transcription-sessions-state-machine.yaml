@@ -45,11 +45,11 @@ machines:
       - id: disconnected
         description: The connection dropped; the software is trying again.
       - id: paused
-        description: Off the record. The software closes the connection.
+        description: Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.
       - id: stopping
         description: Stop was asked for. The software sends the end of the audio and waits for the last text.
       - id: closed
-        description: The session is done and the transcript closed.
+        description: The session is done and the transcript closed. The software closes any connection still open, whoever closed it.
       - id: failed
         description: The software gave up connecting or reconnecting. The transcript is still open.
       - id: line_updated
@@ -346,11 +346,9 @@ machines:
           - emit:
               event: failed
               type: communication.transcription_session.failed
-      - id: transcript-paused
-        description: The transcript was paused by someone other than this session. The software closes the connection.
-        guards:
-          - actors:
-              - system
+    "on":
+      - type: communication.transcript.paused
+        description: Follow the transcript off the record.
         transition:
           from:
             - connecting
@@ -361,11 +359,8 @@ machines:
           - emit:
               event: paused
               type: communication.transcription_session.paused
-      - id: transcript-closed
-        description: The transcript was closed by someone other than this session, or closed itself when idle. The software closes the connection.
-        guards:
-          - actors:
-              - system
+      - type: communication.transcript.closed
+        description: Follow the transcript closed.
         transition:
           from:
             - connecting
@@ -378,29 +373,6 @@ machines:
           - emit:
               event: closed
               type: communication.transcription_session.closed
-    "on":
-      - type: communication.transcript.paused
-        description: Follow the transcript off the record.
-        context:
-          - session:
-              from: communication/transcription-sessions
-              where: item.transcriptId == this.subject && item.status in ["connecting", "connected", "disconnected"]
-        steps:
-          - if: session != null
-            then:
-              - call:
-                  POST: communication/transcription-sessions/$session.id/transcript-paused
-      - type: communication.transcript.closed
-        description: Follow the transcript closed.
-        context:
-          - session:
-              from: communication/transcription-sessions
-              where: item.transcriptId == this.subject && item.status in ["connecting", "connected", "disconnected", "paused", "stopping"]
-        steps:
-          - if: session != null
-            then:
-              - call:
-                  POST: communication/transcription-sessions/$session.id/transcript-closed
     resources:
       TranscriptionSession:
         create:

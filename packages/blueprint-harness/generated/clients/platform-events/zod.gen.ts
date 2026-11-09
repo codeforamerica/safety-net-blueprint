@@ -283,9 +283,48 @@ export const zStreamEventsData = z.object({
 });
 
 /**
- * SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
+ * SSE stream of domain events.
  */
-export const zStreamEventsResponse = z.string();
+export const zStreamEventsResponse = z.object({
+    type: z.string(),
+    description: z.optional(z.string())
+}).and(z.object({
+    subject: z.optional(z.string()),
+    causationid: z.optional(z.string()),
+    data: z.optional(z.record(z.string(), z.unknown()))
+})).and(z.object({
+    specversion: z.literal('1.0'),
+    id: z.uuid(),
+    source: z.string(),
+    subject: z.uuid(),
+    time: z.iso.datetime({ offset: true }),
+    datacontenttype: z.literal('application/json'),
+    traceparent: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    causationid: z.optional(z.union([
+        z.uuid(),
+        z.null()
+    ])),
+    partitionkey: z.optional(z.union([
+        z.string().min(1),
+        z.null()
+    ])),
+    authid: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    authtype: z.optional(z.nullable(z.enum([
+        'user',
+        'service_account',
+        'api_key',
+        'system',
+        'unauthenticated',
+        'unknown'
+    ]))),
+    data: z.optional(z.record(z.string(), z.unknown()))
+}));
 
 export const zGetEventData = z.object({
     body: z.optional(z.never()),

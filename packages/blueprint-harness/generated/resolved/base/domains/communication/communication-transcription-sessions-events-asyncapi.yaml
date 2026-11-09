@@ -165,7 +165,7 @@ components:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionDisconnectedEvent"
     CommunicationTranscriptionSessionPaused:
       name: communication.transcription_session.paused
-      summary: Off the record. The software closes the connection.
+      summary: Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -179,7 +179,7 @@ components:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionStoppingEvent"
     CommunicationTranscriptionSessionClosed:
       name: communication.transcription_session.closed
-      summary: The session is done and the transcript closed.
+      summary: The session is done and the transcript closed. The software closes any connection still open, whoever closed it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:

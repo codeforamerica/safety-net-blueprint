@@ -187,7 +187,7 @@
           ]
         },
         {
-          "name": "Disconnect Transcription-session",
+          "name": "Update-line Transcription-session",
           "request": {
             "method": "POST",
             "header": [
@@ -198,7 +198,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/disconnect",
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/update-line",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -206,59 +206,13 @@
                 "communication",
                 "transcription-sessions",
                 "{{transcriptionSessionId}}",
-                "disconnect"
+                "update-line"
               ],
               "variables": [
                 "transcriptionSessionId"
               ]
             },
-            "description": "Trigger the disconnect transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Transcript-paused Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/transcript-paused",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "transcript-paused"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the transcript-paused transition"
+            "description": "Trigger the update-line transition"
           },
           "event": [
             {
@@ -325,6 +279,52 @@
           ]
         },
         {
+          "name": "Pause Transcription-session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "communication",
+                "transcription-sessions",
+                "{{transcriptionSessionId}}",
+                "pause"
+              ],
+              "variables": [
+                "transcriptionSessionId"
+              ]
+            },
+            "description": "Trigger the pause transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Resume Transcription-session",
           "request": {
             "method": "POST",
@@ -371,7 +371,7 @@
           ]
         },
         {
-          "name": "Update-line Transcription-session",
+          "name": "Disconnect Transcription-session",
           "request": {
             "method": "POST",
             "header": [
@@ -382,7 +382,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/update-line",
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/disconnect",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -390,59 +390,13 @@
                 "communication",
                 "transcription-sessions",
                 "{{transcriptionSessionId}}",
-                "update-line"
+                "disconnect"
               ],
               "variables": [
                 "transcriptionSessionId"
               ]
             },
-            "description": "Trigger the update-line transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pause Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/pause",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "pause"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the pause transition"
+            "description": "Trigger the disconnect transition"
           },
           "event": [
             {
@@ -509,7 +463,7 @@
           ]
         },
         {
-          "name": "Close Transcription-session",
+          "name": "Close Transcription-session (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -541,13 +495,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
+                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
+                  "    pm.response.to.have.status(409);",
                   "});"
                 ]
               }
@@ -581,47 +530,6 @@
               ]
             },
             "description": "Trigger the fail transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
-                  "    pm.response.to.have.status(409);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Transcript-closed Transcription-session (409 Conflict)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/transcript-closed",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "transcript-closed"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the transcript-closed transition"
           },
           "event": [
             {

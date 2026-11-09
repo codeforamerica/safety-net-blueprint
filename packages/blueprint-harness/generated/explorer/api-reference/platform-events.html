@@ -1132,7 +1132,185 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
         <span style="font-size:11px;color:#555;">SSE stream of domain events.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="padding:8px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></div></div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">description</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable annotation for state machine authors. Not a CloudEvents field.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">subject</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">causationid</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Event-specific payload. Field values are value expressions resolved at emit time.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">specversion</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents specification version.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Unique event identifier.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Domain base path that produced the event (e.g., /intake, /workflow).</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">subject</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Entity ID the event pertains to.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">time</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">When the event occurred.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">datacontenttype</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Media type of the event payload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">traceparent</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">causationid</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">partitionkey</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">authid</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">authtype</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">user</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">service_account</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">api_key</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">system</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">unauthenticated</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">unknown</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">null</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">data</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.</span>
+      </div>
+      
+    </div>
+    </div>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">410</span>

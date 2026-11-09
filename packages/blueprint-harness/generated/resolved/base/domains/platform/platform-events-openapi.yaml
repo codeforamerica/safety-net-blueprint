@@ -162,8 +162,7 @@ paths:
           content:
             text/event-stream:
               schema:
-                type: string
-                description: SSE messages, each an `id:` line with the event's id and a `data:` line with the JSON Event.
+                $ref: "#/components/schemas/Event"
         "410":
           description: The log no longer has the event `Last-Event-ID` names, so the events after it can't be sent.
           content:
