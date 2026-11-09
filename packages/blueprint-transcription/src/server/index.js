@@ -5,5 +5,3 @@
  */
 export { createTranscriptsAdapter, CantIssue } from './adapter.js';
 export { awsTranscribeIssuer } from './issuers/aws/transcribe.js';
-export { createFakeRelay } from './relays/fake.js';
-export { RELAY_PROTOCOL } from '../relay-protocol.js';

@@ -21,12 +21,13 @@ transcript on the server, the adapter that issues a short-lived credential —
 and this package implements the parts that aren't contracts. How the parts fit is in
 [`docs/architecture/cross-cutting/browser-vendor-stream.md`](../../docs/architecture/cross-cutting/browser-vendor-stream.md).
 
-It has two entry points, one for each place it runs:
+It has three entry points: one for each place it runs, and the fakes:
 
 | Entry point | Runs | What it has |
 |---|---|---|
-| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, one for any relay, and a fake one with no service behind it |
-| `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with; an issuer for Amazon Transcribe; and a fake relay |
+| `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, and one for any relay |
+| `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with, and an issuer for Amazon Transcribe |
+| `./fakes` | Demos and tests | A fake adapter and a fake relay, with no service behind them, and a WebSocket that runs the fake relay in the page |
 
 Never import `./server` into a page: it's where secrets are used.
 
@@ -37,7 +38,8 @@ server; see the mock server's guide.
 ## The client
 
 ```js
-import { createTranscriptionClient, createFakeAdapter } from '@codeforamerica/blueprint-transcription/client';
+import { createTranscriptionClient } from '@codeforamerica/blueprint-transcription/client';
+import { createFakeAdapter } from '@codeforamerica/blueprint-transcription/fakes';
 
 const client = createTranscriptionClient({
   fetch: mock.fetch,                      // the in-page mock's, which routing forwards
@@ -172,7 +174,7 @@ than running a server, so it works with whatever WebSocket server the host
 has:
 
 ```js
-import { createFakeRelay } from '@codeforamerica/blueprint-transcription/server';
+import { createFakeRelay } from '@codeforamerica/blueprint-transcription/fakes';
 
 const relay = createFakeRelay(recording);
 // On an upgrade request: answer with relay.protocolFor(offeredProtocols), or refuse when it's null.

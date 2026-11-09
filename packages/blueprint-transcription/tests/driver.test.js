@@ -8,7 +8,8 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
-import { createTranscriptionClient, createFakeAdapter } from '../src/client/index.js';
+import { createTranscriptionClient } from '../src/client/index.js';
+import { createFakeAdapter } from '../src/fakes/index.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 

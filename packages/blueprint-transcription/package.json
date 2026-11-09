@@ -8,7 +8,8 @@
   ],
   "exports": {
     "./client": "./src/client/index.js",
-    "./server": "./src/server/index.js"
+    "./server": "./src/server/index.js",
+    "./fakes": "./src/fakes/index.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.js",

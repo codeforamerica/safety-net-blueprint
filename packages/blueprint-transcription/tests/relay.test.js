@@ -15,7 +15,7 @@ import addFormats from 'ajv-formats';
 import yaml from 'js-yaml';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
 import { createRelayAdapter, createTranscriptionClient, RELAY_PROTOCOL } from '../src/client/index.js';
-import { createFakeRelay } from '../src/server/index.js';
+import { createFakeRelay, createInPageSocket } from '../src/fakes/index.js';
 
 // The relay contract and the files it refers to, each under the address its
 // refs name it by, as the harness resolves them.
@@ -39,49 +39,21 @@ const check = (message) => {
 };
 
 /**
- * A WebSocket class whose connections reach the relay in memory. Every
- * message is logged by who sent it, and JSON ones are checked against the
- * contract as they're sent.
+ * The package's in-page socket to the relay, with every message logged by who
+ * sent it, and JSON ones checked against the contract as they're sent.
  */
 function socketsTo(relay) {
   const log = [];
-  class End extends EventTarget {
-    constructor(side) { super(); this.side = side; this.readyState = 0; }
-    send(data) {
-      if (this.readyState !== 1) return;
+  const Base = createInPageSocket(relay, {
+    tap: (from, data) => {
       if (typeof data === 'string') check(JSON.parse(data));
-      log.push({ from: this.side, data });
-      // Delivered in order even when a close follows at once, as a real
-      // WebSocket delivers what was sent before it closed.
-      setTimeout(() => this.peer.dispatchEvent(new MessageEvent('message', { data })));
-    }
-    close() {
-      for (const end of [this, this.peer]) {
-        if (end.readyState === 3) continue;
-        end.readyState = 3;
-        setTimeout(() => end.dispatchEvent(new Event('close')));
-      }
-    }
+      log.push({ from, data });
+    },
+  });
+  class WebSocket extends Base {
+    constructor(...args) { super(...args); WebSocket.last = this; }
   }
-  class ClientSocket extends End {
-    constructor(url, protocols) {
-      super('client');
-      this.url = url;
-      this.offered = protocols;
-      this.peer = new End('relay');
-      this.peer.peer = this;
-      ClientSocket.last = this;
-      setTimeout(() => {
-        this.protocol = relay.protocolFor(protocols);
-        if (!this.protocol) { this.readyState = 3; this.dispatchEvent(new Event('close')); return; }
-        this.readyState = 1;
-        this.peer.readyState = 1;
-        relay.accept(this.peer);
-        this.dispatchEvent(new Event('open'));
-      });
-    }
-  }
-  return { WebSocket: ClientSocket, log };
+  return { WebSocket, log };
 }
 
 const immediately = () => Promise.resolve();

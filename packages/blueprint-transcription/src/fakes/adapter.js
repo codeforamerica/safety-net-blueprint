@@ -8,7 +8,7 @@
  * same recordings.
  */
 
-import { createPlayback } from '../../recording.js';
+import { createPlayback } from '../recording.js';
 
 /**
  * @param {{ events: object[] }} recording

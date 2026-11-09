@@ -20,8 +20,8 @@
  * fake takes any token `verifyToken` accepts, by default any at all.
  */
 
-import { RELAY_PROTOCOL } from '../../relay-protocol.js';
-import { createPlayback } from '../../recording.js';
+import { RELAY_PROTOCOL } from '../relay-protocol.js';
+import { createPlayback } from '../recording.js';
 
 const ms = (seconds) => Math.round((seconds ?? 0) * 1000);
 

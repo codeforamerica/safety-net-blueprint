@@ -1,10 +1,10 @@
 /**
  * Transcription software that runs in the page: the driver, which is the only
  * part that talks to the transcription session, and the client adapters it
- * plugs in, one per transcription service.
+ * plugs in, one per transcription service and one for any relay. The fakes,
+ * for demos and tests, are in ./fakes.
  */
 export { createTranscriptionClient, SessionError } from './driver.js';
-export { createFakeAdapter } from './adapters/fake.js';
 export { createAwsTranscribeAdapter } from './adapters/aws/transcribe.js';
 export { createRelayAdapter } from './adapters/relay.js';
 export { RELAY_PROTOCOL } from '../relay-protocol.js';
