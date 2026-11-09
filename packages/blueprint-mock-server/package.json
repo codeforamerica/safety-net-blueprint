@@ -1,10 +1,11 @@
 {
   "name": "@codeforamerica/blueprint-mock-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Mock API server for contract-first development — auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
   "type": "module",
   "files": [
     "src/",
+    "dist/",
     "cli/",
     "contracts/",
     "schemas/"
@@ -12,6 +13,7 @@
   "exports": {
     ".": "./src/index.js",
     "./browser": "./src/browser.js",
+    "./dist/blueprint-mock-server.esm-browser.js": "./dist/blueprint-mock-server.esm-browser.js",
     "./store": "./src/stores/memory-store.js",
     "./test-utils": "./src/test-utils.js",
     "./routes": "./src/http/route-table.js"
@@ -21,6 +23,8 @@
     "blueprint-swagger": "cli/swagger/server.js"
   },
   "scripts": {
+    "build:browser": "node scripts/build-browser.js",
+    "prepare": "node scripts/build-browser.js",
     "start": "node cli/server.js --spec=../generated/contracts",
     "start:all": "node cli/start-all.js --spec=../generated/contracts",
     "swagger": "node cli/swagger/server.js --spec=../generated/contracts --spec=contracts",
@@ -47,8 +51,8 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
-    "@codeforamerica/blueprint-core": "^0.3.0",
-    "@codeforamerica/blueprint-rules-engine": "^0.1.0",
+    "@codeforamerica/blueprint-core": "^0.4.0",
+    "@codeforamerica/blueprint-rules-engine": "^0.2.0",
     "@faker-js/faker": "^10.4.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",

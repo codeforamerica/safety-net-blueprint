@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-transcription",
   "version": "0.1.0",
-  "description": "Reference transcription software for Blueprint's transcription session contract \u2014 the driver and client adapters that run in the page, and the server adapter that issues connections",
+  "description": "Reference transcription software for Blueprint's transcription session contract — the driver and client adapters that run in the page, and the server adapter that issues connections",
   "type": "module",
   "files": [
     "src/"
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
-    "@codeforamerica/blueprint-mock-server": "^0.3.0",
+    "@codeforamerica/blueprint-mock-server": "^0.4.0",
     "@smithy/eventstream-codec": "^4.0.0",
     "@smithy/signature-v4": "^5.0.0",
     "@smithy/util-utf8": "^4.0.0",
