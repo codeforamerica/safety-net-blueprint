@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
 import { createTranscriptionClient } from '../src/client/index.js';
 import { createFakeAdapter } from '../src/fakes/index.js';
+import { sdkFor } from './sdk.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 
@@ -40,17 +41,16 @@ beforeEach(async () => {
 
 const send = async (method, path, body) => {
   const response = await mock.fetch(new Request(`http://localhost${path}`, {
-    method, headers: { 'content-type': 'application/json' },
+    method, headers: { 'content-type': 'application/json', 'x-caller-id': 'someone-else' },
     body: body === undefined ? undefined : JSON.stringify(body),
   }));
   return response.json();
 };
 
-const startSession = async (options = {}) => {
+const startSession = async ({ fetch = (request) => mock.fetch(request), ...options } = {}) => {
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
   const client = createTranscriptionClient({
-    fetch: (request) => mock.fetch(request),
-    headers: { 'x-caller-id': 'worker-1' },
+    ...sdkFor(fetch),
     audio: AUDIO,
     sleep: immediately,
     retryDelay: () => 0,
@@ -175,4 +175,69 @@ test('a connection that won\'t open is tried again, then the session fails', asy
   await assert.rejects(session.connect(null), /unreachable/);
   assert.strictEqual(session.status, 'failed');
   assert.strictEqual(issued, 3);
+});
+
+/** An adapter that keeps its connection open until finished, and counts the finishes. */
+function heldOpen() {
+  const state = { open: 0, finished: 0, report: null };
+  return {
+    state,
+    adapter: {
+      async open({ report }) {
+        state.open += 1;
+        state.report = report;
+        return { finish: async () => { state.finished += 1; } };
+      },
+    },
+  };
+}
+
+const transcriptOf = (session) => `/communication/transcripts/${session.record.transcriptId}`;
+
+test('the transcript paused by someone else stops the audio', async () => {
+  const { state, adapter } = heldOpen();
+  const session = await startSession({ adapters: { default: adapter } });
+  await session.connect(null);
+  await send('POST', `${transcriptOf(session)}/pause`, { at: '2026-10-12T10:01:00Z' });
+  await until(() => state.finished === 1);
+  await until(() => session.status === 'paused');
+});
+
+test('the transcript closed by someone else stops the audio', async () => {
+  const { state, adapter } = heldOpen();
+  const session = await startSession({ adapters: { default: adapter } });
+  await session.connect(null);
+  await send('POST', `${transcriptOf(session)}/close`, { at: '2026-10-12T10:01:00Z' });
+  await until(() => state.finished === 1);
+  await until(() => session.status === 'closed');
+});
+
+test('the software\'s own pause and resume close and reopen the connection once each', async () => {
+  const { state, adapter } = heldOpen();
+  const session = await startSession({ adapters: { default: adapter } });
+  await session.connect(null);
+  await session.pause();
+  assert.strictEqual(session.status, 'paused');
+  await session.resume();
+  assert.strictEqual(session.status, 'connected');
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.deepStrictEqual([state.open, state.finished], [2, 1]);
+  await session.stop();
+});
+
+test('a line the session refuses because it stopped stops the audio, though no event came', async () => {
+  const { state, adapter } = heldOpen();
+  // Events never arrive: no stream, and an empty log.
+  const session = await startSession({
+    adapters: { default: adapter },
+    onError: () => {},
+    fetch: (request) => (new URL(request.url).pathname.startsWith('/platform/events')
+      ? Promise.resolve(new Response(null, { status: 501 }))
+      : mock.fetch(request)),
+  });
+  await session.connect(null);
+  // Paused behind the software's back, as a lost event would leave it.
+  await send('POST', `/communication/transcription-sessions/${session.id}/pause`, { at: '2026-10-12T10:01:00Z' });
+  state.report.add({ key: 'late', text: 'Said after the pause.', start: 70, end: 71 });
+  await until(() => state.finished === 1);
 });

@@ -14,6 +14,7 @@ import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser'
 import { encodeMessage, decodeMessage, decodeMessages } from '../src/client/adapters/aws/eventstream.js';
 import { createAwsTranscribeAdapter, createTranscriptionClient } from '../src/client/index.js';
 import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
+import { sdkFor } from './sdk.js';
 
 const aws = new EventStreamCodec(toUtf8, fromUtf8);
 const RESULTS = JSON.parse(readFileSync(new URL('./fixtures/transcribe-results.json', import.meta.url), 'utf8')).events;
@@ -187,8 +188,7 @@ test('end to end: the server adapter issues a presigned URL, and the page stream
   }))).json();
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
   const client = createTranscriptionClient({
-    fetch: (request) => mock.fetch(request),
-    headers: { 'x-caller-id': 'worker-1' },
+    ...sdkFor((request) => mock.fetch(request)),
     audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 },
     adapters: { 'aws-transcribe': createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),

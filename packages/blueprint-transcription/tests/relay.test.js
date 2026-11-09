@@ -16,6 +16,7 @@ import yaml from 'js-yaml';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
 import { createRelayAdapter, createTranscriptionClient, RELAY_PROTOCOL } from '../src/client/index.js';
 import { createFakeRelay, createInPageSocket } from '../src/fakes/index.js';
+import { sdkFor } from './sdk.js';
 
 // The relay contract and the files it refers to, each under the address its
 // refs name it by, as the harness resolves them.
@@ -159,8 +160,7 @@ test('end to end: a session streams through a relay, and a drop is reconnected w
   }))).json();
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'google-cloud-speech', languages: ['en-US'] });
   const client = createTranscriptionClient({
-    fetch: (request) => mock.fetch(request),
-    headers: { 'x-caller-id': 'worker-1' },
+    ...sdkFor((request) => mock.fetch(request)),
     audio: FORMAT,
     adapters: { [RELAY_PROTOCOL]: createRelayAdapter({ WebSocket }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),

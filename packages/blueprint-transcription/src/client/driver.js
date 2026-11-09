@@ -5,9 +5,11 @@
  * action, so no adapter holds any session logic and every adapter works the
  * same way. See docs/architecture/cross-cutting/browser-vendor-stream.md.
  *
- * It calls the session's actions through the blueprint's API with the fetch
- * it's given: in a page, the in-page mock's fetch, which routing sends on to
- * wherever each operation is answered.
+ * It calls the session's actions through the session's SDK, generated from
+ * the contracts (blueprint-generate-ts-clients --client=fetch), and follows
+ * the session's events through the platform's events SDK: the page generates
+ * both from its contracts and configures their clients — where they're
+ * served, who's calling, and in a page, the in-page mock's fetch.
  *
  * A client adapter is an object with:
  *   - `open({ connection, format, audio, report })`: open a connection with
@@ -25,7 +27,10 @@
  *     a service that takes a fresh credential during a connection.
  */
 
-const SESSIONS = 'transcription-sessions';
+import { followEvents } from './follow.js';
+
+// The session's events that mean no audio may go out, whoever caused them.
+const STOPPED = new Set(['paused', 'closed', 'failed']);
 
 /** An action the session refused, or a call that failed. */
 export class SessionError extends Error {
@@ -38,18 +43,21 @@ export class SessionError extends Error {
   }
 }
 
+/** The SDK function for an action: `get-connection` → `getConnectionTranscriptionSession`. */
+const operationFor = (action) => `${action.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}TranscriptionSession`;
+
 /**
  * @param {object} options
+ * @param {object} options.sessions - the transcription sessions SDK, generated from the contracts
+ * @param {object} options.events - the platform events SDK, generated from the contracts
+ * @param {Function} [options.fetch] - the fetch the events SDK's client is
+ *   configured with: the driver watches the event stream's answers through it
  * @param {object} options.adapters - client adapters by the service they speak
  *   (a transcription-services entry, such as `aws-transcribe`), or by the
  *   subprotocol, for a relay (`RELAY_PROTOCOL`), which is chosen first;
  *   `default` answers for any other.
  * @param {object} options.audio - the AudioFormat the software sends.
  * @param {string[]} [options.protocols] - what it can connect over.
- * @param {Function} [options.fetch] - `fetch`'s signature; the in-page mock's in a page.
- * @param {string} [options.baseUrl] - where the communication domain is served.
- * @param {object|Function} [options.headers] - sent with every call, such as
- *   who the caller is; a function is asked each time, for a token that renews.
  * @param {Function} [options.speakerFor] - a Speaker for a service's label, when the adapter gives none.
  * @param {number} [options.retries] - reconnects to try before giving up.
  * @param {Function} [options.retryDelay] - milliseconds to wait before reconnect n (from 0).
@@ -58,12 +66,12 @@ export class SessionError extends Error {
  * @param {Function} [options.onError] - told of a report the session refused.
  */
 export function createTranscriptionClient({
+  sessions,
+  events,
+  fetch,
   adapters,
   audio,
   protocols = ['websocket'],
-  fetch: send = globalThis.fetch,
-  baseUrl = 'http://localhost/communication',
-  headers = {},
   speakerFor = () => 'unknown',
   retries = 3,
   retryDelay = (n) => 1000 * 2 ** n,
@@ -71,22 +79,33 @@ export function createTranscriptionClient({
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   onError = (error) => console.error(error),
 }) {
+  if (!sessions || !events) throw new Error('createTranscriptionClient: give the sessions and events SDKs generated from your contracts');
   if (!adapters || !Object.keys(adapters).length) throw new Error('createTranscriptionClient: give at least one client adapter');
   if (!audio) throw new Error('createTranscriptionClient: say what audio the software sends');
 
-  async function call(method, path, body, label) {
-    const response = await send(new Request(`${baseUrl}/${path}`, {
-      method,
-      headers: { ...(typeof headers === 'function' ? await headers() : headers), 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    }));
-    const text = await response.text();
-    const parsed = text ? JSON.parse(text) : null;
-    if (!response.ok) throw new SessionError(label, response.status, parsed);
-    return parsed;
+  /** Call an SDK function, giving its data or throwing what the session answered. */
+  async function call(operation, options, label = operation) {
+    const { data, error, response } = await sessions[operation](options);
+    if (!response?.ok) throw new SessionError(label, response?.status, error);
+    return data;
   }
+  const act = (id, action, body) => call(operationFor(action), {
+    path: { transcriptionSessionId: id },
+    ...(body !== undefined && { body }),
+  }, action);
+  const get = (id) => call('getTranscriptionSession', { path: { transcriptionSessionId: id } });
 
-  const options = { adapters, audio, protocols, speakerFor, retries, retryDelay, now, sleep, onError, call };
+  // The session can pause or close without the software asking — when its
+  // transcript does — so the software follows its events, and stops sending
+  // audio then (the session's state machine says so).
+  const follow = (session, onEvent) => followEvents({
+    events,
+    fetch,
+    filters: { subject: session.id, type: 'communication.transcription_session.*' },
+    onEvent,
+  });
+
+  const options = { adapters, audio, protocols, speakerFor, retries, retryDelay, now, sleep, onError, act, get, follow };
 
   return {
     /**
@@ -95,8 +114,10 @@ export function createTranscriptionClient({
      * `model` unless the profile's service is `none`.
      */
     async start(fields) {
-      const record = await call('POST', SESSIONS, fields, 'createTranscriptionSession');
-      return new Session(record, options);
+      const record = await call('createTranscriptionSession', { body: fields });
+      const session = new Session(record, options);
+      session.follow();
+      return session;
     },
   };
 }
@@ -108,6 +129,7 @@ class Session {
   #renewTimer = null;
   #ending = false;
   #audio = null;
+  #following = null;
   // What the adapter reports, told to the session one at a time and in order,
   // once it knows the connection is open: text can arrive before it does.
   #queue = Promise.resolve();
@@ -118,12 +140,36 @@ class Session {
   }
 
   get id() { return this.record.id; }
+
+  /**
+   * Follow the session's events. One that means no audio may go out —
+   * paused, closed, failed — closes the connection, whoever caused it. Called
+   * by `start`.
+   */
+  follow() {
+    this.#following ??= this.#o.follow(this, (event) => this.#heard(event));
+  }
+
+  async #heard(event) {
+    const what = event.type.slice(event.type.lastIndexOf('.') + 1);
+    if (!STOPPED.has(what)) return;
+    if (what !== 'paused') { this.#following?.stop(); this.#following = null; }
+    try {
+      await this.#stopAudio();
+    } catch (error) { this.#o.onError(error); }
+  }
+
+  // No audio goes out: the connection closes, and the record is read again.
+  async #stopAudio() {
+    if (this.#handle) await this.#close();
+    this.record = await this.#o.get(this.id);
+  }
   get status() { return this.record.status; }
 
-  async #act(action, body = {}) {
-    const answer = await this.#o.call('POST', `${SESSIONS}/${this.id}/${action}`, body, action);
+  async #act(action, body) {
+    const answer = await this.#o.act(this.id, action, body);
     if (answer?.status) this.record = answer;
-    else this.record = await this.#o.call('GET', `${SESSIONS}/${this.id}`, undefined, 'getTranscriptionSession');
+    else this.record = await this.#o.get(this.id);
     return answer;
   }
 
@@ -225,8 +271,13 @@ class Session {
 
   #report() {
     const speaker = (line) => line.speaker ?? this.#o.speakerFor(line.speakerLabel);
+    // A line the session refuses may mean it stopped without the software
+    // hearing yet: it's read again, and the audio stopped if so.
     const tell = (action, body) => {
-      this.#queue = this.#queue.then(() => this.#act(action, body)).catch(this.#o.onError);
+      this.#queue = this.#queue.then(() => this.#act(action, body)).catch((error) => {
+        this.#o.onError(error);
+        this.#checkStopped();
+      });
     };
     return {
       update: (line) => tell('update-line', {
@@ -244,6 +295,13 @@ class Session {
       }),
       dropped: () => { this.#queue = this.#queue.then(() => this.#dropped()); },
     };
+  }
+
+  async #checkStopped() {
+    try {
+      const record = await this.#o.get(this.id);
+      if (STOPPED.has(record.status) && this.#handle) await this.#stopAudio();
+    } catch { /* told already */ }
   }
 
   async #dropped() {
