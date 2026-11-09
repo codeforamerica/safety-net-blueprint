@@ -282,7 +282,11 @@ $defs:
         transition  — if present, the handler acts on the machine's record whose id is
                       the event's subject, which must exist; from limits source states.
                       An event whose subject names no such record, or a record in
-                      another state, is skipped.
+                      another state, is skipped. For an event about another
+                      resource, it acts on each of the machine's records that name
+                      the event's subject through the one field declaring
+                      x-relationship to that resource — a session following its
+                      transcript; validation refuses none or more than one.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.

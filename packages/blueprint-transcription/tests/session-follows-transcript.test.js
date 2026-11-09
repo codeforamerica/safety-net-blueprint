@@ -4,7 +4,9 @@
  * by someone else, it stays paused. The session's own pause and stop still
  * work as before, with the reactions finding nothing to do.
  *
- * The contract alone, through the mock's HTTP API, with no driver.
+ * The contract alone, through the mock's HTTP API, with no driver. The
+ * session's reactions find it through its transcriptId, so it publishes no
+ * action for them.
  */
 
 import { test, beforeEach } from 'node:test';
@@ -116,8 +118,9 @@ test('the session\'s own pause and stop work as before', async () => {
   assert.strictEqual(await statusOf(path), 'closed');
 });
 
-test('only the session\'s reactions can call the follow actions', async () => {
+test('following the transcript publishes no action of its own', async () => {
   const { path } = await connected();
-  const refused = await send('POST', `${path}/transcript-paused`, {});
-  assert.strictEqual(refused.status, 403, JSON.stringify(refused.body));
+  for (const action of ['transcript-paused', 'transcript-closed']) {
+    assert.strictEqual((await send('POST', `${path}/${action}`, {})).status, 404, action);
+  }
 });

@@ -635,6 +635,31 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
       registerContext(proc.context, `${ctx}.procedures[${proc.id}].context`);
     }
 
+    // A transition on an event about another resource applies to this
+    // machine's records that name the event's subject, so exactly one field
+    // must relate them: through it, the engine finds which records.
+    if (objectEntry) {
+      for (const event of (machine.on || [])) {
+        if (!event.transition || aboutOwnResource(event.type, doc.domain, machine.object)) continue;
+        const parts = String(event.type ?? '').split('.');
+        if (parts.length < 3) continue;
+        const eventObject = parts[parts.length - 2];
+        const named = [...schemaIndex.keys()].find((name) => snakeCase(name) === eventObject);
+        const relating = [...objectEntry.properties]
+          .filter(([, property]) => named && property?.['x-relationship']?.resource === named)
+          .map(([field]) => field);
+        if (relating.length !== 1) {
+          errors.push({
+            rule: 'transition-on-unrelated-event',
+            message: relating.length === 0
+              ? `${event.type} is about ${named ?? `"${eventObject}"`}, and no field of ${machine.object} relates to it, so there's no record to transition. Declare the field with x-relationship, or drop transition: and work from $this.subject.`
+              : `${event.type} is about ${named}, and ${machine.object} relates to it through ${relating.join(' and ')}, so which records to transition is ambiguous.`,
+            path: `${ctx}.on[${event.type}].transition`,
+          });
+        }
+      }
+    }
+
     // Validate set: {field:} targets exist on object schema
     if (objectEntry) {
       for (const action of (machine.actions || [])) {

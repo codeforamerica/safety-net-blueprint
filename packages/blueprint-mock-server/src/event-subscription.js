@@ -20,6 +20,7 @@ import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from '
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
+import { referencesByTarget } from './references.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -273,6 +274,35 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.type}`);
   }
 
+  // Which resource each event names, and which records name each resource.
+  const resourceOfEvent = new Map();
+  for (const api of apiSpecs) {
+    for (const top of api.doc?.model?.()?.resources ?? []) {
+      for (const resource of [top, ...top.children, ...top.singletons]) {
+        if (resource.name && resource.eventName) resourceOfEvent.set(resource.eventName, resource.name);
+      }
+    }
+  }
+  const references = referencesByTarget(apiSpecs);
+
+  /**
+   * For a transition on an event about another resource, this machine's
+   * records that name the event's subject through a declared relationship
+   * (validation requires exactly one). Null when the event is about the
+   * machine's own resource: then the record is the subject.
+   */
+  function relatedRecords(smEntry, event) {
+    if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) return null;
+    const parts = String(event.type ?? '').split('.');
+    const named = resourceOfEvent.get(parts[parts.length - 2]);
+    const collection = collectionOf(smEntry);
+    const via = (references.get(named) ?? []).filter((reference) => reference.collection === collection);
+    if (via.length !== 1) return null;
+    const [{ path }] = via;
+    return store.findAll(collection, {}, { limit: null }).items
+      .filter((record) => path.reduce((value, key) => value?.[key], record) === event.subject);
+  }
+
   // Each subscription to an event's type handles it, in order with the
   // events before it that share its partitionkey (inOrder below). One whose
   // API's receive operation is routed doesn't run here: the event is
@@ -287,13 +317,20 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       if (!eventTypeMatches(event.type, entry.type)) continue;
       const api = routedEvents.apiOfFile.get(smEntry.api?.relativePath);
       if (routed.some((receive) => receive.api === api)) continue;
-      inOrder(event.partitionkey, () => react(smEntry, entry, event));
+      // A transition on an event about another resource applies to this
+      // machine's records that name it, through their declared relationship.
+      const related = entry.transition ? relatedRecords(smEntry, event) : null;
+      if (related) {
+        for (const record of related) inOrder(event.partitionkey, () => react(smEntry, entry, event, record));
+      } else {
+        inOrder(event.partitionkey, () => react(smEntry, entry, event));
+      }
     }
   };
 
   // One subscription handling one event. What it returns settles when the
   // reaction, and every call it makes, is done.
-  function react(smEntry, entry, event) {
+  function react(smEntry, entry, event, relatedRecord = null) {
     try {
       const now = new Date().toISOString();
       const caller = theSystem();
@@ -309,7 +346,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
           return;
         }
-        const found = store.findById(targetCollection, event.subject);
+        const found = relatedRecord ?? store.findById(targetCollection, event.subject);
         if (!found) {
           console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
           return;
@@ -465,7 +502,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
         // Handle events emitted directly by onEvent steps
         const domain = smEntry.domain;
-        const subjectId = entry.transition ? event.subject : null;
+        // The record transitioned: the subject, or one naming it.
+        const recordId = relatedRecord?.id ?? event.subject;
+        const subjectId = entry.transition ? recordId : null;
         const allPendingEvents = [...(pendingEvents || [])];
 
         // Procedure calls (call: steps in on: blocks) run before anything is
@@ -495,7 +534,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               }
             }
             if (Object.keys(diff).length > 0) {
-              store.update(targetCollection, event.subject, diff);
+              store.update(targetCollection, recordId, diff);
             }
           }
 
