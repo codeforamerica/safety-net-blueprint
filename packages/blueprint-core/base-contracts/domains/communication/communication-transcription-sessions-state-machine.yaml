@@ -298,6 +298,50 @@ machines:
           to: failed
         steps:
           - emit: failed
+      # The transcript can be paused or closed by someone else, or close itself
+      # when idle. The session follows, so the software stops sending audio.
+      # Only the session's own reactions call these.
+      - id: transcript-paused
+        description: The transcript was paused by someone other than this session. The software closes the connection.
+        guards:
+          - actors: [system]
+        transition:
+          from: [connecting, connected, disconnected]
+          to: paused
+        steps:
+          - emit: paused
+      - id: transcript-closed
+        description: The transcript was closed by someone other than this session, or closed itself when idle. The software closes the connection.
+        guards:
+          - actors: [system]
+        transition:
+          from: [connecting, connected, disconnected, paused, stopping]
+          to: closed
+        steps:
+          - emit: closed
+    # Resuming isn't followed: only the software that's capturing the audio
+    # starts sending it again.
+    on:
+      - type: communication.transcript.paused
+        description: Follow the transcript off the record.
+        context:
+          - session:
+              from: communication/transcription-sessions
+              where: item.transcriptId == this.subject && item.status in ["connecting", "connected", "disconnected"]
+        steps:
+          - if: session != null
+            then:
+              - call: {POST: communication/transcription-sessions/$session.id/transcript-paused}
+      - type: communication.transcript.closed
+        description: Follow the transcript closed.
+        context:
+          - session:
+              from: communication/transcription-sessions
+              where: item.transcriptId == this.subject && item.status in ["connecting", "connected", "disconnected", "paused", "stopping"]
+        steps:
+          - if: session != null
+            then:
+              - call: {POST: communication/transcription-sessions/$session.id/transcript-closed}
     resources:
       TranscriptionSession:
         create:
