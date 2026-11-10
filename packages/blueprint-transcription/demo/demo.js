@@ -20,9 +20,11 @@
 
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
 import { wrap } from '@codeforamerica/blueprint-mock-server/worker';
+import { createSequence } from '@codeforamerica/blueprint-explorer/sequence';
 import contracts from '../../blueprint-harness/generated/mock/contracts.json';
 import script from './interview.md';
 import { recordingFromScript } from './script-to-recording.js';
+import { SCENARIOS } from './scenarios.js';
 import { createTranscriptionClient, createRelayAdapter, RELAY_PROTOCOL } from '../src/client/index.js';
 import { createFakeAdapter, createWorkerWebSocket } from '../src/fakes/index.js';
 // The SDK generated from the contracts (npm run sdk), as a developer generates theirs.
@@ -31,25 +33,33 @@ import { client as sessionsClient } from '../generated/sdk/communication-transcr
 import * as events from '../generated/sdk/platform-events/index.ts';
 import { client as eventsClient } from '../generated/sdk/platform-events/client.gen.ts';
 
-/* global WORKER_SOURCE */
+/* global WORKER_SOURCE, REFS */
 
 const $ = (id) => document.getElementById(id);
 const AUDIO = { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 };
 const CALLER = { 'x-caller-id': 'demo-worker' };
 const SPEAKERS = { spk_0: 'Worker', spk_1: 'Applicant' };
 
-/** The lifelines, left to right. */
-const LANES = ['browser', 'server', 'service'];
-const center = (lane) => (2 * LANES.indexOf(lane) + 1) / 6;
+/**
+ * What a step uses, as the contracts name it, linked to where it's declared;
+ * found at build time (scripts/build-demo.js).
+ */
+const refs = (...keys) => keys.map((key) => REFS[key]).filter(Boolean);
 
 let pageMock;
+/** The diagram (the explorer's sequence view). */
+let sequence;
 /** The state's side, in a worker: `server.fetch`, `server.connect`. */
 let server;
 let control;
 let session = null;
+/** The scenario playing (scenarios.js), and how far through its beats. */
+let scenario = SCENARIOS[0];
+let beat = 0;
 let mode = 'fake';
 let audio = null;
-let drop = null;
+/** How fast a recording plays. */
+const SPEED = 1.5;
 /** Each sentence's row, by the service's key for it. */
 let sentences = new Map();
 /** Which sentence a finished line's text is, to put its save on its row. */
@@ -84,13 +94,80 @@ function next() {
   go?.();
 }
 
-/** The fakes' clock: when stepping, a finished sentence waits for Next. */
+/** What each of a scenario's beats is called, as Next names it. */
+const BEAT_NAMES = {
+  say: 'the next sentence',
+  drop: 'the connection drops',
+  pause: 'go off the record',
+  resume: 'go back on the record',
+  stop: 'finish',
+  'pause-elsewhere': 'someone else pauses the transcript',
+};
+
+/**
+ * The fakes' clock, which is where the scenario moves on: after each finished
+ * sentence, the next beats. A drop is in the recording, so it plays on; the
+ * worker's own beats run here, and the recording waits until they close the
+ * connection or open a new one.
+ */
 async function sleep(ms) {
   if (sentenceDone) {
     sentenceDone = false;
-    await step('the next sentence');
+    beat += 1;
+    if (scenario.beats[beat] === 'drop') {
+      beat += 1;
+      await step(BEAT_NAMES.drop);
+    } else if (scenario.beats[beat] && scenario.beats[beat] !== 'say') {
+      runBeats();
+      return new Promise(() => {});
+    } else {
+      await step(BEAT_NAMES.say);
+    }
   }
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** The scenario's beats from here to its next sentence, one step each. */
+async function runBeats() {
+  while (scenario.beats[beat] && !['say', 'drop'].includes(scenario.beats[beat])) {
+    const action = scenario.beats[beat];
+    beat += 1;
+    await step(BEAT_NAMES[action]);
+    try {
+      await perform(action);
+    } catch (error) {
+      row().arrow('browser', null, error.message, { warn: true });
+    }
+    refresh();
+  }
+}
+
+async function perform(action) {
+  if (action === 'pause') await session.pause();
+  else if (action === 'resume') await session.resume();
+  else if (action === 'stop') {
+    await session.stop();
+    audio.state.done = true;
+  } else if (action === 'pause-elsewhere') {
+    await pauseElsewhere();
+  }
+}
+
+/**
+ * A supervisor pauses the transcript on the server, with no part in the
+ * browser asking. The session follows its transcript, and the driver stops
+ * the audio.
+ */
+async function pauseElsewhere() {
+  const request = new Request(`http://localhost/communication/transcripts/${session.record.transcriptId}/pause`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-caller-id': 'supervisor-1' },
+    body: JSON.stringify({ at: new Date().toISOString() }),
+  });
+  const note = row({ text: 'A supervisor pauses the transcript', style: 'aside' })
+    .arrow('server', null, 'paused by a supervisor')
+    .uses('transcriptPause');
+  await exchange(note, request, await server.fetch(request.clone()));
 }
 
 /** Waits for Next before the browser connects to the service. */
@@ -106,59 +183,29 @@ const pretty = (value) => (typeof value === 'string' ? value : JSON.stringify(va
 const pathOf = (url) => decodeURIComponent(new URL(url).pathname);
 
 /**
- * A row of the diagram: what the worker sees on the left, arrows on the
- * right. Clicking an arrow shows its details under the row.
+ * A row of the diagram: what the worker sees beside it, and its messages.
+ * Each message opens to what passed, and what it uses from the contracts.
  */
-function row(worker = '', { className = '' } = {}) {
-  const flow = $('flow');
-  const el = document.createElement('div');
-  el.className = 'row';
-  el.innerHTML = `<div class="worker ${className}">${worker}</div><div class="lanes"></div><div class="detail" hidden></div>`;
-  const atBottom = flow.scrollHeight - flow.scrollTop - flow.clientHeight < 60;
-  flow.append(el);
-  if (atBottom) flow.scrollTop = flow.scrollHeight;
-  const lanes = el.querySelector('.lanes');
-  const detail = el.querySelector('.detail');
-  let shown = null;
-
-  const r = {
-    worker(html, cls = '') {
-      const cell = el.querySelector('.worker');
-      cell.innerHTML = html;
-      cell.className = `worker ${cls}`;
-      return r;
-    },
-    /** An arrow from one lifeline to another, or a note on one when `to` is null. */
-    arrow(from, to, label, { warn = false } = {}) {
-      const blocks = new Map();
-      const wrap = document.createElement('div');
-      wrap.className = 'step';
-      const a = center(from);
-      const b = to ? center(to) : a;
-      const left = Math.min(a, b);
-      const width = Math.abs(a - b);
-      wrap.innerHTML = to
-        ? `<button class="arrow ${b < a ? 'leftward' : ''} ${warn ? 'warn' : ''}" style="left:${left * 100}%;width:${width * 100}%"><span class="label"></span></button>`
-        : `<button class="note ${warn ? 'warn' : ''}" style="left:${a * 100}%"><span class="label"></span></button>`;
-      lanes.append(wrap);
-      const button = wrap.querySelector('button');
-      const show = () => {
-        detail.hidden = false;
-        detail.innerHTML = [...blocks].map(([k, v]) => `<h4>${escape(k)}</h4><pre>${escape(pretty(v))}</pre>`).join('');
-        for (const other of el.querySelectorAll('button.open')) other.classList.remove('open');
-        button.classList.add('open');
-      };
-      button.addEventListener('click', () => {
-        if (shown === arrow) { shown = null; detail.hidden = true; button.classList.remove('open'); } else { shown = arrow; show(); }
-      });
-      const arrow = {
-        label(text) { button.querySelector('.label').textContent = text; return arrow; },
-        detail(k, v) { blocks.set(k, v); button.classList.add('has-detail'); if (shown === arrow) show(); return arrow; },
-      };
-      return arrow.label(label);
+function row(caption) {
+  const r = sequence.row({ caption });
+  const step = (m) => {
+    const handle = {
+      detail(title, value) { m.update({ details: { [title]: value } }); return handle; },
+      label(text) { m.update({ text }); return handle; },
+      uses(...keys) { m.update({ refs: refs(...keys) }); return handle; },
+      explain(text) { m.update({ explain: text }); return handle; },
+    };
+    return handle;
+  };
+  return {
+    worker(next) { r.caption(next); },
+    /** A message between participants, or a note over one when `to` is null. */
+    arrow(from, to, text, { warn = false, kind } = {}) {
+      return step(to
+        ? r.message({ from, to, text, warn, kind: kind ?? (from === 'browser' && to === 'server' ? 'call' : 'async') })
+        : r.note({ over: from, text, warn }));
     },
   };
-  return r;
 }
 
 /** A request and its response, as details on an arrow. */
@@ -178,11 +225,10 @@ function hear(key, text, final, speakerLabel, message) {
   let sentence = sentences.get(key);
   if (!sentence) {
     const r = row();
-    sentence = { row: r, heard: r.arrow('service', 'browser', ''), sent: [] };
+    sentence = { row: r, heard: r.arrow('service', 'browser', '').uses(...(mode === 'relay' ? ['relayResult'] : []), 'sdkUpdateLine'), sent: [] };
     sentences.set(key, sentence);
   }
-  const who = `<b>${SPEAKERS[speakerLabel] ?? 'Unknown'}</b> `;
-  sentence.row.worker(`${who}${escape(text)}${final ? '' : '…'}`, final ? '' : 'progress');
+  sentence.row.worker({ who: SPEAKERS[speakerLabel] ?? 'Unknown', text: `${text}${final ? '' : '…'}`, style: final ? '' : 'progress' });
   sentence.sent.push(`${final ? 'final  ' : 'partial'}  “${text}”`);
   sentence.heard.label(final ? 'heard' : 'hearing…')
     .detail('What the service sent for this sentence, in order',
@@ -210,7 +256,7 @@ function overTheWire(from, data) {
   if (typeof data !== 'string') {
     audioFrames += 1;
     if (!audioArrow) {
-      audioArrow = row().arrow(a, b, '').detail('Audio', `Binary WebSocket frames of ${data.byteLength} bytes: 100 ms each of ${AUDIO.encoding} at ${AUDIO.sampleRateHertz} Hz. It keeps streaming while the rows below happen.`);
+      audioArrow = row().arrow(a, b, '').uses('relayAudio').detail('Audio', `Binary WebSocket frames of ${data.byteLength} bytes: 100 ms each of ${AUDIO.encoding} at ${AUDIO.sampleRateHertz} Hz. It keeps streaming while the rows below happen.`);
     }
     audioArrow.label(`audio, ${(audioFrames / 10).toFixed(0)} s`);
     return;
@@ -223,7 +269,7 @@ function overTheWire(from, data) {
   // Keepalives come every few seconds while nothing else is said; they ride on the audio arrow.
   if (message.type === 'keepalive' && audioArrow) { audioArrow.detail('Latest keepalive', message); return; }
   const label = { start: 'start', started: 'started', end: 'end', ended: 'ended', keepalive: 'keepalive' }[message.type] ?? message.type;
-  row().arrow(a, b, label, { warn: message.type === 'error' }).detail(`Message (${RELAY_PROTOCOL})`, message);
+  row().arrow(a, b, label, { warn: message.type === 'error' }).detail(`Message (${RELAY_PROTOCOL})`, message).uses(`relay${message.type[0].toUpperCase()}${message.type.slice(1)}`);
 }
 
 /** The fake adapter, as the service it stands in for, with a way to drop its connection. */
@@ -231,8 +277,8 @@ function fakeAdapter(recording, speed) {
   const fake = createFakeAdapter(recording, { speed, sleep });
   return {
     async open(args) {
-      row().arrow('browser', 'service', 'connect')
-        .detail('How', `A WebSocket to ${args.connection.url}, the address the server answered with. The stand-in doesn't open it; it plays a recording. A real adapter does: for Amazon Transcribe, the address itself carries a signed credential that expires in ${args.connection.expiresIn} seconds, and audio and results then pass over that socket in Transcribe's own binary format.`)
+      row().arrow('browser', 'service', 'connect', { kind: 'call' })
+        .detail('How', `A WebSocket to ${args.connection.url}, the address the server answered with. The fake adapter doesn't open it; it plays a recording. A real adapter does: for Amazon Transcribe, the address itself carries a signed credential that expires in ${args.connection.expiresIn} seconds, and audio and results then pass over that socket in Transcribe's own binary format.`)
         .detail('What the server answered', args.connection);
       const report = {
         update: (line) => { hear(line.key, line.text, false, line.speakerLabel, line); args.report.update(line); },
@@ -244,11 +290,10 @@ function fakeAdapter(recording, speed) {
         },
       };
       const handle = await fake.open({ ...args, report });
-      drop = async () => { await handle.finish(); report.dropped(); };
       return {
         finish: async () => {
           row().arrow('browser', 'service', 'disconnect')
-            .detail('What passed', 'Nothing here: the stand-in plays a recording and just stops. A real vendor is told the audio is over in its own way. Amazon Transcribe, for one, gets an empty audio message, sends its last results, and closes.');
+            .detail('What passed', 'Nothing here: the fake adapter plays a recording and just stops. A real vendor is told the audio is over in its own way. Amazon Transcribe, for one, gets an empty audio message, sends its last results, and closes.');
           await handle.finish();
         },
       };
@@ -274,42 +319,44 @@ function transcriptArrow(request, body) {
   const path = pathOf(request.url);
   if (path.endsWith('/entries') && body?.text) {
     const sentence = sentences.get(keyByText.get(body.text));
-    if (sentence) return sentence.row.arrow('browser', 'server', 'save');
-    return row(`<b>${SPEAKERS[body.speaker] ?? ''}</b> ${escape(body.text)}`).arrow('browser', 'server', 'save');
+    if (sentence) return sentence.row.arrow('browser', 'server', 'save').uses('sdkAddLine', 'addTranscriptEntry');
+    return row({ who: SPEAKERS[body.speaker] ?? '', text: body.text }).arrow('browser', 'server', 'save').uses('sdkAddLine', 'addTranscriptEntry');
   }
-  if (path.endsWith('/entries') && body?.kind === 'gap') return row('Nothing captured while the connection was down', { className: 'gap' }).arrow('browser', 'server', 'record the gap');
-  if (path.endsWith('/pause')) return row('Off the record', { className: 'aside' }).arrow('browser', 'server', 'pause');
-  if (path.endsWith('/resume')) return row('Back on the record', { className: 'aside' }).arrow('browser', 'server', 'resume');
-  const label = request.method === 'POST' && path.endsWith('/transcripts') ? 'start a transcript'
-    : path.endsWith('/get-connection') ? 'how do I reach the service?'
-      : path.endsWith('/renew-connection') ? 'fresh pass, please'
-        : path.endsWith('/close') ? 'close the transcript'
-          : `${request.method} ${path}`;
-  return row().arrow('browser', 'server', label);
+  if (path.endsWith('/entries') && body?.kind === 'gap') return row({ text: 'Nothing captured while the connection was down', style: 'warn' }).arrow('browser', 'server', 'record the gap').uses('sdkConnect', 'addTranscriptEntry');
+  if (path.endsWith('/pause')) return row({ text: 'Off the record', style: 'aside' }).arrow('browser', 'server', 'pause').uses('sdkPause', 'transcriptPause');
+  if (path.endsWith('/resume')) return row({ text: 'Back on the record', style: 'aside' }).arrow('browser', 'server', 'resume').uses('sdkResume', 'transcriptResume');
+  if (request.method === 'POST' && path.endsWith('/transcripts')) return row().arrow('browser', 'server', 'start a transcript').uses('sdkGetConnection', 'createTranscript');
+  if (path.endsWith('/get-connection')) return row().arrow('browser', 'server', 'how do I reach the service?').uses('sdkGetConnection', 'transcriptGetConnection', 'issueConnection');
+  if (path.endsWith('/renew-connection')) return row().arrow('browser', 'server', 'fresh pass, please').uses('sdkRenew', 'transcriptGetConnection', 'issueConnection');
+  if (path.endsWith('/close')) return row().arrow('browser', 'server', 'close the transcript').uses('sdkClose', 'transcriptClose');
+  return row().arrow('browser', 'server', `${request.method} ${path}`);
 }
 
 function showMode() {
-  $('service-lane').textContent = mode === 'relay' ? 'Relay (stand-in)' : 'Service (stand-in)';
+  sequence.participant('service', { name: mode === 'relay' ? 'Relay' : 'Service' });
 }
 
 async function start() {
   if (audio) audio.state.done = true;
   next();
   sentenceDone = false;
+  scenario = SCENARIOS.find((s) => s.id === $('scenario').value) ?? SCENARIOS[0];
+  beat = 0;
+  received = [];
   sentences = new Map();
   keyByText = new Map();
   audioArrow = null;
   audioFrames = 0;
-  $('flow').innerHTML = '';
+  sequence.clear();
   drawFollowing();
-  mode = $('mode').value;
+  mode = scenario.via === 'relay' ? 'relay' : 'fake';
   showMode();
-  const speed = Number($('speed').value);
-  const recording = recordingFromScript(script);
+  const speed = SPEED;
+  const recording = recordingFromScript(script, { beats: scenario.beats });
 
   let adapters;
   if (mode === 'relay') {
-    await configureRelay(speed);
+    await configureRelay(speed, scenario.beats);
     const Base = createWorkerWebSocket(() => server.connect('relay'), { tap: overTheWire });
     adapters = {
       [RELAY_PROTOCOL]: stepped(createRelayAdapter({
@@ -317,12 +364,9 @@ async function start() {
           constructor(url, protocols) {
             super(url, protocols);
             audioArrow = null;
-            row().arrow('browser', 'service', 'connect')
+            row().arrow('browser', 'service', 'connect', { kind: 'call' })
+              .uses('relayChannel')
               .detail('How', `A WebSocket to ${url}, the address the server answered with. Audio goes over it as binary frames and everything else as JSON messages, as the relay contract says.\n\nSec-WebSocket-Protocol: ${[].concat(protocols).join(', ')}\n\nThe token travels beside the subprotocol, not in the URL, which servers log.`);
-            drop = () => {
-              row().arrow('service', 'browser', 'connection dropped', { warn: true }).detail('What passed', 'The socket closed without an end message. The browser will ask the server for a fresh pass and reconnect.');
-              this.close();
-            };
           }
         },
       })),
@@ -352,17 +396,6 @@ async function start() {
   refresh();
 }
 
-const act = (name) => async () => {
-  try {
-    if (name === 'drop') await drop?.();
-    else await session[name]();
-    if (name === 'stop' && audio) audio.state.done = true;
-  } catch (error) {
-    row().arrow('browser', null, error.message, { warn: true });
-  }
-  refresh();
-};
-
 const serverCall = async (method, path, body) => (await server.fetch(new Request(`http://localhost${path}`, {
   method, headers: { 'content-type': 'application/json', ...CALLER }, body: body && JSON.stringify(body),
 }))).json();
@@ -372,18 +405,25 @@ const serverCall = async (method, path, body) => (await server.fetch(new Request
  * opens; each run's diagram starts with it.
  */
 let following = null;
+let followArrow = null;
+/** The stream's response: its status and headers, and what this run has received on it, as it came. */
+let streamHead = '';
+let received = [];
+const streamResponse = () => `${streamHead}\n\n${received.join('\n\n')}`;
 function drawFollowing() {
   if (!following) return;
-  row().arrow('browser', 'server', 'follow the transcript\'s events')
+  followArrow = row().arrow('browser', 'server', 'follow the transcript\'s events', { kind: 'async' })
+    .uses('streamEvents', 'sessionFollowsPaused', 'sessionFollowsClosed')
     .detail('Request (HTTPS)', following)
-    .detail('Why', 'The session runs here, in the browser; its transcript is on the server. The session follows the transcript: paused or closed by someone else, it pauses or closes too. So the browser\'s mock reads the server\'s event stream, open since the page loaded, and handles each event as its own.');
+    .detail('Response, so far this run', streamResponse())
+    .detail('Why', 'The session runs in the browser and its transcript on the server. The session follows its transcript: when someone else pauses or closes the transcript, the session pauses or closes too. So the browser reads the server\'s events.');
 }
 
-/** The worker's relay plays at this speed for the run about to start. */
-function configureRelay(speed) {
+/** The worker's relay plays this scenario's recording, at this speed. */
+function configureRelay(speed, beats) {
   return new Promise((resolve) => {
     configured = resolve;
-    control.postMessage({ type: 'configure', speed });
+    control.postMessage({ type: 'configure', speed, beats });
   });
 }
 let configured = null;
@@ -405,6 +445,8 @@ function answerControl({ data: message }) {
  * transcript are drawn as they arrive, the rest pass by.
  */
 function watchEvents(response) {
+  streamHead = `${response.status} ${response.statusText}`.trim()
+    + [...response.headers].map(([k, v]) => `\n${k}: ${v}`).join('');
   const [mine, theirs] = response.body.tee();
   (async () => {
     const reader = mine.pipeThrough(new TextDecoderStream()).getReader();
@@ -420,11 +462,14 @@ function watchEvents(response) {
         const data = block.match(/^data: (.*)$/m)?.[1];
         if (!data) continue;
         const event = JSON.parse(data);
+        received.push(block);
+        followArrow?.detail('Response, so far this run', streamResponse());
         const what = event.type.split('.').pop();
         if (!['paused', 'resumed', 'closed'].includes(what)) continue;
-        row(`The transcript is ${what === 'resumed' ? 'back on the record' : what}`, { className: 'aside' })
+        row({ text: `The transcript is ${what === 'resumed' ? 'back on the record' : what}`, style: 'aside' })
           .arrow('server', 'browser', `transcript ${what}`)
-          .detail('The event, as the server streamed it', event);
+          .detail('The event, as the server streamed it', event)
+          .uses(`event${what[0].toUpperCase()}${what.slice(1)}`, ...(what === 'resumed' ? [] : [`sessionFollows${what[0].toUpperCase()}${what.slice(1)}`]));
       }
     }
   })().catch(() => {});
@@ -442,22 +487,21 @@ function canStart() {
 }
 
 function refresh() {
-  const status = session?.status ?? 'none';
   const startable = canStart();
   $('step').disabled = !startable && !waiting;
   $('run').disabled = !startable && !stepping;
-  const allowed = {
-    pause: status === 'connected',
-    resume: status === 'paused',
-    drop: status === 'connected',
-    stop: ['connected', 'paused', 'disconnected'].includes(status),
-  };
-  for (const [name, on] of Object.entries(allowed)) $(name).disabled = !on;
-  $('mode').disabled = !startable;
-  $('speed').disabled = stepping && !startable;
+  $('scenario').disabled = !startable;
 }
 
 async function boot() {
+  sequence = createSequence($('flow'), {
+    captionTitle: 'What the worker sees',
+    participants: [
+      { id: 'browser', name: 'Browser' },
+      { id: 'server', name: 'Server' },
+      { id: 'service', name: 'Service' },
+    ],
+  });
   const quiet = { log: console.log, warn: console.warn };
   console.log = () => {}; console.warn = () => {};
   try {
@@ -478,7 +522,7 @@ async function boot() {
           // The page's mock following the server's events: one arrow, then
           // each event about the transcript as it arrives.
           if (path === '/platform/events/stream') {
-            following = `GET ${path}${new URL(request.url).search}\nAccept: text/event-stream`;
+            following = `GET ${path}${new URL(request.url).search}${[...request.headers].map(([k, v]) => `\n${k}: ${v}`).join('')}`;
             drawFollowing();
             return watchEvents(await server.fetch(request));
           }
@@ -511,8 +555,15 @@ async function boot() {
   };
   $('step').addEventListener('click', () => { stepping = true; if (canStart()) { begun = true; begin(); } else next(); refresh(); });
   $('run').addEventListener('click', () => { stepping = false; if (canStart()) begin(); else next(); refresh(); });
-  $('mode').addEventListener('change', () => { mode = $('mode').value; showMode(); });
-  for (const name of ['pause', 'resume', 'drop', 'stop']) $(name).addEventListener('click', act(name));
+  $('scenario').innerHTML = SCENARIOS.map((s) => `<option value="${s.id}">${escape(s.title)}</option>`).join('');
+  const describe = () => {
+    const chosen = SCENARIOS.find((s) => s.id === $('scenario').value);
+    $('summary').textContent = chosen.summary;
+    mode = chosen.via === 'relay' ? 'relay' : 'fake';
+    showMode();
+  };
+  $('scenario').addEventListener('change', describe);
+  describe();
   $('loading').hidden = true;
   // The session changes on its own too — a drop, a reconnect — so the
   // buttons follow it.

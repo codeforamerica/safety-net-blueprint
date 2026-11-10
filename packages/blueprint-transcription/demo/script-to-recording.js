@@ -11,15 +11,27 @@ const LINE = /^\*\*(Worker|Applicant)\.\*\* (.+)$/gm;
 /**
  * @param {string} script
  * @param {object} [options]
+ * @param {string[]} [options.beats] - a scenario's beats (scenarios.js): each
+ *   `say` takes the next line, and `drop` drops the connection there; every
+ *   line when not given
  * @param {number} [options.secondsPerWord]
  * @param {number} [options.pause] - seconds between lines
  * @returns {{ events: object[] }}
  */
-export function recordingFromScript(script, { secondsPerWord = 0.32, pause = 0.8 } = {}) {
+export function recordingFromScript(script, { beats, secondsPerWord = 0.32, pause = 0.8 } = {}) {
+  const lines = [...script.matchAll(LINE)].map(([, role, text]) => ({ role, text }));
+  const plan = beats ?? lines.map(() => 'say');
   const events = [];
   let at = 0.5;
   let n = 0;
-  for (const [, role, text] of script.matchAll(LINE)) {
+  for (const beat of plan) {
+    if (beat === 'drop') {
+      events.push({ at, type: 'drop' });
+      at += pause;
+      continue;
+    }
+    if (beat !== 'say' || n >= lines.length) continue;
+    const { role, text } = lines[n];
     n += 1;
     const key = `line-${n}`;
     const speakerLabel = role === 'Worker' ? 'spk_0' : 'spk_1';
@@ -35,5 +47,8 @@ export function recordingFromScript(script, { secondsPerWord = 0.32, pause = 0.8
     events.push({ at: end + 0.2, type: 'add', key, text, speakerLabel, start, end, confidence: 0.94, language: 'en-US' });
     at = end + pause;
   }
+  // Nothing happens at the end but a wait, which is where a scenario's last
+  // beats run (demo.js); the fakes pass over an event they don't know.
+  events.push({ at, type: 'quiet' });
   return { events };
 }

@@ -65,7 +65,7 @@ expose({
       control = port;
       port.onmessage = ({ data: message }) => {
         if (message.type === 'configure') {
-          relay = createFakeRelay(recordingFromScript(script), { speed: message.speed, sleep });
+          relay = createFakeRelay(recordingFromScript(script, { beats: message.beats }), { speed: message.speed, sleep });
           port.postMessage({ type: 'configured' });
         } else if (message.type === 'go') {
           asking.get(message.id)?.();
