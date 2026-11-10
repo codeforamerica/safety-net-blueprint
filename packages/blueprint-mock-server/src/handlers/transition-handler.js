@@ -58,6 +58,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       requestBody: await jsonBody(request),
       traceparent,
       causationid: causationOf(request),
+      authorization: callerHeader(request, 'authorization'),
       responseSchema,
     });
 

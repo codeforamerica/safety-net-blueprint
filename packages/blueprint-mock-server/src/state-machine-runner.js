@@ -107,6 +107,8 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
+ * @param {string} [options.authorization]  - The caller's Authorization header, which a call made
+ *   as the caller carries on; kept apart from the caller, so no expression reads it
  * @param {Object} options.store
  * @param {Object} options.instance         - The mock running it (instance.js)
  * @param {{ schema: Object, follow: Function }|null} [options.responseSchema] - The 200 response schema
@@ -132,6 +134,7 @@ export async function executeTransition({
   requestBody = {},
   traceparent = null,
   causationid = null,
+  authorization = null,
   store,
   instance,
   stepCalls = null,
@@ -192,7 +195,7 @@ export async function executeTransition({
   // record's id as the key: accepting a suggestion calls once, and only a call
   // that succeeds is kept under the key.
   const perform = performerFor({
-    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, instance, stepCalls,
+    callerId, callerRoles, authorization, timestamp, traceparent, causationid: actionEventId, store, instance, stepCalls,
     idempotencyKey: resource?.id ?? null,
   });
 
@@ -291,6 +294,7 @@ export async function executeTransition({
             requestBody: body,
             traceparent,
             causationid,
+            authorization,
             store,
             instance,
             stepCalls,
@@ -385,13 +389,14 @@ export function performerFor(options) {
   return perform;
 }
 
-function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, instance, stepCalls, idempotencyKey = null }) {
+function performCall(call, step, { callerId, callerRoles, authorization = null, timestamp, traceparent, causationid, store, instance, stepCalls, idempotencyKey = null }) {
   if (!stepCalls) {
     return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
   }
   return stepCalls.perform(call, {
     runAs: step.runAs ?? 'system',
     caller: { id: callerId, roles: callerRoles },
+    authorization,
     traceparent,
     causationid,
     idempotencyKey,
@@ -409,6 +414,7 @@ function performCall(call, step, { callerId, callerRoles, timestamp, traceparent
       requestBody: body,
       traceparent,
       causationid,
+      authorization,
       store,
       instance,
       stepCalls,

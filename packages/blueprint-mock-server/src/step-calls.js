@@ -281,12 +281,16 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
    * @param {Object} options
    * @param {'system'|'caller'} [options.runAs]
    * @param {{ id: string|null, roles: string[] }} options.caller
+   * @param {string|null} [options.authorization] - The caller's Authorization
+   *   header, sent with a call made as the caller, as a gateway relays the
+   *   token it was given; where routing sends the call, it goes on only when
+   *   includeHeaders names it
    * @param {string|null} [options.traceparent]
    * @param {string|null} [options.causationid] - The event the call's own events name as their cause
    * @param {string|null} [options.idempotencyKey] - Sent as the Idempotency-Key when the operation requires one and the call has none
    * @returns {Promise<{ ok: boolean, status: number, body: * }>}
    */
-  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
+  async function perform(call, { runAs = 'system', caller, authorization = null, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
     const operation = operations.get(call.operationId);
     if (!operation) return failure(422, 'VALIDATION_ERROR', operations.whyNot(call.operationId));
     if (!fetchHere) return failure(500, 'INTERNAL_ERROR', 'The mock has no routes to send a call through yet.');
@@ -313,6 +317,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     } else {
       if (caller?.id) headers['x-caller-id'] = caller.id;
       if (caller?.roles?.length) headers['x-caller-roles'] = caller.roles.join(',');
+      if (authorization) headers.authorization = authorization;
     }
     if (traceparent) headers.traceparent = traceparent;
     const payload = call.requestBody?.payload;

@@ -880,7 +880,8 @@ $defs:
           machine's own call: it skips only role checks, and its events name
           the system. `caller` is made as the person or service that triggered
           this step, under the operation's own permissions — as making it by
-          hand would be.
+          hand would be — and carries their credential, such as the
+          Authorization header they sent.
       catch:
         type: object
         additionalProperties: false
