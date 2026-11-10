@@ -29,7 +29,7 @@ export function createRelayAdapter({
   finishTimeoutMs = 10_000,
 } = {}) {
   return {
-    open({ connection, format, audio, report }) {
+    open({ connection, chunks, audio, report }) {
       return new Promise((resolve, reject) => {
         const protocols = [RELAY_PROTOCOL, ...(connection.accessToken ? [connection.accessToken] : [])];
         const socket = new Socket(connection.url, protocols);
@@ -50,7 +50,7 @@ export function createRelayAdapter({
 
         async function pump() {
           try {
-            for await (const chunk of audio ?? []) {
+            for await (const chunk of chunks ?? []) {
               if (finishing || socket.readyState !== 1) return;
               send(bytes(chunk));
             }
@@ -63,7 +63,7 @@ export function createRelayAdapter({
           const parameters = connection.connectionParameters ?? {};
           sendJson({
             type: 'start',
-            audio: format,
+            audio,
             ...(parameters.languages && { languages: parameters.languages }),
             ...(parameters.model && { model: parameters.model }),
             interimResults: true,

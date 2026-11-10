@@ -114,7 +114,7 @@ beforeEach(() => { FakeTranscribe.refuse = false; });
 
 test('results become lines in progress and finished lines, keyed by ResultId', async () => {
   const { told, report } = recorder();
-  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks(), report });
   for (const results of RESULTS) FakeTranscribe.last.results(results);
   await handle.finish();
 
@@ -129,7 +129,7 @@ test('results become lines in progress and finished lines, keyed by ResultId', a
 
 test('audio goes out as AudioEvent messages, and finishing sends an empty one', async () => {
   const { report } = recorder();
-  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks([1, 2], [3, 4, 5]), report });
+  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks([1, 2], [3, 4, 5]), report });
   await new Promise((resolve) => setTimeout(resolve, 10));
   await handle.finish();
   const sent = FakeTranscribe.last.sent;
@@ -140,7 +140,7 @@ test('audio goes out as AudioEvent messages, and finishing sends an empty one', 
 
 test('results that arrive together in one frame are all reported', async () => {
   const { told, report } = recorder();
-  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+  const handle = await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks(), report });
   FakeTranscribe.last.results(RESULTS[1], RESULTS[3]);
   await handle.finish();
   assert.deepStrictEqual(told.add.map((l) => l.text), ['Who lives with you?', 'My two kids.']);
@@ -151,7 +151,7 @@ test('an exception from Transcribe closes the connection, which is a drop', asyn
   const { error } = console;
   console.error = () => {};
   try {
-    await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+    await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks(), report });
     FakeTranscribe.last.exception('BadRequestException', 'Your request timed out because no new audio was received for 15 seconds.');
   } finally { console.error = error; }
   assert.strictEqual(told.dropped, 1);
@@ -159,7 +159,7 @@ test('an exception from Transcribe closes the connection, which is a drop', asyn
 
 test('a close nobody asked for is reported as a drop', async () => {
   const { told, report } = recorder();
-  await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report });
+  await createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks(), report });
   FakeTranscribe.last.close();
   assert.strictEqual(told.dropped, 1);
 });
@@ -167,7 +167,7 @@ test('a close nobody asked for is reported as a drop', async () => {
 test('a connection that won\'t open is refused', async () => {
   FakeTranscribe.refuse = true;
   const { report } = recorder();
-  await assert.rejects(createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, audio: chunks(), report }), /didn't open/);
+  await assert.rejects(createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }).open({ connection: CONNECTION, chunks: chunks(), report }), /didn't open/);
 });
 
 test('end to end: the server adapter issues a presigned URL, and the page streams to it', async () => {
@@ -189,13 +189,12 @@ test('end to end: the server adapter issues a presigned URL, and the page stream
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
   const client = createTranscriptionClient({
     ...sdkFor((request) => mock.fetch(request)),
-    audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 },
     adapters: { 'aws-transcribe': createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
     onError: (error) => { throw error; },
   });
   const session = await client.start({ profileId: profile.id, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z' });
-  await session.connect(chunks([0, 0]));
+  await session.connect({ chunks: chunks([0, 0]), audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 } });
 
   const url = new URL(FakeTranscribe.last.url);
   assert.strictEqual(url.host, 'transcribestreaming.us-east-1.amazonaws.com:8443');

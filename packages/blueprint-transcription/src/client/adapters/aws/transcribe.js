@@ -43,7 +43,7 @@ function confidenceOf(alternative) {
  */
 export function createAwsTranscribeAdapter({ WebSocket: Socket = globalThis.WebSocket, finishTimeoutMs = 10_000 } = {}) {
   return {
-    open({ connection, audio, report }) {
+    open({ connection, chunks, report }) {
       return new Promise((resolve, reject) => {
         const socket = new Socket(connection.url);
         socket.binaryType = 'arraybuffer';
@@ -58,7 +58,7 @@ export function createAwsTranscribeAdapter({ WebSocket: Socket = globalThis.WebS
 
         async function pump() {
           try {
-            for await (const chunk of audio ?? []) {
+            for await (const chunk of chunks ?? []) {
               if (finishing || socket.readyState !== 1) return;
               send(bytes(chunk));
             }

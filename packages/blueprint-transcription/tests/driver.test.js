@@ -15,6 +15,7 @@ import { sdkFor } from './sdk.js';
 const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 
 const AUDIO = { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 };
+const CAPTURE = { chunks: null, audio: AUDIO };
 const immediately = () => Promise.resolve();
 
 let mock;
@@ -51,7 +52,6 @@ const startSession = async ({ fetch = (request) => mock.fetch(request), ...optio
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
   const client = createTranscriptionClient({
     ...sdkFor(fetch),
-    audio: AUDIO,
     sleep: immediately,
     retryDelay: () => 0,
     onError: (error) => { throw error; },
@@ -80,7 +80,7 @@ const LINES = {
 
 test('a session streams a recording, adds its finished lines, and closes the transcript', async () => {
   const session = await startSession({ adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   assert.strictEqual(session.status, 'connected');
   await session.stop();
 
@@ -94,7 +94,7 @@ test('a session streams a recording, adds its finished lines, and closes the tra
 test('a line\'s times are from when its connection opened, by the client\'s clock', async () => {
   const opened = new Date('2026-10-12T10:00:00Z');
   const session = await startSession({ now: () => opened, adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await session.stop();
   const [first] = (await entriesOf(session)).filter((e) => e.kind === 'line');
   assert.strictEqual(first.startedAt, '2026-10-12T10:00:00.500Z');
@@ -105,7 +105,7 @@ test('the adapter is chosen by the service the server answered with', async () =
   const used = [];
   const named = (name) => ({ open: async (args) => { used.push(name); return createFakeAdapter(LINES, { sleep: immediately }).open(args); } });
   const session = await startSession({ adapters: { 'aws-transcribe': named('transcribe'), default: named('default') } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await session.stop();
   assert.deepStrictEqual(used, ['transcribe']);
 });
@@ -115,7 +115,7 @@ test('a speaker is told by its label, when the adapter gives no speaker', async 
     adapters: { default: createFakeAdapter(LINES, { sleep: immediately }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
   });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await session.stop();
   const lines = (await entriesOf(session)).filter((e) => e.kind === 'line');
   assert.deepStrictEqual(lines.map((e) => e.speaker), ['staff', 'client']);
@@ -130,7 +130,7 @@ test('a dropped connection reconnects, and the transcript records the gap', asyn
     ],
   };
   const session = await startSession({ adapters: { default: createFakeAdapter(recording, { sleep: immediately }) } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await until(async () => (await entriesOf(session)).some((e) => e.text === 'After it.'));
   await session.stop();
 
@@ -153,7 +153,7 @@ test('pause closes the connection, and resume carries on with the recording on a
   let waits = 0;
   const sleep = () => (waits++ === 0 ? Promise.resolve() : gate);
   const session = await startSession({ adapters: { default: createFakeAdapter(recording, { sleep }) } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await until(async () => (await entriesOf(session)).length === 1);
 
   await session.pause();
@@ -172,7 +172,7 @@ test('pause closes the connection, and resume carries on with the recording on a
 test('a connection that won\'t open is tried again, then the session fails', async () => {
   const refusing = { open: async () => { throw new Error('unreachable'); } };
   const session = await startSession({ adapters: { default: refusing }, retries: 2 });
-  await assert.rejects(session.connect(null), /unreachable/);
+  await assert.rejects(session.connect(CAPTURE), /unreachable/);
   assert.strictEqual(session.status, 'failed');
   assert.strictEqual(issued, 3);
 });
@@ -197,7 +197,7 @@ const transcriptOf = (session) => `/communication/transcripts/${session.record.t
 test('the transcript paused by someone else stops the audio', async () => {
   const { state, adapter } = heldOpen();
   const session = await startSession({ adapters: { default: adapter } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await send('POST', `${transcriptOf(session)}/pause`, { at: '2026-10-12T10:01:00Z' });
   await until(() => state.finished === 1);
   await until(() => session.status === 'paused');
@@ -206,7 +206,7 @@ test('the transcript paused by someone else stops the audio', async () => {
 test('the transcript closed by someone else stops the audio', async () => {
   const { state, adapter } = heldOpen();
   const session = await startSession({ adapters: { default: adapter } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await send('POST', `${transcriptOf(session)}/close`, { at: '2026-10-12T10:01:00Z' });
   await until(() => state.finished === 1);
   await until(() => session.status === 'closed');
@@ -215,7 +215,7 @@ test('the transcript closed by someone else stops the audio', async () => {
 test('the software\'s own pause and resume close and reopen the connection once each', async () => {
   const { state, adapter } = heldOpen();
   const session = await startSession({ adapters: { default: adapter } });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   await session.pause();
   assert.strictEqual(session.status, 'paused');
   await session.resume();
@@ -235,9 +235,51 @@ test('a line the session refuses because it stopped stops the audio, though no e
       ? Promise.resolve(new Response(null, { status: 501 }))
       : mock.fetch(request)),
   });
-  await session.connect(null);
+  await session.connect(CAPTURE);
   // Paused behind the software's back, as a lost event would leave it.
   await send('POST', `/communication/transcription-sessions/${session.id}/pause`, { at: '2026-10-12T10:01:00Z' });
   state.report.add({ key: 'late', text: 'Said after the pause.', start: 70, end: 71 });
   await until(() => state.finished === 1);
+});
+
+/** A session with one line said, then left as a reload leaves it: nothing closed, nothing told. */
+async function leftBehind({ pause = false } = {}) {
+  const { state, adapter } = heldOpen();
+  const session = await startSession({ now: () => new Date('2026-10-12T10:00:00Z'), adapters: { default: adapter } });
+  await session.connect(CAPTURE);
+  state.report.add({ key: 'l1', text: 'Before the reload.', start: 0, end: 1 });
+  await until(async () => (await entriesOf(session)).length === 1);
+  if (pause) await session.pause();
+  return session.record.transcriptId;
+}
+
+const carryOn = (transcriptId, now) => createTranscriptionClient({
+  ...sdkFor((request) => mock.fetch(request)),
+  adapters: { default: heldOpen().adapter },
+  now: () => new Date(now),
+  onError: (error) => { throw error; },
+}).start({ transcriptId });
+
+test('a new session carrying on a recording transcript records the gap since its last line', async () => {
+  const transcriptId = await leftBehind();
+  const session = await carryOn(transcriptId, '2026-10-12T10:05:00Z');
+  await session.connect(CAPTURE);
+  assert.strictEqual(session.status, 'connected');
+  const entries = await entriesOf(session);
+  assert.deepStrictEqual(entries.map((e) => e.kind), ['line', 'gap']);
+  assert.deepStrictEqual([entries[1].startedAt, entries[1].endedAt], ['2026-10-12T10:00:01.000Z', '2026-10-12T10:05:00.000Z']);
+});
+
+test('a new session carrying on a paused transcript resumes with a capture, and records no gap', async () => {
+  const transcriptId = await leftBehind({ pause: true });
+  const session = await carryOn(transcriptId, '2026-10-12T10:05:00Z');
+  await session.resume(CAPTURE);
+  assert.strictEqual(session.status, 'connected');
+  const entries = await entriesOf(session);
+  assert.ok(!entries.some((e) => e.kind === 'gap'), JSON.stringify(entries.map((e) => e.kind)));
+});
+
+test('connect needs a capture: the audio and its format', async () => {
+  const session = await startSession({ adapters: { default: heldOpen().adapter } });
+  await assert.rejects(session.connect(null), /a capture/);
 });

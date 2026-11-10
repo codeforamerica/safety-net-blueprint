@@ -83,7 +83,7 @@ const json = (log, from) => log.filter((m) => m.from === from && typeof m.data =
 test('the relay\'s subprotocol is asked for, with the token beside it', async () => {
   const { WebSocket } = socketsTo(createFakeRelay(LINES, { sleep: immediately }));
   const { report } = recorder();
-  const handle = await createRelayAdapter({ WebSocket }).open({ connection: CONNECTION, format: FORMAT, audio: chunks(), report });
+  const handle = await createRelayAdapter({ WebSocket }).open({ connection: CONNECTION, chunks: chunks(), audio: FORMAT, report });
   assert.deepStrictEqual(WebSocket.last.offered, [RELAY_PROTOCOL, 'token']);
   assert.strictEqual(WebSocket.last.url, 'wss://relay.example');
   await handle.finish();
@@ -102,7 +102,7 @@ test('in a page, the relay runs behind mock-socket by the same two hooks', async
   const server = new Server('wss://relay.example', { selectProtocol: relay.handleProtocols });
   server.on('connection', relay.handleConnection);
   const { told, report } = recorder();
-  const handle = await createRelayAdapter({ WebSocket: MockWebSocket }).open({ connection: CONNECTION, format: FORMAT, audio: chunks([1, 2]), report });
+  const handle = await createRelayAdapter({ WebSocket: MockWebSocket }).open({ connection: CONNECTION, chunks: chunks([1, 2]), audio: FORMAT, report });
   await new Promise((resolve) => setTimeout(resolve, 20));
   await handle.finish();
   server.stop();
@@ -113,7 +113,7 @@ test('start, audio and end go one way; started, results and ended come back, all
   const { WebSocket, log } = socketsTo(createFakeRelay(LINES, { sleep: immediately }));
   const { told, report } = recorder();
   const connection = { ...CONNECTION, connectionParameters: { languages: ['en-US'], model: 'latest_long' } };
-  const handle = await createRelayAdapter({ WebSocket }).open({ connection, format: FORMAT, audio: chunks([1, 2], [3]), report });
+  const handle = await createRelayAdapter({ WebSocket }).open({ connection, chunks: chunks([1, 2], [3]), audio: FORMAT, report });
   await new Promise((resolve) => setTimeout(resolve, 20));
   await handle.finish();
 
@@ -143,7 +143,7 @@ test('a message the relay can\'t read is answered with a bad-message error, and 
 test('a quiet connection is kept open with keepalive', async () => {
   const { WebSocket, log } = socketsTo(createFakeRelay({ events: [] }, { sleep: immediately }));
   const { report } = recorder();
-  const handle = await createRelayAdapter({ WebSocket, keepaliveMs: 10 }).open({ connection: CONNECTION, format: FORMAT, audio: chunks(), report });
+  const handle = await createRelayAdapter({ WebSocket, keepaliveMs: 10 }).open({ connection: CONNECTION, chunks: chunks(), audio: FORMAT, report });
   await new Promise((resolve) => setTimeout(resolve, 40));
   await handle.finish();
   assert.ok(json(log, 'client').some((m) => m.type === 'keepalive'));
@@ -179,7 +179,6 @@ test('end to end: a session streams through a relay, and a drop is reconnected w
   const profile = await send('POST', '/communication/profiles', { name: 'english', provider: 'google-cloud-speech', languages: ['en-US'] });
   const client = createTranscriptionClient({
     ...sdkFor((request) => mock.fetch(request)),
-    audio: FORMAT,
     adapters: { [RELAY_PROTOCOL]: createRelayAdapter({ WebSocket }) },
     speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
     retryDelay: () => 0,
@@ -187,7 +186,7 @@ test('end to end: a session streams through a relay, and a drop is reconnected w
     onError: (error) => { throw error; },
   });
   const session = await client.start({ profileId: profile.id, model: 'latest_long', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z' });
-  await session.connect(chunks());
+  await session.connect({ chunks: chunks(), audio: FORMAT });
   for (let i = 0; i < 200; i++) {
     const { items } = await send('GET', `/communication/transcripts/${session.record.transcriptId}/entries`);
     if (items.some((e) => e.text === 'After it.')) break;

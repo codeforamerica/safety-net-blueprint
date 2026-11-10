@@ -7,6 +7,8 @@
 
 import * as sessions from '../generated/sdk/communication-transcription-sessions/index.ts';
 import { client as sessionsClient } from '../generated/sdk/communication-transcription-sessions/client.gen.ts';
+import * as transcripts from '../generated/sdk/communication-transcripts/index.ts';
+import { client as transcriptsClient } from '../generated/sdk/communication-transcripts/client.gen.ts';
 import * as events from '../generated/sdk/platform-events/index.ts';
 import { client as eventsClient } from '../generated/sdk/platform-events/client.gen.ts';
 
@@ -16,6 +18,7 @@ import { client as eventsClient } from '../generated/sdk/platform-events/client.
  */
 export function sdkFor(fetch, headers = { 'x-caller-id': 'worker-1' }) {
   sessionsClient.setConfig({ baseUrl: 'http://localhost/communication', fetch, headers });
+  transcriptsClient.setConfig({ baseUrl: 'http://localhost/communication', fetch, headers });
   eventsClient.setConfig({ baseUrl: 'http://localhost/platform', fetch, headers });
-  return { sessions, events, fetch };
+  return { sessions, transcripts, events, fetch };
 }

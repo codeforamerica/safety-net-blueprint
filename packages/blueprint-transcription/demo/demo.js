@@ -247,7 +247,7 @@ function silence() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
-  return { state, chunks: chunks() };
+  return { state, chunks: chunks(), audio: AUDIO };
 }
 
 /** The relay contract's messages, as they cross between browser and relay. */
@@ -379,7 +379,6 @@ async function start() {
     sessions,
     events,
     fetch: driverCall,
-    audio: AUDIO,
     adapters,
     speakerFor: (label) => ({ spk_0: 'staff', spk_1: 'client' })[label] ?? 'unknown',
     retryDelay: () => 1500,
@@ -392,7 +391,7 @@ async function start() {
   session = await client.start({ profileId: profile.id, model: 'standard', client: 'blueprint-transcription-demo/0.1.0', startedAt: new Date().toISOString() });
   audio = silence();
   refresh();
-  await session.connect(audio.chunks);
+  await session.connect(audio);
   refresh();
 }
 

@@ -38,23 +38,27 @@ server; see the mock server's guide.
 ## The client
 
 ```js
-import { createTranscriptionClient } from '@codeforamerica/blueprint-transcription/client';
+import { captureAudio, createTranscriptionClient } from '@codeforamerica/blueprint-transcription/client';
 import { createFakeAdapter } from '@codeforamerica/blueprint-transcription/fakes';
 
 const client = createTranscriptionClient({
-  fetch: mock.fetch,                      // the in-page mock's, which routing forwards
-  headers: { 'x-caller-id': staffId },
-  audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 },
+  sessions, transcripts, events,          // the SDKs generated from your contracts
+  fetch: mock.fetch,                      // the fetch the events SDK is configured with
   adapters: { default: createFakeAdapter(recording) },
   speakerFor: (label) => (label === 'spk_0' ? 'staff' : 'client'),
 });
 
+const capture = await captureAudio({ sharedAudio: true }); // from a click: it asks for the microphone
 const session = await client.start({ profileId, model: 'standard', client: 'my-app/1.0.0', startedAt: new Date().toISOString() });
-await session.connect(audio);             // whatever the page captured, passed to the adapter
+await session.connect(capture);           // capture.chunks, the audio, in capture.audio's format
 await session.pause();                    // off the record: the connection closes
 await session.resume();
 await session.stop();                     // the last text comes in, and the transcript closes
+await capture.stop();
 ```
+
+`connect` and `resume` take anything with `chunks`, an async iterable of the
+audio, and `audio`, its AudioFormat, so a test or a demo can pass its own.
 
 The driver asks the session how to stream, picks the adapter for what the
 server answered with — the relay's subprotocol, if the connection is to a
@@ -64,16 +68,46 @@ drop is reconnected, and the stretch it lost is recorded on the transcript as
 a gap; after `retries` failed attempts the session fails, and the transcript
 stays open for a new session to carry on under.
 
+### Carrying on after a reload
+
+The session lives in the page, so a reload loses it; the transcript is on the
+server and stays open. To carry on, your page keeps the transcript's id, and
+after a reload asks whether it's still open. Audio can only be captured from a
+click, so the page offers to carry on rather than starting by itself:
+
+```js
+// Once connected:
+sessionStorage.setItem('transcriptId', session.record.transcriptId);
+
+// After a reload:
+const transcriptId = sessionStorage.getItem('transcriptId');
+const { data: transcript } = transcriptId ? await getTranscript({ path: { transcriptId } }) : {};
+if (transcript?.status === 'recording' || transcript?.status === 'paused') {
+  carryOnButton.onclick = async () => {
+    const capture = await captureAudio({ sharedAudio: true });
+    const session = await client.start({ transcriptId });
+    if (transcript.status === 'paused') await session.resume(capture);
+    else await session.connect(capture);
+  };
+}
+```
+
+Carrying on a transcript that's still recording, `connect` records the time
+since its last line as a gap; a paused one already accounts for that time.
+Where to keep the id, and whether to offer carrying on at all, is your page's
+choice. A tab opened again has no id kept; it can find an open transcript by
+its subject instead, as the session contract's `transcriptId` describes.
+
 ### Writing a client adapter
 
 An adapter speaks one service's protocol and holds no session logic:
 
 ```js
 const adapter = {
-  async open({ connection, format, audio, report }) {
+  async open({ connection, chunks, audio, report }) {
     // Connect with what get-connection answered: connection.url, and
-    // connection.accessToken where the service takes one. Stream `audio`,
-    // which is in the AudioFormat `format`.
+    // connection.accessToken where the service takes one. Stream `chunks`,
+    // the capture's audio, which is in the AudioFormat `audio`.
     // Report as text comes back, with times in seconds from opening:
     //   report.update({ key, text, speakerLabel, start })
     //   report.add({ key, text, speakerLabel, start, end, confidence })

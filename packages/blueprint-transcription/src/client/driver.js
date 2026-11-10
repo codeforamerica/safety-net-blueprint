@@ -12,10 +12,10 @@
  * served, who's calling, and in a page, the in-page mock's fetch.
  *
  * A client adapter is an object with:
- *   - `open({ connection, format, audio, report })`: open a connection with
- *     what get-connection answered, stream `audio` (whatever the page
- *     captured, passed through untouched, in the AudioFormat `format`), and
- *     resolve with a handle once it's open.
+ *   - `open({ connection, chunks, audio, report })`: open a connection with
+ *     what get-connection answered, stream `chunks` (the capture's audio,
+ *     passed through untouched, in the AudioFormat `audio`), and resolve with
+ *     a handle once it's open.
  *     `report` takes:
  *       - `update({ key, text, speaker?, speakerLabel?, start })`, a line in progress
  *       - `add({ key, text, speaker?, speakerLabel?, confidence?, language?, start, end })`, a finished line
@@ -56,7 +56,8 @@ const operationFor = (action) => `${action.replace(/-([a-z])/g, (_, c) => c.toUp
  *   (a transcription-services entry, such as `aws-transcribe`), or by the
  *   subprotocol, for a relay (`RELAY_PROTOCOL`), which is chosen first;
  *   `default` answers for any other.
- * @param {object} options.audio - the AudioFormat the software sends.
+ * @param {object} [options.transcripts] - the transcripts SDK, generated from
+ *   the contracts: needed to carry on a transcript, to read where it left off
  * @param {string[]} [options.protocols] - what it can connect over.
  * @param {Function} [options.speakerFor] - a Speaker for a service's label, when the adapter gives none.
  * @param {number} [options.retries] - reconnects to try before giving up.
@@ -68,9 +69,9 @@ const operationFor = (action) => `${action.replace(/-([a-z])/g, (_, c) => c.toUp
 export function createTranscriptionClient({
   sessions,
   events,
+  transcripts,
   fetch,
   adapters,
-  audio,
   protocols = ['websocket'],
   speakerFor = () => 'unknown',
   retries = 3,
@@ -81,11 +82,10 @@ export function createTranscriptionClient({
 }) {
   if (!sessions || !events) throw new Error('createTranscriptionClient: give the sessions and events SDKs generated from your contracts');
   if (!adapters || !Object.keys(adapters).length) throw new Error('createTranscriptionClient: give at least one client adapter');
-  if (!audio) throw new Error('createTranscriptionClient: say what audio the software sends');
 
   /** Call an SDK function, giving its data or throwing what the session answered. */
-  async function call(operation, options, label = operation) {
-    const { data, error, response } = await sessions[operation](options);
+  async function call(operation, options, label = operation, sdk = sessions) {
+    const { data, error, response } = await sdk[operation](options);
     if (!response?.ok) throw new SessionError(label, response?.status, error);
     return data;
   }
@@ -94,6 +94,7 @@ export function createTranscriptionClient({
     ...(body !== undefined && { body }),
   }, action);
   const get = (id) => call('getTranscriptionSession', { path: { transcriptionSessionId: id } });
+  const getTranscript = (id) => call('getTranscript', { path: { transcriptId: id } }, 'getTranscript', transcripts);
 
   // The session can pause or close without the software asking — when its
   // transcript does — so the software follows its events, and stops sending
@@ -105,7 +106,7 @@ export function createTranscriptionClient({
     onEvent,
   });
 
-  const options = { adapters, audio, protocols, speakerFor, retries, retryDelay, now, sleep, onError, act, get, follow };
+  const options = { adapters, protocols, speakerFor, retries, retryDelay, now, sleep, onError, act, get, getTranscript, follow };
 
   return {
     /**
@@ -114,6 +115,7 @@ export function createTranscriptionClient({
      * `model` unless the profile's service is `none`.
      */
     async start(fields) {
+      if (fields.transcriptId && !transcripts) throw new Error('createTranscriptionClient: give the transcripts SDK to carry on a transcript');
       const record = await call('createTranscriptionSession', { body: fields });
       const session = new Session(record, options);
       session.follow();
@@ -131,7 +133,7 @@ class Session {
   #connections = 0;
   #renewTimer = null;
   #ending = false;
-  #audio = null;
+  #capture = null;
   #following = null;
   // What the adapter reports, told to the session one at a time and in order,
   // once it knows the connection is open: text can arrive before it does.
@@ -179,10 +181,30 @@ class Session {
   #at() { return this.#o.now().toISOString(); }
   #offset(seconds) { return new Date(this.#openedAt.getTime() + seconds * 1000).toISOString(); }
 
-  /** Start streaming `audio`. The session asks how to stream, then opens the connection. */
-  async connect(audio) {
-    this.#audio = audio;
-    await this.#establish();
+  /**
+   * Start streaming a capture: `{ chunks, audio }`, as captureAudio gives,
+   * the audio's pieces and its AudioFormat. The session asks how to stream,
+   * then opens the connection. Carrying on a transcript still recording, the
+   * stretch since it was last written to is recorded as a gap.
+   */
+  async connect(capture) {
+    this.#use(capture);
+    await this.#establish(await this.#carriedOnSince());
+  }
+
+  #use(capture) {
+    if (!capture?.audio) throw new Error('connect and resume take a capture: { chunks, audio }, the audio and its format');
+    this.#capture = capture;
+  }
+
+  // A session carrying on a transcript that's still recording missed what
+  // was said since the transcript's last line or gap (the connect request's
+  // gap, in the contract), or since it started if it has none.
+  async #carriedOnSince() {
+    if (this.#connections > 0 || !this.record.transcriptId) return null;
+    const transcript = await this.#o.getTranscript(this.record.transcriptId);
+    if (transcript.status !== 'recording') return null;
+    return new Date(transcript.lastActivityAt ?? transcript.startedAt);
   }
 
   /** Off the record: the session records the pause, then the connection is closed. */
@@ -191,8 +213,12 @@ class Session {
     await this.#close();
   }
 
-  /** Back on the record, on a new connection. */
-  async resume() {
+  /**
+   * Back on the record, on a new connection. A session carrying on a paused
+   * transcript hasn't been given a capture yet, so takes one here.
+   */
+  async resume(capture = this.#capture) {
+    this.#use(capture);
     await this.#act('resume', { at: this.#at() });
     await this.#establish();
   }
@@ -215,8 +241,8 @@ class Session {
   }
 
   // Ask how to stream, open the connection, and tell the session it's open —
-  // with the stretch lost since `lostSince`, after a drop. Tries again as a
-  // reconnect does, and gives up with fail.
+  // with the stretch lost since `lostSince`, after a drop or carrying on a
+  // transcript. Tries again as a reconnect does, and gives up with fail.
   async #establish(lostSince = null) {
     for (let attempt = 0; ; attempt++) {
       try {
@@ -235,7 +261,8 @@ class Session {
   }
 
   async #open(lostSince) {
-    const { audio, protocols, adapters } = this.#o;
+    const { protocols, adapters } = this.#o;
+    const { audio, chunks } = this.#capture;
     const connection = await this.#act('get-connection', { audio, protocols });
     // A relay speaks the same subprotocol whatever service is behind it, so
     // it's chosen by that before the service.
@@ -247,7 +274,7 @@ class Session {
     this.#openedAt = this.#o.now();
     let handle;
     try {
-      handle = await adapter.open({ connection, format: audio, audio: this.#audio, report: this.#report(++this.#connections) });
+      handle = await adapter.open({ connection, chunks, audio, report: this.#report(++this.#connections) });
       this.#handle = handle;
       await this.#act('connect', lostSince
         ? { gap: { startedAt: lostSince.toISOString(), endedAt: this.#o.now().toISOString() } }
@@ -263,7 +290,7 @@ class Session {
     const handle = this.#handle;
     this.#renewTimer = setTimeout(async () => {
       try {
-        const fresh = await this.#act('renew-connection', { audio: this.#o.audio, protocols: this.#o.protocols });
+        const fresh = await this.#act('renew-connection', { audio: this.#capture.audio, protocols: this.#o.protocols });
         if (this.#handle === handle) {
           await handle.renew(fresh);
           this.#scheduleRenewal(fresh);
