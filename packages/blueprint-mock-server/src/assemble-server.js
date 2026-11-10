@@ -131,7 +131,7 @@ export function assembleServer(
   refuseOwnRouteCollisions(routes, apiSpecs);
   const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]));
   const byApiAndId = new Map(details.map((operation) => [`${operation.api}#${operation.id}`, operation]));
-  const { routed, receives, sends } = applyRouting(routes, routing, {
+  const { routed, receives, sends, unmatched } = applyRouting(routes, routing, {
     instance,
     operations,
     domainOfApi,
@@ -151,6 +151,6 @@ export function assembleServer(
   const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { instance });
 
   // An action calling an operation as its caller sends the call through here.
-  stepCalls.serve(createDispatcher(routes));
-  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
+  stepCalls.serve(createDispatcher(routes, { unmatched }));
+  return { routes, fetch: createDispatcher(routes, { basePath, unmatched }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
 }

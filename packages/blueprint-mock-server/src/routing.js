@@ -168,6 +168,7 @@ export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIM
 
 /** What an entry is called in an error: the thing it names, or its position. */
 function entryName(entry, index) {
+  if (entry?.domain === EVERY_DOMAIN) return 'The routing entry for every domain';
   if (typeof entry?.domain === 'string') return `Routed domain "${entry.domain}"`;
   if (typeof entry?.api === 'string') return `Routed API "${entry.api}"`;
   if (typeof entry?.operation === 'string') return `Routed operation "${entry.operation}"`;
@@ -201,8 +202,11 @@ export function routingFromDocument(document) {
   return document.routing;
 }
 
-/** How narrow an entry is: an operation over an API, an API over a domain. */
-const narrowness = (entry) => (entry.operation ? 2 : entry.api ? 1 : 0);
+/** The domain an entry names to route every domain, as a proxy's catch-all is written. */
+const EVERY_DOMAIN = '*';
+
+/** How narrow an entry is: an operation over an API, an API over a domain, a domain over every one. */
+const narrowness = (entry) => (entry.operation ? 2 : entry.api ? 1 : entry.domain === EVERY_DOMAIN ? -1 : 0);
 
 /**
  * Check configuration against the schema and against what the contracts
@@ -248,7 +252,7 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
     }
 
     let operation = null;
-    if (entry.domain && !domains.has(entry.domain)) {
+    if (entry.domain && entry.domain !== EVERY_DOMAIN && !domains.has(entry.domain)) {
       throw new Error(`${name} declares no APIs. Domains the contracts declare: ${[...domains].sort().join(', ')}`);
     }
     if (entry.api && !apis.has(entry.api)) {
@@ -264,13 +268,17 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
 
     const except = (entry.except ?? []).map((item) => {
       if (item.api) {
-        if (!entry.domain || domainOfApi.get(item.api) !== entry.domain) {
+        if (entry.domain === EVERY_DOMAIN && !apis.has(item.api)) {
+          throw new Error(`${name} excepts API "${item.api}", which the contracts don't declare. APIs: ${[...apis].sort().join(', ')}`);
+        }
+        if (entry.domain !== EVERY_DOMAIN && (!entry.domain || domainOfApi.get(item.api) !== entry.domain)) {
           throw new Error(`${name} excepts API "${item.api}", which isn't inside it. An except names an API in the entry's domain, or an operation in the entry's domain or API.`);
         }
         return { api: item.api };
       }
       const excepted = find(item.operation, `${name}'s except`);
-      const inside = entry.api ? excepted.api === entry.api : domainOfApi.get(excepted.api) === entry.domain;
+      const inside = entry.api ? excepted.api === entry.api
+        : entry.domain === EVERY_DOMAIN || domainOfApi.get(excepted.api) === entry.domain;
       if (!inside) throw new Error(`${name} excepts "${item.operation}", which isn't inside it.`);
       return { operation: excepted };
     });
@@ -281,7 +289,7 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
   const covering = ({ domain, api, id }) => {
     const covers = entries.filter(({ entry, operation }) => (operation
       ? operation.api === api && operation.id === id
-      : entry.api ? entry.api === api : entry.domain === domain));
+      : entry.api ? entry.api === api : entry.domain === EVERY_DOMAIN || entry.domain === domain));
     const chosen = covers.sort((a, b) => narrowness(b.entry) - narrowness(a.entry))[0];
     if (!chosen) return null;
     const excepted = chosen.except.some((e) => (e.api ? e.api === api : e.operation.api === api && e.operation.id === id));
@@ -316,7 +324,9 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
     if (operation.action === 'receive') receives.push(routedEvent);
     else if (operation.action === 'send') sends.push(routedEvent);
   }
-  return { byRoute, receives, sends };
+  // A request for a route the mock doesn't have goes where every domain does.
+  const everything = entries.find(({ entry }) => entry.domain === EVERY_DOMAIN)?.entry ?? null;
+  return { byRoute, receives, sends, everything };
 }
 
 /**
@@ -369,11 +379,13 @@ function checkedHandler(handler, responseSchema, name, schemas) {
  * @param {object} context - As for planRouting, and:
  * @param {(route: object, status: number) => { schema: object, key: string } | null} context.responseSchema
  * @param {object} context.instance - The mock being routed (instance.js)
- * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }> }}
+ * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }>, unmatched: ((request: Request) => Promise<Response>) | null }}
+ *   `unmatched` answers a request for a route the mock doesn't have, when an
+ *   entry routes every domain.
  */
 export function applyRouting(routes, routing = [], context) {
-  if (routing.length === 0) return { routed: [], receives: [], sends: [] };
-  const { byRoute, receives, sends } = planRouting(routing, { ...context, routes });
+  if (routing.length === 0) return { routed: [], receives: [], sends: [], unmatched: null };
+  const { byRoute, receives, sends, everything } = planRouting(routing, { ...context, routes });
 
   for (const [key, entry] of byRoute) {
     const route = routes.get(key);
@@ -383,7 +395,11 @@ export function applyRouting(routes, routing = [], context) {
     // Marked, so a check that reads the mock's records knows these aren't the ones that count.
     route.routed = true;
   }
-  return { routed: [...byRoute.keys()], receives, sends };
+  // No operation to check a handler's answer against, so it's passed on as it is.
+  const unmatched = everything && (everything.handler
+    ? async (request) => everything.handler(request)
+    : forwardTo(everything.to, { includeHeaders: everything.includeHeaders, timeoutMs: everything.timeoutMs, stubs: context.instance.stubs }));
+  return { routed: [...byRoute.keys()], receives, sends, unmatched };
 }
 
 /**

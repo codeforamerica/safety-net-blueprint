@@ -51,12 +51,13 @@
       "additionalProperties": false,
       "properties": {
         "domain": {
-          "description": "A domain the contracts declare, by the name of its directory. Every route its APIs declare, and every event their state machines receive, is routed.",
+          "description": "A domain the contracts declare, by the name of its directory, or * for every domain. Every route its APIs declare, and every event their state machines receive, is routed. With *, so is a request for a route the mock doesn't have, and any entry naming a domain, API or operation overrides it.",
           "type": "string",
-          "pattern": "^[a-z0-9-]+$",
+          "pattern": "^([a-z0-9-]+|\\*)$",
           "examples": [
             "intake",
-            "document-management"
+            "document-management",
+            "*"
           ]
         },
         "api": {
@@ -78,7 +79,7 @@
           ]
         },
         "except": {
-          "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on an API, an operation in it. Not on an operation entry.",
+          "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on *, any API or operation; on an API, an operation in it. Not on an operation entry.",
           "type": "array",
           "minItems": 1,
           "items": {
