@@ -262,7 +262,7 @@ export type ConnectRequest = {
 
 export type LineInProgress = {
     /**
-     * The line's key, the same on every update and on the finished line — the service's own result id where it has one, else one the client makes.
+     * The line's key, the same on every update and on the finished line, and unique within the session. A service's own result id is unique only within one connection, so the client makes it unique across reconnects, for example by putting the connection's number in front.
      */
     key: string;
     text: string;
@@ -280,7 +280,7 @@ export type LineInProgress = {
 
 export type FinishedLine = {
     /**
-     * The line's key, as on its updates. Sent as the entry's Idempotency-Key, so a retry adds the line once.
+     * The line's key, as on its updates. The entry's Idempotency-Key is made from the session's id and this key, so a retry adds the line once and no other line is refused for it.
      */
     key: string;
     /**
@@ -1584,7 +1584,7 @@ export type DisconnectTranscriptionSessionResponse = DisconnectTranscriptionSess
 export type UpdateLineTranscriptionSessionData = {
     body: {
         /**
-         * The line's key, the same on every update and on the finished line — the service's own result id where it has one, else one the client makes.
+         * The line's key, the same on every update and on the finished line, and unique within the session. A service's own result id is unique only within one connection, so the client makes it unique across reconnects, for example by putting the connection's number in front.
          */
         key: string;
         text: string;
@@ -1801,7 +1801,7 @@ export type UpdateLineTranscriptionSessionResponse = UpdateLineTranscriptionSess
 export type AddLineTranscriptionSessionData = {
     body: {
         /**
-         * The line's key, as on its updates. Sent as the entry's Idempotency-Key, so a retry adds the line once.
+         * The line's key, as on its updates. The entry's Idempotency-Key is made from the session's id and this key, so a retry adds the line once and no other line is refused for it.
          */
         key: string;
         /**

@@ -126,6 +126,9 @@ class Session {
   #o;
   #handle = null;
   #openedAt = null;
+  // Each connection is numbered: a service's result ids are unique only
+  // within a connection, so a line's key carries its connection's number.
+  #connections = 0;
   #renewTimer = null;
   #ending = false;
   #audio = null;
@@ -244,7 +247,7 @@ class Session {
     this.#openedAt = this.#o.now();
     let handle;
     try {
-      handle = await adapter.open({ connection, format: audio, audio: this.#audio, report: this.#report() });
+      handle = await adapter.open({ connection, format: audio, audio: this.#audio, report: this.#report(++this.#connections) });
       this.#handle = handle;
       await this.#act('connect', lostSince
         ? { lostStretch: { startedAt: lostSince.toISOString(), endedAt: this.#o.now().toISOString() } }
@@ -269,7 +272,8 @@ class Session {
     }, connection.expiresIn * 800);
   }
 
-  #report() {
+  #report(connectionNumber) {
+    const key = (line) => `${connectionNumber}.${line.key}`;
     const speaker = (line) => line.speaker ?? this.#o.speakerFor(line.speakerLabel);
     // A line the session refuses may mean it stopped without the software
     // hearing yet: it's read again, and the audio stopped if so.
@@ -281,10 +285,10 @@ class Session {
     };
     return {
       update: (line) => tell('update-line', {
-        key: line.key, text: line.text, speaker: speaker(line), startedAt: this.#offset(line.start),
+        key: key(line), text: line.text, speaker: speaker(line), startedAt: this.#offset(line.start),
       }),
       add: (line) => tell('add-line', {
-        key: line.key,
+        key: key(line),
         text: line.text,
         speaker: speaker(line),
         startedAt: this.#offset(line.start),

@@ -210,7 +210,7 @@ components:
             const: result
           id:
             type: string
-            description: The stretch of speech it's about. The relay assigns it; Google's results have none.
+            description: The stretch of speech it's about, unique within the connection; another connection may use it again. The relay assigns it; Google's results have none.
           isFinal:
             type: boolean
             description: Whether the service will revise it again, as the Web Speech API names it.

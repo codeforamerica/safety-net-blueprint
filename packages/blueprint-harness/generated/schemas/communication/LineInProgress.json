@@ -10,7 +10,7 @@
     "key": {
       "type": "string",
       "maxLength": 255,
-      "description": "The line's key, the same on every update and on the finished line — the service's own result id where it has one, else one the client makes."
+      "description": "The line's key, the same on every update and on the finished line, and unique within the session. A service's own result id is unique only within one connection, so the client makes it unique across reconnects, for example by putting the connection's number in front."
     },
     "text": {
       "type": "string"
