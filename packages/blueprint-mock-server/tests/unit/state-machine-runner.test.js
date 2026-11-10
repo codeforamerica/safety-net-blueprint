@@ -5,11 +5,13 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 
 // A store of this file's own, rather than one shared through a module-level
 // singleton. In memory because these cases do not need a database — and
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
+const instance = createInstance({ store });
 import { executeTransition } from '../../src/state-machine-runner.js';
 import { ROLES } from '../roles.js';
 
@@ -59,6 +61,7 @@ test('executeTransition — passes when request body matches schema', async () =
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-1',
     trigger: 'close',
@@ -93,6 +96,7 @@ test('executeTransition — returns 422 when request body fails schema', async (
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-2',
     trigger: 'close',
@@ -122,6 +126,7 @@ test('executeTransition — skips validation when no schema.request defined', as
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-3',
     trigger: 'close',
@@ -155,6 +160,7 @@ test('executeTransition — caller role absent from all clauses → 403', async 
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-or-1',
     trigger: 'claim',
@@ -186,6 +192,7 @@ test('executeTransition — first clause fails, second clause passes → 200', a
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-or-2',
     trigger: 'escalate',
@@ -214,6 +221,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-or-3',
     trigger: 'escalate',
@@ -245,6 +253,7 @@ test('executeTransition — CEL condition guard passes, transition succeeds', as
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-cel-1',
     trigger: 'claim',
@@ -271,6 +280,7 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-cel-2',
     trigger: 'claim',
@@ -299,6 +309,7 @@ test('executeTransition — caller.id CEL guard passes when IDs match', async ()
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-cel-3',
     trigger: 'complete',
@@ -325,6 +336,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-cel-4',
     trigger: 'complete',
@@ -356,6 +368,7 @@ test('executeTransition — set: step mutates field on transition', async () => 
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-1',
     trigger: 'claim',
@@ -384,6 +397,7 @@ test('executeTransition — emit: step stores event in database', async () => {
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-2',
     trigger: 'submit',
@@ -409,6 +423,7 @@ test('executeTransition — an emitted event records who acted and carries the t
 
   const result = await executeTransition({
     store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-auth',
     trigger: 'submit',
@@ -445,6 +460,7 @@ test('executeTransition — emit: subject override uses value expression instead
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-2b',
     trigger: 'complete',
@@ -479,6 +495,7 @@ test('executeTransition — if: step runs correct branch based on resource state
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-3',
     trigger: 'route',
@@ -509,6 +526,7 @@ test('executeTransition — if: true branch runs when condition met', async () =
 
   const result = await executeTransition({
     store: store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-steps-4',
     trigger: 'route',
@@ -528,6 +546,7 @@ test('executeTransition — a body its schema refuses is 422, even when a condit
   const stateMachine = { ...makeStateMachine(), guards: [{ id: 'atIsSet', condition: 'has(request.at)' }] };
   const result = await executeTransition({
     store,
+    instance,
     resourceName: 'testresources',
     resourceId: 'res-order',
     trigger: 'stamp',

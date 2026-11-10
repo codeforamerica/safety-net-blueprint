@@ -6,7 +6,9 @@
 
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { eventBus } from '../../src/event-bus.js';
+import { createEventBus } from '../../src/event-bus.js';
+
+const eventBus = createEventBus();
 
 const received = [];
 const listener = (event) => received.push(event.id);

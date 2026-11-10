@@ -11,7 +11,6 @@
  * the envelope fields (e.g., from: subject looks up the subject entity by ID).
  */
 
-import { eventBus } from './event-bus.js';
 import { deliverEvent } from './routing.js';
 import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
@@ -62,9 +61,9 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
  * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
  * The path is fully interpolated: domain/collection/uuid/operation.
  */
-function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, store) {
-  if (currentStepCalls) {
-    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store });
+function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, { store, instance, stepCalls }) {
+  if (stepCalls) {
+    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store, instance, stepCalls });
     return;
   }
   const parts = path.split('/');
@@ -89,6 +88,7 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
     // after that is reported here rather than left unhandled.
     executeTransition({
       store,
+      instance,
       resourceName: collection,
       resourceId,
       trigger: operation,
@@ -110,9 +110,9 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
 /**
  * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
  */
-function executePendingAppend({ path, body }, store) {
-  if (currentStepCalls) {
-    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store });
+function executePendingAppend({ path, body }, { store, instance, stepCalls }) {
+  if (stepCalls) {
+    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store, instance, stepCalls });
     return;
   }
   const parts = path.split('/');
@@ -141,21 +141,16 @@ function executePendingAppend({ path, body }, store) {
 }
 
 /**
- * Register event subscriptions for all state machines that declare `events:` entries.
- * Call once at server startup after state machines are loaded.
+ * Run each of a function's calls for one key after the one before it settles,
+ * and a call for a key with nothing running at once. The reactions to events
+ * that share a partitionkey run in order this way; events with no key wait
+ * for nothing.
  *
- * @param {Array} allStateMachines - from discoverStateMachines()
- * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
+ * @param {Map<unknown, Promise<void>>} running - The mock's reactions still running, by key
+ * @param {unknown} key
+ * @param {() => unknown} run
  */
-let currentDispatch = null;
-let warnedReplaced = false;
-
-// The reactions still running for each partitionkey. One whose key has a
-// reaction running waits for it; one whose key has none runs at once, as it
-// always has. Events with no key wait for nothing.
-const running = new Map();
-
-export function inOrder(key, run) {
+export function inOrder(running, key, run) {
   if (key == null) return run();
   const before = running.get(key);
   const result = before ? before.then(run) : run();
@@ -165,25 +160,22 @@ export function inOrder(key, run) {
   settled.then(() => { if (running.get(key) === settled) running.delete(key); });
 }
 
-// What a step's call means, read against the API (step-calls.js). Set when
-// subscriptions are registered; without it, calls fall back to reading the
-// path by convention, which cannot create a nested record.
-let currentStepCalls = null;
-
 /**
- * Do a reaction's call the way the API's route at that method and path means:
- * a nested create, an update, or an action, which runs as the system.
+ * Do a reaction's call the way the API's route at that method and path means
+ * (step-calls.js): a nested create, an update, or an action, which runs as the
+ * system.
  */
-function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store }) {
+function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store, instance, stepCalls }) {
   const actor = { id: caller?.id || 'system', roles: caller?.roles || ['system'] };
   try {
-    const done = currentStepCalls.apply(call, {
+    const done = stepCalls.apply(call, {
       caller: actor,
       traceparent,
       causationid,
       now,
       runAction: ({ entry, collection, id, action, body }) => executeTransition({
         store,
+        instance,
         resourceName: collection,
         resourceId: id,
         trigger: action,
@@ -191,12 +183,12 @@ function applyThroughRoutes(call, { now, caller, traceparent = null, causationid
         callerRoles: actor.roles,
         stateMachine: entry.stateMachine,
         machine: entry.machine,
-        slaTypes: currentStepCalls.slaTypesFor(entry.domain),
+        slaTypes: stepCalls.slaTypesFor(entry.domain),
         requestBody: body || {},
         traceparent,
         causationid,
         now,
-        stepCalls: currentStepCalls,
+        stepCalls,
       }),
     });
     // An action it runs returns a promise; report its failure here.
@@ -227,33 +219,31 @@ function aboutOwnResource(type, domain, eventName) {
 }
 
 /**
+ * Register event subscriptions for all state machines that declare `on:`
+ * entries, on the mock's own bus. Call once, when the mock is assembled.
+ *
  * @param {object[]} allStateMachines
  * @param {object[]} [allSlaTypes]
  * @param {object[]} [apiSpecs]
- * @param {object} store
- * @param {object|null} [stepCalls]
+ * @param {object} instance - The mock reacting (instance.js)
+ * @param {object|null} [stepCalls] - What a step's call means, read against
+ *   the API (step-calls.js); without it, calls fall back to reading the path
+ *   by convention, which cannot create a nested record
  * @param {{ receives: Array<{ api: string, event: string, id: string, entry: object }>, apiOfFile: Map<string, string> }} [routedEvents]
  *   The received events routing sends elsewhere (routing.js); read when an
  *   event fires, so it can be filled in after this registers.
  */
-export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null, routedEvents = { receives: [], apiOfFile: new Map() }) {
-  currentStepCalls = stepCalls;
-  // Replace rather than accumulate. Registering twice — a second server in
-  // the same process, or a page rebooting one from an edited contract set —
-  // otherwise leaves the first set of handlers attached, so every event is
-  // handled twice and every subscription acts twice on it. Mirrors what
-  // `subscribeStubDispatch` already does.
-  if (currentDispatch) {
-    eventBus.off('domain-event', currentDispatch);
-    currentDispatch = null;
-    // Said once: two mocks in one page or process share these reactions, so
-    // the one built first stops reacting. Rebuilding one is fine.
-    if (!warnedReplaced) {
-      warnedReplaced = true;
-      console.warn('A new mock replaced the event reactions of the one before it in this page or process. If both are meant to run, run each in its own worker or process.');
-    }
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], instance, stepCalls = null, routedEvents = { receives: [], apiOfFile: new Map() }) {
+  const { store, reactions } = instance;
+  // Replace rather than accumulate, for a mock rebuilt from an edited
+  // contract set: otherwise the first set of handlers stays attached, and
+  // every event is handled twice.
+  if (reactions.dispatch) {
+    instance.bus.off('domain-event', reactions.dispatch);
+    reactions.dispatch = null;
   }
-  running.clear();
+  reactions.running.clear();
+  const deps = { store, instance, stepCalls };
 
   // Collect each machine's on: entries — the events it reacts to
   const machineEventSubs = [];
@@ -308,10 +298,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
   // API's receive operation is routed doesn't run here: the event is
   // delivered to whoever answers it instead, once, however many of the API's
   // machines react to it.
-  currentDispatch = (event) => {
+  reactions.dispatch = (event) => {
     const routed = routedEvents.receives.filter((receive) => eventTypeMatches(event.type, receive.event));
     // One that came from a service isn't sent back to it.
-    const from = arrivedThrough(event);
+    const from = arrivedThrough(instance, event);
     for (const receive of routed) if (receive.entry !== from) deliverEvent(event, receive);
     for (const { smEntry, entry } of machineEventSubs) {
       if (!eventTypeMatches(event.type, entry.type)) continue;
@@ -321,9 +311,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       // machine's records that name it, through their declared relationship.
       const related = entry.transition ? relatedRecords(smEntry, event) : null;
       if (related) {
-        for (const record of related) inOrder(event.partitionkey, () => react(smEntry, entry, event, record));
+        for (const record of related) inOrder(reactions.running, event.partitionkey, () => react(smEntry, entry, event, record));
       } else {
-        inOrder(event.partitionkey, () => react(smEntry, entry, event));
+        inOrder(reactions.running, event.partitionkey, () => react(smEntry, entry, event));
       }
     }
   };
@@ -391,7 +381,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       }
       // The schemas the steps' values go into, so a null one doesn't accept is
       // left out (step-calls.js, schemasFor).
-      const context = { ...baseContext, entities, schemas: currentStepCalls?.schemasFor?.(smEntry.machine) };
+      const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(smEntry.machine), instance };
 
       // Evaluate guards if defined on this onEvent entry
       const guardConditions = entry.guards?.conditions || [];
@@ -410,7 +400,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       // none, nothing it did is saved.
       const perform = performerFor({
         callerId: caller.id, callerRoles: caller.roles, timestamp: now,
-        traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, stepCalls: currentStepCalls,
+        traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, instance, stepCalls,
       });
       const before = { ...resource };
       const restore = () => {
@@ -456,16 +446,16 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
           try {
             const stored = store.create(entity, data);
-            const created = currentStepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
+            const created = stepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
             // Named for the resource the API serves at that path, where the
             // route can be found; otherwise for the path's last segment.
             let object = eventObject || entity.replace(/s$/, '');
             try {
-              const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+              const resolved = stepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
               if (resolved?.resource?.eventName) object = resolved.resource.eventName;
             } catch { /* not a declared route: keep the path's name */ }
             emitEvent({
-              store,
+              instance,
               domain: entDomain || smEntry.domain,
               object,
               action: 'created',
@@ -485,7 +475,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle array appends
         for (const append of pendingAppends) {
           try {
-            executePendingAppend(append, store);
+            executePendingAppend(append, deps);
           } catch (e) {
             console.error(`onEvent append failed for "${append.path}":`, e.message);
           }
@@ -494,7 +484,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle operation triggers
         for (const op of pendingOperations) {
           try {
-            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
           } catch (e) {
             console.error(`onEvent operation failed for "${op.path}":`, e.message);
           }
@@ -518,7 +508,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           if (failed) return unhandled(failed);
           for (const op of procOps) {
             try {
-              executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
+              executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
             } catch (e) {
               console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
             }
@@ -549,7 +539,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
                 causationid: event.id,
                 time: now,
                 ...authContext('system'),
-              }, store);
+              }, instance);
             } catch (e) {
               console.error(`onEvent emit "${evt.type}" failed:`, e.message);
             }
@@ -561,5 +551,5 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     }
   }
 
-  eventBus.on('domain-event', currentDispatch);
+  instance.bus.on('domain-event', reactions.dispatch);
 }

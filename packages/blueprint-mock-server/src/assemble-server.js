@@ -24,10 +24,9 @@ import { applyRouting } from './routing.js';
 import { operationsOf } from './operation-calls.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { eventsToFollow, followRoutedEvents } from './routed-events.js';
-import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { createStepCalls } from './step-calls.js';
 import { rememberMachineFiles } from './state-machine-runner.js';
-import { initRulesIndex } from './state-machine-engine.js';
+import { createInstance, loadContracts } from './instance.js';
 
 /**
  * @param {object} set - What the contract set declares, as `extract` reads it
@@ -42,24 +41,32 @@ import { initRulesIndex } from './state-machine-engine.js';
  * @param {object} set.registries
  * @param {object} options
  * @param {object} options.store - Already seeded
+ * @param {object} [options.instance] - The mock's own state (instance.js), when
+ *   the caller made it to seed configs or check requests before assembling;
+ *   otherwise a new one is made here
  * @param {() => object[]} options.readDocs - The documents /mock/reseed restores
  * @param {boolean} options.seeded - Whether the store was seeded from mock data
  * @param {string} [options.baseUrl] - Base for Location headers
  * @param {string} [options.basePath] - Path prefix to strip before matching
  * @param {Array} [options.routing] - Domains, APIs and operations something else answers (#283, #520)
- * @returns {{ routes: Map, fetch: Function, endpoints: object[], rpcEndpoints: object[], overridden: { applied: string[], unmatched: string[] }, routed: string[], receives: object[] }}
+ * @returns {{ routes: Map, fetch: Function, endpoints: object[], rpcEndpoints: object[], overridden: { applied: string[], unmatched: string[] }, routed: string[], receives: object[], instance: object }}
  * @throws {Error} When a contract route collides with the mock's own, or routing names nothing
  */
 export function assembleServer(
   { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
-  { store, readDocs, seeded, baseUrl = '', basePath = '', routing = [] },
+  { store, instance = null, readDocs, seeded, baseUrl = '', basePath = '', routing = [] },
 ) {
   // A step's call to a record — a nested create, an update, another action, a
   // composition's patch — means what the API's route at that method and path
   // means.
   const docs = readDocs();
+  // Everything this mock holds besides its records is its own, so another
+  // mock in the same page or process hears none of its events and answers
+  // none of its stubs.
+  if (!instance) instance = loadContracts(createInstance({ store }), { docs });
+  loadContracts(instance, { apiSpecs });
   rememberMachineFiles(stateMachines);
-  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store, docs });
+  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store, instance, docs });
   // Every operation the set has, as core finds them: the events documents'
   // receive operations included, which routing a domain or API covers.
   const operations = extract(docs, 'operations');
@@ -68,21 +75,17 @@ export function assembleServer(
   // Filled in once routing is applied, below, before the first request: the
   // received events that go elsewhere, so the reactions to them don't run here.
   const routedEvents = { receives: [], apiOfFile };
-  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls, routedEvents);
-  // Stubs are kept per module, not per server: a new server starts with none,
-  // so one registered on the server it replaces cannot answer here.
-  clearAllStubs();
-  subscribeStubDispatch(store);
+  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, instance, stepCalls, routedEvents);
   // The rulesets a state machine's `evaluate:` step runs.
-  initRulesIndex(buildRulesIndex(graphs));
+  instance.rulesIndex = buildRulesIndex(graphs);
 
   // Registration order is priority: addRoute keeps the first entry for a key.
   const routes = new Map();
-  registerPlatformRoutes(routes, { store, apiNames: apiSpecs.map((a) => a.name), readDocs, configs, seeded });
-  if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store, stepCalls });
+  registerPlatformRoutes(routes, { store, instance, apiNames: apiSpecs.map((a) => a.name), readDocs, configs, seeded });
+  if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store, instance, stepCalls });
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
-  const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
-  const rpcEndpoints = registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });
+  const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store, instance });
+  const rpcEndpoints = registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, instance, stepCalls });
 
   // Each route a contract's operation declares, tagged with the operation and
   // the API it belongs to, wherever it was registered from — routing and the
@@ -98,7 +101,7 @@ export function assembleServer(
   // A few contract-declared endpoints cannot be served by generated CRUD.
   // Matched by operationId, so adding a platform endpoint to the contract
   // needs no code here, and an override that stops matching is reported.
-  const overridden = overrideByOperationId(routes, contractOverrides({ store, registries }));
+  const overridden = overrideByOperationId(routes, contractOverrides({ store, instance, registries }));
 
   // Service-call creation is enriched with catalog-derived fields: serviceType
   // and callMode come from the referenced ExternalService, and status starts
@@ -129,6 +132,7 @@ export function assembleServer(
   const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]));
   const byApiAndId = new Map(details.map((operation) => [`${operation.api}#${operation.id}`, operation]));
   const { routed, receives, sends } = applyRouting(routes, routing, {
+    instance,
     operations,
     domainOfApi,
     // What a routed handler's answer is checked against.
@@ -144,9 +148,9 @@ export function assembleServer(
   });
   routedEvents.receives = receives;
   // The events routed services send that reactions here need, read from them.
-  const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { store });
+  const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { instance });
 
   // An action calling an operation as its caller sends the call through here.
   stepCalls.serve(createDispatcher(routes));
-  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop };
+  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
 }

@@ -8,11 +8,10 @@
  * operation-calls-in-actions.test.js.
  */
 
-import { test, beforeEach } from 'node:test';
+import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/browser.js';
-import { eventBus } from '../../src/event-bus.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 const APPLICATION = '6a0c3e2b-1f4d-4b8a-9c7e-5d2f1a0b3c84';
@@ -24,7 +23,9 @@ let mock;
 beforeEach(async () => {
   const log = console.log; const warn = console.warn; console.log = () => {}; console.warn = () => {};
   try { mock = await createMockServer({ contracts, seed: true }); } finally { console.log = log; console.warn = warn; }
+  hearTimers();
 });
+afterEach(() => listening.abort());
 
 const send = async (method, path, body) => {
   const response = await mock.fetch(new Request(`http://localhost${path}`, {
@@ -205,12 +206,26 @@ test('expiring closes an open suggestion, and a closed one cannot be decided', a
 // Expiry: a suggestion asks the scheduler for a timer at its expiresAt — a day
 // out unless it says when — and deciding it cancels the timer. Scheduling
 // events go to the bus, for a scheduler or a stub, not to /platform/events.
+// Heard on each test's mock's event stream, as a scheduler would hear them.
 const scheduling = [];
-eventBus.on('domain-event', (event) => { if (event.type.startsWith('platform.timer.')) scheduling.push(event); });
+let listening;
+function hearTimers() {
+  listening = new AbortController();
+  mock.fetch(new Request('http://localhost/platform/events/stream?type=platform.timer.*', { signal: listening.signal }))
+    .then(async (response) => {
+      const lines = response.body.pipeThrough(new TextDecoderStream());
+      for await (const chunk of lines) {
+        for (const line of chunk.split('\n')) if (line.startsWith('data: ')) scheduling.push(JSON.parse(line.slice(6)));
+      }
+    })
+    .catch(() => { /* aborted at the end of the test */ });
+}
+// What the stream has sent arrives a turn later than the request that sent it.
+const delivered = () => new Promise((resolve) => setImmediate(resolve));
 const eventsOf = async (type) => (await send('GET', `/platform/events?type=${type}`)).body.items;
-const timerFor = async (id) => scheduling
+const timerFor = async (id) => (await delivered(), scheduling)
   .find((e) => e.type === 'platform.timer.requested' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
-const cancelledFor = async (id) => scheduling
+const cancelledFor = async (id) => (await delivered(), scheduling)
   .filter((e) => e.type === 'platform.timer.cancelled' && e.data.timerId === `decision-support.suggestion_expiry.${id}`);
 
 test('a suggestion with no expiresAt expires a day out, and asks for a timer then', async () => {

@@ -10,7 +10,6 @@ import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
-import { validate } from './validator.js';
 import { playsAnyOf } from './auth-context.js';
 
 /**
@@ -108,6 +107,8 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
+ * @param {Object} options.store
+ * @param {Object} options.instance         - The mock running it (instance.js)
  * @param {{ schema: Object, follow: Function }|null} [options.responseSchema] - The 200 response schema
  *   the action's endpoint declares, which an action's `response.payload` is fitted to
  * Steps run in order; a call to an operation is made as it is reached. When
@@ -132,6 +133,7 @@ export async function executeTransition({
   traceparent = null,
   causationid = null,
   store,
+  instance,
   stepCalls = null,
   responseSchema = null
 }) {
@@ -171,13 +173,13 @@ export async function executeTransition({
   }
   // The schemas the steps' values go into, so a null one doesn't accept is
   // left out (step-calls.js, schemasFor).
-  const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(machine) };
+  const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(machine), instance };
 
   const checkBody = () => {
     if (!operation?.schema?.request) return null;
     const relativePath = declaredIn.get(stateMachine);
     const source = relativePath ? { relativePath, defs: stateMachine.$defs } : null;
-    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`, source);
+    const { valid, errors } = instance.schemas.validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`, source);
     return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
   };
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
@@ -190,7 +192,7 @@ export async function executeTransition({
   // record's id as the key: accepting a suggestion calls once, and only a call
   // that succeeds is kept under the key.
   const perform = performerFor({
-    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
+    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, instance, stepCalls,
     idempotencyKey: resource?.id ?? null,
   });
 
@@ -290,6 +292,7 @@ export async function executeTransition({
             traceparent,
             causationid,
             store,
+            instance,
             stepCalls,
           }),
         });
@@ -313,7 +316,7 @@ export async function executeTransition({
         traceparent,
         causationid: event.causationid || causationid || undefined,
         ...authContext(callerId, callerRoles),
-      }, store);
+      }, instance);
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);
     }
@@ -365,6 +368,7 @@ function refusedBy(outcome) {
  * @param {string|null} options.traceparent
  * @param {string|null} options.causationid - The event the call's own events name as their cause
  * @param {Object} options.store
+ * @param {Object} options.instance
  * @param {Object|null} options.stepCalls
  * @returns {((call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>) & { settleCreated: (path: string, record: Object) => Object|null }}
  */
@@ -381,7 +385,7 @@ export function performerFor(options) {
   return perform;
 }
 
-function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls, idempotencyKey = null }) {
+function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, instance, stepCalls, idempotencyKey = null }) {
   if (!stepCalls) {
     return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
   }
@@ -406,6 +410,7 @@ function performCall(call, step, { callerId, callerRoles, timestamp, traceparent
       traceparent,
       causationid,
       store,
+      instance,
       stepCalls,
     }),
   });

@@ -21,8 +21,6 @@
  */
 
 import { assertValid, dotted } from './mock-schemas.js';
-import { matchAndPopHttp } from './mock-stub-engine.js';
-import { validate } from './validator.js';
 import schema from '../schemas/routing-schema.json' with { type: 'json' };
 
 /**
@@ -74,9 +72,10 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  * @param {object} [options]
  * @param {string[]} [options.includeHeaders] - Headers to pass along beyond the defaults
  * @param {number} [options.timeoutMs]
+ * @param {object} [options.stubs] - The mock's HTTP stubs, which answer first (mock-stub-engine.js)
  * @returns {(request: Request) => Promise<Response>}
  */
-export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIMEOUT_MS, stubs = null } = {}) {
   const named = new Set(includeHeaders.map((name) => name.toLowerCase()));
 
   return async function forwarded(request) {
@@ -84,7 +83,7 @@ export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIM
 
     // A stub is a per-test override, and outranks the configuration the same
     // way it outranks normal mock handling.
-    const httpStub = matchAndPopHttp(request.method, incoming.pathname);
+    const httpStub = stubs?.matchAndPopHttp(request.method, incoming.pathname);
     // Answered the way the mock's own handler for this method would answer
     // it, so a stub behaves the same whether or not its route is real.
     if (httpStub) {
@@ -328,9 +327,10 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
  * @param {Function} handler - `(Request) => Response | Promise<Response>`
  * @param {(status: number) => { schema: object, key: string, source?: object } | null} responseSchema
  * @param {string} name - What the route is, for the message
+ * @param {{ validate: Function }} schemas - The mock's validator
  * @returns {(request: Request) => Promise<Response>}
  */
-function checkedHandler(handler, responseSchema, name) {
+function checkedHandler(handler, responseSchema, name, schemas) {
   return async function routed(request) {
     const response = await handler(request);
     if (!(response instanceof Response)) {
@@ -348,7 +348,7 @@ function checkedHandler(handler, responseSchema, name) {
       console.warn(message);
       return Response.json({ code: 'BAD_GATEWAY', message }, { status: 502 });
     }
-    const { valid, errors } = validate(body, declared.schema, declared.key, declared.source);
+    const { valid, errors } = schemas.validate(body, declared.schema, declared.key, declared.source);
     if (valid) return response;
     const details = errors.map((e) => ({ field: e.field ?? e.instancePath ?? '', message: e.message }));
     const message = `The handler routed for ${name} answered ${response.status} with a body its response schema doesn't allow.`;
@@ -368,6 +368,7 @@ function checkedHandler(handler, responseSchema, name) {
  * @param {Array} routing
  * @param {object} context - As for planRouting, and:
  * @param {(route: object, status: number) => { schema: object, key: string } | null} context.responseSchema
+ * @param {object} context.instance - The mock being routed (instance.js)
  * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }> }}
  */
 export function applyRouting(routes, routing = [], context) {
@@ -377,8 +378,8 @@ export function applyRouting(routes, routing = [], context) {
   for (const [key, entry] of byRoute) {
     const route = routes.get(key);
     route.handler = entry.handler
-      ? checkedHandler(entry.handler, (status) => context.responseSchema(route, status), key)
-      : forwardTo(entry.to, { includeHeaders: entry.includeHeaders, timeoutMs: entry.timeoutMs });
+      ? checkedHandler(entry.handler, (status) => context.responseSchema(route, status), key, context.instance.schemas)
+      : forwardTo(entry.to, { includeHeaders: entry.includeHeaders, timeoutMs: entry.timeoutMs, stubs: context.instance.stubs });
     // Marked, so a check that reads the mock's records knows these aren't the ones that count.
     route.routed = true;
   }

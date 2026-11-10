@@ -15,8 +15,6 @@
 
 import { resolverFor } from './schema-refs.js';
 import { deriveCollectionName } from './collection-utils.js';
-import { registerResourceCollections } from './handlers/expand-utils.js';
-import { registerEventOwners } from './emit-event.js';
 
 /** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
 const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
@@ -258,13 +256,24 @@ export function apiSpecsFromDocs(docs) {
     }
   }
 
-  // Where each resource's records are kept, so a related record is found by
-  // its resource's name without guessing at its collection — and where it is
-  // read, so a link to one points at its own route, in its own API.
+  return loaded;
+}
+
+/**
+ * Where each resource's records are kept, so a related record is found by its
+ * resource's name without guessing at its collection — and where it is read,
+ * so a link to one points at its own route, in its own API. Read from core's
+ * model of the API documents, so a TranscriptionProfile served at /profiles is
+ * found in `profiles`. Each mock keeps its own (instance.js).
+ *
+ * @param {object[]} apiSpecs - From apiSpecsFromDocs
+ * @returns {{ collections: Map<string, string>, itemPaths: Map<string, { path: string, parameter: string }> }}
+ */
+export function resourceIndex(apiSpecs) {
   const collections = new Map();
   const itemPaths = new Map();
-  for (const api of loaded) {
-    for (const resource of api.doc.model?.()?.resources ?? []) {
+  for (const api of apiSpecs) {
+    for (const resource of api.doc?.model?.()?.resources ?? []) {
       if (resource.name && !collections.has(resource.name)) {
         collections.set(resource.name, deriveCollectionName(resource.path('collection'), ''));
         const item = resource.path('item');
@@ -272,15 +281,22 @@ export function apiSpecsFromDocs(docs) {
       }
     }
   }
-  registerResourceCollections(collections, itemPaths);
+  return { collections, itemPaths };
+}
 
-  // Which record each resource's records sit under, by the name its events
-  // carry — an income's events find the application above it — so an event
-  // is keyed by the record that owns it (emit-event.js).
+/**
+ * Which record each resource's records sit under, by the name its events carry
+ * (`intake.application_income`) — an income's events find the application
+ * above it — so an event is keyed by the record that owns it (emit-event.js).
+ *
+ * @param {object[]} apiSpecs - From apiSpecsFromDocs
+ * @returns {Map<string, { collection: string, parent: string|null, parentField: string|null }>}
+ */
+export function eventOwnersOf(apiSpecs) {
   const owners = new Map();
-  for (const api of loaded) {
+  for (const api of apiSpecs) {
     const domain = (api.serverBasePath ?? '').replace(/^\//, '');
-    for (const resource of api.doc.model?.()?.resources ?? []) {
+    for (const resource of api.doc?.model?.()?.resources ?? []) {
       const collection = resource.path('collection');
       if (!resource.eventName || !collection) continue;
       const parent = resource.parent;
@@ -291,7 +307,5 @@ export function apiSpecsFromDocs(docs) {
       });
     }
   }
-  registerEventOwners(owners);
-
-  return loaded;
+  return owners;
 }

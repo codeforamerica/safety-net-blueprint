@@ -23,17 +23,18 @@ const LIST = '/platform/events';
 const RETRY_MS = [1000, 2000, 5000, 10000, 30000];
 const POLL_MS = 3000;
 
-/**
- * Event ids that arrived from a service, with the routing entry they came
- * through, so the dispatcher doesn't deliver them back to it.
- * @type {Map<string, object>}
- */
-const arrivals = new Map();
 const ARRIVALS_KEPT = 1000;
 
-/** The routing entry an event arrived through, if it did. */
-export function arrivedThrough(event) {
-  return arrivals.get(event?.id) ?? null;
+/**
+ * The routing entry an event arrived through, if it did. A mock remembers the
+ * ids of events that arrived from a service, and the entry they came through
+ * (`instance.arrivals`), so its dispatcher doesn't deliver them back to it.
+ *
+ * @param {{ arrivals: Map<string, object> }} instance
+ * @param {object} event
+ */
+export function arrivedThrough(instance, event) {
+  return instance.arrivals.get(event?.id) ?? null;
 }
 
 /**
@@ -76,16 +77,17 @@ function typeFilter(types) {
  * Start reading. Each service is read until `stop`.
  *
  * @param {Map<object, Set<string>>} wanted - from eventsToFollow
- * @param {{ store: object }} deps
+ * @param {{ instance: object }} deps - The mock the events arrive in (instance.js)
  * @returns {{ stop: () => void }}
  */
-export function followRoutedEvents(wanted, { store }) {
+export function followRoutedEvents(wanted, { instance }) {
   const controller = new AbortController();
-  for (const [entry, types] of wanted) follow(entry, [...types], store, controller.signal);
+  for (const [entry, types] of wanted) follow(entry, [...types], instance, controller.signal);
   return { stop: () => controller.abort() };
 }
 
-function follow(entry, types, store, signal) {
+function follow(entry, types, instance, signal) {
+  const { store, arrivals } = instance;
   const filter = typeFilter(types);
   const query = filter ? `?type=${encodeURIComponent(filter)}` : '';
   const send = (path, headers = {}) => {
@@ -105,7 +107,7 @@ function follow(entry, types, store, signal) {
     if (store.findById('events', event.id)) return;
     arrivals.set(event.id, entry);
     if (arrivals.size > ARRIVALS_KEPT) arrivals.delete(arrivals.keys().next().value);
-    emitEventEnvelope(event, store);
+    emitEventEnvelope(event, instance);
   };
 
   const wait = (ms) => new Promise((resolve) => {

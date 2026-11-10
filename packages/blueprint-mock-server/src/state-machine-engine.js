@@ -10,19 +10,6 @@ import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
 import { resolveTimeToken } from './time-tokens.js';
 import { evaluate as evaluateRules } from '@codeforamerica/blueprint-rules-engine';
 
-// ── Rules index ───────────────────────────────────────────────────────────────
-// Populated at startup by initRulesIndex(). Maps rulesetName → compiled graph.
-let _rulesIndex = {};
-
-/**
- * Initialize the rules index used by evaluate: steps.
- * Call once at server startup after discovering and compiling rules files.
- * @param {Object} index - map of rulesetName → compiled graph
- */
-export function initRulesIndex(index) {
-  _rulesIndex = index ?? {};
-}
-
 /**
  * Resolve a value expression against a context.
  * Supports $caller.*, $object.*, $request.*, $this.*, $alias.* (context entities), $now,
@@ -677,7 +664,9 @@ function* walkSteps(steps, resource, context, store, pending) {
       const data = context.schemas?.event(step.emit.type, filled) ?? filled;
       pendingEvents.push({ type: step.emit.type, data, subject: step.emit.subject ? resolveValue(step.emit.subject, context) : undefined, causationid: step.emit.causationid ? resolveValue(step.emit.causationid, context) : undefined });
     } else if (step.evaluate) {
-      const graph = _rulesIndex[step.evaluate];
+      // The mock's rulesets by name (instance.js), compiled from the decision
+      // graphs when it was assembled.
+      const graph = context.instance?.rulesIndex[step.evaluate];
       if (!graph) {
         console.warn(`evaluate: ruleset "${step.evaluate}" not found in rules index — skipping`);
         continue;

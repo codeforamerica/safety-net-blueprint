@@ -19,7 +19,6 @@
 
 import { deriveCollectionName } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
-import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
 import { extractExpandFields, applyExpand, propertiesOf } from './handlers/expand-utils.js';
 import { operationsOf } from './operation-calls.js';
@@ -34,9 +33,10 @@ import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
  * @param {Array}  options.stateMachines - From `extract(docs, 'state-machines')`
  * @param {Array}  [options.slaTypes]    - From `extract(docs, 'sla-types')`, for an action a call runs
  * @param {Object} options.store
+ * @param {Object} options.instance - The mock making the calls (instance.js)
  * @returns {{ resolve: Function, apply: Function, perform: Function, settleCreated: Function, startClocksAt: Function, serve: Function, slaTypesFor: Function }}
  */
-export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store, docs = [] }) {
+export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store, instance, docs = [] }) {
   // Every operation by operationId, including those a state machine adds, for
   // a call that names one; and the mock's own fetch, once its routes exist,
   // for a call made as the caller.
@@ -191,9 +191,9 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
   function checkRecord(resolved, stored) {
     const { schema, follow } = schemaOf(resolved);
     if (!schema) return;
-    const record = applyExpand(stored, extractExpandFields(schema, follow), store.findById);
+    const record = applyExpand(stored, extractExpandFields(schema, follow, instance.resources), store.findById);
     const source = { relativePath: resolved.api.doc.relativePath, ref: `#/components/schemas/${resolved.resource.name}` };
-    const { valid, errors } = validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
+    const { valid, errors } = instance.schemas.validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
     if (!valid) {
       throw new Error(`call wrote a ${resolved.resource.name} its schema refuses: ${errors.map((e) => `${e.field} ${e.message}`).join('; ')}`);
     }
@@ -217,7 +217,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     // Named for the resource, as a client's write is: a machine's write is
     // the same event.
     const event = (action, resourceId, data) => resolved.resource.eventName && emitEvent({
-      store,
+      instance,
       domain: resolved.api.domain,
       object: resolved.resource.eventName,
       action,
@@ -394,7 +394,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store,
     try { resolved = resolve('POST', path); } catch { return false; }
     if (resolved.kind !== 'create' || !resolved.resource.eventName) return false;
     emitEvent({
-      store,
+      instance,
       domain: resolved.api.domain,
       object: resolved.resource.eventName,
       action: 'created',

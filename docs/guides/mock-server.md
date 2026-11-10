@@ -361,7 +361,7 @@ The other way round: when a state machine the mock keeps reacts to an event a ro
 
 It starts on its own when the mock is built, one reader per service, and logs `EVENTS <types> from <service>`. An event the mock already has — one it sent there itself — is skipped, and one that arrives isn't delivered back. In a page, `mock.stopFollowing()` stops reading.
 
-One mock per page or process: a second shares the first's event reactions and replaces them, and says so. Run a stand-in for the server in a worker or another process.
+Each mock keeps its own events, reactions and stubs, so a page can build one for itself and another standing in for the server, and route the first to the second's `fetch` with a `handler`.
 
 ### Headers
 

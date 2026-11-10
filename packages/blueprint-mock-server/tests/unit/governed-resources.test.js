@@ -22,6 +22,7 @@ import assert from 'node:assert';
 import { createMockServer } from '../../src/browser.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
 import { seedConfigs } from '../../src/config-registry.js';
+import { createInstance } from '../../src/instance.js';
 import { extract } from '@codeforamerica/blueprint-core';
 
 const ok = (schema, status = 200) => ({ [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });
@@ -243,7 +244,7 @@ describe('a config catalog', () => {
   test('seeds only what is missing, so a change made through the API is kept', () => {
     const store = createMemoryStore();
     store.insertResource('templates', { id: 'kanban', name: 'Renamed', source: 'system' });
-    seedConfigs(extract(extract(contracts, 'docs'), 'config'), store);
+    seedConfigs(extract(extract(contracts, 'docs'), 'config'), createInstance({ store }));
     assert.strictEqual(store.findById('templates', 'kanban').name, 'Renamed');
   });
 });

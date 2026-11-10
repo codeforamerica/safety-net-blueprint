@@ -7,13 +7,14 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { makeRequest, readResponse } from '../helpers/fetch.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 
 // A store of this file's own, rather than one shared through a module-level
 // singleton. In memory because these cases do not need a database — and
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
 
-const DEPS = { store: store };
+const DEPS = { store, instance: createInstance({ store }) };
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -305,7 +306,7 @@ test('Route Generator Tests', async (t) => {
       }
     ];
 
-    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080');
+    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080', [], [], [], DEPS);
     const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 4, 'Should register all 4 endpoints');
@@ -324,7 +325,7 @@ test('Route Generator Tests', async (t) => {
       ])
     ];
 
-    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080');
+    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080', [], [], [], DEPS);
 
     assert.ok(Array.isArray(allEndpoints));
     assert.strictEqual(allEndpoints[0].apiName, 'test-api');
@@ -337,7 +338,7 @@ test('Route Generator Tests', async (t) => {
   await t.test('registerAllRoutes - handles empty specs array', () => {
     const table = new Map();
 
-    const allEndpoints = registerAllRoutes(table, [], 'http://localhost:1080');
+    const allEndpoints = registerAllRoutes(table, [], 'http://localhost:1080', [], [], [], DEPS);
 
     assert.strictEqual(allEndpoints.length, 0);
     assert.strictEqual(listRoutes(table).length, 0);

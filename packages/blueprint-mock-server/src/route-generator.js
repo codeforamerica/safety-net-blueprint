@@ -8,7 +8,7 @@ import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expa
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
 import { addRoute, routesFrom, tagRoutesAddedBy, routeKey, templateOf } from './http/route-table.js';
-import { registerReadRoute, clearReadRoutes, heldHere, referencesByTarget } from './references.js';
+import { registerReadRoute, heldHere, referencesByTarget } from './references.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -22,16 +22,16 @@ import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { emitEvent } from './emit-event.js';
 import { governorsByRoute, checkGoverned } from './governed-resources.js';
-import { validate as validateBody, createErrorResponse } from './validator.js';
+import { createErrorResponse } from './validator.js';
 
 /**
  * A check of a request body against an operation's schema, for a governed
  * create or update to run between its role check and its conditions.
  */
-function bodyCheckFor(endpoint, apiMetadata, key) {
+function bodyCheckFor(endpoint, apiMetadata, key, schemas) {
   return (body) => () => {
     if (!endpoint.requestSchema) return null;
-    const { valid, errors } = validateBody(body, endpoint.requestSchema, key,
+    const { valid, errors } = schemas.validate(body, endpoint.requestSchema, key,
       { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef });
     if (valid) return null;
     const { message, details } = createErrorResponse(errors, 422);
@@ -41,7 +41,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { operationsOf } from './operation-calls.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
-import { editableResources, assembleEditable, createEditablePatchHandler, registerEditableOperation, clearEditableOperations } from './editable-composition.js';
+import { editableResources, assembleEditable, createEditablePatchHandler, registerEditableOperation } from './editable-composition.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
@@ -125,9 +125,9 @@ function deriveParentCollection(path, basePath) {
  * @param {string} parentId
  * @returns {Response|null}
  */
-function parentNotFound(store, parentCollection, parentId) {
+function parentNotFound(store, instance, parentCollection, parentId) {
   // A parent forwarded to a real service has its records there, not here.
-  if (!parentCollection || !heldHere(parentCollection)) return null;
+  if (!parentCollection || !heldHere(instance, parentCollection)) return null;
   const { items } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
   if (items.length > 0) return null;
   const label = capitalize(parentCollection.replace(/s$/, ''));
@@ -160,7 +160,7 @@ function createSingletonGetHandler(endpoint, parentParam, parentField, deps = {}
  * path for resources not auto-created by the rules engine (e.g., household-info).
  */
 function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField, deps = {}) {
-  const { store } = deps;
+  const { store, instance } = deps;
   const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return async (request, { params }) => {
     const parentId = params[parentParam];
@@ -195,7 +195,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
     try {
       const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
       emitEvent({
-        store,
+        instance,
         domain,
         object: resourceLabel,
         action,
@@ -312,11 +312,11 @@ export function extractRequiredDefaults(responseSchema, follow = (x) => x) {
  * @param {string} baseUrl - Base URL for Location headers
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
  * @param {Array} [slaTypes] - SLA types, by domain
- * @param {Object} [deps] - Shared dependencies ({ store })
+ * @param {Object} [deps] - Shared dependencies ({ store, instance }): the mock serving them (instance.js)
  * @returns {Array} Array of registered endpoint info
  */
 export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaTypes = [], deps = {}) {
-  const { store } = deps;
+  const { store, instance } = deps;
   const registeredEndpoints = [];
   const governors = governorsByRoute(stateMachines);
 
@@ -395,7 +395,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       // yet, so its guards see only the body and the caller.
       const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
       const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
-      const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`);
+      const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
       handler = createGovernors.length === 0 ? baseCreateHandler : async (request, ctx) => {
         const sent = await jsonBody(request.clone());
         const refused = checkGoverned({
@@ -444,7 +444,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const pagination = apiMetadata.pagination || {};
           handler = (request, { params }) => {
             const parentId = params[parentParam];
-            const noParent = parentNotFound(store, parentCollection, parentId);
+            const noParent = parentNotFound(store, instance, parentCollection, parentId);
             if (noParent) return noParent;
             // List sub-resources filtered by parent ID plus any extra query field filters,
             // calling findAll directly rather than routing through createListHandler.
@@ -480,7 +480,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
               ({ items, total } = store.findAll(endpointWithCollection.collectionName, filters, { limit, offset }));
             }
             const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
-            const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
+            const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema, instance.resources);
             const expandedItems = expandFields.length > 0
               ? items.map(item => applyExpand(item, expandFields, (c, id) => store.findById(c, id)))
               : items;
@@ -501,11 +501,11 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           // document writes it, without the server's base.
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
           const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
-          const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`);
+          const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`, instance.schemas);
           const parentCollection = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
           handler = async (request, ctx) => {
             // Nothing is created under a parent that isn't there, as nothing is listed under one.
-            const noParent = parentNotFound(store, parentCollection, ctx.params[parentParam]);
+            const noParent = parentNotFound(store, instance, parentCollection, ctx.params[parentParam]);
             if (noParent) return noParent;
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
@@ -544,7 +544,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
         const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
         const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
-        const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`);
+        const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`, instance.schemas);
         handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
           const change = await jsonBody(request.clone());
           const refused = checkGoverned({
@@ -579,7 +579,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint, deps);
       const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
       const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
-      const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`);
+      const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`, instance.schemas);
       handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
         const change = await jsonBody(request.clone());
         const refused = checkGoverned({
@@ -619,7 +619,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
     // Where this collection's records are read, so an id pointing into it can
     // be checked here unless the route is later forwarded to a real service.
     if (method === 'get' && /\}$/.test(endpoint.path) && !endpoint.path.endsWith('/me')) {
-      registerReadRoute(collectionName, routes, routeKey('GET', templateOf(expressPath)));
+      registerReadRoute(instance, collectionName, routes, routeKey('GET', templateOf(expressPath)));
     }
 
     registeredEndpoints.push({
@@ -647,13 +647,9 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
 export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], deps = {}) {
   console.log('\nRegistering API routes...');
 
-  // This server's collections replace the last one's, so an id into a
-  // collection only that server held isn't checked here.
-  clearReadRoutes();
-
   // Every operation in the set, for checking a call a write carries, and
   // every field naming a record of each resource, for what a delete does.
-  deps = { ...deps, operations: operationsOf(apiSpecs), referencesTo: referencesByTarget(apiSpecs) };
+  deps = { ...deps, operations: operationsOf(apiSpecs), referencesTo: referencesByTarget(apiSpecs, deps.instance.resources) };
 
   const allEndpoints = [];
 
@@ -750,12 +746,11 @@ function buildResourceCollectionNameMap(apiSpecs) {
  * @returns {Array} Registered endpoint info
  */
 export function registerCompositionRoutes(routes, compositionFiles = [], apiSpecs = [], deps = {}) {
-  const { store, stepCalls } = deps;
+  const { store, instance, stepCalls } = deps;
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
   const editables = editableResources(apiSpecs, resourceCollectionNameMap);
-  clearEditableOperations();
 
   for (const { domain, doc, filePath, relativePath, api } of compositionFiles) {
     const table = routesFrom(routes, relativePath ?? filePath);
@@ -786,7 +781,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
       // apiSpecs includes the server base prefix.
       if (composition.endpoint?.parentLink) {
         const parentFullPath = fullPath.replace(/\/[^/]+$/, '');
-        registerParentLink(parentFullPath, compositionName, fullPath);
+        registerParentLink(instance, parentFullPath, compositionName, fullPath);
       }
 
       // Merge doc-level derives so the assembler can resolve $ref expressions in views and derive fields
@@ -813,7 +808,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
         const patchBodyRef = apiSpec?.doc?.content?.paths?.[endpointPath]?.patch
           ?.requestBody?.content?.['application/json-patch+json']?.schema?.$ref;
         const requestSchema = { relativePath: apiSpec?.doc?.relativePath, ref: patchBodyRef, schema: { $ref: patchBodyRef } };
-        const editableOpts = { resources: editables, store, stepCalls, primaryParam, requestSchema };
+        const editableOpts = { resources: editables, store, instance, stepCalls, primaryParam, requestSchema };
         const updateOperationId = apiSpec?.doc?.content?.paths?.[endpointPath]?.patch?.operationId;
         if (updateOperationId) registerEditableOperation(updateOperationId, composition, editableOpts);
         addRoute(table, 'GET', indexExpressPath, (request, { params }) => {

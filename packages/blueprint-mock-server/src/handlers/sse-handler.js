@@ -10,7 +10,6 @@
  * listing events' (platform-events-openapi.yaml).
  */
 
-import { eventBus } from '../event-bus.js';
 
 const HEARTBEAT_MS = 30000;
 
@@ -56,11 +55,13 @@ const message = (event) => `id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`
  * (#448 step 4). The client disconnect that `req.on('close')` used to report
  * arrives as the request's `AbortSignal`, which is where the standard puts it.
  *
- * @param {{ store?: object }} [deps] - the store the event log is in, for catching up
+ * @param {{ store?: object, instance: object }} deps - the store the event log
+ *   is in, for catching up, and the mock whose events it streams (instance.js)
  * @returns {(request: Request) => Response}
  */
-export function createSseHandler({ store } = {}) {
+export function createSseHandler({ store, instance }) {
   return (request) => {
+    const eventBus = instance.bus;
     const passes = eventFilter(new URL(request.url).searchParams);
     const lastEventId = request.headers.get('last-event-id');
     let missed = [];
