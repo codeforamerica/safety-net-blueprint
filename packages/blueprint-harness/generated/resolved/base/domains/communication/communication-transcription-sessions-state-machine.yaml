@@ -37,6 +37,9 @@ machines:
       - id: transcriptExists
         description: the transcript it names exists
         condition: "!has(request.transcriptId) || transcript != null"
+      - id: hasTranscript
+        description: the session has a transcript to carry on
+        condition: has(object.transcriptId)
     emits:
       - id: connecting
         description: The software is getting where to connect and opening the connection.
@@ -119,6 +122,7 @@ machines:
                       startedAt: $object.startedAt
                       subjectType: $object.subjectType
                       subjectId: $object.subjectId
+                runAs: caller
                 bind: $transcript
               - set:
                   field: transcriptId
@@ -133,6 +137,7 @@ machines:
                 payload:
                   audio: $request.audio
                   protocols: $request.protocols
+            runAs: caller
             bind: $connection
           - emit:
               event: connecting
@@ -159,13 +164,14 @@ machines:
                 payload:
                   audio: $request.audio
                   protocols: $request.protocols
+            runAs: caller
             bind: $connection
         response:
           schema:
             $ref: "#/$defs/StreamConnection"
           payload: $connection
       - id: connect
-        description: The connection to the service is open. After a reconnect, the stretch that was lost is recorded as a gap.
+        description: The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
         transition:
           from: connecting
           to: connected
@@ -173,7 +179,7 @@ machines:
           request:
             $ref: "#/$defs/ConnectRequest"
         steps:
-          - if: has(request.lostStretch)
+          - if: has(request.gap)
             then:
               - call:
                   operationId: addTranscriptEntry
@@ -183,13 +189,14 @@ machines:
                       value: $object.transcriptId
                     - name: Idempotency-Key
                       in: header
-                      value: "{$object.id}.gap.{$request.lostStretch.startedAt}"
+                      value: "{$object.id}.gap.{$request.gap.startedAt}"
                   requestBody:
                     payload:
                       kind: gap
-                      startedAt: $request.lostStretch.startedAt
-                      endedAt: $request.lostStretch.endedAt
+                      startedAt: $request.gap.startedAt
+                      endedAt: $request.gap.endedAt
                       cause: connection
+                runAs: caller
           - emit:
               event: connected
               type: communication.transcription_session.connected
@@ -250,6 +257,7 @@ machines:
                   speakerLabel: $request.speakerLabel
                   confidence: $request.confidence
                   language: $request.language
+            runAs: caller
             bind: $entry
           - emit:
               event: line_added
@@ -275,17 +283,23 @@ machines:
               requestBody:
                 payload:
                   at: $request.at
+            runAs: caller
           - emit:
               event: paused
               type: communication.transcription_session.paused
       - id: resume
-        description: Put the conversation back on the record. The software then asks how to stream again.
+        description: Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
         transition:
-          from: paused
+          from:
+            - created
+            - paused
           to: connecting
         schema:
           request:
             $ref: "#/$defs/AtRequest"
+        guards:
+          - conditions:
+              - hasTranscript
         steps:
           - call:
               operationId: resumeTranscript
@@ -296,6 +310,7 @@ machines:
               requestBody:
                 payload:
                   at: $request.at
+            runAs: caller
           - emit:
               event: connecting
               type: communication.transcription_session.connecting
@@ -332,6 +347,7 @@ machines:
               requestBody:
                 payload:
                   at: $request.at
+            runAs: caller
           - emit:
               event: closed
               type: communication.transcription_session.closed
@@ -403,13 +419,13 @@ $defs:
     type: object
     additionalProperties: false
     properties:
-      lostStretch:
+      gap:
         type: object
         additionalProperties: false
         required:
           - startedAt
           - endedAt
-        description: After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.
+        description: The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.
         properties:
           startedAt:
             type: string

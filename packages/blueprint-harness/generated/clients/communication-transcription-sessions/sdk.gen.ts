@@ -96,7 +96,7 @@ export const renewConnectionTranscriptionSession = <ThrowOnError extends boolean
 /**
  * Connect transcriptionsession
  *
- * The connection to the service is open. After a reconnect, the stretch that was lost is recorded as a gap.
+ * The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
  *
  * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
@@ -183,7 +183,7 @@ export const pauseTranscriptionSession = <ThrowOnError extends boolean = false>(
 /**
  * Resume transcriptionsession
  *
- * Put the conversation back on the record. The software then asks how to stream again.
+ * Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
  *
  * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */

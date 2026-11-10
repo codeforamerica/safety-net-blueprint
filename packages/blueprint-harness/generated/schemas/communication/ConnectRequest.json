@@ -2,14 +2,14 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "lostStretch": {
+    "gap": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "startedAt",
         "endedAt"
       ],
-      "description": "After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.",
+      "description": "The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.",
       "properties": {
         "startedAt": {
           "type": "string",

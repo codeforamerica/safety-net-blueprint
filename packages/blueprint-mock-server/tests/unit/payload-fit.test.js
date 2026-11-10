@@ -85,9 +85,9 @@ describe('looking a value up, for a guard or a where:', () => {
   });
 
   test('a $request path reads nested fields, as $object does', () => {
-    const request = { lostStretch: { startedAt: '2026-10-12T10:00:30Z' } };
-    assert.strictEqual(lookupValue('$request.lostStretch.startedAt', { request }), '2026-10-12T10:00:30Z');
-    assert.strictEqual(lookupValue('$request.lostStretch.endedAt', { request }), undefined);
+    const request = { gap: { startedAt: '2026-10-12T10:00:30Z' } };
+    assert.strictEqual(lookupValue('$request.gap.startedAt', { request }), '2026-10-12T10:00:30Z');
+    assert.strictEqual(lookupValue('$request.gap.endedAt', { request }), undefined);
   });
 
   test('resolveValue keeps its behavior: nothing is null, a missing $request field undefined', () => {

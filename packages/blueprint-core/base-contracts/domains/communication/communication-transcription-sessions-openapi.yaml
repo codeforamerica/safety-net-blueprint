@@ -126,8 +126,12 @@ components:
           type: string
           format: uuid
           description: |
-            The transcript the session writes to. Given to carry on after a
-            session failed; otherwise set when the session starts a new one.
+            The transcript the session writes to. Given to carry on a
+            transcript, after a session failed or in a reopened tab; otherwise
+            set when the session starts a new one. A reopened tab finds its
+            transcript with listTranscripts, by its subject and status:
+            `q=subjectId:{id} status:recording,paused`. A transcript with no
+            subject can't be found again.
           x-relationship:
             resource: Transcript
             style: links-only

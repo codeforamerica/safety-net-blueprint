@@ -144,8 +144,12 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -271,8 +275,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -638,8 +646,12 @@ or gives neither a transcript nor what to start one with.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -1786,7 +1798,7 @@ session failed; otherwise set when the session starts a new one.
       </span>
     </summary>
     <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service is open. After a reconnect, the stretch that was lost is recorded as a gap.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -1817,11 +1829,11 @@ session failed; otherwise set when the session starts a new one.
       </summary>
       <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">lostStretch</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">gap</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.</span>
       </div>
       
     </div>
@@ -1866,8 +1878,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -2309,8 +2325,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -2765,8 +2785,12 @@ safety-net-contracts might say `worker` and `applicant`.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -3305,8 +3329,12 @@ safety-net-contracts might say `worker` and `applicant`.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -3769,8 +3797,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -4173,7 +4205,7 @@ session failed; otherwise set when the session starts a new one.
       </span>
     </summary>
     <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Put the conversation back on the record. The software then asks how to stream again.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
@@ -4233,8 +4265,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -4697,8 +4733,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -5161,8 +5201,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       
@@ -5604,8 +5648,12 @@ session failed; otherwise set when the session starts a new one.
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on after a
-session failed; otherwise set when the session starts a new one.
+        <span style="font-size:11px;color:#555;margin-left:2px;">The transcript the session writes to. Given to carry on a
+transcript, after a session failed or in a reopened tab; otherwise
+set when the session starts a new one. A reopened tab finds its
+transcript with listTranscripts, by its subject and status:
+`q=subjectId:{id} status:recording,paused`. A transcript with no
+subject can't be found again.
 </span>
       </div>
       

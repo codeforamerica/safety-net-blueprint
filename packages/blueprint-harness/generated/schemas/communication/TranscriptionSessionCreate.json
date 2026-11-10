@@ -8,7 +8,7 @@
         "transcriptId": {
           "type": "string",
           "format": "uuid",
-          "description": "The transcript the session writes to. Given to carry on after a\nsession failed; otherwise set when the session starts a new one.\n"
+          "description": "The transcript the session writes to. Given to carry on a\ntranscript, after a session failed or in a reopened tab; otherwise\nset when the session starts a new one. A reopened tab finds its\ntranscript with listTranscripts, by its subject and status:\n`q=subjectId:{id} status:recording,paused`. A transcript with no\nsubject can't be found again.\n"
         },
         "profileId": {
           "type": "string",

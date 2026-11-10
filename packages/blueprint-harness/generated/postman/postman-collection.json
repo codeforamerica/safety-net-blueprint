@@ -463,7 +463,7 @@
           ]
         },
         {
-          "name": "Close Transcription-session (409 Conflict)",
+          "name": "Close Transcription-session",
           "request": {
             "method": "POST",
             "header": [
@@ -495,8 +495,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
-                  "    pm.response.to.have.status(409);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
                   "});"
                 ]
               }

@@ -250,7 +250,7 @@ class Session {
       handle = await adapter.open({ connection, format: audio, audio: this.#audio, report: this.#report(++this.#connections) });
       this.#handle = handle;
       await this.#act('connect', lostSince
-        ? { lostStretch: { startedAt: lostSince.toISOString(), endedAt: this.#o.now().toISOString() } }
+        ? { gap: { startedAt: lostSince.toISOString(), endedAt: this.#o.now().toISOString() } }
         : {});
     } finally { opened(); }
     this.#scheduleRenewal(connection);

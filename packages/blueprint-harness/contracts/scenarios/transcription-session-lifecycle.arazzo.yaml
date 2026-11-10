@@ -381,7 +381,7 @@ workflows:
           - reference: $components.parameters.caller
           - reference: $components.parameters.session
         requestBody:
-          payload: {lostStretch: {startedAt: '2026-10-12T10:00:30Z', endedAt: '2026-10-12T10:00:34Z'}}
+          payload: {gap: {startedAt: '2026-10-12T10:00:30Z', endedAt: '2026-10-12T10:00:34Z'}}
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'connected'

@@ -186,7 +186,7 @@ paths:
     post:
       summary: Connect transcriptionsession
       description: |-
-        The connection to the service is open. After a reconnect, the stretch that was lost is recorded as a gap.
+        The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: connectTranscriptionSession
@@ -396,7 +396,7 @@ paths:
     post:
       summary: Resume transcriptionsession
       description: |-
-        Put the conversation back on the record. The software then asks how to stream again.
+        Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: resumeTranscriptionSession
@@ -579,8 +579,12 @@ components:
           type: string
           format: uuid
           description: |
-            The transcript the session writes to. Given to carry on after a
-            session failed; otherwise set when the session starts a new one.
+            The transcript the session writes to. Given to carry on a
+            transcript, after a session failed or in a reopened tab; otherwise
+            set when the session starts a new one. A reopened tab finds its
+            transcript with listTranscripts, by its subject and status:
+            `q=subjectId:{id} status:recording,paused`. A transcript with no
+            subject can't be found again.
           x-relationship:
             resource: Transcript
             style: links-only
@@ -679,13 +683,13 @@ components:
       type: object
       additionalProperties: false
       properties:
-        lostStretch:
+        gap:
           type: object
           additionalProperties: false
           required:
             - startedAt
             - endedAt
-          description: After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.
+          description: The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.
           properties:
             startedAt:
               type: string

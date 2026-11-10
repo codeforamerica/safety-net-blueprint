@@ -12,8 +12,12 @@ export type ClientOptions = {
  */
 export type TranscriptionSessionWritable = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -61,8 +65,12 @@ export type TranscriptionSessionWritable = {
  */
 export type TranscriptionSession = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -124,8 +132,12 @@ export type TranscriptionSession = {
 
 export type TranscriptionSessionCreate = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -252,9 +264,9 @@ export type StreamConnection = {
 
 export type ConnectRequest = {
     /**
-     * After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.
+     * The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.
      */
-    lostStretch?: {
+    gap?: {
         startedAt: string;
         endedAt: string;
     };
@@ -321,8 +333,12 @@ export type AtRequest = {
  */
 export type TranscriptionSessionWritableWritable = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -360,8 +376,12 @@ export type TranscriptionSessionWritableWritable = {
  */
 export type TranscriptionSessionWritable2 = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -393,8 +413,12 @@ export type TranscriptionSessionWritable2 = {
 
 export type TranscriptionSessionCreateWritable = {
     /**
-     * The transcript the session writes to. Given to carry on after a
-     * session failed; otherwise set when the session starts a new one.
+     * The transcript the session writes to. Given to carry on a
+     * transcript, after a session failed or in a reopened tab; otherwise
+     * set when the session starts a new one. A reopened tab finds its
+     * transcript with listTranscripts, by its subject and status:
+     * `q=subjectId:{id} status:recording,paused`. A transcript with no
+     * subject can't be found again.
      *
      */
     transcriptId?: string;
@@ -437,8 +461,12 @@ export type TranscriptionSessionIdParam = string;
 export type CreateTranscriptionSessionData = {
     body: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -581,8 +609,12 @@ export type CreateTranscriptionSessionResponses = {
      */
     201: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -706,8 +738,12 @@ export type GetTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -1193,9 +1229,9 @@ export type RenewConnectionTranscriptionSessionResponse = RenewConnectionTranscr
 export type ConnectTranscriptionSessionData = {
     body?: {
         /**
-         * After a reconnect, the stretch nothing was captured in, by the client's clock. Recorded on the transcript as a gap.
+         * The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.
          */
-        lostStretch?: {
+        gap?: {
             startedAt: string;
             endedAt: string;
         };
@@ -1335,8 +1371,12 @@ export type ConnectTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -1517,8 +1557,12 @@ export type DisconnectTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -1734,8 +1778,12 @@ export type UpdateLineTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -1961,8 +2009,12 @@ export type AddLineTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -2167,8 +2219,12 @@ export type PauseTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -2373,8 +2429,12 @@ export type ResumeTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -2579,8 +2639,12 @@ export type StopTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -2785,8 +2849,12 @@ export type CloseTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;
@@ -2967,8 +3035,12 @@ export type FailTranscriptionSessionResponses = {
      */
     200: {
         /**
-         * The transcript the session writes to. Given to carry on after a
-         * session failed; otherwise set when the session starts a new one.
+         * The transcript the session writes to. Given to carry on a
+         * transcript, after a session failed or in a reopened tab; otherwise
+         * set when the session starts a new one. A reopened tab finds its
+         * transcript with listTranscripts, by its subject and status:
+         * `q=subjectId:{id} status:recording,paused`. A transcript with no
+         * subject can't be found again.
          *
          */
         transcriptId?: string;

@@ -122,7 +122,7 @@ export const zStreamConnection = z.object({
 });
 
 export const zConnectRequest = z.object({
-    lostStretch: z.optional(z.object({
+    gap: z.optional(z.object({
         startedAt: z.iso.datetime({ offset: true }),
         endedAt: z.iso.datetime({ offset: true })
     }))
@@ -407,7 +407,7 @@ export const zRenewConnectionTranscriptionSessionResponse = z.object({
 
 export const zConnectTranscriptionSessionData = z.object({
     body: z.optional(z.object({
-        lostStretch: z.optional(z.object({
+        gap: z.optional(z.object({
             startedAt: z.iso.datetime({ offset: true }),
             endedAt: z.iso.datetime({ offset: true })
         }))

@@ -109,7 +109,7 @@ export function lookupValue(value, context) {
     }
 
     if (value.startsWith('$request.')) {
-      // A nested path, $request.lostStretch.startedAt, as $object's are.
+      // A nested path, $request.gap.startedAt, as $object's are.
       return lookupPath(context.request, value.slice('$request.'.length));
     }
 
