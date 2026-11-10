@@ -38,6 +38,8 @@ export function createInstance({ store, docs = null, apiSpecs = [] }) {
     // The state machines' `on:` reactions: the bus listener, and those still
     // running for each partitionkey (event-subscription.js).
     reactions: { dispatch: null, running: new Map() },
+    // The records an action or reaction is changing now (record-turns.js).
+    changing: new Map(),
     // How each event read from a routed service arrived (routed-events.js).
     arrivals: new Map(),
     // Compositions' parent links, read routes and editable operations

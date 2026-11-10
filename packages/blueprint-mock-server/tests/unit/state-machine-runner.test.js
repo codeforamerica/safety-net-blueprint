@@ -580,7 +580,7 @@ const connecting = (response) => makeMachine([{
 }]);
 
 const connect = (machine, stepCalls) => executeTransition({
-  store, stepCalls, resourceName: 'testresources', resourceId: 'res-1', trigger: 'connect',
+  store, instance, stepCalls, resourceName: 'testresources', resourceId: 'res-1', trigger: 'connect',
   callerId: 'user-1', callerRoles: [ROLES.CASE_WORKER], stateMachine: makeStateMachine(), machine, rules: [],
 });
 

@@ -328,11 +328,12 @@ etags:
     carries it among its parameters, so accepting a suggestion made from an
     outdated read fails instead of undoing a newer change.
 
-  with_event_ordering: |
-    Use ETags together with event ordering (events.yaml, event_ordering).
-    Ordering keeps reactions to one aggregate's events from overlapping or
-    running out of turn; it can't hold back a person's request. ETags refuse a
-    write that a newer change has made outdated, whoever made it.
+  one_change_at_a_time: |
+    Changes to one record never overlap. Inside the server, actions and
+    reactions on a record take turns, each running to completion before the
+    next starts (state-machine-schema.yaml, actions). A write based on a read
+    the caller made earlier, such as a form a person loaded, sends If-Match,
+    and is refused with 412 if the record changed since.
 
   response_headers:
     ETag:

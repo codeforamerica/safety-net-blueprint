@@ -11,6 +11,7 @@ import { executeProcedures, resolveContextLayers } from './handlers/procedure-ru
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { playsAnyOf } from './auth-context.js';
+import { whenFree } from './record-turns.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -119,9 +120,25 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * and the record in `details`. With no `catch:`, the action fails and
  * nothing is saved.
  *
+ * It waits for any action or reaction already changing the record, and holds
+ * the record until it's saved (record-turns.js); what it does after — its
+ * calls to other records' actions, its events — runs once it's let go, so
+ * nothing it sets off waits on it.
+ *
  * @returns {Promise<{ success: boolean, result?: Object, status?: number, code?: string, error?: string, details?: Object[] }>}
  */
-export async function executeTransition({
+export async function executeTransition(options) {
+  const { instance, resourceName, resourceId } = options;
+  let letGo = whenFree(instance, resourceName, resourceId);
+  if (typeof letGo.then === 'function') letGo = await letGo;
+  try {
+    return await transitionRecord(options, letGo);
+  } finally {
+    letGo();
+  }
+}
+
+async function transitionRecord({
   resourceName,
   resourceId,
   trigger,
@@ -139,7 +156,7 @@ export async function executeTransition({
   instance,
   stepCalls = null,
   responseSchema = null
-}) {
+}, letGo) {
   const timestamp = now || new Date().toISOString();
 
   const resource = store.findById(resourceName, resourceId);
@@ -255,6 +272,7 @@ export async function executeTransition({
     if (resource[key] !== value) diff[key] = value;
   }
   const result = store.update(resourceName, resourceId, diff);
+  letGo();
 
   // A record a step creates directly has its SLA clocks started and is
   // announced as a create through the API would be, caused by the action.

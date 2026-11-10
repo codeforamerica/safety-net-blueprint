@@ -14,6 +14,7 @@
 import { deliverEvent } from './routing.js';
 import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
+import { busyWith, takeTurn } from './record-turns.js';
 import { executeTransition, performerFor } from './state-machine-runner.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
@@ -341,6 +342,17 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
           return;
         }
+        // An action or reaction already changing the record finishes first,
+        // and this one then starts over, reading the record as it was left
+        // (record-turns.js).
+        const busy = busyWith(instance, targetCollection, found.id);
+        if (busy) {
+          return busy.then(() => {
+            const again = relatedRecord ? store.findById(targetCollection, relatedRecord.id) : null;
+            if (relatedRecord && !again) return undefined;
+            return react(smEntry, entry, event, again);
+          });
+        }
         const from = entry.transition.from;
         if (from) {
           const fromArr = Array.isArray(from) ? from : [from];
@@ -430,6 +442,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           handled.failed ? unhandled(handled.failed) : finish(handled, failureContext, step.catch.to ?? entry.transition?.to));
       });
       if (reaction && typeof reaction.then === 'function') {
+        // It waits on a call: the record is its own until it's done.
+        if (entry.transition) reaction.finally(takeTurn(instance, targetCollection, resource.id)).catch(() => {});
         reaction.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
       }
       return reaction;
