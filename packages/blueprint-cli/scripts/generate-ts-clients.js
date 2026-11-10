@@ -51,7 +51,7 @@ const assetsDir = join(__dirname, '..', '..', 'blueprint-core', 'assets');
  * Parse command line arguments
  */
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { spec: null, out: null, help: false, preserveXExtensions: false, client: 'axios' };
+  const args = { spec: null, out: null, help: false, preserveXExtensions: false, httpClient: 'axios' };
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
@@ -60,8 +60,8 @@ function parseArgs(argv = process.argv.slice(2)) {
       args.spec = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       args.out = arg.split('=')[1];
-    } else if (arg.startsWith('--client=')) {
-      args.client = arg.split('=')[1];
+    } else if (arg.startsWith('--http-client=')) {
+      args.httpClient = arg.split('=')[1];
     } else if (arg === '--preserve-x-extensions') {
       args.preserveXExtensions = true;
     }
@@ -84,7 +84,8 @@ Flags:
   --spec=<file-or-dir>       Path to resolved spec file or directory (required)
   --out=<dir>                Output directory for generated clients (required)
   --preserve-x-extensions    Keep x-* vendor extensions (e.g. x-relationship) in generated output
-  --client=<axios|fetch>     The HTTP client the SDK sends requests with (default axios). fetch
+  --http-client=<axios|fetch>
+                             The HTTP client the SDK sends requests with (default axios). fetch
                              needs no dependency and takes a fetch of your own, such as the
                              in-page mock's
   -h, --help                 Show this help message
@@ -187,7 +188,7 @@ function stripXRelationshipFromSchema(schema) {
  */
 const CLIENT_PLUGINS = { axios: '@hey-api/client-axios', fetch: '@hey-api/client-fetch' };
 
-function createOpenApiTsConfig(inputPath, outputPath, client = 'axios') {
+function createOpenApiTsConfig(inputPath, outputPath, httpClient = 'axios') {
   const config = `// Auto-generated openapi-ts config
 export default {
   input: '${inputPath}',
@@ -209,7 +210,7 @@ export default {
       dates: { offset: true },
     },
     {
-      name: '${CLIENT_PLUGINS[client]}',
+      name: '${CLIENT_PLUGINS[httpClient]}',
     },
   ],
   types: {
@@ -427,8 +428,8 @@ async function main() {
     process.exit(0);
   }
 
-  if (!CLIENT_PLUGINS[args.client]) {
-    console.error(`Error: --client takes ${Object.keys(CLIENT_PLUGINS).join(' or ')}, not "${args.client}".\n`);
+  if (!CLIENT_PLUGINS[args.httpClient]) {
+    console.error(`Error: --http-client takes ${Object.keys(CLIENT_PLUGINS).join(' or ')}, not "${args.httpClient}".\n`);
     showHelp();
     process.exit(1);
   }
@@ -509,7 +510,7 @@ async function main() {
     writeFileSync(bundledSpecPath, yaml.dump(bundledSpec, { noRefs: true }));
 
     // Create openapi-ts config pointing at the bundled spec
-    const configContent = createOpenApiTsConfig(bundledSpecPath, domainOutputDir, args.client);
+    const configContent = createOpenApiTsConfig(bundledSpecPath, domainOutputDir, args.httpClient);
     writeFileSync(configPath, configContent);
 
     // Generate client using @hey-api/openapi-ts.

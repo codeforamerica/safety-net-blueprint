@@ -93,7 +93,7 @@ Generates typed TypeScript clients from resolved OpenAPI specs using `@hey-api/o
 npx blueprint-generate-ts-clients --spec=./resolved --out=./clients
 ```
 
-The SDK sends requests with axios unless `--client=fetch` is given. The fetch client needs no dependency and takes a `fetch` of your own, which is how a page sends its calls to the in-page mock server.
+The SDK sends requests with axios unless `--http-client=fetch` is given. The fetch client needs no dependency and takes a `fetch` of your own, which is how a page sends its calls to the in-page mock server.
 
 ### `blueprint-generate-postman-collection`
 

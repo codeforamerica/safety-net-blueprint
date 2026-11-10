@@ -13,8 +13,8 @@ const __dirname = dirname(__filename);
 describe('Client Generation', () => {
   describe('parseArgs', () => {
     it('takes the HTTP client, axios unless given', () => {
-      assert.strictEqual(parseArgs([]).client, 'axios');
-      assert.strictEqual(parseArgs(['--client=fetch']).client, 'fetch');
+      assert.strictEqual(parseArgs([]).httpClient, 'axios');
+      assert.strictEqual(parseArgs(['--http-client=fetch']).httpClient, 'fetch');
     });
 
     it('should parse spec parameter', () => {

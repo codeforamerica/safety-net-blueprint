@@ -28,7 +28,7 @@ if (existsSync(stamp) && statSync(stamp).mtimeMs >= newest(contracts)) process.e
 
 execFileSync(process.execPath, [
   join(root, '..', 'blueprint-cli', 'scripts', 'generate-ts-clients.js'),
-  '--client=fetch', `--spec=${contracts}`, `--out=${out}`,
+  '--http-client=fetch', `--spec=${contracts}`, `--out=${out}`,
 ], { stdio: ['ignore', 'ignore', 'inherit'] });
 writeFileSync(stamp, '');
 console.log('Generated generated/sdk/ from the harness\'s contracts');

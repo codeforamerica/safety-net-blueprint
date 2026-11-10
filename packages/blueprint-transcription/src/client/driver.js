@@ -6,7 +6,7 @@
  * same way. See docs/architecture/cross-cutting/browser-vendor-stream.md.
  *
  * It calls the session's actions through the session's SDK, generated from
- * the contracts (blueprint-generate-ts-clients --client=fetch), and follows
+ * the contracts (blueprint-generate-ts-clients --http-client=fetch), and follows
  * the session's events through the platform's events SDK: the page generates
  * both from its contracts and configures their clients — where they're
  * served, who's calling, and in a page, the in-page mock's fetch.
