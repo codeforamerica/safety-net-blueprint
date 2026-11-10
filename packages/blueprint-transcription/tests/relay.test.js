@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import yaml from 'js-yaml';
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { createRelayAdapter, createTranscriptionClient, RELAY_PROTOCOL } from '../src/client/index.js';
 import { Server, WebSocket as MockWebSocket } from 'mock-socket';
 import { createFakeRelay, createWorkerWebSocket, serveWebSocketOverPort } from '../src/fakes/index.js';

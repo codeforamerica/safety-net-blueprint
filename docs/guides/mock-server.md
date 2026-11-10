@@ -300,20 +300,20 @@ routing:
 npm run mock:start -- --spec=<contracts> --routing=routing.yaml
 ```
 
-In a page, pass the same entries to `createMockServer({ contracts, routing })`. Both are checked against [`schemas/routing-schema.json`](../../packages/blueprint-mock-server/schemas/routing-schema.json).
+In a page, pass the same entries to `createMockServer({ contracts, routing })`, or to `createMockClient`, which keeps a page's own APIs and sends the rest to the server with a `*` entry (the [mock's README](../../packages/blueprint-mock-server/README.md#a-client-and-a-server)). Both are checked against [`schemas/routing-schema.json`](../../packages/blueprint-mock-server/schemas/routing-schema.json).
 
 | Field | |
 |---|---|
-| `domain` | Every route the domain's APIs declare, state machine actions included, and every event their state machines receive. Named by its directory under `domains/`. |
+| `domain` | Every route the domain's APIs declare, state machine actions included, and every event their state machines receive. Named by its directory under `domains/`, or `*` for every domain, which also answers any request the mock has no route for. |
 | `api` | One API's routes and received events. Named by its OpenAPI file's name without `-openapi.yaml` — `intake`, `communication-transcripts` — which its events AsyncAPI shares. |
 | `operation` | One operation, by its id: an OpenAPI `operationId`, or an AsyncAPI `receive` operation's. Bare when one API declares it; `$apis.<api>.<id>` when more than one does. |
-| `except` | What stays in the mock, inside the entry: `{ api }` or `{ operation }` on a domain, `{ operation }` on an API. Not on an operation entry. |
+| `except` | What stays in the mock, inside the entry: `{ api }` or `{ operation }` on a domain, any of them on `*`, `{ operation }` on an API. Not on an operation entry. |
 | `to` | The service's base URL. For a request, its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. It may not carry a username or password. |
 | `handler` | A function that answers instead, `(request) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has. Code only, so a page can pass one and a file can't. |
 | `includeHeaders` | Headers to pass along beyond the defaults, below. |
 | `timeoutMs` | How long to wait before answering `504`. Defaults to 10000. |
 
-Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, or carries a key the schema does not.
+Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, a domain over `*`, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, or carries a key the schema does not.
 
 **Prefer a domain to an operation.** A routed operation answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Routing the whole domain keeps them together.
 
@@ -408,7 +408,7 @@ The same file runs as a test, is one of the walkthroughs in the demo page's Show
 A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
 
 ```js
-import { createMockServer, runScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer, runScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/server';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const mock = await createMockServer({ contracts });

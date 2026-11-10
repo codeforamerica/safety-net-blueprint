@@ -19,7 +19,7 @@
 
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
 import { seedConfigs } from '../../src/config-registry.js';
 import { createInstance } from '../../src/instance.js';

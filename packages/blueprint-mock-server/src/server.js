@@ -1,12 +1,13 @@
 /**
- * The mock server, without a server.
+ * The mock server, without a server: the server's side, in a page or in Node.
+ * The page's side is client.js.
  *
  * Hand it a contracts artifact and it returns the same route table the Node
  * process builds, plus a `fetch` that serves it. No HTTP, no filesystem, no
  * native module — the handlers were always ordinary JavaScript; what bound
  * them to Node was the shell around them (#448).
  *
- *   import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+ *   import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
  *
  *   const contracts = await (await fetch('./contracts.json')).json();
  *   const mock = await createMockServer({ contracts });
@@ -26,8 +27,6 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { assembleServer } from './assemble-server.js';
 export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
-
-
 
 /**
  * Build a mock server from a contracts artifact.

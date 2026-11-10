@@ -12,7 +12,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 
 const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 

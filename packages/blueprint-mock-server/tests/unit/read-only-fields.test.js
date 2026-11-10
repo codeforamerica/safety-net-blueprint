@@ -11,7 +11,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { asSystem } from '../../src/auth-context.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));

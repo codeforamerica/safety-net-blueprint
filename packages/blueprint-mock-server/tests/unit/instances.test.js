@@ -9,7 +9,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
 // What an informing suggestion is about has to exist: Rosa, seeded in the harness.

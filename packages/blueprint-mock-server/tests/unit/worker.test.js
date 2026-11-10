@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discover, load, generate } from '@codeforamerica/blueprint-core';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { expose, wrap } from '../../src/worker.js';
 
 /** A server's two sides, joined as a worker and its page are. */

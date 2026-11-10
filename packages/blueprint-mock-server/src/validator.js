@@ -47,7 +47,7 @@ export function createSchemaRegistry(docs = null) {
    * Hand the validator the document set, so it can resolve refs.
    *
    * Called once per boot, by whichever path assembled the documents — `setup.js`
-   * from a directory, `browser.js` from an artifact.
+   * from a directory, `server.js` from an artifact.
    *
    * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
    * @returns {{ registered: number, skipped: string[] }}

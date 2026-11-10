@@ -10,7 +10,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { EventStreamCodec } from '@smithy/eventstream-codec';
 import { toUtf8, fromUtf8 } from '@smithy/util-utf8';
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { encodeMessage, decodeMessage, decodeMessages } from '../src/client/adapters/aws/eventstream.js';
 import { createAwsTranscribeAdapter, createTranscriptionClient } from '../src/client/index.js';
 import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';

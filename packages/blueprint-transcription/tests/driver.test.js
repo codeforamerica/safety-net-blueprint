@@ -7,7 +7,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { createTranscriptionClient } from '../src/client/index.js';
 import { createFakeAdapter } from '../src/fakes/index.js';
 import { sdkFor } from './sdk.js';

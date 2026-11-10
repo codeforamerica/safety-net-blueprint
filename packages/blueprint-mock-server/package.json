@@ -12,7 +12,12 @@
   ],
   "exports": {
     ".": "./src/index.js",
-    "./browser": "./src/browser.js",
+    "./client": "./src/client.js",
+    "./server": {
+      "node": "./src/server.node.js",
+      "default": "./src/server.js"
+    },
+    "./browser": "./src/server.js",
     "./worker": "./src/worker.js",
     "./dist/blueprint-mock-server.esm-browser.js": "./dist/blueprint-mock-server.esm-browser.js",
     "./store": "./src/stores/memory-store.js",

@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createMockServer, runScenario, operationIndex, controlOperations } from '../../src/browser.js';
+import { createMockServer, runScenario, operationIndex, controlOperations } from '../../src/server.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));

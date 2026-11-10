@@ -19,7 +19,7 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discover, load, generate } from '@codeforamerica/blueprint-core';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { createNodeServer } from '../../src/http/node-server.js';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
