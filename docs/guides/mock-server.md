@@ -278,6 +278,41 @@ curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1 
 curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
 ```
 
+## WebSocket stubs
+
+Some parties are reached over a connection of their own, which an AsyncAPI document with `servers` describes: a transcription relay, say (`communication-transcripts-relay-asyncapi.yaml`). The mock serves each such document as a WebSocket at `/mock/ws/{document}`, by its file name, and answers nothing on its own. What comes back is what a WebSocket stub says. Each is consumed by the first message it matches, as an HTTP stub is by the first request.
+
+```bash
+curl -X POST http://localhost:1080/mock/stubs/ws \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "communication-transcripts-relay-asyncapi.yaml#/channels/audio",
+    "on": "start",
+    "send": [{ "type": "started" }]
+  }'
+# → 201 { "id": "ws.start-1", "type": "ws", ... }
+```
+
+- `channel` is the document's file name and a JSON Pointer to its channel.
+- `on` is the message to answer, by its name in the channel: one the mock receives there.
+- `match` narrows it by fields of the message, as dot paths with the values they must equal.
+- `send` is what to send back, in order. Each must be a message the contract lets the mock send there, or the stub is refused with `422`.
+- `close` closes the connection after sending: `{ "code": 1006 }` for a connection that drops, `{ "code": 1008, "reason": "not-allowed" }` for one refused.
+- `protocols` matches only a connection that offered each of them, such as a token sent beside the subprotocol's name, so one stub can refuse an expired token while another answers the rest.
+
+Every message is checked against the contract, both ways. One the mock isn't allowed to receive closes the connection with `1007`. One whose operation declares a `reply`, with no stub to give it, closes the connection with `1011`, the WebSocket equivalent of an HTTP call answered `501`. The mock doesn't check the token, as it doesn't check credentials over HTTP.
+
+In a page or a test, connect with `createMockServer`'s `WebSocket`, a class with the standard WebSocket interface that reaches the mock in-process:
+
+```js
+const mock = await createMockServer({ contracts });
+const relay = new mock.WebSocket('ws://localhost/mock/ws/communication-transcripts-relay-asyncapi.yaml', ['blueprint.transcripts.relay.v1', token]);
+```
+
+The Node server, `blueprint-mock`, doesn't serve these WebSockets.
+
+`GET /mock/stubs/ws` lists the stubs not yet used, `DELETE /mock/stubs/ws/{id}` removes one, and `DELETE /mock/stubs/ws` clears them all. `POST /mock/reset` clears them with the others.
+
 ## Routing to a real service
 
 Routing hands a domain, an API or a single operation to something other than the mock — a real service at a URL, or a function a page passes in — while everything else stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
@@ -404,6 +439,7 @@ The same file runs as a test, is one of the walkthroughs in the demo page's Show
 - `onFailure` actions of type `retry`, with `retryAfter` in seconds and `retryLimit` — for a step checking what the mock does after it answers, such as a state machine's reaction to an event, which may not have run the moment the step before it returns
 - `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
 - more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
+- steps that send or receive a message (Arazzo 1.1), naming an AsyncAPI operation with `action: send` or `receive`. On an events document, receiving waits for the event on the mock's event stream, read as `$message.payload#/<pointer>`, and sending publishes one. On a document with `servers`, such as a relay's, both go over the mock's WebSocket for it, one connection per workflow, answered by [WebSocket stubs](#websocket-stubs). A receive step takes the first message of its kind, not taken by an earlier step, that meets its `successCriteria`, so it can pick its own record's event out of several by `subject`. It waits up to its `timeout`, in milliseconds, or 2 seconds when it gives none. A step's `dependsOn` may name earlier steps
 
 A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
 
@@ -415,7 +451,7 @@ const mock = await createMockServer({ contracts });
 const docs = extract(contracts, 'docs');
 const scenario = docs.find((doc) => doc.type === 'arazzo');
 const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
-const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations });
+const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket });
 workflow.passed; // and workflow.steps: each request, response and check
 ```
 
@@ -425,7 +461,7 @@ A step's `description` is CommonMark: its first paragraph is the step's title, a
 
 ## The mock's own endpoints
 
-The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
+The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — and the WebSockets at `/mock/ws/{document}` are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
 
 ```bash
 npx blueprint-swagger --spec=./resolved --spec=node_modules/@codeforamerica/blueprint-mock-server/contracts
@@ -494,6 +530,11 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 | `GET /mock/stubs/http` | List active HTTP stubs |
 | `DELETE /mock/stubs/http/:id` | Remove a specific HTTP stub |
 | `DELETE /mock/stubs/http` | Clear all HTTP stubs |
+| `POST /mock/stubs/ws` | Register a WebSocket stub |
+| `GET /mock/stubs/ws` | List active WebSocket stubs |
+| `DELETE /mock/stubs/ws/:id` | Remove a specific WebSocket stub |
+| `DELETE /mock/stubs/ws` | Clear all WebSocket stubs |
+| `/mock/ws/{document}` | The WebSocket for an AsyncAPI document with servers, in a page or test |
 
 ## Troubleshooting
 
