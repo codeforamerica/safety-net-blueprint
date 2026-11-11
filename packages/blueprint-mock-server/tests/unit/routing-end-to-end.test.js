@@ -243,3 +243,28 @@ describe('two contracts declaring one route', () => {
       /GET \/platform\/events is declared by two contracts: (base\/domains\/platform\/platform-events-openapi\.yaml and domains\/platform\/platform-openapi\.yaml|domains\/platform\/platform-openapi\.yaml and base\/domains\/platform\/platform-events-openapi\.yaml)/);
   });
 });
+
+describe('a handler\'s answer, against a response schema with refs into other files', () => {
+  test('is refused with 502 when the schema doesn\'t allow it', async () => {
+    // Application refers to Household in another file; checked without the
+    // operation's own document, the refs can't resolve and the answer passed.
+    const warn = console.warn;
+    const warnings = [];
+    console.warn = (...args) => warnings.push(args.join(' '));
+    try {
+      const mock = await boot({
+        contracts,
+        routing: [{ operation: 'getApplication', handler: async () => Response.json({ id: 42 }) }],
+      });
+      const response = await mock.fetch(new Request('http://localhost/intake/applications/11111111-1111-4111-8111-111111111111', {
+        headers: { 'x-caller-id': 'worker-1' },
+      }));
+      const body = await response.json();
+      assert.equal(response.status, 502);
+      assert.ok(body.details.some((d) => /id/.test(d.field) && /string/.test(d.message)), JSON.stringify(body.details));
+      assert.deepEqual(warnings.filter((w) => w.includes('no validator')), []);
+    } finally {
+      console.warn = warn;
+    }
+  });
+});

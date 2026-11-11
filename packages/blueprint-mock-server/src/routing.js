@@ -320,7 +320,7 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
  * broken adapter shows at once rather than as odd data later.
  *
  * @param {Function} handler - `(Request) => Response | Promise<Response>`
- * @param {(status: number) => { schema: object, key: string } | null} responseSchema
+ * @param {(status: number) => { schema: object, key: string, source?: object } | null} responseSchema
  * @param {string} name - What the route is, for the message
  * @returns {(request: Request) => Promise<Response>}
  */
@@ -342,7 +342,7 @@ function checkedHandler(handler, responseSchema, name) {
       console.warn(message);
       return Response.json({ code: 'BAD_GATEWAY', message }, { status: 502 });
     }
-    const { valid, errors } = validate(body, declared.schema, declared.key);
+    const { valid, errors } = validate(body, declared.schema, declared.key, declared.source);
     if (valid) return response;
     const details = errors.map((e) => ({ field: e.field ?? e.instancePath ?? '', message: e.message }));
     const message = `The handler routed for ${name} answered ${response.status} with a body its response schema doesn't allow.`;

@@ -133,7 +133,10 @@ export function assembleServer(
       const operation = byApiAndId.get(`${route.api}#${route.operationId}`);
       const response = operation && operation.follow(operation.responses?.[status] ?? operation.responses?.default);
       const schema = response?.content?.['application/json']?.schema;
-      return schema ? { schema: operation.follow(schema), key: `${operation.api}-${operation.id}-response-${status}` } : null;
+      if (!schema) return null;
+      // Where the schema was declared, so its refs into other files resolve.
+      const source = typeof schema.$ref === 'string' ? { relativePath: operation.relativePath, ref: schema.$ref } : null;
+      return { schema: operation.follow(schema), key: `${operation.api}-${operation.id}-response-${status}`, source };
     },
   });
   routedEvents.receives = receives;
