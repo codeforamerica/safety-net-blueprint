@@ -88,7 +88,6 @@ Only packages with a changeset are published in a given release — not all pack
 - `@codeforamerica/blueprint-cli`
 - `@codeforamerica/blueprint-mock-server`
 - `@codeforamerica/blueprint-rules-engine`
-- `@codeforamerica/blueprint-transcription`
 - `@codeforamerica/blueprint-explorer`
 - `@codeforamerica/blueprint-safety-net-contracts`
 

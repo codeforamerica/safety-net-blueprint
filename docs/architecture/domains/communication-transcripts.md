@@ -87,15 +87,14 @@ flowchart LR
 ```
 
 Each part is one side of a contract. You write the Client and the transcript
-audio adapter, or take the transcription package's; the blueprint gives you the
-Session and the Transcript.
+audio adapter; the blueprint gives you the Session and the Transcript.
 
 | Part | API | Defined in | What it does |
 |---|---|---|---|
-| Client | — | — | The software in the staff member's browser: the screen, capturing the audio, and calling the sessions API through the SDK generated from the contracts, in the order every client needs — asking how to stream, opening the connection, reconnecting after a drop, closing the connection when the session pauses or closes. It follows the session's events, and speaks the service's API, or the relay API. Reference implementation: the package's `createTranscriptionClient`, with `createAwsTranscribeAdapter` for Amazon Transcribe, `createRelayAdapter` for a relay, and `captureAudio` ([Decision 16](#decision-16-everything-the-client-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)). |
+| Client | — | — | The software in the staff member's browser: the screen, capturing the audio, and calling the sessions API through the SDK generated from the contracts, in the order every client needs — asking how to stream, opening the connection, reconnecting after a drop, closing the connection when the session pauses or closes. It follows the session's events, and speaks the service's API, or the relay API ([Decision 16](#decision-16-everything-the-client-tells-the-session-goes-in-as-an-action-and-each-action-sends-an-event-out)). |
 | Session | sessions API | `communication-transcription-sessions-openapi.yaml`; its actions and events in `communication-transcription-sessions-state-machine.yaml` | Keeps track of the Client's connection, shows lines in progress, and calls the transcripts API for everything that's kept. Runs in the page, kept there by routing. |
 | Transcript | transcripts API | `communication-transcripts-openapi.yaml`; its actions and events in `communication-transcripts-state-machine.yaml` | Keeps the transcript and its rules, and sends every change as an event. |
-| Transcript audio adapter | adapter API | `communication-transcripts-audio-adapter-openapi.yaml`: `issueTranscriptConnection`, and `getTranscriptConnectionKeys` for a service behind a relay | A state's service beside the Transcript. Only involved in setting up a connection: each time the Client asks how to stream, at the start, after a drop and to renew, the Transcript calls it, and once the Client connects it's out of the picture. For a service the browser can reach, it holds the service's secret and gets a credential that lasts minutes: from the service's API for most services, such as Deepgram, while for Amazon Transcribe it signs the URL itself with the AWS key and calls nothing. For a service behind a relay, it signs a short-lived token itself and publishes the public keys the relay checks it with. Either way it answers `issueTranscriptConnection` with where to connect and the credential ([Decision 11](#decision-11-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). Reference implementation: the package's `createTranscriptAudioAdapter`, with `awsTranscribeIssuer`. |
+| Transcript audio adapter | adapter API | `communication-transcripts-audio-adapter-openapi.yaml`: `issueTranscriptConnection`, and `getTranscriptConnectionKeys` for a service behind a relay | A state's service beside the Transcript. Only involved in setting up a connection: each time the Client asks how to stream, at the start, after a drop and to renew, the Transcript calls it, and once the Client connects it's out of the picture. For a service the browser can reach, it holds the service's secret and gets a credential that lasts minutes: from the service's API for most services, such as Deepgram, while for Amazon Transcribe it signs the URL itself with the AWS key and calls nothing. For a service behind a relay, it signs a short-lived token itself and publishes the public keys the relay checks it with. Either way it answers `issueTranscriptConnection` with where to connect and the credential ([Decision 11](#decision-11-the-software-asks-the-server-how-to-stream-in-one-shape-for-every-service)). |
 | Relay | relay API | `communication-transcripts-relay-asyncapi.yaml` | Only for a service a browser can't reach, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself. A server the state runs, between the Client and the Service: it implements the relay API toward the Client, audio in and text out, and speaks the service's API toward the Service ([Decisions 12](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract) and [13](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names)). |
 | Service | service's API | The vendor's documentation, such as [Amazon Transcribe streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html) | Turns speech into text: Amazon Transcribe, Deepgram, a model the state runs. |
 
@@ -117,9 +116,10 @@ staff member signed in; how they sign in is part of the security model in
 The contracts define every part: the transcript, the session that keeps
 track of the Client's connection, the transcript audio adapter, the relay, and
 routing, which decides where each part runs. The mock runs the Session and the
-Transcript, and the transcription package,
-`@codeforamerica/blueprint-transcription`, is a reference implementation of
-the Client and the transcript audio adapter. The shape is a general one, for any live stream from the browser to a vendor:
+Transcript, and stands in for the transcript audio adapter, the service and
+the relay with stubs. The harness's transcription scenario,
+`blueprint-harness/contracts/scenarios/transcription.arazzo.yaml`, plays the
+Client's part through every step, each checked against the contracts. The shape is a general one, for any live stream from the browser to a vendor:
 [Browser-to-Vendor Stream](../cross-cutting/browser-vendor-stream.md) says when
 it fits and why each part is there.
 
@@ -1267,9 +1267,7 @@ until they are closed; the profiles the framework provides set 30 minutes.
 - **The Client and the transcript audio adapter** — signing in to the service, streaming
   audio, reconnecting, and turning the service's results into lines are the
   Client's; issuing a credential with the service's secret is the transcript audio adapter's.
-  The contracts say what each must do; the transcription package,
-  `@codeforamerica/blueprint-transcription`, is a reference implementation of
-  both.
+  The contracts say what each must do.
 - **Capturing audio** — the microphone or the call window, which a browser grants
   only to the page.
 - **Storing audio** — the blueprint keeps the record, not the recording.
@@ -1281,7 +1279,7 @@ until they are closed; the profiles the framework provides set 30 minutes.
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Live transcription of a conversation | Contact-center and meeting platforms transcribe calls as they happen | built — the record and its rules, the session, and how the Client connects to a service, with a reference implementation of the Client and the transcript audio adapter |
+| Live transcription of a conversation | Contact-center and meeting platforms transcribe calls as they happen | built — the record and its rules, the session, and how the Client connects to a service |
 | Short-lived credentials for streaming | Services issue temporary tokens or signed URLs so a browser never holds the key | built — the transcript audio adapter issues one, in one shape for every service |
 | A service a browser can't reach | Speech services that take only gRPC, or a model run in-house | built — the relay contract a relay implements; the relay is the state's to run |
 | Telling speakers apart | Transcription services label speakers or channels | partial — each line keeps the service's label and a role mapped from it |

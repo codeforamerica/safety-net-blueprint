@@ -61,7 +61,7 @@ rules:
   - >-
     Put a reference adapter in the package for its capability, beside the
     code that runs in the page, under a ./server entry point a page never
-    imports (packages/blueprint-transcription). Name entry points that do
+    imports. Name entry points that do
     different jobs by the job, ./client and ./server; ./browser, as in core
     and the mock, means the same API built to run in a browser.
 

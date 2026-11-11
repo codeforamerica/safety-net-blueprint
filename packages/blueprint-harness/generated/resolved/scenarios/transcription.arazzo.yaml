@@ -20,7 +20,7 @@ info:
       description: Starts, pauses, resumes and stops transcribing, from their browser.
     - id: client
       name: The client
-      description: The software in the staff member's browser that streams the audio to the transcription service and tells the session what happens. The transcription package is a reference implementation of it.
+      description: The software in the staff member's browser that streams the audio to the transcription service and tells the session what happens. This scenario plays its part.
     - id: server
       name: The server
       description: Runs the contracts. In this demo, that's the mock server, which also runs the session, as the browser would.
