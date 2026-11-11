@@ -97,6 +97,44 @@ test('a relay refuses a connection without its subprotocol, or with a token it w
   assert.strictEqual(relay.handleProtocols(['something-else', 'good']), false);
 });
 
+/** The fake relay behind mock-socket, given the subprotocols each connection offered. */
+function serve(relay, url = 'wss://relay.example') {
+  let offered;
+  const server = new Server(url, { selectProtocol: (protocols) => { offered = [...protocols]; return relay.handleProtocols(protocols); } });
+  server.on('connection', (socket) => relay.handleConnection(socket, offered));
+  return server;
+}
+
+test('a relay whose token check answers later refuses a bad token once open, with not-allowed', async () => {
+  const relay = createFakeRelay(LINES, { sleep: immediately, verifyToken: async (token) => token === 'good' });
+  const server = serve(relay);
+  const errors = [];
+  const original = console.error;
+  console.error = (message) => errors.push(message);
+  try {
+    const { report } = recorder();
+    await assert.rejects(
+      createRelayAdapter({ WebSocket: MockWebSocket }).open({ connection: CONNECTION, chunks: chunks(), audio: FORMAT, report }),
+      /closed before the relay started/,
+    );
+  } finally {
+    console.error = original;
+    server.stop();
+  }
+  assert.ok(errors.some((message) => /not-allowed/.test(message)), errors.join('\n'));
+});
+
+test('a relay whose token check answers later takes a good token', async () => {
+  const relay = createFakeRelay(LINES, { sleep: immediately, verifyToken: async (token) => token === 'token' });
+  const server = serve(relay);
+  const { told, report } = recorder();
+  const handle = await createRelayAdapter({ WebSocket: MockWebSocket }).open({ connection: CONNECTION, chunks: chunks([1, 2]), audio: FORMAT, report });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await handle.finish();
+  server.stop();
+  assert.deepStrictEqual(told.add.map((line) => line.text), ['Who lives with you?', 'My two kids.']);
+});
+
 test('in a page, the relay runs behind mock-socket by the same two hooks', async () => {
   const relay = createFakeRelay(LINES, { sleep: immediately });
   const server = new Server('wss://relay.example', { selectProtocol: relay.handleProtocols });

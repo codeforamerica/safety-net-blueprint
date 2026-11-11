@@ -15,7 +15,7 @@
  *
  *   // Node, with ws
  *   const wss = new WebSocketServer({ port, handleProtocols: relay.handleProtocols });
- *   wss.on('connection', relay.handleConnection);
+ *   wss.on('connection', (socket, request) => relay.handleConnection(socket, request));
  *
  *   // In a page, with mock-socket
  *   const server = new Server(url, { selectProtocol: relay.handleProtocols });
@@ -23,8 +23,15 @@
  *
  *   // In a worker, from a page: serveWebSocketOverPort (socket.js)
  *
- * A real relay checks the token as a JWT the transcripts adapter signed; the
- * fake takes any token `verifyToken` accepts, by default any at all.
+ * It takes any token `verifyToken` accepts, by default any at all. To check
+ * tokens as a real relay does, give it the server side's verifyRelayToken:
+ *
+ *   verifyToken: (token) => verifyRelayToken(token, { keys, audience: url }).then(() => true, () => false)
+ *
+ * A check that answers later, as that one does, is finished once the
+ * connection is open: the relay refuses it then with a not-allowed error. Pass
+ * handleConnection the upgrade's request, or the subprotocols offered, so it
+ * knows which token to wait on.
  */
 
 import { RELAY_PROTOCOL } from '../relay-protocol.js';
@@ -32,15 +39,24 @@ import { createPlayback } from '../recording.js';
 
 const ms = (seconds) => Math.round((seconds ?? 0) * 1000);
 
+/** The Sec-WebSocket-Protocol values offered: from ws's request, the header, or a list. */
+const offeredOf = (offered) => {
+  const header = offered?.headers?.['sec-websocket-protocol'] ?? offered;
+  if (typeof header === 'string') return header.split(',').map((value) => value.trim());
+  return [...(header ?? [])];
+};
+
 /**
  * @param {{ events: object[] }} recording
  * @param {object} [options]
  * @param {number} [options.speed] - 2 plays twice as fast.
  * @param {Function} [options.sleep] - waits a number of milliseconds.
- * @param {(token: string) => boolean} [options.verifyToken]
+ * @param {(token: string) => boolean | Promise<boolean>} [options.verifyToken]
  */
 export function createFakeRelay(recording, { verifyToken = (token) => Boolean(token), ...options } = {}) {
   const playback = createPlayback(recording, options);
+  // Checks still going when a connection opens, by token.
+  const checking = new Map();
 
   return {
     /**
@@ -52,12 +68,25 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
      * @returns {string|false}
      */
     handleProtocols(offered) {
-      const [protocol, token] = [...(offered ?? [])];
-      return protocol === RELAY_PROTOCOL && verifyToken(token) ? RELAY_PROTOCOL : false;
+      const [protocol, token] = offeredOf(offered);
+      if (protocol !== RELAY_PROTOCOL || !token) return false;
+      const verdict = verifyToken(token);
+      if (typeof verdict?.then === 'function') {
+        checking.set(token, Promise.resolve(verdict).catch(() => false));
+        return RELAY_PROTOCOL;
+      }
+      return verdict ? RELAY_PROTOCOL : false;
     },
 
-    /** Speak the relay contract on an open connection, as `ws`'s connection event gives it. */
-    handleConnection(socket) {
+    /**
+     * Speak the relay contract on an open connection, as `ws`'s connection
+     * event gives it, with the upgrade's request or the subprotocols offered.
+     */
+    handleConnection(socket, offered) {
+      const [, token] = offeredOf(offered);
+      const allowed = checking.get(token) ?? Promise.resolve(true);
+      checking.delete(token);
+
       let playing = null;
       let ended = false;
       const send = (message) => { if (socket.readyState === 1) socket.send(JSON.stringify(message)); };
@@ -78,8 +107,12 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
         alternatives: [{ transcript: line.text, ...(line.confidence !== undefined && { confidence: line.confidence }) }],
       });
 
+      allowed.then((ok) => { if (!ok) fail('not-allowed', 'The relay doesn\'t take this token'); });
+
       // ws gives text as a Buffer it marks not binary; mock-socket gives a string.
-      socket.on('message', (data, isBinary) => {
+      // Nothing is taken until the token's check is done, in the order it came.
+      socket.on('message', (data, isBinary) => allowed.then((ok) => { if (ok) take(data, isBinary); }));
+      const take = (data, isBinary) => {
         const text = typeof data === 'string' ? data : isBinary === false ? new TextDecoder().decode(data) : null;
         // Audio arrives as binary frames, and a fake has nothing to do with it.
         if (text === null) {
@@ -117,7 +150,7 @@ export function createFakeRelay(recording, { verifyToken = (token) => Boolean(to
         } else {
           fail('bad-message', `No message has type ${JSON.stringify(message.type)}`);
         }
-      });
+      };
 
       socket.on('close', () => { playing?.stop(); });
     },

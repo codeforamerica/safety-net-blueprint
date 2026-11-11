@@ -9,7 +9,9 @@
  * - Mock client: the session, in the page;
  * - Mock server: the transcript, standing in for the state's server;
  * - Transcription service: Amazon Transcribe, played by a fake socket
- *   (fake-transcribe.js) so no AWS account is needed.
+ *   (fake-transcribe.js) so no AWS account is needed; or, for a service a
+ *   browser can't reach, the relay a state runs in front of it, played by
+ *   the fake relay over mock-socket.
  *
  * Every arrow is something that crossed, named as the contracts name it, with
  * a caption saying what happened. Click an arrow for what passed; hover a
@@ -24,8 +26,10 @@ import script from './interview.md';
 import { recordingFromScript } from './script-to-recording.js';
 import { SCENARIOS } from './scenarios.js';
 import { createFakeTranscribe } from './fake-transcribe.js';
-import { createTranscriptionClient, createAwsTranscribeAdapter } from '../src/client/index.js';
-import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
+import { Server as RelayServer, WebSocket as RelayWebSocket } from 'mock-socket';
+import { createTranscriptionClient, createAwsTranscribeAdapter, createRelayAdapter, RELAY_PROTOCOL } from '../src/client/index.js';
+import { createFakeRelay } from '../src/fakes/index.js';
+import { createTranscriptAudioAdapter, awsTranscribeIssuer, relayIssuer, generateRelayKey, verifyRelayToken } from '../src/server/index.js';
 // The SDK generated from the contracts (npm run sdk), as a developer generates theirs.
 import * as sessions from '../generated/sdk/communication-transcription-sessions/index.ts';
 import { client as sessionsClient } from '../generated/sdk/communication-transcription-sessions/client.gen.ts';
@@ -41,8 +45,9 @@ const AUDIO = { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 };
 const CALLER = { 'x-caller-id': 'worker-1' };
 /** How fast a recording plays. */
 const SPEED = 1.5;
-/** The relay scenario is drawn next; until then, the ones straight to Transcribe. */
-const PLAYABLE = SCENARIOS.filter((s) => s.via !== 'relay');
+const PLAYABLE = SCENARIOS;
+/** Where the demo's relay listens. */
+const RELAY_URL = 'wss://relay.example.gov/transcribe';
 
 /** A name's declaration, found at build time (scripts/build-demo.js), for the hover card. */
 const refsFor = (...names) => names.map((name) => REFS[name]).filter(Boolean);
@@ -134,14 +139,20 @@ function tapStream(response, from, to) {
 let following = null;
 let mockServer;
 let mockClient;
-let profile;
+/** The profiles the state set up: one straight to Amazon Transcribe, one to Google behind a relay. */
+const profiles = {};
+/** Whether this run goes straight to a vendor or through a relay (scenarios.js). */
+let via = 'vendor';
 
 const SETUP_SERVER = `const server = await createMockServer({
   contracts,
   routing: [{
     operation: 'issueTranscriptConnection',
-    handler: createTranscriptsAdapter({
-      issuers: { 'aws-transcribe': awsTranscribeIssuer({ region, credentials }) },
+    handler: createTranscriptAudioAdapter({
+      issuers: {
+        'aws-transcribe': awsTranscribeIssuer({ region, credentials }),
+        'google-cloud-speech': relayIssuer({ url: relayUrl, privateKey }),
+      },
     }),
   }],
 });`;
@@ -161,36 +172,53 @@ eventsClient.setConfig({ baseUrl: '/platform', fetch: client.fetch });
 
 const transcription = createTranscriptionClient({
   sessions, transcripts, events, fetch: client.fetch,
-  adapters: { 'aws-transcribe': createAwsTranscribeAdapter() },
+  adapters: {
+    'aws-transcribe': createAwsTranscribeAdapter(),
+    [RELAY_PROTOCOL]: createRelayAdapter(),
+  },
 });`;
 
 /**
- * The state's transcripts adapter, from the transcription package's server
- * side, which signs a URL straight to Amazon Transcribe. It runs in the page
- * here only because the mock server does; a state runs it on its server,
- * where the secret is. The key is AWS's documented example key.
+ * The state's transcript audio adapter, from the transcription package's server
+ * side: it signs a URL straight to Amazon Transcribe, and for Google Cloud
+ * Speech-to-Text, which takes only gRPC, a browser can't reach, so a state
+ * runs a relay in front of it, a token the relay checks against the adapter's
+ * published keys. It runs in the page here only because the mock server does;
+ * a state runs it on its server, where the secrets are. The AWS key is AWS's
+ * documented example key, and the relay's signing key is made when the page
+ * loads.
  */
-const issue = createTranscriptsAdapter({
-  issuers: {
-    'aws-transcribe': awsTranscribeIssuer({
-      region: 'us-east-1',
-      credentials: { accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY' },
-      settings: { 'show-speaker-label': 'true' },
-    }),
-  },
-});
+let issue;
+async function createAdapter() {
+  issue = createTranscriptAudioAdapter({
+    issuers: {
+      'aws-transcribe': awsTranscribeIssuer({
+        region: 'us-east-1',
+        credentials: { accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY' },
+        settings: { 'show-speaker-label': 'true' },
+      }),
+      'google-cloud-speech': relayIssuer({ url: RELAY_URL, privateKey: await generateRelayKey({ kid: 'demo-relay-key' }) }),
+    },
+  });
+}
 
 async function setUp() {
+  await createAdapter();
   mockServer = await createMockServer({
     contracts,
     routing: [{
       operation: 'issueTranscriptConnection',
       handler: async (request) => {
-        draw('server', 'code', 'call', 'issueTranscriptConnection', 'The transcript\'s get-connection action calls the state\'s transcripts adapter, which your code gave the mock server. The profile\'s provider is aws-transcribe, so it signs a URL straight to Amazon Transcribe.', {
+        const relayed = (await request.clone().json()).provider === 'google-cloud-speech';
+        draw('server', 'code', 'call', 'issueTranscriptConnection', `The transcript's get-connection action calls the state's transcript audio adapter, which your code gave the mock server. ${relayed
+          ? 'The profile\'s provider is google-cloud-speech, which a browser can\'t reach, so it answers with the state\'s relay and a token for it.'
+          : 'The profile\'s provider is aws-transcribe, so it signs a URL straight to Amazon Transcribe.'}`, {
           details: { Request: await requestDetail(request) },
         });
         const response = await issue(request);
-        draw('code', 'server', 'reply', String(response.status), 'The adapter answers with the signed URL. It holds the AWS secret; only the short-lived signed URL leaves it.', {
+        draw('code', 'server', 'reply', String(response.status), relayed
+          ? 'The adapter answers with the relay\'s address, its subprotocol, and a token good for a minute.'
+          : 'The adapter answers with the signed URL. It holds the AWS secret; only the short-lived signed URL leaves it.', {
           details: { Response: clip(pretty(await response.clone().text())) },
         });
         return response;
@@ -224,12 +252,14 @@ async function setUp() {
     }],
   });
 
-  // A profile the state set up on the server, before any of this.
-  profile = await (await mockServer.fetch(new Request('http://localhost/communication/profiles', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-caller-id': 'admin-1' },
-    body: JSON.stringify({ name: 'english', provider: 'aws-transcribe', languages: ['en-US'] }),
-  }))).json();
+  // The profiles the state set up on the server, before any of this.
+  for (const [key, name, provider] of [['vendor', 'english', 'aws-transcribe'], ['relay', 'english-relayed', 'google-cloud-speech']]) {
+    profiles[key] = await (await mockServer.fetch(new Request('http://localhost/communication/profiles', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-caller-id': 'admin-1' },
+      body: JSON.stringify({ name, provider, languages: ['en-US'] }),
+    }))).json();
+  }
 }
 
 /** The mock client follows the mock server's events from the start; each run's diagram shows it. */
@@ -458,29 +488,154 @@ function transcribeTap() {
   };
 }
 
+/** The relay contract's messages, as they cross between the relay adapter and the relay, drawn. */
+function relayTap() {
+  let audioArrow = null;
+  let frames = 0;
+  const CAPTIONS = {
+    start: 'The relay adapter starts the stream: the audio\'s format, and the languages.',
+    started: 'The relay is ready for audio.',
+    keepalive: 'Nothing has been said for a while; a keepalive keeps the connection open.',
+    end: 'The audio is over. The relay sends its last results.',
+    ended: 'The relay has sent everything, and closes.',
+    error: 'The relay refused something, and closes.',
+  };
+  return {
+    opened(protocols) {
+      audioArrow = null;
+      frames = 0;
+      draw('sdk', 'service', 'call', 'new WebSocket', 'The relay adapter opens a WebSocket to the relay the server answered with, asking for the relay contract\'s subprotocol with the token beside it.', {
+        details: { URL: RELAY_URL, 'Sec-WebSocket-Protocol': protocols.join(', ') },
+        refs: refsFor('relayChannel'),
+      });
+    },
+    sent(data) {
+      if (typeof data !== 'string') {
+        frames += 1;
+        if (!audioArrow) {
+          audioArrow = draw('sdk', 'service', 'async', 'audio', 'Audio, as binary WebSocket frames: 100 ms each, for as long as the connection is open. One arrow stands for them all.', {
+            details: { Each: `${data.byteLength ?? data.length} bytes of ${AUDIO.encoding} at ${AUDIO.sampleRateHertz} Hz` },
+            refs: refsFor('relay.audio'),
+          });
+        }
+        audioArrow.update({ text: `audio ×${frames}` });
+        return;
+      }
+      const message = JSON.parse(data);
+      // Keepalives ride on the audio arrow, rather than a row each.
+      if (message.type === 'keepalive' && audioArrow) { audioArrow.update({ details: { 'Latest keepalive': message } }); return; }
+      draw('sdk', 'service', 'async', message.type, CAPTIONS[message.type] ?? '', { details: { Message: message }, refs: refsFor(`relay.${message.type}`) });
+    },
+    received(data) {
+      const message = JSON.parse(data);
+      if (message.type === 'result') {
+        headed();
+        const text = message.alternatives[0].transcript;
+        draw('service', 'sdk', 'async', 'result', message.isFinal ? `A finished result: "${text}".` : `A result that's still changing: "${text}".`, {
+          details: { Message: message },
+          refs: refsFor('relay.result'),
+        });
+        if (message.isFinal) sentenceDone = true;
+        return;
+      }
+      draw('service', 'sdk', 'async', message.type, CAPTIONS[message.type] ?? '', { details: { Message: message }, refs: refsFor(`relay.${message.type}`), warn: message.type === 'error' });
+    },
+    closed(finished) {
+      if (!finished) headed();
+      draw('service', 'sdk', 'async', 'close', finished ? 'The relay closes the connection.' : 'The connection drops: the network went away.', { warn: !finished });
+    },
+  };
+}
+
+/**
+ * The relay, as a state runs it in front of a service a browser can't reach:
+ * the fake relay, playing the recording, served over mock-socket at the
+ * address the issuer answers with. Each message either way is drawn.
+ */
+let relayServer = null;
+
+/**
+ * The relay's check of a token, as a real relay makes it: it gets the
+ * adapter's published keys and checks the token's signature, audience and
+ * expiry with the server side's verifyRelayToken.
+ */
+async function checkRelayToken(token) {
+  const request = new Request('https://adapter.example.gov/.well-known/jwks.json');
+  draw('service', 'code', 'call', 'getTranscriptConnectionKeys', 'Before taking the connection, the relay gets the public keys of the state\'s transcript audio adapter, to check the token it signed.', {
+    details: { Request: 'GET /.well-known/jwks.json' },
+  });
+  const response = await issue(request);
+  const keys = await response.json();
+  draw('code', 'service', 'reply', String(response.status), 'The adapter answers with its key set: the public half of the key it signs relay tokens with.', {
+    details: { Response: clip(pretty(JSON.stringify(keys))) },
+  });
+  try {
+    await verifyRelayToken(token, { keys, audience: RELAY_URL });
+    draw('service', 'service', 'note', 'token checked', 'The token is signed by the adapter\'s key, for this relay, and not expired, so the relay takes the connection.', { refs: [] });
+    return true;
+  } catch (error) {
+    draw('service', 'service', 'note', 'token refused', error.message, { warn: true, refs: [] });
+    return false;
+  }
+}
+function serveRelay(recording) {
+  relayServer?.stop();
+  const relay = createFakeRelay(recording, { speed: SPEED, sleep, verifyToken: checkRelayToken });
+  const tap = relayTap();
+  let offered;
+  relayServer = new RelayServer(RELAY_URL, {
+    selectProtocol: (protocols) => { offered = [...protocols]; tap.opened(offered); return relay.handleProtocols(protocols); },
+  });
+  relayServer.on('connection', (socket) => {
+    let finished = false;
+    socket.on('message', (data) => tap.sent(data));
+    socket.on('close', () => tap.closed(finished));
+    // mock-socket's server socket is a proxy of the browser's own, so what
+    // the relay sends is tapped through a socket of its own, not by
+    // replacing send, which would replace the browser's.
+    relay.handleConnection({
+      send(data) {
+        tap.received(data);
+        if (JSON.parse(data).type === 'ended') finished = true;
+        socket.send(data);
+      },
+      close: () => socket.close(),
+      on: (type, listener) => socket.on(type, listener),
+      get readyState() { return socket.readyState; },
+    }, offered);
+  });
+}
+
 async function start() {
   if (audio) audio.state.done = true;
   next();
   sentenceDone = false;
   scenario = PLAYABLE.find((s) => s.id === $('scenario').value) ?? PLAYABLE[0];
+  via = scenario.via === 'relay' ? 'relay' : 'vendor';
+  sequence.participant('service', { name: via === 'relay' ? 'Relay' : 'Transcription service' });
   beat = 0;
   phases = 0;
   heading = null;
   sequence.clear();
 
   phase('The page starts');
-  draw('code', 'code', 'note', 'createMockServer', 'Your code creates the mock server. It stands in for the state\'s server, and its routing sends issueTranscriptConnection to the transcripts adapter your code gives it.', { details: { Code: SETUP_SERVER } });
+  draw('code', 'code', 'note', 'createMockServer', 'Your code creates the mock server. It stands in for the state\'s server, and its routing sends issueTranscriptConnection to the transcript audio adapter your code gives it.', { details: { Code: SETUP_SERVER } });
   draw('code', 'code', 'note', 'createMockClient', 'Your code creates the mock client. It runs the session API and the page\'s event log in the page, and sends everything else to the mock server.', { details: { Code: SETUP_CLIENT } });
   drawFollowing();
-  draw('code', 'code', 'note', 'createTranscriptionClient', 'Your code points the generated SDKs at the mock client, and creates the transcription client with the client adapters it can connect with, by service: here, the Amazon Transcribe adapter.', { details: { Code: SETUP_TRANSCRIPTION } });
+  draw('code', 'code', 'note', 'createTranscriptionClient', 'Your code points the generated SDKs at the mock client, and creates the transcription client with the client adapters it can connect with: the Amazon Transcribe adapter, by its service, and the relay adapter, by the relay contract\'s subprotocol, which works with any relay.', { details: { Code: SETUP_TRANSCRIPTION } });
 
-  const FakeTranscribe = createFakeTranscribe(recordingFromScript(script, { beats: scenario.beats }), { speed: SPEED, sleep, tap: transcribeTap() });
+  const recording = recordingFromScript(script, { beats: scenario.beats });
+  const FakeTranscribe = createFakeTranscribe(recording, { speed: SPEED, sleep, tap: transcribeTap() });
+  if (via === 'relay') serveRelay(recording);
   const transcription = createTranscriptionClient({
     sessions,
     transcripts,
     events,
     fetch: sdkFetch,
-    adapters: { 'aws-transcribe': createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }) },
+    adapters: {
+      'aws-transcribe': createAwsTranscribeAdapter({ WebSocket: FakeTranscribe }),
+      [RELAY_PROTOCOL]: createRelayAdapter({ WebSocket: RelayWebSocket }),
+    },
     speakerFor: (label) => ({ spk_0: 'staff', spk_1: 'client' })[label] ?? 'unknown',
     retryDelay: () => 1500,
     onError: (error) => draw('sdk', 'sdk', 'note', error.message, '', { warn: true, refs: [] }),
@@ -488,8 +643,9 @@ async function start() {
 
   await step('start a session');
   phase('Start');
+  const profile = profiles[via];
   const fields = { profileId: profile.id, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: new Date().toISOString() };
-  draw('code', 'sdk', 'call', 'start', 'Your code starts a session, with a profile the state set up on the server (provider: aws-transcribe).', {
+  draw('code', 'sdk', 'call', 'start', `Your code starts a session, with a profile the state set up on the server (provider: ${profile.provider}).`, {
     details: { Code: short(`const session = await transcription.start(${JSON.stringify(fields, null, 2)});`) },
     refs: [],
   });
@@ -554,7 +710,11 @@ async function boot() {
   $('step').addEventListener('click', () => { stepping = true; if (canStart()) { begun = true; begin(); } else next(); refresh(); });
   $('run').addEventListener('click', () => { stepping = false; if (canStart()) begin(); else next(); refresh(); });
   $('scenario').innerHTML = PLAYABLE.map((s) => `<option value="${s.id}">${escape(s.title)}</option>`).join('');
-  const describe = () => { $('summary').textContent = PLAYABLE.find((s) => s.id === $('scenario').value).summary; };
+  const describe = () => {
+    const chosen = PLAYABLE.find((s) => s.id === $('scenario').value);
+    $('summary').textContent = chosen.summary;
+    sequence.participant('service', { name: chosen.via === 'relay' ? 'Relay' : 'Transcription service' });
+  };
   $('scenario').addEventListener('change', describe);
   describe();
   $('loading').hidden = true;

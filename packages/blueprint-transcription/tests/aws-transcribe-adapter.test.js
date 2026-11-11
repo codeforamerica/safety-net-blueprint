@@ -13,7 +13,7 @@ import { toUtf8, fromUtf8 } from '@smithy/util-utf8';
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { encodeMessage, decodeMessage, decodeMessages } from '../src/client/adapters/aws/eventstream.js';
 import { createAwsTranscribeAdapter, createTranscriptionClient } from '../src/client/index.js';
-import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
+import { createTranscriptAudioAdapter, awsTranscribeIssuer } from '../src/server/index.js';
 import { sdkFor } from './sdk.js';
 
 const aws = new EventStreamCodec(toUtf8, fromUtf8);
@@ -172,7 +172,7 @@ test('a connection that won\'t open is refused', async () => {
 
 test('end to end: the server adapter issues a presigned URL, and the page streams to it', async () => {
   const contracts = JSON.parse(readFileSync(new URL('../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
-  const issue = createTranscriptsAdapter({
+  const issue = createTranscriptAudioAdapter({
     issuers: { 'aws-transcribe': awsTranscribeIssuer({ region: 'us-east-1', credentials: { accessKeyId: 'AKIDEXAMPLE', secretAccessKey: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY' } }) },
   });
   const { log, warn } = console;

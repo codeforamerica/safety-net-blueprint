@@ -32,7 +32,7 @@ const SESSIONS = `${DIR}/communication/communication-transcription-sessions-stat
 const TRANSCRIPTS = `${DIR}/communication/communication-transcripts-state-machine.yaml`;
 const SESSIONS_API = `${DIR}/communication/communication-transcription-sessions-openapi.yaml`;
 const TRANSCRIPTS_API = `${DIR}/communication/communication-transcripts-openapi.yaml`;
-const ADAPTER = `${DIR}/communication/communication-transcripts-adapter-openapi.yaml`;
+const ADAPTER = `${DIR}/communication/communication-transcripts-audio-adapter-openapi.yaml`;
 const RELAY = `${DIR}/communication/communication-transcripts-relay-asyncapi.yaml`;
 const EVENTS = `${DIR}/platform/platform-events-openapi.yaml`;
 const sessionAction = (fn, action) => [`${fn}()`, `client function, for the session's ${action} action`, SESSIONS, new RegExp(`- id: ${action}\\n`)];
@@ -60,6 +60,7 @@ const DEFINITIONS = {
   resumeTranscript: transcriptAction('resumeTranscript', 'resume'),
   closeTranscript: transcriptAction('closeTranscript', 'close'),
   issueTranscriptConnection: operation('issueTranscriptConnection', ADAPTER, 'the adapter\'s operation, which the state implements and the transcript calls'),
+  getTranscriptConnectionKeys: operation('getTranscriptConnectionKeys', ADAPTER, 'the adapter\'s key set, which a relay checks tokens with'),
   'communication.transcript.paused': ['communication.transcript.paused', 'event, sent by the transcript', TRANSCRIPTS, /- id: paused\n\s+description: The conversation went off/],
   'communication.transcript.resumed': ['communication.transcript.resumed', 'event, sent by the transcript', TRANSCRIPTS, /- id: resumed\n/],
   'communication.transcript.closed': ['communication.transcript.closed', 'event, sent by the transcript', TRANSCRIPTS, /- id: closed\n\s+description: The transcript has ended/],

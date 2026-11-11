@@ -2,6 +2,8 @@
 
 > Reference transcription software for the Blueprint's transcription session contract
 
+For transcribing speech: it captures audio in the browser and streams it to a transcription service. A typed conversation, such as a chat, doesn't need it; add its lines to the transcript directly.
+
 > **Pre-release:** This package is at `0.x`. Until `1.0.0`, minor versions may include breaking changes. Pin your version if stability matters.
 
 > **Reference implementation.** One way to do this, not the only one: use it as is, adapt it, or replace it. The contracts are the authority; anything that satisfies them works the same.
@@ -26,7 +28,7 @@ It has three entry points: one for each place it runs, and the fakes:
 | Entry point | Runs | What it has |
 |---|---|---|
 | `./client` | In the page | The driver, which is the only part that talks to the transcription session, and the client adapters it plugs in: one per transcription service, and one for any relay |
-| `./server` | Beside the state's server | The transcripts adapter, which holds a service's secret and issues the connection the page streams with, and an issuer for Amazon Transcribe |
+| `./server` | Beside the state's server | The transcript audio adapter, which holds a service's secret and issues the connection the page streams with, and an issuer for Amazon Transcribe |
 | `./fakes` | Demos and tests | A fake adapter and a fake relay, with no service behind them, and a WebSocket that runs the fake relay in the page |
 
 Never import `./server` into a page: it's where secrets are used.
@@ -130,7 +132,7 @@ import { createAwsTranscribeAdapter } from '@codeforamerica/blueprint-transcript
 adapters: { 'aws-transcribe': createAwsTranscribeAdapter() }
 ```
 
-Opens the presigned URL the server adapter issued, sends the audio as
+Opens the presigned URL the transcript audio adapter issued, sends the audio as
 Transcribe's `AudioEvent` messages, and reports its results: a partial
 result as a line in progress, a final one as a finished line, tied by
 Transcribe's `ResultId`. Speaker labels (`spk_0`, or `ch_0` with two
@@ -176,9 +178,9 @@ After a pause or a drop, playback carries on from where it stopped.
 ## The server
 
 ```js
-import { createTranscriptsAdapter, awsTranscribeIssuer } from '@codeforamerica/blueprint-transcription/server';
+import { createTranscriptAudioAdapter, awsTranscribeIssuer } from '@codeforamerica/blueprint-transcription/server';
 
-const adapter = createTranscriptsAdapter({
+const adapter = createTranscriptAudioAdapter({
   issuers: {
     'aws-transcribe': awsTranscribeIssuer({ region: 'us-east-1', settings: { 'show-speaker-label': 'true' } }),
   },
@@ -188,7 +190,7 @@ const adapter = createTranscriptsAdapter({
 ```
 
 It answers `POST /issue-connection`, the contract in
-`communication-transcripts-adapter-openapi.yaml`. For Amazon Transcribe it
+`communication-transcripts-audio-adapter-openapi.yaml`. For Amazon Transcribe it
 answers with a presigned WebSocket URL that carries its own credential, so no
 AWS credential reaches the page. Credentials come from the environment
 (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`) unless
@@ -226,7 +228,7 @@ In a worker, apart from the page, the connection goes over a `MessagePort`:
 `createWorkerWebSocket(() => server.connect('relay'))`, a class with the
 standard WebSocket interface to give the relay adapter.
 
-A real relay checks the token as a JWT the transcripts adapter signed; the
+A real relay checks the token as a JWT the transcript audio adapter signed; the
 fake takes any token its `verifyToken` option accepts. Its tests check every
 message either side sends against the relay contract's schemas.
 
@@ -240,15 +242,15 @@ service a browser can't reach needs no client adapter of its own: it sits
 behind a relay, which the relay adapter speaks to. The transcription services
 the contracts name are in the `transcription-services` registry
 (`communication-transcripts-registry-transcription-services.yaml`), with how a
-browser reaches each in `docs/architecture/domains/communication.md`,
-Decision 12.
+browser reaches each in `docs/architecture/domains/communication-transcripts.md`,
+Decision 11.
 
 - **A client adapter** in `src/client/adapters/`, exported from `./client`: an object
   with `open`, as above. It speaks only the service's protocol; the driver
   does the rest.
 - **An issuer** in `src/server/issuers/`, exported from `./server`: a function from a
   `ConnectionRequest` to a `StreamConnection`, given to
-  `createTranscriptsAdapter` under the service's registry name. Throw
+  `createTranscriptAudioAdapter` under the service's registry name. Throw
   `CantIssue` for a request the service can't take, naming the field.
 - **Tests that need no account.** Check an issuer against the service's own
   SDK or documented examples with a made-up key, as the Transcribe signer is

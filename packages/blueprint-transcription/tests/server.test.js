@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { SignatureV4 } from '@smithy/signature-v4';
 import { Sha256 } from '@aws-crypto/sha256-js';
-import { createTranscriptsAdapter, awsTranscribeIssuer } from '../src/server/index.js';
+import { createTranscriptAudioAdapter, awsTranscribeIssuer } from '../src/server/index.js';
 import { presignUrl } from '../src/server/issuers/aws/sigv4.js';
 
 // AWS's documented example key, not a real one.
@@ -42,7 +42,7 @@ for (const [name, credentials] of [
   });
 }
 
-const issue = (body, options = {}) => createTranscriptsAdapter({
+const issue = (body, options = {}) => createTranscriptAudioAdapter({
   issuers: { 'aws-transcribe': awsTranscribeIssuer({ region: 'us-east-1', credentials: CREDENTIALS, now: () => NOW, ...options }) },
 })(new Request('https://adapter.example/issue-connection', { method: 'POST', body: JSON.stringify(body) }));
 

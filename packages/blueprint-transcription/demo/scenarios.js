@@ -21,14 +21,14 @@ export const SCENARIOS = [
     title: 'An interview, straight to a vendor',
     summary: 'The browser streams straight to a transcription service. Each finished sentence is saved to the transcript on the server.',
     via: 'vendor',
-    beats: ['say', 'say', 'say', 'stop'],
+    beats: ['say', 'stop'],
   },
   {
     id: 'relay',
     title: 'An interview, through a relay',
     summary: 'The same interview, for a service a browser can\'t reach: the browser streams to a relay the state runs, which speaks the relay contract.',
     via: 'relay',
-    beats: ['say', 'say', 'say', 'stop'],
+    beats: ['say', 'stop'],
   },
   {
     id: 'off-the-record',

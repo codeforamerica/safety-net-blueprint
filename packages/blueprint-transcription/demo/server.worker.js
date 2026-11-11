@@ -24,7 +24,7 @@ const mock = createMockServer({
   contracts,
   routing: [{
     operation: 'issueTranscriptConnection',
-    // Stands in for the state's transcripts adapter, which holds the vendor's
+    // Stands in for the state's transcript audio adapter, which holds the vendor's
     // secret and hands out a short-lived pass: to the relay for a service a
     // browser can't reach, straight to the vendor otherwise.
     handler: async (request) => {

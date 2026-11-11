@@ -1,6 +1,6 @@
 /**
  * A client adapter for Amazon Transcribe streaming. It opens the presigned
- * WebSocket URL the transcripts adapter issued, sends the audio as
+ * WebSocket URL the transcript audio adapter issued, sends the audio as
  * AudioEvent messages, and reports each TranscriptEvent's results: a partial
  * result as a line in progress, a final one as a finished line, keyed by
  * Transcribe's ResultId so the two are tied.

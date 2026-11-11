@@ -1,6 +1,6 @@
 /**
  * Turn a demo script into a recording the fakes can play: each line becomes
- * a line in progress that grows a word at a time, then the finished line,
+ * one line in progress, about half of it, then the finished line,
  * with the worker as `spk_0` and the applicant as `spk_1`. The format is the
  * transcription tools' demo scripts': lines starting `**Worker.**` or
  * `**Applicant.**`.
@@ -37,12 +37,11 @@ export function recordingFromScript(script, { beats, secondsPerWord = 0.32, paus
     const speakerLabel = role === 'Worker' ? 'spk_0' : 'spk_1';
     const words = text.split(/\s+/);
     const start = at;
-    words.forEach((_, i) => {
-      // A service revises a line every few words, not every word.
-      if (i % 3 === 2 && i < words.length - 1) {
-        events.push({ at: start + (i + 1) * secondsPerWord, type: 'update', key, text: words.slice(0, i + 1).join(' '), speakerLabel, start });
-      }
-    });
+    // A service revises a line every few words; one revision shows what each does.
+    const half = Math.ceil(words.length / 2);
+    if (half < words.length) {
+      events.push({ at: start + half * secondsPerWord, type: 'update', key, text: words.slice(0, half).join(' '), speakerLabel, start });
+    }
     const end = start + words.length * secondsPerWord;
     events.push({ at: end + 0.2, type: 'add', key, text, speakerLabel, start, end, confidence: 0.94, language: 'en-US' });
     at = end + pause;

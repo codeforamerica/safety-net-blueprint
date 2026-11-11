@@ -1,12 +1,14 @@
 /**
- * The transcripts adapter: the contract in
- * communication-transcripts-adapter-openapi.yaml, as a function of
+ * The transcript audio adapter: the contract in
+ * communication-transcripts-audio-adapter-openapi.yaml, as a function of
  * `fetch`'s shape, `(Request) => Response`, so it runs on whatever host a
  * state chooses — a Node server, a serverless function, a worker. The state
  * runs it, holds its secrets, and decides where it's served.
  *
  * It answers POST /issue-connection with the issuer for the service the
- * request names, and echoes the request's metadata, as every adapter does.
+ * request names, and echoes the request's metadata, as every adapter does;
+ * and GET /.well-known/jwks.json with the public keys of the issuers that sign
+ * tokens for a relay, or 404 when none do.
  */
 
 /**
@@ -30,12 +32,23 @@ const error = (status, code, message, details) => Response.json(
  * @param {object} options
  * @param {Record<string, Function>} options.issuers - by transcription
  *   service, a function from a ConnectionRequest to a StreamConnection, such
- *   as `awsTranscribeIssuer(...)` for `aws-transcribe`
+ *   as `awsTranscribeIssuer(...)` for `aws-transcribe`, or `relayIssuer(...)`
+ *   for a service behind a relay, whose `publicKey` the adapter publishes
  * @returns {(request: Request) => Promise<Response>}
  */
-export function createTranscriptsAdapter({ issuers }) {
+export function createTranscriptAudioAdapter({ issuers }) {
+  // One entry per key, however many services share a relay's key.
+  const keys = [...new Map(Object.values(issuers)
+    .filter((issuer) => issuer.publicKey)
+    .map(({ publicKey }) => [publicKey.kid, publicKey])).values()];
+
   return async (request) => {
     const { pathname } = new URL(request.url);
+    if (pathname.endsWith('/.well-known/jwks.json')) {
+      if (request.method !== 'GET') return error(405, 'METHOD_NOT_ALLOWED', 'The key set takes GET');
+      if (!keys.length) return error(404, 'NOT_FOUND', 'This adapter signs no tokens for a relay');
+      return Response.json({ keys }, { headers: { 'Content-Type': 'application/jwk-set+json' } });
+    }
     if (!pathname.endsWith('/issue-connection')) return error(404, 'NOT_FOUND', `Nothing at ${pathname}`);
     if (request.method !== 'POST') return error(405, 'METHOD_NOT_ALLOWED', 'issue-connection takes POST');
 
