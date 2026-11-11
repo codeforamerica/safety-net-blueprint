@@ -262,3 +262,24 @@ test('a receive step takes the event that meets its criteria, leaving another\'s
   assert.deepStrictEqual(run.steps.map((s) => s.passed), [true, true, true, true, false]);
   assert.deepStrictEqual(run.steps[4].checks.map((c) => c.condition), ['received demo.thing.noticed meeting its criteria within 100 ms']);
 });
+
+test('a step runs another workflow with its inputs, reads its outputs, and that workflow runs only there', async () => {
+  const { fetch, seen } = fakeFetch();
+  const make = { workflowId: 'make', inputs: { type: 'object' }, steps: [
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: '$inputs.name' } }, outputs: { id: '$response.body#/id' } },
+  ], outputs: { thing: '$steps.create.outputs.id' } };
+  const main = { workflowId: 'main', steps: [
+    { stepId: 'makeOne', workflowId: 'make', parameters: [{ name: 'name', value: 'from main' }],
+      successCriteria: [{ condition: '$outputs.thing == \'t1\'' }], outputs: { made: '$outputs.thing' } },
+    { stepId: 'read', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: '$steps.makeOne.outputs.made' }] },
+  ] };
+  const results = await runScenario({ arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [main, make] }, { fetch, operations });
+  assert.deepStrictEqual(results.map((r) => r.workflowId), ['main'], 'make ran inside main, not on its own');
+  assert.ok(results[0].passed);
+  assert.strictEqual(JSON.parse(seen[0].body).name, 'from main');
+  assert.deepStrictEqual(results[0].steps[0].steps.map((s) => s.stepId), ['create']);
+  assert.strictEqual(seen[1].url, '/demo/things/t1');
+
+  const broken = { ...main, steps: [{ stepId: 'makeOne', workflowId: 'make', parameters: [{ name: 'name', in: 'query', value: 'x' }] }] };
+  await assert.rejects(runScenario({ arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [broken, make] }, { fetch, operations }), /has no "in"/);
+});

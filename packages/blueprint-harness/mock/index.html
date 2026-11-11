@@ -142,13 +142,20 @@
   .op.step .n { flex: none; }
   .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   /* How a step travels: an HTTP call, an event on the stream, or a WebSocket message. */
-  .op.step .via {
+  .via {
     flex: none; align-self: center; font-family: var(--mono); font-size: .62rem; font-weight: 600;
     padding: 0 .3rem; border-radius: 3px; border: 1px solid; line-height: 1.5;
   }
   .via-http { color: #555; background: #f2f2f2; border-color: #dcdcdc; }
   .via-event { color: #24613a; background: #e7f4ea; border-color: #bcdcc5; }
   .via-ws { color: #5d2f7a; background: #f1e8f6; border-color: #d7c2e4; }
+  /* Something the step can't show, which a "Not shown:" bullet names. */
+  .via-workflow { color: #1f4f86; background: #e6f0fb; border-color: #b9d2ef; }
+  .panel ol.inner { margin: .6rem 0 0; padding-left: 1.4rem; font-size: .88rem; }
+  .panel ol.inner li { margin: .15rem 0; }
+  .panel ol.inner .tag { margin-left: .4rem; }
+  .via-gap { color: #8a5a00; background: #fdf3dc; border-color: #ecd49a; }
+  .panel .kindline .via { margin-left: .4rem; letter-spacing: 0; text-transform: none; }
   /* A tour in sections — one workflow each — names each where it starts. */
   .steps .section {
     margin: .8rem 0 .2rem .45rem; font-size: .78rem; font-weight: 700; color: var(--ink);
@@ -1325,8 +1332,16 @@ const asWritten = (url) => {
 /** A section's name: its workflow's summary, or its id. */
 const sectionOf = (workflow) => workflow.summary ?? workflow.workflowId;
 
-/** Every step of a scenario, in order, across its workflows. */
-const scenarioSteps = (doc) => (doc.content.workflows ?? []).flatMap((workflow) =>
+/**
+ * Every step of a scenario, in order, across its workflows — but for a
+ * workflow another step runs (`workflowId`), which shows inside that step.
+ */
+const calledWorkflows = (doc) => new Set((doc.content.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => step.workflowId).filter(Boolean)));
+const tourWorkflows = (doc) => {
+  const called = calledWorkflows(doc);
+  return (doc.content.workflows ?? []).filter((workflow) => !called.has(workflow.workflowId));
+};
+const scenarioSteps = (doc) => tourWorkflows(doc).flatMap((workflow) =>
   (workflow.steps ?? []).map((step) => ({ workflow, step, key: `${workflow.workflowId}/${step.stepId}` })));
 
 /**
@@ -1349,13 +1364,27 @@ const describe = (step) => {
  * stream; `http` for a call.
  */
 const transportOf = (doc, step, ops) => {
+  if (step.workflowId !== undefined) return 'workflow';
   if (step.action === undefined && step.channelPath === undefined) return 'http';
   const named = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
   const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
   const ref = source && ops.get(`${String(source.url).split('/').pop()}#${named[2]}`);
   return ref?.reached === 'servers' ? 'ws' : 'event';
 };
-const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', ws: 'WS' };
+const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', ws: 'WS', workflow: 'Steps' };
+
+/** A workflow of the scenario, by its id. */
+const byWorkflowId = (doc, id) => (doc.content.workflows ?? []).find((workflow) => workflow.workflowId === id);
+
+/** What a step can't show: its description's bullets that start "Not shown:". */
+const notShown = (step) => describe(step).points.filter((point) => /^Not shown:/.test(point));
+const gapTag = (step) => {
+  const gaps = notShown(step);
+  if (gaps.length === 0) return null;
+  const tag = el('span', 'Gap', 'via via-gap');
+  tag.title = gaps.join('\n');
+  return tag;
+};
 
 /** Every operation a scenario can call: the contracts', and the mock's own. */
 const scenarioOperations = () => new Map([...operationIndex(docs), ...controlOperations(mock)]);
@@ -1506,7 +1535,7 @@ const renderTourNav = (nav, doc) => {
   const reached = entries.findIndex((entry) => !tourResults.get(entry.key)?.passed);
   const upTo = reached === -1 ? entries.length : reached + 1;
   const list = el('ol', '', 'ops steps');
-  const sectioned = (doc.content.workflows ?? []).length > 1;
+  const sectioned = tourWorkflows(doc).length > 1;
   const ops = scenarioOperations();
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
     if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
@@ -1531,10 +1560,11 @@ const renderTourNav = (nav, doc) => {
     const run = Boolean(tourResults.get(entry.key)?.passed);
     const via = transportOf(doc, entry.step, ops);
     const tag = el('span', TRANSPORT_TAGS[via], `via via-${via}`);
-    tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', ws: 'A message over a WebSocket' }[via];
+    tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', ws: 'A message over a WebSocket', workflow: 'Several steps, run as one: another workflow' }[via];
     button.append(
       el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
       el('span', describe(entry.step).title, 'title'),
+      ...[gapTag(entry.step)].filter(Boolean),
       tag
     );
     if (tourStep === index) button.classList.add('here');
@@ -1684,18 +1714,25 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   const messaging = step.action !== undefined || step.channelPath !== undefined;
   // On a connection of its own (the relay's) it's a WebSocket message; else an event.
   const overWs = messaging && Boolean(sending?.message ?? result?.request?.message);
-  const group = messaging ? GROUPS.find((candidate) => candidate.holds(overWs ? 'ws' : 'message'))
+  // A step that runs another workflow has no one kind: its steps each have theirs.
+  const group = step.workflowId !== undefined ? null : messaging ? GROUPS.find((candidate) => candidate.holds(overWs ? 'ws' : 'message'))
     : op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
-  const sectioned = (doc.content.workflows ?? []).length > 1;
+  const sectioned = tourWorkflows(doc).length > 1;
   if (sectioned) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
   // The section's introduction, on its first step when a step at a time; the
   // whole tour shows it under the section's heading instead.
   if (sectioned && live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
-  if (group) panel.append(el('p', group.title, 'kindline'));
+  if (group) {
+    const kind = el('p', group.title, 'kindline');
+    const gap = gapTag(step);
+    if (gap) kind.append(gap);
+    panel.append(kind);
+  }
   const acting = actorLine(doc, step['x-actors']);
   if (acting) panel.append(acting);
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
-  panel.append(el('p', messaging ? `${step.action === 'send' ? 'Send' : 'Receive'} ${sending?.message ?? sending?.channel ?? step.channelPath ?? step.operationId}`
+  panel.append(el('p', step.workflowId !== undefined ? `Runs ${byWorkflowId(doc, step.workflowId)?.summary ?? step.workflowId}`
+    : messaging ? `${step.action === 'send' ? 'Send' : 'Receive'} ${sending?.message ?? sending?.channel ?? step.channelPath ?? step.operationId}`
     : sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
   if (shown.length > 0) panel.append(el('p', shown.join('   ·   '), 'cited'));
@@ -1736,7 +1773,21 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     send.textContent = result.passed ? 'Done' : 'Try again';
   }
 
-  if (result && !result.response && step.action !== 'send') {
+  if (step.workflowId !== undefined) {
+    // The workflow's own steps, each with how it went once run.
+    const workflow = byWorkflowId(doc, step.workflowId);
+    const ran = new Map((result?.steps ?? []).map((inner) => [inner.stepId, inner]));
+    const ops = scenarioOperations();
+    const list = el('ol', '', 'inner');
+    for (const inner of workflow?.steps ?? []) {
+      const done = ran.get(inner.stepId);
+      const item = el('li', `${done ? (done.passed ? '✓ ' : '✗ ') : ''}${describe(inner).title}`);
+      const via = transportOf(doc, inner, ops);
+      item.append(el('span', TRANSPORT_TAGS[via], `via via-${via} tag`));
+      list.append(item);
+    }
+    panel.append(list);
+  } else if (result && !result.response && step.action !== 'send') {
     // A message received: the event, or the frame, as it arrived. One sent
     // over a WebSocket is shown above, as what was sent.
     const heard = el('pre', '', result.passed ? '' : 'bad');
@@ -1820,7 +1871,7 @@ const renderTourStage = (stage, doc) => {
     again.onclick = () => { tourWhole = false; tourStep = 0; renderGroups(); renderStage(); };
     panel.append(again);
     stage.append(panel);
-    const sectioned = (doc.content.workflows ?? []).length > 1;
+    const sectioned = tourWorkflows(doc).length > 1;
     for (const [index, entry] of entries.entries()) {
       if (!tourResults.has(entry.key)) continue;
       if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {

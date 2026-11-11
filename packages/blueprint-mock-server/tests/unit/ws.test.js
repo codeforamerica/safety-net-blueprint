@@ -159,3 +159,33 @@ test('a stub can drop the connection after what it sends, or answer only a conne
   assert.strictEqual(await closed, 1008);
   assert.strictEqual(expiredHeard[0].code, 'not-allowed');
 });
+
+test('a scenario connects again by sending after the connection closed', async () => {
+  const mock = await quietMock();
+  const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+  const relay = (key) => `$sourceDescriptions.relay.${key}`;
+  const stubStep = (stepId, payload) => ({ stepId, operationId: '$sourceDescriptions.mock.registerWsStub', requestBody: { payload: { channel: CHANNEL, ...payload } }, successCriteria: [{ condition: '$statusCode == 201' }] });
+  const scenario = {
+    arazzo: '1.1.0', info: { title: 't', version: '1' },
+    sourceDescriptions: [
+      { name: 'relay', url: '../base/domains/communication/communication-transcripts-relay-asyncapi.yaml', type: 'asyncapi' },
+      { name: 'mock', url: 'https://blueprint.codeforamerica.org/mock/mock-openapi.yaml', type: 'openapi' },
+    ],
+    workflows: [{
+      workflowId: 'w',
+      steps: [
+        stubStep('first', { on: 'start', send: [{ type: 'started' }] }),
+        stubStep('drop', { on: 'audio', send: [RESULT], close: { code: 1006 } }),
+        stubStep('again', { on: 'start', send: [{ type: 'started' }] }),
+        { stepId: 'start', operationId: relay('receiveStart'), action: 'send', requestBody: { payload: START } },
+        { stepId: 'started', operationId: relay('sendStarted'), action: 'receive' },
+        { stepId: 'audio', operationId: relay('receiveAudio'), action: 'send', requestBody: { payload: '(audio)' } },
+        { stepId: 'lastResult', operationId: relay('sendResult'), action: 'receive' },
+        { stepId: 'startAgain', operationId: relay('receiveStart'), action: 'send', requestBody: { payload: START } },
+        { stepId: 'startedAgain', operationId: relay('sendStarted'), action: 'receive' },
+      ],
+    }],
+  };
+  const [run] = await runScenario(scenario, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket });
+  assert.ok(run.passed, JSON.stringify(run.steps.filter((s) => !s.passed).map((s) => [s.stepId, s.checks])));
+});

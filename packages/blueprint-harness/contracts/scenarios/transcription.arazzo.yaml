@@ -110,6 +110,7 @@ workflows:
 
           - It says what to start a transcript with: the profile, the model, the client and when the conversation began. No transcript exists yet.
           - The session begins in `created`.
+          - Not shown: signing in. The staff member is already signed in.
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -155,6 +156,7 @@ workflows:
           Ask how to stream
 
           - The session has no transcript yet, so `get-connection` starts one, under the profile it was created with, then asks the transcript how to connect. The transcript's own `get-connection` calls the transcript audio adapter's `issueTranscriptConnection`.
+          - Not shown: the server's call to the adapter. It happens inside this step, and the stub above answers it.
           - The answer is a `StreamConnection`: where to connect, its `subprotocol`, and the token. The client streams the audio straight to the service; it never passes through the server.
         operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
         parameters:
@@ -388,13 +390,19 @@ workflows:
 
       - stepId: standInForTheEnd
         x-actors: [developer]
-        description: Stand in for the service's last answer, ended
+        description: |
+          Stand in for the service's last answers
+
+          - A last line, said just before Stop, then `ended`, and the service closes the connection, as the contract says it does after `ended`.
         operationId: $sourceDescriptions.mock.registerWsStub
         requestBody:
           payload:
             channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
             'on': end
-            send: [{type: ended}]
+            send:
+              - {type: result, id: r2, isFinal: true, startOffsetMs: 8500, endOffsetMs: 10200, speaker: spk_0, alternatives: [{transcript: "Thank you, that's everything."}]}
+              - {type: ended}
+            close: {code: 1000}
         successCriteria:
           - condition: $statusCode == 201
 
@@ -409,12 +417,40 @@ workflows:
         requestBody:
           payload: {type: end}
 
+      - stepId: lastResult
+        x-actors: [service, client]
+        description: Hear the last result, after Stop
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/id == 'r2'
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+
+      - stepId: lastLine
+        x-actors: [client, server]
+        description: |
+          Add the last line, after Stop
+
+          - Still added: lines are accepted while stopping, and it began before the transcript closes.
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {key: $steps.lastResult.outputs.key, text: $steps.lastResult.outputs.text, speaker: staff, startedAt: '2026-10-12T10:00:08Z', endedAt: '2026-10-12T10:00:10Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+
       - stepId: ended
         x-actors: [service, client]
         description: |
           Hear that the service is done
 
-          - `ended`: no more results are coming. The client closes the connection.
+          - `ended`: no more results are coming, and the service closes the connection.
         operationId: $sourceDescriptions.audio.sendEnded
         action: receive
 
@@ -451,7 +487,7 @@ workflows:
         description: |
           Read the transcript's timeline
 
-          - The one line, kept once. Nothing from the line in progress.
+          - Both lines. Nothing from the line in progress.
         operationId: $sourceDescriptions.transcripts.listTranscriptEntries
         parameters:
           - reference: $components.parameters.caller
@@ -460,8 +496,9 @@ workflows:
             value: $steps.connect.outputs.transcriptId
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/total == 1
+          - condition: $response.body#/total == 2
           - condition: $response.body#/items/0/text == 'Can you tell me who lives with you?'
+          - condition: $response.body#/items/1/text == "Thank you, that's everything."
 
   - workflowId: throughARelay
     summary: The main flow, through a relay
@@ -566,6 +603,8 @@ workflows:
           Open the connection to the relay and say what audio is coming
 
           - The relay checks the token before taking the connection, then opens its own connection to Google. A token it refuses ends with an `error` whose `code` is `not-allowed`.
+          - Not shown: the relay refusing a token. The token goes in the connection's opening handshake, which a scenario step can't set, so this scenario connects without one.
+          - Not shown: the relay reading the adapter's keys to check the token. The client doesn't make that call.
         operationId: $sourceDescriptions.audio.receiveStart
         action: send
         requestBody:
@@ -599,70 +638,126 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'connected'
 
+      - stepId: keepalive
+        x-actors: [client, relay]
+        description: |
+          Keep a quiet connection open
+
+          - Sent when no audio has gone for a while, since browser code can't send a WebSocket ping. Nothing answers it.
+        operationId: $sourceDescriptions.audio.receiveKeepalive
+        action: send
+        requestBody:
+          payload: {type: keepalive}
+
+      - stepId: standInForWhatsSaid
+        x-actors: [developer]
+        description: Stand in for what the relay hears
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': audio
+            send:
+              - {type: result, id: r1, isFinal: true, startOffsetMs: 2000, endOffsetMs: 3400, speaker: spk_0, alternatives: [{transcript: "Who lives with you?"}]}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendAudio
+        x-actors: [client, relay]
+        description: Send the audio
+        operationId: $sourceDescriptions.audio.receiveAudio
+        action: send
+        requestBody:
+          payload: (16-bit PCM audio)
+
+      - stepId: finalResult
+        x-actors: [relay, client]
+        description: |
+          Hear the result
+
+          - The relay sends Google's results in the relay contract's shape, so the client handles them as it would any service's.
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == true
+
+      - stepId: stop
+        x-actors: [staff, client, server]
+        description: Stop
+        operationId: $sourceDescriptions.sessions.stopTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {at: '2026-10-12T11:00:10Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: standInForTheEnd
+        x-actors: [developer]
+        description: Stand in for the relay's last answer, then the connection closing
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': end
+            send:
+              - {type: ended}
+            close: {code: 1000}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendEnd
+        x-actors: [client, relay]
+        description: Say the audio has ended
+        operationId: $sourceDescriptions.audio.receiveEnd
+        action: send
+        requestBody:
+          payload: {type: end}
+
+      - stepId: ended
+        x-actors: [relay, client]
+        description: Hear that the relay is done
+        operationId: $sourceDescriptions.audio.sendEnded
+        action: receive
+
+      - stepId: close
+        x-actors: [client, server]
+        description: Close
+        operationId: $sourceDescriptions.sessions.closeTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {at: '2026-10-12T11:00:11Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+
   - workflowId: offTheRecord
     summary: Off the record and back
-    description: Starts already connected. The staff member pauses; the connection to the service closes, so nothing said off the record leaves the browser, and the transcript keeps the pause. They resume, and the client connects again with a new credential.
+    description: Starts already connected. The staff member pauses; the client finishes what the service heard, ends the connection, so nothing said off the record leaves the browser, and the transcript keeps the pause. They resume, and the client connects again.
     dependsOn: [setUp]
     steps:
-      - stepId: start
+      - stepId: connected
         x-actors: [staff, client, server]
-        description: Start a session
-        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        description: |
+          Start a session and connect, as in the main flow
+
+          - Runs the Connect workflow: start a session, ask how to stream, open the connection to the service, and say it's open.
+        workflowId: connect
         parameters:
-          - reference: $components.parameters.caller
-        requestBody:
-          payload:
-            profileId: $workflows.setUp.outputs.profileId
-            model: standard
-            client: interview-assistant/0.1.0
-            startedAt: '2026-10-12T12:00:00Z'
-        successCriteria:
-          - condition: $statusCode == 201
+          - name: profileId
+            value: $workflows.setUp.outputs.profileId
+          - name: startedAt
+            value: '2026-10-12T12:00:00Z'
         outputs:
-          id: $response.body#/id
-
-      - stepId: standInForTheAdapter
-        x-actors: [developer]
-        description: Stand in for the transcript audio adapter
-        operationId: $sourceDescriptions.mock.registerHttpStub
-        requestBody:
-          payload:
-            match: {method: POST, url: /issue-connection}
-            response:
-              status: 200
-              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: getConnection
-        x-actors: [client, server]
-        description: Ask how to stream
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
-        successCriteria:
-          - condition: $statusCode == 200
-
-      - stepId: connect
-        x-actors: [client, server]
-        description: Say the connection is open
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {}
-        successCriteria:
-          - condition: $statusCode == 200
-        outputs:
-          transcriptId: $response.body#/transcriptId
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
 
       - stepId: pause
         x-actors: [staff, client, server]
@@ -675,7 +770,7 @@ workflows:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         requestBody:
           payload: {at: '2026-10-12T12:00:10Z'}
         successCriteria:
@@ -687,23 +782,107 @@ workflows:
         description: |
           Hear that the session is paused
 
-          - On `paused`, the client closes the connection to the service, so no audio leaves the browser.
+          - On `paused`, the client stops sending audio and ends the connection.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionPaused
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
+          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
 
-      - stepId: transcriptPaused
+      - stepId: standInForTheFinish
+        x-actors: [developer]
+        description: Stand in for the service finishing what it heard
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': finalize
+            send:
+              - {type: result, id: r1, isFinal: true, startOffsetMs: 7000, endOffsetMs: 9800, speaker: spk_0, alternatives: [{transcript: "My two kids and my mother."}]}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendFinalize
+        x-actors: [client, service]
         description: |
-          Read the transcript
+          Ask for what's been said so far, as final
 
-          - The pause is kept on the transcript, which is `paused` too.
-        operationId: $sourceDescriptions.transcripts.getTranscript
+          - A line said just before the pause still reaches the transcript.
+        operationId: $sourceDescriptions.audio.receiveFinalize
+        action: send
+        requestBody:
+          payload: {type: finalize}
+
+      - stepId: finalResult
+        x-actors: [service, client]
+        description: Hear the final result
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == true
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+
+      - stepId: lineBeforeThePause
+        x-actors: [client, server]
+        description: |
+          Add the line said before the pause
+
+          - Allowed while paused, and kept, since it started before the pause.
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
-          - name: transcriptId
+          - name: transcriptionSessionId
             in: path
-            value: $steps.connect.outputs.transcriptId
+            value: $steps.connected.outputs.sessionId
+        requestBody:
+          payload: {key: $steps.finalResult.outputs.key, text: $steps.finalResult.outputs.text, speaker: client, startedAt: '2026-10-12T12:00:07Z', endedAt: '2026-10-12T12:00:09Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: standInForTheEnd
+        x-actors: [developer]
+        description: Stand in for the service's last answers, then the connection closing
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': end
+            send:
+              - {type: ended}
+            close: {code: 1000}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendEnd
+        x-actors: [client, service]
+        description: End the connection
+        operationId: $sourceDescriptions.audio.receiveEnd
+        action: send
+        requestBody:
+          payload: {type: end}
+
+      - stepId: ended
+        x-actors: [service, client]
+        description: |
+          Hear that the service is done
+
+          - The service closes the connection. No audio leaves the browser until the staff member resumes.
+        operationId: $sourceDescriptions.audio.sendEnded
+        action: receive
+
+      - stepId: stillPaused
+        x-actors: [client, server]
+        description: |
+          Read the session
+
+          - Still `paused`, with no connection.
+        operationId: $sourceDescriptions.sessions.getTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.connected.outputs.sessionId
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'paused'
@@ -719,140 +898,51 @@ workflows:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         requestBody:
           payload: {at: '2026-10-12T12:00:20Z'}
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'connecting'
 
-      - stepId: connectingAgain
-        x-actors: [server, client]
-        description: |
-          Hear that the session is connecting
-
-          - The client hears `connecting` and connects again.
-        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
-
-      - stepId: standInAgain
-        x-actors: [developer]
-        description: Stand in for the transcript audio adapter for the new connection
-        operationId: $sourceDescriptions.mock.registerHttpStub
-        requestBody:
-          payload:
-            match: {method: POST, url: /issue-connection}
-            response:
-              status: 200
-              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: getConnectionAgain
+      - stepId: reconnected
         x-actors: [client, server]
         description: |
-          Ask how to stream again
+          Reconnect
 
-          - The session already has its transcript, so it only gets a new credential.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+          - Runs the Reconnect workflow: ask how to stream again for a new credential, open a new connection to the service, and say it's open.
+        workflowId: reconnect
         parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
-        successCriteria:
-          - condition: $statusCode == 200
-
-      - stepId: connectAgain
-        x-actors: [client, server]
-        description: Say the connection is open again
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {}
-        successCriteria:
-          - condition: $statusCode == 200
-          - condition: $response.body#/status == 'connected'
+          - name: sessionId
+            value: $steps.connected.outputs.sessionId
 
   - workflowId: someoneElsePauses
     summary: Someone else pauses the transcript
-    description: Starts already connected. Someone else with access to the transcript, such as a supervisor, pauses it directly, not through this session. The session follows the transcript off the record, so the client stops sending audio. Only the client capturing the audio can resume.
+    description: Starts already connected. Someone else with access to the transcript, such as a supervisor, pauses it directly, not through this session. The session follows the transcript off the record, and the client ends the connection. Only the client capturing the audio can resume.
     dependsOn: [setUp]
     steps:
-      - stepId: start
+      - stepId: connected
         x-actors: [staff, client, server]
-        description: Start a session
-        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        description: |
+          Start a session and connect, as in the main flow
+
+          - Runs the Connect workflow: start a session, ask how to stream, open the connection to the service, and say it's open.
+        workflowId: connect
         parameters:
-          - reference: $components.parameters.caller
-        requestBody:
-          payload:
-            profileId: $workflows.setUp.outputs.profileId
-            model: standard
-            client: interview-assistant/0.1.0
-            startedAt: '2026-10-12T13:00:00Z'
-        successCriteria:
-          - condition: $statusCode == 201
+          - name: profileId
+            value: $workflows.setUp.outputs.profileId
+          - name: startedAt
+            value: '2026-10-12T13:00:00Z'
         outputs:
-          id: $response.body#/id
-
-      - stepId: standInForTheAdapter
-        x-actors: [developer]
-        description: Stand in for the transcript audio adapter
-        operationId: $sourceDescriptions.mock.registerHttpStub
-        requestBody:
-          payload:
-            match: {method: POST, url: /issue-connection}
-            response:
-              status: 200
-              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: getConnection
-        x-actors: [client, server]
-        description: Ask how to stream
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
-        successCriteria:
-          - condition: $statusCode == 200
-
-      - stepId: connect
-        x-actors: [client, server]
-        description: Say the connection is open
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {}
-        successCriteria:
-          - condition: $statusCode == 200
-        outputs:
-          transcriptId: $response.body#/transcriptId
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
 
       - stepId: pauseTheTranscript
         x-actors: [someoneElse, server]
         description: |
           Pause the transcript directly
 
-          - A call to the transcript, not the session: whoever made it, the session isn't told by them.
+          - A call to the transcript, not the session: the session isn't told by whoever made it.
         operationId: $sourceDescriptions.transcripts.pauseTranscript
         parameters:
           - name: X-Caller-Id
@@ -860,7 +950,7 @@ workflows:
             value: supervisor-1
           - name: transcriptId
             in: path
-            value: $steps.connect.outputs.transcriptId
+            value: $steps.connected.outputs.transcriptId
         requestBody:
           payload: {at: '2026-10-12T13:00:10Z'}
         successCriteria:
@@ -870,102 +960,139 @@ workflows:
       - stepId: transcriptPaused
         x-actors: [server]
         description: |
-          The transcript sends `paused`
+          The transcript sends paused
 
           - `communication.transcript.paused`, which the session's state machine reacts to (its `on:`), finding itself by the transcript's id.
         operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptPaused
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.connect.outputs.transcriptId
+          - condition: $message.payload#/subject == $steps.connected.outputs.transcriptId
 
       - stepId: sessionPaused
         x-actors: [server, client]
         description: |
           Hear that the session followed
 
-          - The session is `paused` and sends `paused`, the same event as when the staff member pauses, so the client closes the connection either way.
+          - The same `paused` as when the staff member pauses, so the client ends the connection either way.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionPaused
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
+          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
+
+      - stepId: standInForTheEnd
+        x-actors: [developer]
+        description: Stand in for the service's last answers, then the connection closing
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': end
+            send:
+              - {type: ended}
+            close: {code: 1000}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendEnd
+        x-actors: [client, service]
+        description: End the connection
+        operationId: $sourceDescriptions.audio.receiveEnd
+        action: send
+        requestBody:
+          payload: {type: end}
+
+      - stepId: ended
+        x-actors: [service, client]
+        description: Hear that the service is done
+        operationId: $sourceDescriptions.audio.sendEnded
+        action: receive
 
   - workflowId: connectionDrops
     summary: The connection drops
-    description: Starts already connected. The network drops the connection to the service. The client connects again with a new credential, and the transcript records the stretch nothing was captured in as a gap.
+    description: Starts already connected. The connection to the service drops partway through. The client connects again with a new credential, and the transcript records the stretch nothing was captured in as a gap.
     dependsOn: [setUp]
     steps:
-      - stepId: start
+      - stepId: connected
         x-actors: [staff, client, server]
-        description: Start a session
-        operationId: $sourceDescriptions.sessions.createTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-        requestBody:
-          payload:
-            profileId: $workflows.setUp.outputs.profileId
-            model: standard
-            client: interview-assistant/0.1.0
-            startedAt: '2026-10-12T14:00:00Z'
-        successCriteria:
-          - condition: $statusCode == 201
-        outputs:
-          id: $response.body#/id
+        description: |
+          Start a session and connect, as in the main flow
 
-      - stepId: standInForTheAdapter
+          - Runs the Connect workflow: start a session, ask how to stream, open the connection to the service, and say it's open.
+        workflowId: connect
+        parameters:
+          - name: profileId
+            value: $workflows.setUp.outputs.profileId
+          - name: startedAt
+            value: '2026-10-12T14:00:00Z'
+        outputs:
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
+
+      - stepId: standInForTheDrop
         x-actors: [developer]
-        description: Stand in for the transcript audio adapter
-        operationId: $sourceDescriptions.mock.registerHttpStub
+        description: |
+          Stand in for the service, then the connection dropping
+
+          - A result, then the connection closes with `1006`: closed with no goodbye, as a network failing closes it.
+        operationId: $sourceDescriptions.mock.registerWsStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
-            response:
-              status: 200
-              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': audio
+            send:
+              - {type: result, id: r1, isFinal: true, startOffsetMs: 2000, endOffsetMs: 3500, speaker: spk_0, alternatives: [{transcript: "I work at the grocery store."}]}
+            close: {code: 1006}
         successCriteria:
           - condition: $statusCode == 201
 
-      - stepId: getConnection
-        x-actors: [client, server]
-        description: Ask how to stream
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
-        parameters:
-          - reference: $components.parameters.caller
-          - name: transcriptionSessionId
-            in: path
-            value: $steps.start.outputs.id
+      - stepId: sendAudio
+        x-actors: [client, service]
+        description: Send the audio
+        operationId: $sourceDescriptions.audio.receiveAudio
+        action: send
         requestBody:
-          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
-        successCriteria:
-          - condition: $statusCode == 200
+          payload: (16-bit PCM audio)
 
-      - stepId: connect
+      - stepId: finalResult
+        x-actors: [service, client]
+        description: Hear the last result before the drop
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == true
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+
+      - stepId: finishedLine
         x-actors: [client, server]
-        description: Say the connection is open
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+        description: |
+          Add the finished line
+
+          - What arrived before the drop is kept.
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         requestBody:
-          payload: {}
+          payload: {key: $steps.finalResult.outputs.key, text: $steps.finalResult.outputs.text, speaker: client, startedAt: '2026-10-12T14:00:02Z', endedAt: '2026-10-12T14:00:03Z'}
         successCriteria:
           - condition: $statusCode == 200
-        outputs:
-          transcriptId: $response.body#/transcriptId
 
       - stepId: dropped
         x-actors: [client, server]
         description: |
           Say the connection dropped
 
-          - The session is `disconnected`, and the client tries again.
+          - The client saw the connection close. The session is `disconnected`, and the client tries again.
         operationId: $sourceDescriptions.sessions.disconnectTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         successCriteria:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'disconnected'
@@ -976,9 +1103,97 @@ workflows:
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
         action: receive
         successCriteria:
-          - condition: $message.payload#/subject == $steps.start.outputs.id
+          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
 
-      - stepId: standInAgain
+      - stepId: reconnected
+        x-actors: [client, server]
+        description: |
+          Reconnect, and say what was lost
+
+          - Runs the Reconnect workflow: ask how to stream again for a new credential, open a new connection to the service, and say it's open, with the gap.
+        workflowId: reconnect
+        parameters:
+          - name: sessionId
+            value: $steps.connected.outputs.sessionId
+          - name: gap
+            value: {startedAt: '2026-10-12T14:00:04Z', endedAt: '2026-10-12T14:00:08Z'}
+
+      - stepId: gapKept
+        description: |
+          Read the transcript's timeline
+
+          - The line from before the drop, then a `gap` entry with `cause` `connection`.
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.connected.outputs.transcriptId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 2
+          - condition: $response.body#/items/1/kind == 'gap'
+
+  - workflowId: givingUp
+    summary: The client gives up
+    description: Starts already connected. The connection drops, and the service refuses the new one. The client gives up, the session fails, and the transcript stays open for a new session to carry on.
+    dependsOn: [setUp]
+    steps:
+      - stepId: connected
+        x-actors: [staff, client, server]
+        description: |
+          Start a session and connect, as in the main flow
+
+          - Runs the Connect workflow: start a session, ask how to stream, open the connection to the service, and say it's open.
+        workflowId: connect
+        parameters:
+          - name: profileId
+            value: $workflows.setUp.outputs.profileId
+          - name: startedAt
+            value: '2026-10-12T15:00:00Z'
+        outputs:
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
+
+      - stepId: standInForTheDrop
+        x-actors: [developer]
+        description: Stand in for the connection dropping
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': audio
+            send:
+              - {type: result, id: r1, isFinal: false, startOffsetMs: 2000, endOffsetMs: 2600, speaker: spk_0, alternatives: [{transcript: "I work"}]}
+            close: {code: 1006}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendAudio
+        x-actors: [client, service]
+        description: |
+          Send the audio
+
+          - The connection closes under it.
+        operationId: $sourceDescriptions.audio.receiveAudio
+        action: send
+        requestBody:
+          payload: (16-bit PCM audio)
+
+      - stepId: dropped
+        x-actors: [client, server]
+        description: Say the connection dropped
+        operationId: $sourceDescriptions.sessions.disconnectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.connected.outputs.sessionId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'disconnected'
+
+      - stepId: standInForTheAdapterAgain
         x-actors: [developer]
         description: Stand in for the transcript audio adapter for the new connection
         operationId: $sourceDescriptions.mock.registerHttpStub
@@ -993,72 +1208,110 @@ workflows:
 
       - stepId: getConnectionAgain
         x-actors: [client, server]
-        description: |
-          Ask how to stream again
-
-          - A new credential. Asking again is how the client reconnects.
+        description: Ask how to stream again
         operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         requestBody:
           payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
         successCriteria:
           - condition: $statusCode == 200
 
-      - stepId: connectWithTheGap
+      - stepId: standInForTheRefusal
+        x-actors: [developer]
+        description: |
+          Stand in for the service refusing the new connection
+
+          - `error`, which the contract says answers `start` when the service can't, and then the connection closes.
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': start
+            send:
+              - {type: error, code: network, message: The service is unavailable.}
+            close: {code: 1011}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendStartAgain
+        x-actors: [client, service]
+        description: Open a new connection and send start
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        requestBody:
+          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
+
+      - stepId: refused
+        x-actors: [service, client]
+        description: Hear the error
+        operationId: $sourceDescriptions.audio.sendError
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/code == 'network'
+
+      - stepId: fail
         x-actors: [client, server]
         description: |
-          Say the connection is open, and what was lost
+          Give up
 
-          - `gap` is the stretch nothing was captured in, by the client's clock. The session adds it to the transcript.
-        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+          - After as many tries as it allows, the client gives up. The session is `failed`.
+        operationId: $sourceDescriptions.sessions.failTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
-        requestBody:
-          payload: {gap: {startedAt: '2026-10-12T14:00:20Z', endedAt: '2026-10-12T14:00:24Z'}}
+            value: $steps.connected.outputs.sessionId
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/status == 'connected'
+          - condition: $response.body#/status == 'failed'
 
-      - stepId: gapKept
+      - stepId: failed
+        x-actors: [server, client]
+        description: Hear that the session failed
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionFailed
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
+
+      - stepId: transcriptStillOpen
         description: |
-          Read the transcript's timeline
+          Read the transcript
 
-          - A `gap` entry, with `cause` `connection`.
-        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+          - Still `recording`: a session failing doesn't close it, so a new one can carry on.
+        operationId: $sourceDescriptions.transcripts.getTranscript
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptId
             in: path
-            value: $steps.connect.outputs.transcriptId
+            value: $steps.connected.outputs.transcriptId
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/total == 1
-          - condition: $response.body#/items/0/kind == 'gap'
+          - condition: $response.body#/status == 'recording'
+    outputs:
+      transcriptId: $steps.connected.outputs.transcriptId
 
-  - workflowId: renewing
-    summary: Renewing the credential
-    description: Starts already connected. Before the credential expires, the client gets a fresh one without dropping the connection.
-    dependsOn: [setUp]
+  - workflowId: carryingOn
+    summary: Carrying on after a reload
+    description: The page reloads, or a session fails, while the transcript is still recording. A new session carries on the same transcript, and the time since its last line is recorded as a gap.
+    dependsOn: [setUp, givingUp]
     steps:
+
       - stepId: start
         x-actors: [staff, client, server]
-        description: Start a session
+        description: |
+          Start a session for the same transcript
+
+          - Given the transcript's id, not a profile: the page kept it, or found it by its subject.
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            profileId: $workflows.setUp.outputs.profileId
-            model: standard
-            client: interview-assistant/0.1.0
-            startedAt: '2026-10-12T15:00:00Z'
+            transcriptId: $workflows.givingUp.outputs.transcriptId
         successCriteria:
           - condition: $statusCode == 201
         outputs:
@@ -1079,7 +1332,10 @@ workflows:
 
       - stepId: getConnection
         x-actors: [client, server]
-        description: Ask how to stream
+        description: |
+          Ask how to stream
+
+          - The session already names a transcript, so none is started.
         operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -1091,9 +1347,39 @@ workflows:
         successCriteria:
           - condition: $statusCode == 200
 
+      - stepId: standInForTheService
+        x-actors: [developer]
+        description: Stand in for the service, answering start with started
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': start
+            send:
+              - {type: started}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendStart
+        x-actors: [client, service]
+        description: Open the connection and send start
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        requestBody:
+          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
+
+      - stepId: started
+        x-actors: [service, client]
+        description: Hear that the service is ready
+        operationId: $sourceDescriptions.audio.sendStarted
+        action: receive
+
       - stepId: connect
         x-actors: [client, server]
-        description: Say the connection is open
+        description: |
+          Say the connection is open, and what was lost
+
+          - `gap` runs from the transcript's `lastActivityAt` to now.
         operationId: $sourceDescriptions.sessions.connectTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -1101,9 +1387,46 @@ workflows:
             in: path
             value: $steps.start.outputs.id
         requestBody:
-          payload: {}
+          payload: {gap: {startedAt: '2026-10-12T15:00:00Z', endedAt: '2026-10-12T15:01:00Z'}}
         successCriteria:
           - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
+
+      - stepId: gapKept
+        description: |
+          Read the transcript's timeline
+
+          - The gap, on the same transcript the failed session started.
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.givingUp.outputs.transcriptId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/items/0/kind == 'gap'
+
+  - workflowId: renewing
+    summary: Renewing the credential
+    description: Starts already connected. Before the credential expires, the client gets a fresh one without dropping the connection.
+    dependsOn: [setUp]
+    steps:
+      - stepId: connected
+        x-actors: [staff, client, server]
+        description: |
+          Start a session and connect, as in the main flow
+
+          - Runs the Connect workflow: start a session, ask how to stream, open the connection to the service, and say it's open.
+        workflowId: connect
+        parameters:
+          - name: profileId
+            value: $workflows.setUp.outputs.profileId
+          - name: startedAt
+            value: '2026-10-12T16:30:00Z'
+        outputs:
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
 
       - stepId: standInForRenewal
         x-actors: [developer]
@@ -1129,7 +1452,7 @@ workflows:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
             in: path
-            value: $steps.start.outputs.id
+            value: $steps.connected.outputs.sessionId
         requestBody:
           payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
         successCriteria:
@@ -1137,10 +1460,44 @@ workflows:
           - condition: $response.body#/expiresIn == 300
 
   - workflowId: transcriptRules
-    summary: What the transcript refuses and repeats
-    description: The transcript's own rules, called directly, with no session. This is also how a typed conversation, such as a chat, is kept, under a profile with no service.
+    summary: What's refused and repeated
+    description: A line sent to a session before it's connected, then the transcript's own rules, called directly, with no session. Calling the transcript directly is also how a typed conversation, such as a chat, is kept, under a profile with no service.
     dependsOn: [setUp]
     steps:
+      - stepId: startSession
+        x-actors: [staff, client, server]
+        description: Start a session, and don't connect
+        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $workflows.setUp.outputs.profileId
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: '2026-10-12T15:30:00Z'
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: lineBeforeConnecting
+        x-actors: [client, server]
+        description: |
+          Send a finished line before connecting
+
+          - Refused with `409`: a session adds a line only while connected, paused or stopping.
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.startSession.outputs.id
+        requestBody:
+          payload: {key: early, startedAt: '2026-10-12T15:30:01Z', endedAt: '2026-10-12T15:30:02Z', text: Too soon., speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 409
+
       - stepId: startWithoutAModel
         x-actors: [client, server]
         description: |
@@ -1543,3 +1900,194 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'closed'
           - condition: $response.body#/closedAt == '2026-10-12T17:00:00Z'
+
+  # Workflows the sections run by workflowId. They run where a step names
+  # them, not on their own.
+  - workflowId: connect
+    summary: Connect
+    description: Start a session and connect to the service, as the main flow does.
+    inputs:
+      type: object
+      required: [profileId, startedAt]
+      properties:
+        profileId: {type: string}
+        startedAt: {type: string, format: date-time}
+    steps:
+      - stepId: start
+        x-actors: [staff, client, server]
+        description: Start a session
+        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $inputs.profileId
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: $inputs.startedAt
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: standInForTheAdapter
+        x-actors: [developer]
+        description: Stand in for the transcript audio adapter
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match: {method: POST, url: /issue-connection}
+            response:
+              status: 200
+              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: getConnection
+        x-actors: [client, server]
+        description: Ask how to stream
+        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: standInForTheService
+        x-actors: [developer]
+        description: Stand in for the service, answering start with started
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': start
+            send:
+              - {type: started}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendStart
+        x-actors: [client, service]
+        description: Open the connection and send start
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        requestBody:
+          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
+
+      - stepId: started
+        x-actors: [service, client]
+        description: Hear that the service is ready
+        operationId: $sourceDescriptions.audio.sendStarted
+        action: receive
+
+      - stepId: connect
+        x-actors: [client, server]
+        description: Say the connection is open
+        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
+        outputs:
+          transcriptId: $response.body#/transcriptId
+    outputs:
+      sessionId: $steps.start.outputs.id
+      transcriptId: $steps.connect.outputs.transcriptId
+
+  - workflowId: reconnect
+    summary: Reconnect
+    description: Get a new credential and connect again, recording a gap when one is given.
+    inputs:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId: {type: string}
+        gap: {type: object}
+    steps:
+      - stepId: standInForTheAdapter
+        x-actors: [developer]
+        description: Stand in for the transcript audio adapter for the new connection
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match: {method: POST, url: /issue-connection}
+            response:
+              status: 200
+              body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: getConnection
+        x-actors: [client, server]
+        description: |
+          Ask how to stream again
+
+          - The session already has its transcript, so it only gets a new credential.
+        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $inputs.sessionId
+        requestBody:
+          payload: {audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, protocols: [websocket]}
+        successCriteria:
+          - condition: $statusCode == 200
+
+      - stepId: standInForTheService
+        x-actors: [developer]
+        description: Stand in for the service on the new connection
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            'on': start
+            send:
+              - {type: started}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: sendStart
+        x-actors: [client, service]
+        description: |
+          Open a new connection and send start
+
+          - The last connection closed, so this opens another.
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        requestBody:
+          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
+
+      - stepId: started
+        x-actors: [service, client]
+        description: Hear that the service is ready
+        operationId: $sourceDescriptions.audio.sendStarted
+        action: receive
+
+      - stepId: connect
+        x-actors: [client, server]
+        description: |
+          Say the connection is open
+
+          - With a `gap`, the stretch nothing was captured in, which the session adds to the transcript.
+        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $inputs.sessionId
+        requestBody:
+          payload: {gap: $inputs.gap}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
