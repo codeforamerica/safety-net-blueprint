@@ -29,14 +29,16 @@ for (const scenario of scenarios) {
     try {
       const mock = await createMockServer({ contracts, seed: true });
       const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
-      results = await runScenario(scenario.content, { fetch: mock.fetch, operations });
+      results = await runScenario(scenario.content, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket });
     } finally {
       console.log = log; console.warn = warn;
     }
     for (const workflow of results) {
       const failed = workflow.steps.find((step) => !step.passed);
       assert.ok(workflow.passed, failed
-        ? `${workflow.workflowId}: step ${failed.stepId} failed — ${failed.checks.filter((c) => !c.passed).map((c) => c.condition).join('; ')} (got ${failed.response.status} ${JSON.stringify(failed.response.body).slice(0, 200)})`
+        ? `${workflow.workflowId}: step ${failed.stepId} failed — ${failed.checks.filter((c) => !c.passed).map((c) => c.condition).join('; ')} (got ${failed.response
+          ? `${failed.response.status} ${JSON.stringify(failed.response.body).slice(0, 200)}`
+          : JSON.stringify(failed.message?.payload ?? null).slice(0, 300)})`
         : `${workflow.workflowId} failed`);
     }
   });

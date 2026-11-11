@@ -142,3 +142,123 @@ test('a jsonpath criterion passes when it matches something, with runtime expres
   assert.strictEqual((await check("$.items[?@.id == '{$steps.make.outputs.id}']"))[0].passed, true);
   assert.strictEqual((await check("$.items[?@.id == 'nope']"))[0].passed, false);
 });
+
+// ── Message steps (Arazzo 1.1) ──────────────────────────────────────────────
+
+const messaging = new Map([
+  ...operations,
+  ['streamEvents', { method: 'GET', path: '/platform/events/stream' }],
+  ['publishEvent', { method: 'POST', path: '/platform/events' }],
+  ['things-events-asyncapi.yaml#sendThingCreated', { async: true, action: 'send', address: 'demo.thing.created', reached: 'events' }],
+  ['things-events-asyncapi.yaml#receiveThingNoticed', { async: true, action: 'receive', address: 'demo.thing.noticed', reached: 'events' }],
+  ['things-events-asyncapi.yaml#/channels/demo.thing.created', { async: true, address: 'demo.thing.created', reached: 'events' }],
+  ['relay-asyncapi.yaml#/channels/audio', { async: true, address: 'audio', reached: 'servers' }],
+]);
+
+/**
+ * A server with an event stream: creating a thing sends `demo.thing.created`,
+ * and anything published is sent on too, as the mock's platform events are.
+ */
+function eventServer() {
+  const listeners = new Set();
+  const published = [];
+  const encoder = new TextEncoder();
+  const send = (event) => { for (const listen of listeners) listen(event); };
+  const fetch = async (request) => {
+    const { pathname } = new URL(request.url);
+    if (pathname === '/platform/events/stream') {
+      let listen;
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(': connected\n\n'));
+          listen = (event) => controller.enqueue(encoder.encode(`id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`));
+          listeners.add(listen);
+          request.signal.addEventListener('abort', () => { listeners.delete(listen); controller.close(); });
+        },
+      });
+      return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    }
+    if (pathname === '/platform/events') {
+      const event = await request.json();
+      published.push(event);
+      send({ id: `e${published.length}`, ...event });
+      return Response.json(event, { status: 201 });
+    }
+    if (request.method === 'POST') {
+      // Sent after answering, as a reaction would be.
+      setTimeout(() => send({ id: 'c1', type: 'demo.thing.created', subject: 't1', data: { id: 't1', status: 'new' } }), 5);
+      return Response.json({ id: 't1' }, { status: 201 });
+    }
+    return Response.json({ id: 't1' });
+  };
+  return { fetch, published, listeners };
+}
+
+const sources = [{ name: 'things', url: './things-events-asyncapi.yaml', type: 'asyncapi' }, { name: 'relay', url: './relay-asyncapi.yaml', type: 'asyncapi' }];
+const messages = (steps) => ({ ...doc(steps), arazzo: '1.1.0', sourceDescriptions: sources });
+
+test('a receive step takes the event a step before it caused, and reads it as $message.payload', async () => {
+  const server = eventServer();
+  const [run] = await runScenario(messages([
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'x' } }, outputs: { id: '$response.body#/id' } },
+    { stepId: 'created', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'receive', dependsOn: ['create'],
+      successCriteria: [{ condition: '$message.payload#/subject == $steps.create.outputs.id && $message.payload.data.status == \'new\'' }],
+      outputs: { status: '$message.payload#/data/status' } },
+  ]), { fetch: server.fetch, operations: messaging });
+
+  assert.ok(run.passed, JSON.stringify(run.steps.at(-1)?.checks));
+  const received = run.steps[1];
+  assert.deepStrictEqual(received.request, { action: 'receive', channel: 'demo.thing.created' });
+  assert.strictEqual(received.message.payload.subject, 't1');
+  assert.deepStrictEqual(received.outputs, { status: 'new' });
+  assert.strictEqual(server.listeners.size, 0, 'the run closed the stream when it finished');
+});
+
+test('a receive step by channelPath; an event is taken once', async () => {
+  const server = eventServer();
+  const receive = (stepId) => ({ stepId, channelPath: '{$sourceDescriptions.things.url}#/channels/demo.thing.created', action: 'receive', timeout: 100 });
+  const [run] = await runScenario(messages([
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'x' } } },
+    receive('first'),
+    receive('again'),
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.deepStrictEqual(run.steps.map((s) => s.passed), [true, true, false]);
+  assert.deepStrictEqual(run.steps[2].checks, [{ condition: 'received demo.thing.created within 100 ms', passed: false }]);
+});
+
+test('a send step publishes the event, with the channel as its type', async () => {
+  const server = eventServer();
+  const [run] = await runScenario(messages([
+    { stepId: 'notice', operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'send',
+      requestBody: { payload: { subject: 't1', data: { by: 'tester' } } } },
+    { stepId: 'heard', operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'receive',
+      successCriteria: [{ condition: '$message.payload#/data/by == \'tester\'' }] },
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.ok(run.passed, JSON.stringify(run.steps.map((s) => s.checks)));
+  assert.strictEqual(server.published[0].type, 'demo.thing.noticed');
+  assert.strictEqual(server.published[0].specversion, '1.0');
+});
+
+test('refuses message steps it cannot run, by name', async () => {
+  const server = eventServer();
+  const refuse = (steps, pattern) => assert.rejects(runScenario(messages(steps), { fetch: server.fetch, operations: messaging }), pattern);
+  await refuse([{ stepId: 's', channelPath: '{$sourceDescriptions.relay.url}#/channels/audio', action: 'send' }], /by operationId, not channelPath/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'publish' }], /action is send or receive/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.nothingLikeThis', action: 'receive' }], /no AsyncAPI document in the set declares/);
+  await refuse([{ stepId: 's', operationId: 'createThing', action: 'receive' }], /is an HTTP operation/);
+  await refuse([{ stepId: 's', operationId: 'createThing', dependsOn: ['later'] }, { stepId: 'later', operationId: 'createThing' }], /depends on later, which isn't a step before it/);
+  await refuse([{ stepId: 's', channelPath: '#/channels/x', action: 'receive' }], /is not \{\$sourceDescriptions/);
+});
+
+test('a receive step takes the event that meets its criteria, leaving another\'s of the same type', async () => {
+  const server = eventServer();
+  const publish = (stepId, subject) => ({ stepId, operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'send', requestBody: { payload: { subject } } });
+  const receive = (stepId, subject) => ({ stepId, operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'receive', timeout: 100,
+    successCriteria: [{ condition: `$message.payload#/subject == '${subject}'` }] });
+  const [run] = await runScenario(messages([
+    publish('other', 'b'), publish('mine', 'a'),
+    receive('forA', 'a'), receive('forB', 'b'), receive('forAAgain', 'a'),
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.deepStrictEqual(run.steps.map((s) => s.passed), [true, true, true, true, false]);
+  assert.deepStrictEqual(run.steps[4].checks.map((c) => c.condition), ['received demo.thing.noticed meeting its criteria within 100 ms']);
+});

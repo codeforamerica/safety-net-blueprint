@@ -108,8 +108,9 @@ So when you add a feature to a tooling package, adding a contract here that exer
 - The tour Show me around opens with (`--first-tour` in `scripts/regenerate.js`). Each step's first line is its title in the page, and its bullets are what to notice
 - Written down, not worked out from the contracts, so it reads the same however the set changes
 
-**[`contracts/scenarios/transcript-lifecycle.arazzo.yaml`](contracts/scenarios/transcript-lifecycle.arazzo.yaml)**
-- An Arazzo scenario: a transcript started, recorded, paused, resumed and closed, with what it refuses along the way
+**[`contracts/scenarios/transcription.arazzo.yaml`](contracts/scenarios/transcription.arazzo.yaml)**
+- Transcribing a conversation end to end, one section per situation: the main flow, the same through a relay, off the record and back, someone else pausing the transcript, a dropped connection, renewing the credential, and what the transcript refuses and repeats
+- Calls the sessions and transcripts APIs, and receives the events they send as Arazzo 1.1 AsyncAPI steps (`action: receive`), so a step shows the event the client hears
 - Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
 - Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
 

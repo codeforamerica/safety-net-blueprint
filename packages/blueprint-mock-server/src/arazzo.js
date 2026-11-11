@@ -36,6 +36,17 @@
  *   - `onFailure` actions of type `retry`, with `retryAfter` (seconds) and
  *     `retryLimit` — for a step that checks what an asynchronous reaction
  *     does, which may not have happened the moment the step before it returns
+ *   - steps that send or receive a message (Arazzo 1.1): an AsyncAPI
+ *     operation by `operationId`, or a channel by `channelPath`, with `action`
+ *     `send` or `receive`, against the platform's events. Receiving takes the
+ *     first event of the channel's type, heard on `streamEvents` since the run
+ *     began and not taken by an earlier step, that meets the step's
+ *     `successCriteria` (which is how it tells its event from another's of
+ *     the same type), waiting up to `timeout`
+ *     milliseconds (2000 when not given); `$message.payload#/<pointer>` reads
+ *     it. Sending publishes one with `publishEvent`. A step's `dependsOn` may
+ *     name steps before it, which have run by then. A channel reached through
+ *     its document's own servers, such as a relay's, is refused
  * Standard enough that Redocly's Respect runs the same documents against a
  * served mock.
  */
@@ -44,6 +55,8 @@ import { query as jsonPath } from 'jsonpath-rfc9535';
 import parseJsonPath from 'jsonpath-rfc9535/parser';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { CONTROL_OPERATIONS } from './platform-routes.js';
+import { operationsOf, messageChecker, recognize } from './asyncapi-messages.js';
+import { WS_PATH } from './ws.js';
 
 /** The last part of a path or URL: what a source's URL and a document's path share. */
 const fileName = (path) => (path ?? '').split(/[?#]/)[0].split('/').pop();
@@ -51,7 +64,10 @@ const fileName = (path) => (path ?? '').split(/[?#]/)[0].split('/').pop();
 /** The key an operation has under the document it's in: `intake-openapi.yaml#createApplication`. */
 const inFile = (path, id) => `${fileName(path)}#${id}`;
 
-const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs', 'onFailure']);
+const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'channelPath', 'action', 'dependsOn', 'timeout', 'parameters', 'requestBody', 'successCriteria', 'outputs', 'onFailure']);
+
+/** How long a `receive` step waits for its message when it gives no `timeout`, in milliseconds. */
+const RECEIVE_TIMEOUT = 2000;
 
 /**
  * Every operation in the set's OpenAPI documents, with the method and full
@@ -93,8 +109,49 @@ export function operationIndex(docs) {
       }
     }
   }
+  // AsyncAPI operations, by key, with the channel's address: for an events
+  // document, the event type. Only by their document's name, since AsyncAPI
+  // makes a key unique within its document only. A document with servers is
+  // reached over its own connection, and its messages are recognized by
+  // checking them against the contract.
+  const check = messageChecker(docs ?? []);
+  for (const doc of docs ?? []) {
+    if (doc.type !== 'asyncapi') continue;
+    const path = doc.relativePath ?? doc.path;
+    const reached = (doc.content?.servers && Object.keys(doc.content.servers).length > 0) ? 'servers' : 'events';
+    const described = operationsOf(doc.content);
+    for (const [key, operation] of Object.entries(doc.content?.operations ?? {})) {
+      const channel = channelOf(doc.content, operation?.channel?.$ref);
+      if (!channel) continue;
+      const { messages } = described.get(key);
+      index.set(inFile(path, key), {
+        async: true, action: operation.action, address: channel.address, reached, document: path,
+        messages: messages.map((m) => m.name),
+        binary: messages.length > 0 && messages.every((m) => m.binary),
+        recognize: (data) => recognize(check, path, messages, data),
+      });
+    }
+    for (const [name, channel] of Object.entries(doc.content?.channels ?? {})) {
+      const found = channelOf(doc.content, `#/channels/${name}`) ?? channel;
+      index.set(`${fileName(path)}#/channels/${name}`, { async: true, address: found.address ?? name, reached, document: path });
+    }
+  }
   return index;
 }
+
+/**
+ * A channel by its local `$ref`, with its address: its own, or, for a channel
+ * that refers into another document, the name it's kept under, which for an
+ * events document is the event type.
+ */
+function channelOf(content, ref) {
+  if (typeof ref !== 'string' || !ref.startsWith('#/channels/')) return null;
+  const name = ref.slice('#/channels/'.length).replace(/~1/g, '/').replace(/~0/g, '~');
+  const channel = content?.channels?.[name];
+  if (!channel) return null;
+  return { address: channel.address ?? name };
+}
+
 
 /**
  * The mock's own routes — stubs, reset, reseed — as operations, by the
@@ -132,6 +189,102 @@ function operationOf(step, sources, operations) {
   return operations.get(step.operationId);
 }
 
+/**
+ * The channel a step's `channelPath` names: its source's URL and a JSON
+ * Pointer to the channel, `{$sourceDescriptions.events.url}#/channels/<name>`,
+ * as Arazzo writes an operationPath.
+ */
+function channelPathOf(step, sources, operations) {
+  const m = /^\{\$sourceDescriptions\.([^.}]+)\.url\}#\/channels\/(.+)$/.exec(step.channelPath ?? '');
+  if (!m) throw new Error(`Step ${step.stepId}: channelPath ${step.channelPath} is not {$sourceDescriptions.<name>.url}#/channels/<channel>`);
+  const source = sources.get(m[1]);
+  if (!source) throw new Error(`Step ${step.stepId} names source ${m[1]}, which the document's sourceDescriptions do not declare`);
+  const name = m[2].replace(/~1/g, '/').replace(/~0/g, '~');
+  return operations.get(`${fileName(source.url)}#/channels/${name}`);
+}
+
+/** A step that sends or receives a message (Arazzo 1.1), rather than calling an HTTP operation. */
+const isMessageStep = (step) => step.action !== undefined || step.channelPath !== undefined;
+
+/**
+ * The events a run hears, read from the platform's event stream
+ * (`streamEvents`, Server-Sent Events) from the start of the run, so a step
+ * that receives an event finds it however soon after the step that caused it.
+ * Each event is taken once, the first that fits, in the order they came.
+ */
+function eventReader({ fetch, origin, operations }) {
+  const stream = operations.get('platform-events-openapi.yaml#streamEvents') ?? operations.get('streamEvents');
+  const heard = [];
+  const taken = new Set();
+  const waiting = new Set();
+  const abort = new AbortController();
+  let opened = null;
+
+  const hear = (event) => {
+    heard.push(event);
+    for (const wake of waiting) wake();
+  };
+
+  async function pump(body) {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = '';
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) return;
+        buffered += decoder.decode(value, { stream: true });
+        let end;
+        while ((end = buffered.indexOf('\n\n')) !== -1) {
+          const block = buffered.slice(0, end);
+          buffered = buffered.slice(end + 2);
+          const data = block.split('\n').filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trimStart()).join('\n');
+          if (data) { try { hear(JSON.parse(data)); } catch { /* not an event */ } }
+        }
+      }
+    } catch { /* the run closed the stream */ }
+  }
+
+  return {
+    /** Start listening; resolves once the stream is open. */
+    open() {
+      opened ??= (async () => {
+        if (!stream) throw new Error('A step receives a message, but no API in the set declares streamEvents to hear events by');
+        const response = await fetch(new Request(`${origin}${stream.path}`, { headers: { accept: 'text/event-stream' }, signal: abort.signal }));
+        if (!response.ok || !response.body) throw new Error(`streamEvents answered ${response.status}; a step that receives a message needs the event stream`);
+        pump(response.body);
+      })();
+      return opened;
+    },
+    /**
+     * The first event of a type, not yet taken, that `fits`, waiting up to
+     * `timeout` milliseconds for one; and the last of that type that didn't
+     * fit, to say why.
+     */
+    async take(type, timeout, fits = () => true) {
+      let nearest = null;
+      const find = () => heard.find((event) => {
+        if (taken.has(event) || event.type !== type) return false;
+        if (fits(event)) return true;
+        nearest = event;
+        return false;
+      });
+      let found = find();
+      if (!found) {
+        found = await new Promise((settle) => {
+          const wake = () => { const event = find(); if (event) { done(); settle(event); } };
+          const timer = setTimeout(() => { done(); settle(null); }, timeout);
+          const done = () => { clearTimeout(timer); waiting.delete(wake); };
+          waiting.add(wake);
+        });
+      }
+      if (found) taken.add(found);
+      return { event: found, nearest };
+    },
+    close() { abort.abort(); },
+  };
+}
+
 /** A JSON Pointer into a value: `/items/0/id`. */
 function pointer(value, path) {
   if (!path) return value;
@@ -143,12 +296,19 @@ function pointer(value, path) {
  * The value of a runtime expression.
  *
  * @param {string} expression - e.g. `$steps.start.outputs.id`
- * @param {object} scope - { inputs, steps, workflows, response }
+ * @param {object} scope - { inputs, steps, workflows, response, message }
  */
 function evaluate(expression, scope) {
   if (expression === '$statusCode') return scope.response?.status;
   if (expression.startsWith('$response.body')) return pointer(scope.response?.body, expression.slice('$response.body'.length).replace(/^#/, ''));
   if (expression.startsWith('$response.header.')) return scope.response?.headers?.[expression.slice('$response.header.'.length).toLowerCase()];
+  // A message a step sent or received (Arazzo 1.1): its payload by JSON
+  // Pointer, `$message.payload#/data/status`, or by name, `$message.payload.data.status`.
+  if (expression.startsWith('$message.payload')) {
+    const rest = expression.slice('$message.payload'.length);
+    return pointer(scope.message?.payload, rest.startsWith('#') ? rest.slice(1) : rest.replace(/\./g, '/'));
+  }
+  if (expression.startsWith('$message.header.')) return scope.message?.headers?.[expression.slice('$message.header.'.length).toLowerCase()];
   const steps = /^\$steps\.([^.]+)\.outputs\.(.+)$/.exec(expression);
   if (steps) return scope.steps[steps[1]]?.outputs?.[steps[2]];
   const workflows = /^\$workflows\.([^.]+)\.outputs\.(.+)$/.exec(expression);
@@ -292,7 +452,7 @@ function formOf(payload, files) {
  *   says what a step would send, from what the steps before it produced;
  *   `results` are each workflow's run so far.
  */
-export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep } = {}) {
+export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep, WebSocket: Socket = globalThis.WebSocket } = {}) {
   const components = arazzo.components ?? {};
   const sources = new Map((arazzo.sourceDescriptions ?? []).map((source) => [source.name, source]));
   const results = [];
@@ -301,6 +461,10 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   const workflowOutputs = {}; // each finished workflow's outputs, by workflowId
   const stopped = new Set(); // workflows a failed step stopped, or a failed dependency kept from running
   let position = 0;
+  const events = eventReader({ fetch, origin, operations });
+  // Each section's connection to each document reached over its own server,
+  // opened by its first message step there.
+  const connections = new Map();
 
   const scopeOf = (workflow) => {
     if (!scopes.has(workflow.workflowId)) {
@@ -349,7 +513,12 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     return { operation, method: operation.method, path: `${path}${query.size ? `?${query}` : ''}`, headers, body, multipart };
   }
 
+  // A run with a step that receives an event listens from before its first
+  // step, so it hears what every step causes.
+  const listens = queue.some(({ step }) => step.action === 'receive');
+
   async function next() {
+    if (listens) await events.open();
     for (;;) {
       while (position < queue.length && stopped.has(queue[position].workflow.workflowId)) position += 1;
       if (position >= queue.length) return null;
@@ -363,6 +532,8 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     const { workflow, step } = queue[position];
     position += 1;
     const scope = scopeOf(workflow);
+    checkDependsOn(workflow, step);
+    if (isMessageStep(step)) return finish(workflow, step, scope, await messageStep(step, scope, workflow));
     const request = requestOf(step, scope);
     const retry = retryOf(step);
 
@@ -375,6 +546,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
         headers: request.headers,
         body: request.body === undefined ? undefined
           : request.multipart ? formOf(request.body, request.operation.files ?? []) : JSON.stringify(request.body),
+        ...(step.timeout !== undefined && { signal: AbortSignal.timeout(step.timeout) }),
       }));
       const text = await response.text();
       let parsed = text;
@@ -387,6 +559,180 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
       if (passed || !retry || attempt >= retry.limit) break;
       await new Promise((settle) => setTimeout(settle, retry.after * 1000));
     }
+    return finish(workflow, step, scope, {
+      request: { method: request.method, url: request.path, headers: request.headers, body: request.body, multipart: request.multipart },
+      stepScope, checks, passed,
+    });
+  }
+
+  /**
+   * A step that sends or receives a message. Receiving takes the first event
+   * of the channel's type the run has heard, not yet taken, that meets the
+   * step's successCriteria — so a step finds its own session's event among
+   * others' — waiting up to the step's `timeout`; sending publishes one (`publishEvent`), with the
+   * channel's type unless the payload gives its own.
+   */
+  async function messageStep(step, scope, workflow) {
+    const request = messageOf(step, scope);
+    const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
+    if (operation.reached === 'servers') return socketStep(step, scope, workflow, operation, request);
+    if (request.action === 'receive') {
+      await events.open();
+      const timeout = step.timeout ?? RECEIVE_TIMEOUT;
+      const checksOn = (event) => {
+        const stepScope = { ...scope, message: { payload: event, headers: {} } };
+        return { stepScope, checks: (step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) })) };
+      };
+      const fits = (event) => { try { return checksOn(event).checks.every((c) => c.passed); } catch { return false; } };
+      const { event, nearest } = await events.take(request.channel, timeout, fits);
+      if (!event) {
+        const missed = { condition: `received ${request.channel}${step.successCriteria?.length ? ' meeting its criteria' : ''} within ${timeout} ms`, passed: false };
+        // The nearest miss, so a failure says what came instead.
+        if (nearest) {
+          const { stepScope, checks } = checksOn(nearest);
+          return { request, stepScope, checks: [missed, ...checks], passed: false, message: stepScope.message };
+        }
+        return { request, stepScope: scope, checks: [missed], passed: false };
+      }
+      const { stepScope, checks } = checksOn(event);
+      const message = stepScope.message;
+      return { request, stepScope, checks, passed: checks.every((c) => c.passed), message };
+    }
+    const publish = operations.get('platform-events-openapi.yaml#publishEvent') ?? operations.get('publishEvent');
+    if (!publish) throw new Error(`Step ${step.stepId} sends a message, but no API in the set declares publishEvent to send it by`);
+    const payload = { specversion: '1.0', source: 'arazzo', type: request.channel, ...request.body };
+    const response = await fetch(new Request(`${origin}${publish.path}`, {
+      method: publish.method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+    }));
+    const text = await response.text();
+    let body = text;
+    try { body = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+    const message = { payload, headers: {} };
+    const stepScope = { ...scope, message, response: { status: response.status, statusText: response.statusText, body, headers: {} } };
+    const checks = [{ condition: `sent ${request.channel}`, passed: response.ok },
+      ...(step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) }))];
+    return { request: { ...request, body: payload }, stepScope, checks, passed: checks.every((c) => c.passed), message };
+  }
+
+  /** What a message step sends or listens for: its action and channel, and a payload to send. */
+  function messageOf(step, scope) {
+    const unsupported = Object.keys(step).filter((k) => !SUPPORTED_STEP_FIELDS.has(k) && !k.startsWith('x-'));
+    if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
+    if (step.action !== 'send' && step.action !== 'receive') throw new Error(`Step ${step.stepId}: a message step's action is send or receive, not ${step.action}`);
+    if (step.onFailure) throw new Error(`Step ${step.stepId}: onFailure on a message step is not supported`);
+    if (step.parameters?.length) throw new Error(`Step ${step.stepId}: parameters on a message step are not supported`);
+    const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
+    if (!operation) throw new Error(`Step ${step.stepId} names ${step.channelPath ?? step.operationId}, which no AsyncAPI document in the set declares`);
+    if (!operation.async) throw new Error(`Step ${step.stepId} has an action, but ${step.operationId} is an HTTP operation`);
+    if (operation.reached === 'servers' && !operation.recognize) {
+      throw new Error(`Step ${step.stepId}: give a message step on a document reached over its own server by operationId, not channelPath, so the runner knows which message it is`);
+    }
+    const body = step.action === 'send' && step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
+    return {
+      action: step.action, channel: operation.address,
+      ...(operation.reached === 'servers' && { message: operation.messages.join(' or '), document: operation.document }),
+      ...(body !== undefined && { body }),
+    };
+  }
+
+  /**
+   * This section's connection to a document's server: the mock's WebSocket
+   * for it, at /mock/ws/{document}, opened on first use. What arrives
+   * is kept in order, each frame taken once by a step that receives it.
+   */
+  function connectionFor(workflow, operation) {
+    const key = `${workflow.workflowId} ${operation.document}`;
+    if (connections.has(key)) return connections.get(key);
+    if (!Socket) throw new Error(`A step sends or receives on ${fileName(operation.document)}, and there's no WebSocket to connect with; pass one`);
+    const url = new URL(`${WS_PATH}${encodeURIComponent(fileName(operation.document))}`, origin.replace(/^http/, 'ws'));
+    const socket = new Socket(url.href);
+    socket.binaryType = 'arraybuffer';
+    const connection = { socket, heard: [], taken: new Set(), waiting: new Set(), closed: null };
+    const wake = () => { for (const fn of connection.waiting) fn(); };
+    connection.opened = new Promise((settle) => {
+      socket.addEventListener('open', () => settle(true));
+      socket.addEventListener('close', () => settle(false));
+    });
+    // Kept as frames, not their text, so two alike are taken one at a time.
+    socket.addEventListener('message', (event) => { connection.heard.push({ data: event.data }); wake(); });
+    socket.addEventListener('close', (event) => { connection.closed = { code: event.code, reason: event.reason }; wake(); });
+    connections.set(key, connection);
+    return connection;
+  }
+
+  /** What a closed connection says, as a failed check. */
+  const closedCheck = (connection) => ({ condition: `the connection is open (it closed: ${connection.closed.code} ${connection.closed.reason})`.trim(), passed: false });
+
+  /**
+   * A message step on a document reached over its own server: sending writes
+   * a frame, binary for a binary message; receiving takes the first frame,
+   * not yet taken, that is one of the operation's messages and meets the
+   * step's successCriteria.
+   */
+  async function socketStep(step, scope, workflow, operation, request) {
+    const connection = connectionFor(workflow, operation);
+    const open = await connection.opened;
+    if (!open) return { request, stepScope: scope, checks: [closedCheck(connection)], passed: false };
+    const payloadOf = (data) => (typeof data === 'string' ? JSON.parse(data) : null);
+
+    if (request.action === 'send') {
+      const data = operation.binary ? new TextEncoder().encode(String(request.body ?? '')) : JSON.stringify(request.body ?? {});
+      connection.socket.send(data);
+      // Give the far end its turn: a frame it refuses closes the connection.
+      await new Promise((settle) => setTimeout(settle, 0));
+      const message = { payload: operation.binary ? null : request.body ?? {}, headers: {} };
+      const stepScope = { ...scope, message };
+      const checks = [
+        ...(connection.closed ? [closedCheck(connection)] : []),
+        ...(step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) })),
+      ];
+      return { request, stepScope, checks, passed: checks.every((c) => c.passed), message };
+    }
+
+    const timeout = step.timeout ?? RECEIVE_TIMEOUT;
+    const checksOn = (data) => {
+      const stepScope = { ...scope, message: { payload: payloadOf(data), headers: {} } };
+      return { stepScope, checks: (step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) })) };
+    };
+    const fits = (data) => {
+      if (!operation.recognize(data).message) return false;
+      try { return checksOn(data).checks.every((c) => c.passed); } catch { return false; }
+    };
+    const find = () => connection.heard.find((frame) => !connection.taken.has(frame) && fits(frame.data));
+    let frame = find();
+    if (frame === undefined && !connection.closed) {
+      frame = await new Promise((settle) => {
+        const wake = () => {
+          const found = find();
+          if (found !== undefined || connection.closed) { done(); settle(found); }
+        };
+        const timer = setTimeout(() => { done(); settle(undefined); }, timeout);
+        const done = () => { clearTimeout(timer); connection.waiting.delete(wake); };
+        connection.waiting.add(wake);
+      });
+    }
+    if (frame === undefined) {
+      const checks = [{ condition: `received ${request.message} within ${timeout} ms`, passed: false }];
+      if (connection.closed) checks.push(closedCheck(connection));
+      return { request, stepScope: scope, checks, passed: false };
+    }
+    connection.taken.add(frame);
+    const { stepScope, checks } = checksOn(frame.data);
+    return { request, stepScope, checks, passed: checks.every((c) => c.passed), message: stepScope.message };
+  }
+
+  /** A step's `dependsOn` names steps before it in its workflow, which have run by the time it does. */
+  function checkDependsOn(workflow, step) {
+    for (const id of step.dependsOn ?? []) {
+      const at = workflow.steps.findIndex((s) => s.stepId === id);
+      if (at === -1 || at >= workflow.steps.indexOf(step)) {
+        throw new Error(`Step ${step.stepId} depends on ${id}, which isn't a step before it in workflow ${workflow.workflowId}; this runner runs steps in order`);
+      }
+    }
+  }
+
+  /** A step's outputs, its result, and what it means for its workflow. */
+  function finish(workflow, step, scope, { request, stepScope, checks, passed, message }) {
     // Outputs whose selector names a value that isn't there fail the step,
     // as a check that says which output.
     const outputsOf = (map, from, label) => {
@@ -415,8 +761,10 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
       stepId: step.stepId,
       description: step.description,
       operationId: step.operationId,
-      request: { method: request.method, url: request.path, headers: request.headers, body: request.body, multipart: request.multipart },
+      ...(step.channelPath && { channelPath: step.channelPath }),
+      request,
       response: stepScope.response,
+      ...(message && { message }),
       checks,
       passed,
       outputs,
@@ -440,16 +788,22 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   function preview(workflowId, step) {
-    const workflow = (arazzo.workflows ?? []).find((w) => w.workflowId === workflowId);
+    const scope = scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {}, workflows: workflowOutputs };
     try {
-      const { method, path, headers, body, multipart } = requestOf(step, scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {}, workflows: workflowOutputs });
+      if (isMessageStep(step)) return messageOf(step, scope);
+      const { method, path, headers, body, multipart } = requestOf(step, scope);
       return { method, url: path, headers, body, multipart };
     } catch {
       return null; // refers to a step that has not run
     }
   }
 
-  return { results, next, runUntil, preview, finished: () => position >= queue.length };
+  return { results, next, runUntil, preview, finished: () => position >= queue.length,
+    close: () => {
+      events.close();
+      for (const { socket } of connections.values()) socket.close();
+    },
+  };
 }
 
 /**
@@ -485,5 +839,10 @@ function retryOf(step) {
  * @returns {Promise<Array<{ workflowId: string, passed: boolean, steps: object[] }>>}
  */
 export async function runScenario(arazzo, { until, ...options } = {}) {
-  return startScenario(arazzo, options).runUntil(until);
+  const run = startScenario(arazzo, options);
+  try {
+    return await run.runUntil(until);
+  } finally {
+    run.close();
+  }
 }

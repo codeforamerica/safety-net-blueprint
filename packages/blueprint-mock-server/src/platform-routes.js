@@ -134,12 +134,39 @@ function registerOwnRoutes(routes, { store, instance, apiNames = [], readDocs, c
   console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
   console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
 
+  // WebSocket stub registry — answer a message on a WebSocket an AsyncAPI
+  // document describes, once (ws.js).
+  addRoute(routes, 'POST', '/mock/stubs/ws', async (request) => {
+    try {
+      return Response.json(instance.ws.registerStub(await jsonBody(request)), { status: 201 });
+    } catch (err) {
+      return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
+    }
+  });
+  addRoute(routes, 'GET', '/mock/stubs/ws', () => {
+    const items = instance.ws.listStubs();
+    return Response.json({ items, total: items.length });
+  });
+  addRoute(routes, 'DELETE', '/mock/stubs/ws', () => {
+    instance.ws.clearStubs();
+    return new Response(null, { status: 204 });
+  });
+  addRoute(routes, 'DELETE', '/mock/stubs/ws/{id}', (request, { params }) =>
+    instance.ws.removeStub(params.id)
+      ? new Response(null, { status: 204 })
+      : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
+  console.log('  POST   /mock/stubs/ws - Register a WebSocket stub');
+  console.log('  GET    /mock/stubs/ws - List active WebSocket stubs');
+  console.log('  DELETE /mock/stubs/ws/:id - Remove a WebSocket stub');
+  console.log('  DELETE /mock/stubs/ws - Clear all WebSocket stubs');
+
   // Reset endpoint — clears all runtime data and restores config-managed resources.
   // Config-managed items (queues, services, document types) are restored; all other
   // data is wiped. Useful for putting tests into a known-clean state without restarting.
   addRoute(routes, 'POST', '/mock/reset', () => {
     for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
     stubs.clearAllStubs();
+    instance.ws.clearStubs();
     seedConfigs(configs, instance);
     return new Response(null, { status: 204 });
   });
@@ -176,6 +203,10 @@ export const CONTROL_OPERATIONS = {
   'GET /mock/stubs/http': 'listHttpStubs',
   'DELETE /mock/stubs/http': 'clearHttpStubs',
   'DELETE /mock/stubs/http/{id}': 'removeHttpStub',
+  'POST /mock/stubs/ws': 'registerWsStub',
+  'GET /mock/stubs/ws': 'listWsStubs',
+  'DELETE /mock/stubs/ws': 'clearWsStubs',
+  'DELETE /mock/stubs/ws/{id}': 'removeWsStub',
   'POST /mock/reset': 'resetMock',
   'POST /mock/reseed': 'reseedMock',
 };

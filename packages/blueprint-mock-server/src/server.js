@@ -44,7 +44,7 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  *   else answers — a service at a URL, or a `handler` function this page
  *   passes — as `schemas/routing-schema.json` describes the entries.
  *   Configuration for this page, not part of the contract set.
- * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void }>}
+ * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void, WebSocket: typeof WebSocket }>}
  *   `stopFollowing` stops reading the events of services routing sends to,
  *   which starts when a state machine here reacts to one (routed-events.js).
  */
@@ -98,5 +98,7 @@ export async function createMockServer({
     { store, instance, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
   );
   for (const key of routed) console.log(`  ROUTE ${key}`);
-  return { fetch, routes, store, endpoints, routed, stopFollowing };
+  // A WebSocket connected in-process to the documents the mock serves one
+  // for, such as a relay's (ws.js).
+  return { fetch, routes, store, endpoints, routed, stopFollowing, WebSocket: instance.ws.WebSocket };
 }

@@ -12,6 +12,7 @@
 import { createEventBus } from './event-bus.js';
 import { createStubs, subscribeStubDispatch } from './mock-stub-engine.js';
 import { createSchemaRegistry } from './validator.js';
+import { createWs } from './ws.js';
 import { createConfigRegistry } from './config-registry.js';
 import { resourceIndex, eventOwnersOf } from './spec-loader.js';
 
@@ -28,6 +29,8 @@ export function createInstance({ store, docs = null, apiSpecs = [] }) {
     store,
     bus: createEventBus(),
     stubs: createStubs(),
+    // The WebSockets AsyncAPI documents describe, and their WebSocket stubs (ws.js).
+    ws: createWs(docs ?? []),
     schemas: createSchemaRegistry(docs),
     // What the contract set says, kept with the mock that loaded it.
     resources: resourceIndex(apiSpecs),
@@ -61,7 +64,10 @@ export function createInstance({ store, docs = null, apiSpecs = [] }) {
  * @param {{ docs?: import('@codeforamerica/blueprint-core').Doc[], apiSpecs?: object[] }} set
  */
 export function loadContracts(instance, { docs, apiSpecs }) {
-  if (docs) instance.schemas.load(docs);
+  if (docs) {
+    instance.schemas.load(docs);
+    instance.ws = createWs(docs);
+  }
   if (apiSpecs) {
     instance.resources = resourceIndex(apiSpecs);
     instance.eventOwners = eventOwnersOf(apiSpecs);
