@@ -5,7 +5,7 @@
     "transcriptId": {
       "type": "string",
       "format": "uuid",
-      "description": "The transcript the session writes to. Given to carry on a\ntranscript, after a session failed or in a reopened tab; otherwise\nset when the session starts a new one. A reopened tab finds its\ntranscript with listTranscripts, by its subject and status:\n`q=subjectId:{id} status:recording,paused`. A transcript with no\nsubject can't be found again.\n"
+      "description": "The transcript the session writes to. Given to carry on a\ntranscript, after a session failed or in a reopened tab; otherwise\nset when the session starts a new one. To carry on after a reload,\nthe page keeps this id, in sessionStorage for example, and reads\nthe transcript with getTranscript: one still recording or paused\ncan be carried on. A tab opened again has no id kept, and finds\nthe transcript with listTranscripts, by its subject and status:\n`q=subjectId:{id} status:recording,paused`. A transcript with no\nsubject can't be found that way.\n"
     },
     "profileId": {
       "type": "string",

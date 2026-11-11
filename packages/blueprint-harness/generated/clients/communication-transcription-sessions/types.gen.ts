@@ -14,10 +14,13 @@ export type TranscriptionSessionWritable = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -67,10 +70,13 @@ export type TranscriptionSession = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -134,10 +140,13 @@ export type TranscriptionSessionCreate = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -335,10 +344,13 @@ export type TranscriptionSessionWritableWritable = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -378,10 +390,13 @@ export type TranscriptionSessionWritable2 = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -415,10 +430,13 @@ export type TranscriptionSessionCreateWritable = {
     /**
      * The transcript the session writes to. Given to carry on a
      * transcript, after a session failed or in a reopened tab; otherwise
-     * set when the session starts a new one. A reopened tab finds its
-     * transcript with listTranscripts, by its subject and status:
+     * set when the session starts a new one. To carry on after a reload,
+     * the page keeps this id, in sessionStorage for example, and reads
+     * the transcript with getTranscript: one still recording or paused
+     * can be carried on. A tab opened again has no id kept, and finds
+     * the transcript with listTranscripts, by its subject and status:
      * `q=subjectId:{id} status:recording,paused`. A transcript with no
-     * subject can't be found again.
+     * subject can't be found that way.
      *
      */
     transcriptId?: string;
@@ -463,10 +481,13 @@ export type CreateTranscriptionSessionData = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -611,10 +632,13 @@ export type CreateTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -740,10 +764,13 @@ export type GetTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -1373,10 +1400,13 @@ export type ConnectTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -1559,10 +1589,13 @@ export type DisconnectTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -1780,10 +1813,13 @@ export type UpdateLineTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -2011,10 +2047,13 @@ export type AddLineTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -2221,10 +2260,13 @@ export type PauseTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -2431,10 +2473,13 @@ export type ResumeTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -2641,10 +2686,13 @@ export type StopTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -2851,10 +2899,13 @@ export type CloseTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
@@ -3037,10 +3088,13 @@ export type FailTranscriptionSessionResponses = {
         /**
          * The transcript the session writes to. Given to carry on a
          * transcript, after a session failed or in a reopened tab; otherwise
-         * set when the session starts a new one. A reopened tab finds its
-         * transcript with listTranscripts, by its subject and status:
+         * set when the session starts a new one. To carry on after a reload,
+         * the page keeps this id, in sessionStorage for example, and reads
+         * the transcript with getTranscript: one still recording or paused
+         * can be carried on. A tab opened again has no id kept, and finds
+         * the transcript with listTranscripts, by its subject and status:
          * `q=subjectId:{id} status:recording,paused`. A transcript with no
-         * subject can't be found again.
+         * subject can't be found that way.
          *
          */
         transcriptId?: string;
