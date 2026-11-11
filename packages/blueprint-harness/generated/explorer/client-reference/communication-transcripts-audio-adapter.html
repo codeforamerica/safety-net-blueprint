@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Blueprint Harness — Client Reference: Communication Transcripts Adapter</title>
+  <title>Blueprint Harness — Client Reference: Communication Transcripts Audio Adapter</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -77,13 +77,13 @@
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Communication Transcripts Adapter</a></div>
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Communication Transcripts Audio Adapter</a></div>
     <div style="background:#2B1A78;color:white;">
       <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:0.9375rem;font-weight:800;">Communication Transcripts Adapter</span>
-        <code style="font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">packages/generated/clients/communication-transcripts-adapter</code>
+        <span style="font-size:0.9375rem;font-weight:800;">Communication Transcripts Audio Adapter</span>
+        <code style="font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">packages/generated/clients/communication-transcripts-audio-adapter</code>
       </div>
-      <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-adapter-openapi.yaml</code></a><span style="margin-left:auto;"><a href="../api-reference/communication-transcripts-adapter.html" style="font-size:12px;color:#5650BE;">View full API reference →</a></span></div>
+      <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter-openapi.yaml</code></a><span style="margin-left:auto;"><a href="../api-reference/communication-transcripts-audio-adapter.html" style="font-size:12px;color:#5650BE;">View full API reference →</a></span></div>
     </div>
   </div>
   <div class="page-layout">
@@ -97,29 +97,29 @@
       <div id="sidebar-nav">
         <div class="nav-section">
       <div class="nav-section-label">Methods</div>
-      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">1</span></a>
+      <a href="#group-issue-connection" class="nav-link">Issue Connection <span class="nav-count">1</span></a><a href="#group-well-known" class="nav-link">.Well Known <span class="nav-count">1</span></a>
     </div>
     
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-ConnectionRequest" class="nav-link">ConnectionRequest</a><a href="#type-ConnectionResponse" class="nav-link">ConnectionResponse</a>
+        <a href="#type-ConnectionRequest" class="nav-link">ConnectionRequest</a><a href="#type-JsonWebKeySet" class="nav-link">JsonWebKeySet</a><a href="#type-ConnectionResponse" class="nav-link">ConnectionResponse</a>
       </div>
       </div>
     </nav>
     <main id="content">
-      <section id="section-methods" style="margin-bottom:2.5rem;">
-      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (1)</h2>
-      <div id="ep-issueTranscriptConnection" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+      <section id="group-issue-connection" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Issue Connection (1)</h2>
+        <div id="ep-issueTranscriptConnection" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">issueTranscriptConnection<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
-      <a href="../api-reference/communication-transcripts-adapter.html#op-post-issue-connection" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="../api-reference/communication-transcripts-audio-adapter.html#op-post-issue-connection" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-issueTranscriptConnection" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">communication-transcripts-adapter.issueTranscriptConnection({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">communication-transcripts-audio-adapter.issueTranscriptConnection({
   body: { ... },
 })</pre>
       
@@ -135,8 +135,25 @@
     </div>
   </details>
 </div>
-    </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (2)</h2>
+      </section><section id="group-well-known" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">.Well Known (1)</h2>
+        <div id="ep-getTranscriptConnectionKeys" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getTranscriptConnectionKeys<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">The public keys a relay checks tokens with</span>
+      <a href="../api-reference/communication-transcripts-audio-adapter.html#op-get-.well-known-jwks.json" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="#ep-getTranscriptConnectionKeys" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">communication-transcripts-audio-adapter.getTranscriptConnectionKeys()</pre>
+      
+    </div>
+  </details>
+</div>
+      </section><section id="section-types" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (3)</h2>
         <div id="type-ConnectionRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -148,6 +165,20 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ConnectionRequest</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-JsonWebKeySet" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">JsonWebKeySet</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-JsonWebKeySet" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">JsonWebKeySet</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">keys</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

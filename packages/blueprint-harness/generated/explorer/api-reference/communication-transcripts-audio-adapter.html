@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Blueprint Harness — Transcripts Adapter API</title>
+  <title>Blueprint Harness — Transcript Audio Adapter API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -77,15 +77,15 @@
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Transcripts Adapter API</a></div>
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Transcript Audio Adapter API</a></div>
     <div style="background:#2B1A78;color:#FFFFFF;">
     <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:0.9375rem;font-weight:800;">Transcripts Adapter API</span>
+      <span style="font-size:0.9375rem;font-weight:800;">Transcript Audio Adapter API</span>
       <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v0.1.0</span>
       <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;flex-shrink:0;background:rgba(194,192,232,0.12);color:#b0a8d8;border:1px solid rgba(194,192,232,0.2);">Alpha</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">1 endpoint</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">2 endpoints</span>
     </div>
-    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-adapter-openapi.yaml</code></a></div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter-openapi.yaml</code></a></div>
   </div>
   </div>
   <div class="page-layout">
@@ -97,13 +97,13 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-connections" class="nav-link">Connections <span class="nav-count">1</span></a>
+        <a href="#section-connections" class="nav-link">Connections <span class="nav-count">1</span></a><a href="#section-keys" class="nav-link">Keys <span class="nav-count">1</span></a>
       </div>
     </nav>
     <main id="content">
       
     <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for the state-provided transcripts adapter. The blueprint calls it when transcription software asks how to connect, and the adapter answers with where the software connects and a short-lived credential — from the transcription service, or one it signs for a relay the state runs in front of a service a browser can't reach.</p><p style="margin:0 0 6px;">The adapter is stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration. Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for the state-provided transcript audio adapter. The blueprint calls it when transcription software asks how to connect, and the adapter answers with where the software connects and a short-lived credential — from the transcription service, or one it signs for a relay the state runs in front of a service a browser can't reach. An adapter that signs for a relay publishes the public keys the relay checks those tokens with.</p><p style="margin:0 0 6px;">The adapter is stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration. Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
       <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://adapter.example.com</code></div>
     </div>
     <section id="section-connections" style="margin-bottom:2.5rem;">
@@ -157,7 +157,7 @@
         
         <span style="font-size:11px;color:#555;margin-left:2px;">The transcription service, an entry of the transcription-services registry.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">assemblyai</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aws-transcribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">azure-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">deepgram</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">elevenlabs-scribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">gladia</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-cloud-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-gemini-live</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">none</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">openai-realtime</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">soniox</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">speechmatics</code></div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">assemblyai</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aws-transcribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">azure-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">deepgram</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">elevenlabs-scribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fake-transcription</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">gladia</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-cloud-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-gemini-live</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">none</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">openai-realtime</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">soniox</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">speechmatics</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
@@ -273,7 +273,7 @@
         
         <span style="font-size:11px;color:#555;margin-left:2px;">The transcription service, as the transcript's profile names it.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">assemblyai</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aws-transcribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">azure-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">deepgram</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">elevenlabs-scribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">gladia</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-cloud-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-gemini-live</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">none</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">openai-realtime</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">soniox</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">speechmatics</code></div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">assemblyai</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aws-transcribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">azure-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">deepgram</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">elevenlabs-scribe</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fake-transcription</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">gladia</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-cloud-speech</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">google-gemini-live</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">none</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">openai-realtime</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">soniox</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">speechmatics</code></div>
     </div>
     <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
         <details>
@@ -433,6 +433,177 @@
       
     </div>
     </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
+        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
+    </div></div>
+  </div>
+    </div>
+  </details>
+</div>
+    </section><section id="section-keys" style="margin-bottom:2.5rem;">
+      <div style="margin-bottom:1rem;">
+        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Keys</h2>
+        <p style="font-size:12px;color:#666;">The public keys a relay checks the adapter's tokens with.</p>
+      </div>
+      <div id="op-get-.well-known-jwks.json" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/.well-known/jwks.json</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">The public keys a relay checks tokens with</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+        <a href="#op-get-.well-known-jwks.json" class="permalink" title="Link to this endpoint">#</a>
+      </span>
+    </summary>
+    <div style="padding:12px 16px;">
+      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The public keys of the tokens the adapter signs for a relay, as a JSON Web Key Set (RFC 7517). A relay reads them to check a token's signature, choosing the key by the token's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">kid</code>, and may cache them. To change keys, publish the new one before signing with it, and keep the old one until the tokens it signed have expired. An adapter that signs no tokens, because no service it issues for sits behind a relay, answers 404.</p></div></div>
+      
+      
+      <div style="margin-top:16px;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
+    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
+        <span style="font-size:11px;color:#555;">The adapter's public keys.</span>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">keys</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">kty</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The key type</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">kid</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The key's id</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">use</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">alg</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The algorithm the key signs with</span>
+      </div>
+      
+    </div>
+    </div>
+    </div><div style="border-top:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
+        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
+        <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
+      </div>
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
+      </div>
+      
+    </div>
+    </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>

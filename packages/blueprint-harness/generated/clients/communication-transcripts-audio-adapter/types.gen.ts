@@ -23,7 +23,7 @@ export type ConnectionRequest = {
     /**
      * The transcription service, an entry of the transcription-services registry.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
     /**
      * The service's model, for a service that fixes it when issuing the credential.
      */
@@ -60,6 +60,27 @@ export type ConnectionRequest = {
 };
 
 /**
+ * A JSON Web Key Set (RFC 7517), public keys only.
+ */
+export type JsonWebKeySet = {
+    keys: Array<{
+        /**
+         * The key type
+         */
+        kty: string;
+        /**
+         * The key's id
+         */
+        kid: string;
+        use?: 'sig';
+        /**
+         * The algorithm the key signs with
+         */
+        alg?: string;
+    }>;
+};
+
+/**
  * Where and how the software connects, with metadata echoed back.
  */
 export type ConnectionResponse = {
@@ -77,7 +98,7 @@ export type ConnectionResponse = {
     /**
      * The transcription service, as the transcript's profile names it.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
     /**
      * How the software connects to the service.
      */
@@ -135,7 +156,7 @@ export type IssueTranscriptConnectionData = {
         /**
          * The transcription service, an entry of the transcription-services registry.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
         /**
          * The service's model, for a service that fixes it when issuing the credential.
          */
@@ -257,7 +278,7 @@ export type IssueTranscriptConnectionResponses = {
         /**
          * The transcription service, as the transcript's profile names it.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
         /**
          * How the software connects to the service.
          */
@@ -297,3 +318,78 @@ export type IssueTranscriptConnectionResponses = {
 };
 
 export type IssueTranscriptConnectionResponse = IssueTranscriptConnectionResponses[keyof IssueTranscriptConnectionResponses];
+
+export type GetTranscriptConnectionKeysData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/.well-known/jwks.json';
+};
+
+export type GetTranscriptConnectionKeysErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetTranscriptConnectionKeysError = GetTranscriptConnectionKeysErrors[keyof GetTranscriptConnectionKeysErrors];
+
+export type GetTranscriptConnectionKeysResponses = {
+    /**
+     * A JSON Web Key Set (RFC 7517), public keys only.
+     */
+    200: {
+        keys: Array<{
+            /**
+             * The key type
+             */
+            kty: string;
+            /**
+             * The key's id
+             */
+            kid: string;
+            use?: 'sig';
+            /**
+             * The algorithm the key signs with
+             */
+            alg?: string;
+        }>;
+    };
+};
+
+export type GetTranscriptConnectionKeysResponse = GetTranscriptConnectionKeysResponses[keyof GetTranscriptConnectionKeysResponses];

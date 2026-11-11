@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { IssueTranscriptConnectionData, IssueTranscriptConnectionErrors, IssueTranscriptConnectionResponses } from './types.gen';
-import { zIssueTranscriptConnectionData, zIssueTranscriptConnectionResponse } from './zod.gen';
+import type { GetTranscriptConnectionKeysData, GetTranscriptConnectionKeysErrors, GetTranscriptConnectionKeysResponses, IssueTranscriptConnectionData, IssueTranscriptConnectionErrors, IssueTranscriptConnectionResponses } from './types.gen';
+import { zGetTranscriptConnectionKeysData, zGetTranscriptConnectionKeysResponse, zIssueTranscriptConnectionData, zIssueTranscriptConnectionResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -43,4 +43,24 @@ export const issueTranscriptConnection = <ThrowOnError extends boolean = false>(
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * The public keys a relay checks tokens with
+ *
+ * The public keys of the tokens the adapter signs for a relay, as a JSON
+ * Web Key Set (RFC 7517). A relay reads them to check a token's
+ * signature, choosing the key by the token's `kid`, and may cache them.
+ * To change keys, publish the new one before signing with it, and keep
+ * the old one until the tokens it signed have expired. An adapter that
+ * signs no tokens, because no service it issues for sits behind a
+ * relay, answers 404.
+ *
+ */
+export const getTranscriptConnectionKeys = <ThrowOnError extends boolean = false>(options?: Options<GetTranscriptConnectionKeysData, ThrowOnError>) => (options?.client ?? client).get<GetTranscriptConnectionKeysResponses, GetTranscriptConnectionKeysErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetTranscriptConnectionKeysData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetTranscriptConnectionKeysResponse.parseAsync(data),
+    url: '/.well-known/jwks.json',
+    ...options
 });

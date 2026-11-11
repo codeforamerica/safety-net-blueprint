@@ -4,7 +4,7 @@ title: Transcription streaming
 domain: communication
 capability: transcripts
 description: |
-  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcripts adapter and the relay contract, so all three agree. See docs/architecture/domains/communication.md, Decisions 12 to 14.
+  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcript audio adapter and the relay contract, so all three agree. See docs/architecture/domains/communication-transcripts.md, Decisions 11 to 13.
 $defs:
   AudioEncoding:
     type: string
@@ -53,7 +53,7 @@ $defs:
   GetConnectionRequest:
     type: object
     description: |
-      What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+      What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
     additionalProperties: false
     required:
       - audio
@@ -96,6 +96,7 @@ $defs:
           - azure-speech
           - deepgram
           - elevenlabs-scribe
+          - fake-transcription
           - gladia
           - google-cloud-speech
           - google-gemini-live

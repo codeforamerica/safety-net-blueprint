@@ -70,7 +70,7 @@ export const zTranscriptionSessionCreate = z.object({
 }));
 
 /**
- * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
  *
  */
 export const zGetConnectionRequest = z.object({
@@ -104,6 +104,7 @@ export const zStreamConnection = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',
@@ -334,6 +335,7 @@ export const zGetConnectionTranscriptionSessionResponse = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',
@@ -388,6 +390,7 @@ export const zRenewConnectionTranscriptionSessionResponse = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',

@@ -195,7 +195,7 @@ export type TranscriptionSessionCreate = {
 };
 
 /**
- * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
  *
  */
 export type GetConnectionRequest = {
@@ -233,7 +233,7 @@ export type StreamConnection = {
     /**
      * The transcription service, as the transcript's profile names it.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
     /**
      * How the software connects to the service.
      */
@@ -835,7 +835,7 @@ export type GetTranscriptionSessionResponse = GetTranscriptionSessionResponses[k
 
 export type GetConnectionTranscriptionSessionData = {
     /**
-     * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+     * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
      *
      */
     body: {
@@ -1002,7 +1002,7 @@ export type GetConnectionTranscriptionSessionResponses = {
         /**
          * The transcription service, as the transcript's profile names it.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
         /**
          * How the software connects to the service.
          */
@@ -1045,7 +1045,7 @@ export type GetConnectionTranscriptionSessionResponse = GetConnectionTranscripti
 
 export type RenewConnectionTranscriptionSessionData = {
     /**
-     * What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+     * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
      *
      */
     body: {
@@ -1212,7 +1212,7 @@ export type RenewConnectionTranscriptionSessionResponses = {
         /**
          * The transcription service, as the transcript's profile names it.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
         /**
          * How the software connects to the service.
          */

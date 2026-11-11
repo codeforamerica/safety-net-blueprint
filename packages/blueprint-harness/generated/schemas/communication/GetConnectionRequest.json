@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "description": "What the software will stream, so the server adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.\n",
+  "description": "What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.\n",
   "additionalProperties": false,
   "required": [
     "audio",

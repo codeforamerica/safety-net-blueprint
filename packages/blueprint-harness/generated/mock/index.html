@@ -141,6 +141,14 @@
   /* A long title wraps under itself, not under its number. */
   .op.step .n { flex: none; }
   .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* How a step travels: an HTTP call, an event on the stream, or a WebSocket message. */
+  .op.step .via {
+    flex: none; align-self: center; font-family: var(--mono); font-size: .62rem; font-weight: 600;
+    padding: 0 .3rem; border-radius: 3px; border: 1px solid; line-height: 1.5;
+  }
+  .via-http { color: #555; background: #f2f2f2; border-color: #dcdcdc; }
+  .via-event { color: #24613a; background: #e7f4ea; border-color: #bcdcc5; }
+  .via-ws { color: #5d2f7a; background: #f1e8f6; border-color: #d7c2e4; }
   /* A tour in sections — one workflow each — names each where it starts. */
   .steps .section {
     margin: .8rem 0 .2rem .45rem; font-size: .78rem; font-weight: 700; color: var(--ink);
@@ -1066,6 +1074,18 @@ const GROUPS = [
     holds: (kind) => kind === 'rules',
   },
   {
+    id: 'events',
+    title: 'Events',
+    about: 'Messages an API sends or receives, as its AsyncAPI document declares them: what happened, for whoever is following.',
+    holds: (kind) => kind === 'message',
+  },
+  {
+    id: 'ws',
+    title: 'WebSocket',
+    about: 'Messages over a connection an AsyncAPI document describes, such as the relay contract\'s: what the client and the service say to each other.',
+    holds: (kind) => kind === 'ws',
+  },
+  {
     id: 'control',
     title: 'The mock itself',
     about: 'The only endpoints here that no contract declares. They belong to the harness, not to the system it is running — resetting it, reseeding it, and standing in for whatever has not been built.',
@@ -1324,6 +1344,20 @@ const describe = (step) => {
   return { title: first.trim().replace(/\s+/g, ' ') || step.stepId, points };
 };
 
+/**
+ * How a step travels: `ws` for a message on a connection an AsyncAPI document
+ * with servers describes, such as the relay's; `event` for one on the event
+ * stream; `http` for a call.
+ */
+const transportOf = (doc, step, ops) => {
+  if (step.action === undefined && step.channelPath === undefined) return 'http';
+  const named = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
+  const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
+  const ref = source && ops.get(`${String(source.url).split('/').pop()}#${named[2]}`);
+  return ref?.reached === 'servers' ? 'ws' : 'event';
+};
+const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', ws: 'WS' };
+
 /** Every operation a scenario can call: the contracts', and the mock's own. */
 const scenarioOperations = () => new Map([...operationIndex(docs), ...controlOperations(mock)]);
 
@@ -1405,13 +1439,17 @@ const runnerFor = (doc) => {
       const { pathname, search } = new URL(request.url);
       return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
     };
-    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations() });
+    // The mock's WebSocket, for steps on a connection an AsyncAPI document
+    // describes, such as the relay's.
+    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations(), WebSocket: mock.WebSocket });
   }
   return tourRunner;
 };
 
 /** Forget a tour's run, as a new server does. */
 const resetTour = () => {
+  // Stop listening for the old run's events.
+  tourRunner?.close();
   tourRunner = null;
   tourResults.clear();
   tourStep = null;
@@ -1470,6 +1508,7 @@ const renderTourNav = (nav, doc) => {
   const upTo = reached === -1 ? entries.length : reached + 1;
   const list = el('ol', '', 'ops steps');
   const sectioned = (doc.content.workflows ?? []).length > 1;
+  const ops = scenarioOperations();
   for (const [index, entry] of entries.slice(0, upTo).entries()) {
     if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
       // A section's name goes to where its description is: its first step,
@@ -1491,9 +1530,13 @@ const renderTourNav = (nav, doc) => {
     const item = el('li');
     const button = el('button', '', 'op step');
     const run = Boolean(tourResults.get(entry.key)?.passed);
+    const via = transportOf(doc, entry.step, ops);
+    const tag = el('span', TRANSPORT_TAGS[via], `via via-${via}`);
+    tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', ws: 'A message over a WebSocket' }[via];
     button.append(
       el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
-      el('span', describe(entry.step).title, 'title')
+      el('span', describe(entry.step).title, 'title'),
+      tag
     );
     if (tourStep === index) button.classList.add('here');
     button.onclick = () => {
@@ -1638,7 +1681,12 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   const panel = el('div', '', 'panel');
   panel.id = `tour-step-${index}`;
 
-  const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
+  // A step that sends or receives a message (Arazzo 1.1) is an event's, not an HTTP call's.
+  const messaging = step.action !== undefined || step.channelPath !== undefined;
+  // On a connection of its own (the relay's) it's a WebSocket message; else an event.
+  const overWs = messaging && Boolean(sending?.message ?? result?.request?.message);
+  const group = messaging ? GROUPS.find((candidate) => candidate.holds(overWs ? 'ws' : 'message'))
+    : op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
   const sectioned = (doc.content.workflows ?? []).length > 1;
   if (sectioned) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
   // The section's introduction, on its first step when a step at a time; the
@@ -1648,7 +1696,8 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   const acting = actorLine(doc, step['x-actors']);
   if (acting) panel.append(acting);
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
-  panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
+  panel.append(el('p', messaging ? `${step.action === 'send' ? 'Send' : 'Receive'} ${sending?.message ?? sending?.channel ?? step.channelPath ?? step.operationId}`
+    : sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
   if (shown.length > 0) panel.append(el('p', shown.join('   ·   '), 'cited'));
   const cited = citedLine(op);
@@ -1688,7 +1737,16 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     send.textContent = result.passed ? 'Done' : 'Try again';
   }
 
-  if (result) {
+  if (result && !result.response && step.action !== 'send') {
+    // A message received: the event, or the frame, as it arrived. One sent
+    // over a WebSocket is shown above, as what was sent.
+    const heard = el('pre', '', result.passed ? '' : 'bad');
+    heard.append(el('span', result.message ? 'Received' : 'Nothing received', 'label'),
+      document.createTextNode(result.message ? JSON.stringify(result.message.payload, null, 2) : ''));
+    panel.append(heard);
+  }
+
+  if (result?.response) {
     const named = op ? responseShape(op, result.response.status) : null;
     if (named) panel.append(shapeLine(named.name, named.path, 'shape', named.node));
     const answer = el('pre', '', result.response.status >= 400 ? 'bad' : '');
@@ -1700,6 +1758,9 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     answer.append(el('span', `${result.response.status} ${result.response.statusText ?? ''}`.trim(), 'label'),
       document.createTextNode(headerLines + (headerLines ? '\n' : '') + JSON.stringify(result.response.body, null, 2)));
     panel.append(answer);
+  }
+
+  if (result) {
     // A step's checks are shown when one fails; a step that did what it says
     // has nothing to add to its answer.
     if (!result.passed) {

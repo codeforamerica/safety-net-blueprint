@@ -41,6 +41,7 @@
             "azure-speech",
             "deepgram",
             "elevenlabs-scribe",
+            "fake-transcription",
             "gladia",
             "google-cloud-speech",
             "google-gemini-live",

@@ -15,6 +15,7 @@ export const zConnectionRequest = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',
@@ -45,6 +46,18 @@ export const zConnectionRequest = z.object({
 }));
 
 /**
+ * A JSON Web Key Set (RFC 7517), public keys only.
+ */
+export const zJsonWebKeySet = z.object({
+    keys: z.array(z.object({
+        kty: z.string(),
+        kid: z.string(),
+        use: z.optional(z.literal('sig')),
+        alg: z.optional(z.string())
+    }))
+});
+
+/**
  * Where and how the software connects, with metadata echoed back.
  */
 export const zConnectionResponse = z.object({
@@ -56,6 +69,7 @@ export const zConnectionResponse = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',
@@ -83,6 +97,7 @@ export const zIssueTranscriptConnectionData = z.object({
             'azure-speech',
             'deepgram',
             'elevenlabs-scribe',
+            'fake-transcription',
             'gladia',
             'google-cloud-speech',
             'google-gemini-live',
@@ -127,6 +142,7 @@ export const zIssueTranscriptConnectionResponse = z.object({
         'azure-speech',
         'deepgram',
         'elevenlabs-scribe',
+        'fake-transcription',
         'gladia',
         'google-cloud-speech',
         'google-gemini-live',
@@ -143,3 +159,21 @@ export const zIssueTranscriptConnectionResponse = z.object({
     expiresIn: z.int().gte(1),
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
+
+export const zGetTranscriptConnectionKeysData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * A JSON Web Key Set (RFC 7517), public keys only.
+ */
+export const zGetTranscriptConnectionKeysResponse = z.object({
+    keys: z.array(z.object({
+        kty: z.string(),
+        kid: z.string(),
+        use: z.optional(z.literal('sig')),
+        alg: z.optional(z.string())
+    }))
+});

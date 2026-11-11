@@ -555,7 +555,7 @@
     {
       "name": "Issue-connection",
       "item": [],
-      "description": "Transcripts Adapter API"
+      "description": "Transcript Audio Adapter API"
     },
     {
       "name": "Profiles",
