@@ -1,8 +1,8 @@
 /**
  * A live sequence diagram, for a page: participants side by side, and the
  * messages between them drawn as they happen, each opening to what passed
- * and what it uses — an operation, an event, a message — linked to where
- * that's defined. In the browser, with no dependencies.
+ * and the calls it makes — an operation, an event, a message — each name
+ * showing its declaration when hovered, as the mock page's scenarios do. In the browser, with no dependencies.
  *
  * The vocabulary is UML's, as Mermaid and PlantUML write sequence diagrams:
  * participants, messages — a call that waits for its answer, a reply, or an
@@ -18,7 +18,7 @@
  *   const step = sequence.message({ from: 'browser', to: 'server', kind: 'call', text: 'start a transcript' });
  *   step.update({
  *     details: { Request: 'POST /transcripts …', Response: '201 …' },
- *     refs: [{ name: 'createTranscript', kind: 'operation', file: 'transcripts-openapi.yaml', href: '…' }],
+ *     refs: [{ name: 'createTranscript()', kind: 'operation', yaml: 'post: …', file: 'transcripts-openapi.yaml', href: '…' }],
  *   });
  *
  * It only draws. Running things a step at a time is the page's to do: what
@@ -29,11 +29,11 @@ const STYLE_ID = 'blueprint-sequence-style';
 
 const STYLE = `
 .bps { --bps-ink: #1a1a1a; --bps-muted: #666; --bps-line: #dcdcdc; --bps-accent: #5650BE; --bps-warn: #AF121D;
-  --bps-code-bg: #F3F3F3; --bps-open: #FFF3E0;
+  --bps-code-bg: #F3F3F3; --bps-open: #FFF3E0; --bps-ok: #2f7a3f; --bps-ok-bg: #cfe4cf; --bps-card: #fff; --bps-warm: #8a6d3b;
   font: 14px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--bps-ink); }
 @media (prefers-color-scheme: dark) {
   .bps { --bps-ink: #ecebe6; --bps-muted: #9a9993; --bps-line: #3a3936; --bps-accent: #C2C0E8; --bps-warn: #F9C8CB;
-    --bps-code-bg: #2a2a27; --bps-open: #4a4120; }
+    --bps-code-bg: #2a2a27; --bps-open: #4a4120; --bps-ok: #8fc79a; --bps-ok-bg: #2c4a33; --bps-card: #1f1f1d; --bps-warm: #c9a86a; }
 }
 .bps-row, .bps-head { display: grid; grid-template-columns: var(--bps-caption, 2fr) 3fr; gap: 0 16px; }
 .bps.bps-no-caption .bps-row, .bps.bps-no-caption .bps-head { grid-template-columns: 1fr; }
@@ -63,7 +63,10 @@ const STYLE = `
   border-right: 0; border-left: 1.5px solid currentColor; transform: rotate(-45deg); }
 .bps-label { position: absolute; left: 0; right: 0; top: 1px; text-align: center; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; }
-.bps-note { transform: translateX(-50%); white-space: nowrap; padding: 2px 6px; }
+/* A note is as wide as what it says, boxed over its lifeline, as UML draws one. */
+.bps-note { transform: translateX(-50%); white-space: nowrap; top: 3px; height: auto; padding: 1px 6px;
+  background: var(--bps-code-bg); border: 1px solid var(--bps-line); border-radius: 3px; }
+.bps-note .bps-label { position: static; }
 .bps-warn, .bps-warn .bps-label { color: var(--bps-warn); }
 .bps-has-detail { cursor: pointer; }
 .bps-has-detail .bps-label { text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -74,11 +77,19 @@ const STYLE = `
 .bps-detail pre { margin: 0; padding: 8px; background: var(--bps-code-bg); border-radius: 6px; font-size: 0.78rem;
   white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow: auto; }
 .bps-detail p { margin: 0; font-size: 0.88rem; }
-.bps-refs { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; }
-.bps-refs li { margin: 2px 0; }
-.bps-refs code { font-size: 0.82rem; }
-.bps-refs .bps-kind { color: var(--bps-muted); }
-.bps-refs a { color: var(--bps-accent); }
+.bps-calls { margin: 8px 0 0; font-size: 0.85rem; }
+.bps-calls .bps-then { color: var(--bps-muted); margin: 0 6px; }
+/* A name with its declaration on hover, as the mock page's scenarios show them. */
+.bps-ref { position: relative; display: inline-block; }
+.bps-ref > code { font-size: 0.82rem; border-bottom: 1px dotted var(--bps-ok); cursor: help; outline: none; }
+.bps-ref > code:hover, .bps-ref > code:focus { background: var(--bps-ok-bg); }
+.bps-card { display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: 5; width: min(640px, 80vw);
+  background: var(--bps-card); border: 1px solid var(--bps-line); border-radius: 4px; box-shadow: 0 8px 20px rgba(0, 0, 0, .13);
+  padding: 8px 10px; }
+.bps-ref:hover .bps-card, .bps-ref:focus-within .bps-card { display: block; }
+.bps-card .bps-kind { margin: 0 0 6px; color: var(--bps-muted); font-size: 0.8rem; }
+.bps-detail .bps-card pre { max-height: 18rem; font-size: 0.73rem; border-left: 3px solid var(--bps-warm); }
+.bps-card a { display: inline-block; margin-top: 6px; font-size: 0.75rem; color: var(--bps-accent); }
 `;
 
 const escape = (text) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -176,13 +187,16 @@ export function createSequence(element, { participants, captionTitle }) {
 
       const render = () => {
         const sections = [];
+        // The calls first: what this step is, as the contracts name it.
+        if (state.refs.length) {
+          // Divs, not a paragraph: a <pre> inside a <p> ends the paragraph early.
+          sections.push(`<div class="bps-calls">${state.refs.map((ref) => `<span class="bps-ref"><code tabindex="0">${escape(ref.name)}</code><div class="bps-card">${
+            ref.kind ? `<div class="bps-kind">${escape(ref.kind)}</div>` : ''}${
+            ref.yaml ? `<pre>${escape(ref.yaml)}</pre>` : ''}${
+            ref.href ? `<a href="${escape(ref.href)}" target="_blank" rel="noopener">open ${escape(ref.file ?? ref.href)}</a>` : ''}</div></span>`).join('<span class="bps-then">→</span>')}</div>`);
+        }
         if (state.explain) sections.push(`<p>${escape(state.explain)}</p>`);
         for (const [title, value] of state.details) sections.push(`<h4>${escape(title)}</h4><pre>${escape(pretty(value))}</pre>`);
-        if (state.refs.length) {
-          sections.push(`<h4>Defined in</h4><ul class="bps-refs">${state.refs.map((ref) => `<li><code>${escape(ref.name)}</code>${
-            ref.kind ? ` <span class="bps-kind">${escape(ref.kind)}</span>` : ''} — ${
-            ref.href ? `<a href="${escape(ref.href)}" target="_blank" rel="noopener">${escape(ref.file ?? ref.href)}</a>` : escape(ref.file ?? '')}</li>`).join('')}</ul>`);
-        }
         detail.innerHTML = sections.join('');
       };
       const open = () => {
@@ -198,9 +212,9 @@ export function createSequence(element, { participants, captionTitle }) {
       const message = {
         /**
          * Change what it says, or add details — a step that grows, like a
-         * sentence being heard. `refs` are what it uses, each
-         * `{ name, kind?, file?, href? }`: shown as the name, linked to
-         * where it's defined.
+         * sentence being heard. `refs` are the calls it makes, in order, each
+         * `{ name, kind?, yaml?, file?, href? }`: shown as the name, and on
+         * hover what it is, its declaration, and a link to the file.
          */
         update({ text: nextText, details: more, refs: uses, explain: why } = {}) {
           if (nextText !== undefined) button.querySelector('.bps-label').textContent = nextText;
