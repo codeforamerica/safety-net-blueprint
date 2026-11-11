@@ -329,7 +329,7 @@ template schema is written.
 The written record of a conversation, in a `communication` domain the framework
 provides. Built: its lifecycle, its timeline of lines, lost stretches and
 pauses, and the rules for accepting them. Its design, and what is still to
-come, is in [Communication](../domains/communication.md).
+come, is in [Communication: Transcripts](../domains/communication-transcripts.md).
 
 ### Provider session
 
@@ -355,7 +355,7 @@ happened, linked to scheduling appointments, as `intake.md` describes. Its
 conduct belongs on the same resource rather than a separate session: recording
 consent, starting, the applicable interview requirements, and completing,
 guarded on every applicable item being covered. It refers to its
-[transcript](../domains/communication.md#transcript), whose recording its consent guards and its
+[transcript](../domains/communication-transcripts.md#transcript), whose recording its consent guards and its
 completion closes. Its state machine also re-runs the guidance rulesets when the interview's application changes, and
 creates the resulting suggestions. Recertification belongs to case management
 under `eligibility.md`, which does not model it yet; a recertification interview
@@ -506,7 +506,7 @@ The audio stream stays out deliberately: providers design for the browser
 connecting directly, and a mock that relayed audio would become a real
 implementation of a provider integration.
 The blueprint's part is the transcript: what the client reports, and the rules
-it is held to. See [Communication](../domains/communication.md#decision-3-audio-never-passes-through-the-blueprint).
+it is held to. See [Communication: Transcripts](../domains/communication-transcripts.md#decision-3-audio-never-passes-through-the-blueprint).
 
 ### On a server
 

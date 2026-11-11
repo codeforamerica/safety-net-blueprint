@@ -7,8 +7,8 @@ domain: communication
 capability: transcripts
 type: transcription-services
 
-# How a browser reaches each is in docs/architecture/domains/communication.md,
-# Decision 12; a service it can't reach sits behind a relay (Decision 13).
+# How a browser reaches each is in docs/architecture/domains/communication-transcripts.md,
+# Decision 11; a service it can't reach sits behind a relay (Decision 12).
 entries:
   aws-transcribe:
     description: Amazon Transcribe streaming. The software connects to a presigned URL.

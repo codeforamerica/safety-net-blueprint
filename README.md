@@ -37,7 +37,7 @@ The monorepo separates domain-agnostic framework tooling from safety-net-specifi
 | `packages/safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Reference contracts | Safety-net domain contracts: OpenAPI specs, state machines, overlays |
 | `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Reference implementation | Mock API server: `blueprint-mock`, `blueprint-swagger`. For development and demos, not production |
 | `packages/blueprint-rules-engine` | `@codeforamerica/blueprint-rules-engine` | Reference implementation | Evaluates rulesets, in Node or the browser |
-| `packages/blueprint-transcription` | `@codeforamerica/blueprint-transcription` | Reference implementation | Transcription software: the driver and client adapters for the page, and the transcripts adapter for the server |
+| `packages/blueprint-transcription` | `@codeforamerica/blueprint-transcription` | Reference implementation | Transcription software: the driver and client adapters for the page, and the transcript audio adapter for the server |
 | `packages/generated` | — | — | Generated artifacts: resolved specs, TypeScript clients, Postman collection (gitignored) |
 
 `blueprint-core` and `blueprint-cli` are domain-agnostic — they can be used for any contract-driven project. `safety-net-contracts` depends on `blueprint-cli` and uses `blueprint-core` as its framework.

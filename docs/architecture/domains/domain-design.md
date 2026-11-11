@@ -136,7 +136,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 
 #### Communication (Cross-Cutting)
 
-Official notices and correspondence that can originate from any domain, and transcripts of conversations. **[Details →](communication.md)**
+What passes between an organization and the people it serves: messages by email, text, mail or a portal, which any domain can cause, and transcripts of conversations. **[Details →](communication.md)** · **[Transcripts →](communication-transcripts.md)**
 
 | Entity | Purpose |
 |--------|---------|
@@ -326,6 +326,7 @@ Domain-specific design has been moved to separate files:
 | Data Exchange | [domains/data-exchange.md](domains/data-exchange.md) |
 | Scheduling | [domains/scheduling.md](domains/scheduling.md) |
 | Communication | [communication.md](communication.md) |
+| Communication: Transcripts | [communication-transcripts.md](communication-transcripts.md) |
 | Decision Support | [decision-support.md](decision-support.md) |
 | Search | [cross-cutting/search.md](cross-cutting/search.md) |
 

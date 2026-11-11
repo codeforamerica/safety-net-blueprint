@@ -56,4 +56,4 @@ example: >
   service. A demo with no backend routes nothing, and answers the adapter's
   operation in the page.
 
-rationale: docs/architecture/domains/communication.md
+rationale: docs/architecture/domains/communication-transcripts.md

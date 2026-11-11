@@ -1,23 +1,25 @@
-# The transcripts adapter: the state's service that holds a transcription
+# The transcript audio adapter: the state's service that holds a transcription
 # service's secret and issues the short-lived credential transcription
 # software streams with. The transcript's get-connection action calls it; the
 # software never sees the secret. See
-# docs/architecture/domains/communication.md, Decision 12, and
+# docs/architecture/domains/communication-transcripts.md, Decision 11, and
 # docs/architecture/cross-cutting/adapters.md for the pattern.
 openapi: 3.1.0
 info:
-  title: Transcripts Adapter API
+  title: Transcript Audio Adapter API
   version: 0.1.0
   x-domain: communication
   x-capability: transcripts
   x-status: alpha
   x-visibility: external
   description: |
-    Contracted interface for the state-provided transcripts adapter. The
+    Contracted interface for the state-provided transcript audio adapter. The
     blueprint calls it when transcription software asks how to connect, and the
     adapter answers with where the software connects and a short-lived
     credential — from the transcription service, or one it signs for a relay
-    the state runs in front of a service a browser can't reach.
+    the state runs in front of a service a browser can't reach. An adapter
+    that signs for a relay publishes the public keys the relay checks those
+    tokens with.
 
     The adapter is stateless: one request, one answer. It maps the languages
     and audio it's given to what its service takes, and holds everything that
@@ -32,6 +34,8 @@ servers:
 tags:
   - name: Connections
     description: Issuing what transcription software connects with.
+  - name: Keys
+    description: The public keys a relay checks the adapter's tokens with.
 paths:
   /issue-connection:
     post:
@@ -84,6 +88,40 @@ paths:
                 $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
         '500':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /.well-known/jwks.json:
+    get:
+      summary: The public keys a relay checks tokens with
+      description: |
+        The public keys of the tokens the adapter signs for a relay, as a JSON
+        Web Key Set (RFC 7517). A relay reads them to check a token's
+        signature, choosing the key by the token's `kid`, and may cache them.
+        To change keys, publish the new one before signing with it, and keep
+        the old one until the tokens it signed have expired. An adapter that
+        signs no tokens, because no service it issues for sits behind a
+        relay, answers 404.
+      operationId: getTranscriptConnectionKeys
+      tags:
+        - Keys
+      responses:
+        '200':
+          description: The adapter's public keys.
+          content:
+            application/jwk-set+json:
+              schema:
+                $ref: "#/components/schemas/JsonWebKeySet"
+              example:
+                keys:
+                  - kty: EC
+                    crv: P-256
+                    kid: relay-2026-11
+                    use: sig
+                    alg: ES256
+                    x: f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU
+                    y: x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0
+        '404':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '500':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
   schemas:
@@ -127,6 +165,22 @@ components:
               items:
                 $ref: "./communication-transcripts-schema.yaml#/$defs/StreamProtocol"
               description: The protocols the software can connect over. The adapter answers with one of them.
+    JsonWebKeySet:
+      description: A JSON Web Key Set (RFC 7517), public keys only.
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            required: [kty, kid]
+            properties:
+              kty: {type: string, description: The key type, such as EC or RSA.}
+              kid: {type: string, description: The key's id, which a token names in its header.}
+              use: {type: string, const: sig}
+              alg: {type: string, description: The algorithm the key signs with, such as ES256.}
+            description: A public key, with the parameters its key type takes (RFC 7518).
     ConnectionResponse:
       description: Where and how the software connects, with metadata echoed back.
       unevaluatedProperties: false

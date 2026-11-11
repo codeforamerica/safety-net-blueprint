@@ -1,13 +1,13 @@
 # A transcription session: the transcription software's connection to its
-# transcription service, kept track of in the page. The page and the client
-# adapter talk only to the session; its actions call the transcript's
+# transcription service, kept track of in the page. The client talks only to
+# the session; its actions call the transcript's
 # operations, so everything that's kept is the transcript's. Its lifecycle is
 # communication-transcription-sessions-state-machine.yaml beside this file.
 #
 # Designed to run in the page: a deployment keeps this API there with routing
 # and sends the transcripts API to its server. See
-# docs/architecture/domains/communication.md, "How the parts work together" and
-# Decisions 15 to 18.
+# docs/architecture/domains/communication-transcripts.md, "How the parts work together" and
+# Decisions 14 to 17.
 openapi: 3.1.0
 info:
   title: Transcription sessions
@@ -24,10 +24,9 @@ info:
     Creating a session says which transcript it writes to: an existing one,
     to carry on after a session failed, or what to start a new one with. A
     new transcript is started the first time the software asks how to
-    stream. The session's actions are what the page and the client adapter
-    tell it — how do I stream, the connection is open or dropped, a line in
+    stream. The session's actions are what the client tells it — how do I stream, the connection is open or dropped, a line in
     progress or finished, pause, resume, stop, close, give up — and each
-    sends an event, which is how the page and the client adapter follow it.
+    sends an event, which is how the client follows it.
 servers:
   - url: https://api.example.com/communication
     description: Production server

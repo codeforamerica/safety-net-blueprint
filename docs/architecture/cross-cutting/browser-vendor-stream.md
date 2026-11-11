@@ -5,7 +5,7 @@ such as speech to a transcription service, while the blueprint keeps the
 result. The rules are in
 [`docs/conventions/patterns/browser-vendor-stream.yaml`](../../conventions/patterns/browser-vendor-stream.yaml);
 this doc says why each one is there. Transcription is the first use, in the
-[communication domain](../domains/communication.md#how-the-parts-work-together).
+[communication domain](../domains/communication-transcripts.md#how-the-parts-work-together).
 
 ## When it fits
 
@@ -104,5 +104,5 @@ every vendor; keeping a quiet connection open is done differently by each.
 ## Where it's used
 
 - **Transcription**, in the communication domain: the transcription session,
-  the transcript, the transcripts adapter and the relay contract. Its decisions
-  are [Decisions 3 and 12 to 18](../domains/communication.md#key-design-decisions).
+  the transcript, the transcript audio adapter and the relay contract. Its decisions
+  are [Decisions 3 and 11 to 17](../domains/communication-transcripts.md#key-design-decisions).

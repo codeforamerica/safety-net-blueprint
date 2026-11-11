@@ -1,5 +1,5 @@
 /**
- * A transcript's get-connection answers with what its transcripts adapter issued,
+ * A transcript's get-connection answers with what its transcript audio adapter issued,
  * fitted to StreamConnection — run against the harness's contracts, with an
  * HTTP stub standing in for the adapter.
  *

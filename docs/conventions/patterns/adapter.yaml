@@ -36,7 +36,7 @@ rules:
     otherwise the state defines it.
   - >-
     Put the contract beside the API it serves, named for it with -adapter, as
-    eligibility-adapter-openapi.yaml, communication-transcripts-adapter-openapi.yaml.
+    eligibility-adapter-openapi.yaml, communication-transcripts-audio-adapter-openapi.yaml.
   - >-
     Call it from a state machine step by operationId.
   - >-
@@ -66,7 +66,7 @@ rules:
     and the mock, means the same API built to run in a browser.
 
 example: >
-  The eligibility adapter, beside eligibility; the transcripts adapter, which
+  The eligibility adapter, beside eligibility; the transcript audio adapter, which
   issues a transcription service's short-lived credential.
 
 rationale: docs/architecture/cross-cutting/adapters.md

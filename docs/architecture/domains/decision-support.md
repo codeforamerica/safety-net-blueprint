@@ -490,4 +490,4 @@ arrives after the suggestion was decided does nothing.
 - [HL7 CDS Hooks](https://cds-hooks.hl7.org/)
 - [AI Services](../cross-cutting/ai-services.md)
 - [Platform](../cross-cutting/platform.md)
-- [Communication](communication.md) — transcripts, which suggestions cite as evidence
+- [Communication: Transcripts](communication-transcripts.md) — transcripts, which suggestions cite as evidence

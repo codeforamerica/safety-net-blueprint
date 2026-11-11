@@ -1,6 +1,6 @@
 # The lifecycle of a transcript. A transcript starts in `recording` when it is
 # created; pausing takes the conversation off the record, resuming puts it back,
-# and closing ends it. See docs/architecture/domains/communication.md.
+# and closing ends it. See docs/architecture/domains/communication-transcripts.md.
 #
 # Every time here is the client's — the transcript's startedAt, and the `at`
 # pause, resume and close are sent with — the same clock the times on its
@@ -119,7 +119,7 @@ machines:
               - call: requestIdleCheck
               - emit: resumed
       # The software streams audio straight to its transcription service; this
-      # gets it what it needs to, from the server adapter, which holds the
+      # gets it what it needs to, from the transcript audio adapter, which holds the
       # service's secret. Asking again renews the credential.
       - id: get-connection
         description: Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.

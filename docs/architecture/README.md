@@ -34,7 +34,8 @@ One document per domain — entity model, lifecycle, events, and key design deci
 | [Document Management](domains/document-management.md) | Document upload, classification, verification status, and retention |
 | [Data Exchange](domains/data-exchange.md) | External data requests: income verification, citizenship, state data matches |
 | [Scheduling](domains/scheduling.md) | Appointment scheduling across channels |
-| [Communication](domains/communication.md) | Notices, correspondence, multi-channel delivery, and transcripts of conversations |
+| [Communication](domains/communication.md) | Messages to the people an organization serves, by email, text, mail or a portal, and records of conversations with them |
+| [Communication: Transcripts](domains/communication-transcripts.md) | The record of a conversation, and how the software in the browser streams audio to a transcription service |
 | [Decision Support](domains/decision-support.md) | Suggestions put in front of a person acting on a case, and their decision on each |
 
 ## Cross-cutting docs

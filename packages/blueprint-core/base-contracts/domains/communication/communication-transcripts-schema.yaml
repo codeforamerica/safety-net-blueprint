@@ -7,8 +7,8 @@ description: >
   What transcription software and the server say to each other about
   streaming audio to a transcription service: the audio the software will
   send, and how it connects. Used by the transcript's get-connection action, the
-  transcripts adapter and the relay contract, so all three agree. See
-  docs/architecture/domains/communication.md, Decisions 12 to 14.
+  transcript audio adapter and the relay contract, so all three agree. See
+  docs/architecture/domains/communication-transcripts.md, Decisions 11 to 13.
 
 $defs:
   AudioEncoding:
@@ -62,7 +62,7 @@ $defs:
   GetConnectionRequest:
     type: object
     description: >
-      What the software will stream, so the server adapter can issue a
+      What the software will stream, so the transcript audio adapter can issue a
       connection for it: the audio, and the protocols the software can connect
       over. The transcript's get-connection takes it, and the session's passes
       it on.
@@ -85,7 +85,7 @@ $defs:
     allOf:
       - $ref: "#/$defs/StreamConnectionFields"
 
-  # Open, so the transcripts adapter's answer can add the metadata every
+  # Open, so the transcript audio adapter's answer can add the metadata every
   # adapter echoes; StreamConnection closes it.
   StreamConnectionFields:
     type: object

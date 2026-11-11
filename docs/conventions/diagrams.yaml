@@ -63,5 +63,5 @@ diagrams:
         keep a semicolon out of a sequence diagram's message, which Mermaid
         reads as the end of a line.
     example: >-
-      docs/architecture/domains/communication.md, "How the parts work together".
+      docs/architecture/domains/communication-transcripts.md, "How the parts work together".
 

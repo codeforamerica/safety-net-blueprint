@@ -1,9 +1,9 @@
 # The lifecycle of a transcription session: the software's connection to its
 # transcription service, kept track of in the page. See
-# docs/architecture/domains/communication.md, Decisions 15 to 18.
+# docs/architecture/domains/communication-transcripts.md, Decisions 14 to 17.
 #
-# The page and the client adapter talk only to the session, and every action
-# sends an event, which is how they follow it. The software must follow it:
+# The client talks only to the session, and every action sends an event,
+# which is how it follows it. The software must follow it:
 # the session can pause or close without the software asking, when its
 # transcript does, and the software then stops sending audio. An action that changes the
 # state leads to the state of the same name and sends the event of that name;

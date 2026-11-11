@@ -186,7 +186,7 @@ domain's. See [Decision 3](#decision-3-the-platform-is-infrastructure-only).
 - **Search** — a contract set's own concern; see [Search](search.md).
 - **Identity and access** — see [Identity & Access](identity-access.md).
 - **Capabilities such as transcripts and suggestions** — in the business
-  domains they belong to; see [Communication](../domains/communication.md) and
+  domains they belong to; see [Communication: Transcripts](../domains/communication-transcripts.md) and
   [AI Services](ai-services.md).
 
 ## Capability coverage
