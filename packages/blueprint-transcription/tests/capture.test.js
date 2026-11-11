@@ -48,14 +48,29 @@ test('the interleaver runs from its own source text, as the worklet loads it', (
   assert.deepStrictEqual(out, [[32767, 0]]);
 });
 
-test('the queue gives chunks in order, whether pushed before or after reading', async () => {
+test('the queue gives chunks in order while read, and ignores what comes before', async () => {
   const queue = createChunkQueue();
+  queue.push('before connect');
+  const iterator = queue[Symbol.asyncIterator]();
   queue.push('a');
-  const reading = (async () => { const seen = []; for await (const chunk of queue) seen.push(chunk); return seen; })();
-  await Promise.resolve();
   queue.push('b');
-  queue.push('c');
   queue.end();
   queue.push('ignored');
-  assert.deepStrictEqual(await reading, ['a', 'b', 'c']);
+  const seen = [];
+  for (let next = await iterator.next(); !next.done; next = await iterator.next()) seen.push(next.value);
+  assert.deepStrictEqual(seen, ['a', 'b']);
+});
+
+test('what is pushed while nobody reads, off the record, is never read', async () => {
+  const queue = createChunkQueue();
+  const first = (async () => { for await (const chunk of queue) if (chunk === 'on') return chunk; return null; })();
+  queue.push('on');
+  assert.strictEqual(await first, 'on');
+  // The connection closed: its reader stopped, as an adapter's does on pause.
+  queue.push('off the record');
+  queue.push('still off');
+  const second = (async () => { const seen = []; for await (const chunk of queue) seen.push(chunk); return seen; })();
+  queue.push('back on');
+  queue.end();
+  assert.deepStrictEqual(await second, ['back on']);
 });

@@ -54,16 +54,22 @@ export function createInterleaver(channelCount, chunkFrames, emit) {
 
 /**
  * Chunks pushed as they come, read as an async iterable, which is what
- * `session.connect` takes. Ends when `end` is called; chunks pushed with
- * nobody reading wait in order.
+ * `session.connect` takes. Ends when `end` is called.
+ *
+ * Only audio heard while a connection reads is kept: chunks wait in order
+ * while a reader is busy, and are thrown away while nobody reads, before
+ * connect, off the record, and while a dropped connection comes back. So
+ * what was said off the record never reaches the service; an adapter stops
+ * reading when its connection closes, and the next connection reads afresh.
  */
 export function createChunkQueue() {
   const waiting = [];
   const readers = [];
   let ended = false;
+  let reading = false;
   return {
     push(chunk) {
-      if (ended) return;
+      if (ended || !reading) return;
       const reader = readers.shift();
       if (reader) reader({ value: chunk, done: false });
       else waiting.push(chunk);
@@ -73,11 +79,19 @@ export function createChunkQueue() {
       for (const reader of readers.splice(0)) reader({ value: undefined, done: true });
     },
     [Symbol.asyncIterator]() {
+      reading = true;
       return {
         next: () => {
           if (waiting.length) return Promise.resolve({ value: waiting.shift(), done: false });
           if (ended) return Promise.resolve({ value: undefined, done: true });
           return new Promise((resolve) => readers.push(resolve));
+        },
+        // Called when the reader stops: a for await that returns or breaks.
+        return: () => {
+          reading = false;
+          waiting.length = 0;
+          for (const reader of readers.splice(0)) reader({ value: undefined, done: true });
+          return Promise.resolve({ value: undefined, done: true });
         },
       };
     },
