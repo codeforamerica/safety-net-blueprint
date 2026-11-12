@@ -27,6 +27,6 @@
   },
   "private": true,
   "devDependencies": {
-    "@codeforamerica/blueprint-explorer": "^0.3.0"
+    "@codeforamerica/blueprint-explorer": "^0.3.1"
   }
 }
