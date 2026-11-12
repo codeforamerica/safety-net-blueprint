@@ -14,6 +14,13 @@
  * means anything if the caller already addressed the real service. Forwarding
  * also keeps the caller unchanged when a route is switched.
  *
+ * A socket — an AsyncAPI document reached over its own connection, such as a
+ * relay's — is routed the same way, by naming its API: its connections go to
+ * a URL, or to a handler with the WebSocket constructor's signature, as a
+ * route's requests go to a URL or a function with fetch's (ws.js). Only an
+ * entry naming it routes it: a domain's `to` is a base for requests, not a
+ * socket's address, and its handler answers requests, not connections.
+ *
  * Configuration arrives as data, never a file path, because this runs in a
  * browser as well as in Node. The CLI reads a file and passes the array; a
  * page passes it directly; a test passes a literal. Both are checked against
@@ -223,9 +230,10 @@ const narrowness = (entry) => (entry.operation ? 2 : entry.api ? 1 : entry.domai
  * @param {Map<string, object>} context.routes - Tagged with each route's domain, api and operationId
  * @param {object} context.operations - From extract(docs, 'operations')
  * @param {Map<string, string>} context.domainOfApi - API name → domain
- * @returns {{ byRoute: Map<string, object>, receives: Array<{ api: string, event: string, id: string, entry: object }> }}
+ * @param {Map<string, { paths: string[] }>} [context.sockets] - APIs reached over their own connection, which the mock serves (ws.js)
+ * @returns {{ byRoute: Map<string, object>, receives: Array<{ api: string, event: string, id: string, entry: object }>, sockets: Array<{ api: string, entry: object }> }}
  */
-export function planRouting(routing, { routes, operations, domainOfApi }) {
+export function planRouting(routing, { routes, operations, domainOfApi, sockets = new Map() }) {
   checkSchema({ routing });
 
   const find = (ref, name) => {
@@ -248,7 +256,7 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
     seen.add(id);
     if (Boolean(entry.to) === Boolean(entry.handler)) throw new Error(`${name} needs exactly one of "to" or "handler"`);
     if (entry.handler !== undefined && typeof entry.handler !== 'function') {
-      throw new Error(`${name}'s handler is a function, (request) => response, passed in code`);
+      throw new Error(`${name}'s handler is a function passed in code: (request) => response, or for an API reached over its own connection, a class used as new WebSocket(url, protocols)`);
     }
 
     let operation = null;
@@ -258,12 +266,24 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
     if (entry.api && !apis.has(entry.api)) {
       throw new Error(`${name} is no API the contracts declare. APIs: ${[...apis].sort().join(', ')}`);
     }
+    if (entry.api && sockets.has(entry.api)) {
+      // A socket's messages all travel on one connection, which goes one place.
+      if (entry.except) throw new Error(`${name} is reached over its own connection, which goes one place, so it takes no except`);
+      // A browser's WebSocket sends no headers of its own; its subprotocols, a token among them, are passed on as offered.
+      if (entry.includeHeaders) throw new Error(`${name} is reached over its own connection, which passes on the subprotocols the client offered and no headers, so it takes no includeHeaders`);
+    }
     if (entry.operation) {
       operation = find(entry.operation, name);
+      if (sockets.has(operation.api)) {
+        throw new Error(`${name} is an operation of ${operation.api}, which is reached over its own connection; its messages all travel on it, so route the API instead`);
+      }
       if (operation.kind === 'asyncapi' && operation.action !== 'receive') {
         throw new Error(`${name} is a send operation; an API sends its own events. Route the receive operation that hears it instead.`);
       }
       if (entry.except) throw new Error(`${name} is one operation, so it takes no except`);
+    }
+    if (!(entry.api && sockets.has(entry.api)) && /^wss?:/.test(entry.to ?? '')) {
+      throw new Error(`${name} is routed to a WebSocket URL, ${entry.to}; only an API reached over its own connection is. Use an http or https URL`);
     }
 
     const except = (entry.except ?? []).map((item) => {
@@ -287,6 +307,8 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
 
   /** The narrowest entry that covers a thing, unless its except takes it back. */
   const covering = ({ domain, api, id }) => {
+    // Only an entry naming a socket routes it.
+    if (sockets.has(api)) return null;
     const covers = entries.filter(({ entry, operation }) => (operation
       ? operation.api === api && operation.id === id
       : entry.api ? entry.api === api : entry.domain === EVERY_DOMAIN || entry.domain === domain));
@@ -326,7 +348,8 @@ export function planRouting(routing, { routes, operations, domainOfApi }) {
   }
   // A request for a route the mock doesn't have goes where every domain does.
   const everything = entries.find(({ entry }) => entry.domain === EVERY_DOMAIN)?.entry ?? null;
-  return { byRoute, receives, sends, everything };
+  const routedSockets = entries.filter(({ entry }) => entry.api && sockets.has(entry.api)).map(({ entry }) => ({ api: entry.api, entry }));
+  return { byRoute, receives, sends, everything, sockets: routedSockets };
 }
 
 /**
@@ -378,14 +401,17 @@ function checkedHandler(handler, responseSchema, name, schemas) {
  * @param {Array} routing
  * @param {object} context - As for planRouting, and:
  * @param {(route: object, status: number) => { schema: object, key: string } | null} context.responseSchema
- * @param {object} context.instance - The mock being routed (instance.js)
+ * @param {object} context.instance - The mock being routed (instance.js),
+ *   whose WebSockets (ws.js) say which APIs are reached over their own connection
  * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }>, unmatched: ((request: Request) => Promise<Response>) | null }}
  *   `unmatched` answers a request for a route the mock doesn't have, when an
- *   entry routes every domain.
+ *   entry routes every domain. A routed socket is listed in `routed` as
+ *   `WS <path>`.
  */
 export function applyRouting(routes, routing = [], context) {
   if (routing.length === 0) return { routed: [], receives: [], sends: [], unmatched: null };
-  const { byRoute, receives, sends, everything } = planRouting(routing, { ...context, routes });
+  const sockets = context.instance?.ws?.sockets() ?? new Map();
+  const { byRoute, receives, sends, everything, sockets: routedSockets } = planRouting(routing, { ...context, routes, sockets });
 
   for (const [key, entry] of byRoute) {
     const route = routes.get(key);
@@ -399,7 +425,9 @@ export function applyRouting(routes, routing = [], context) {
   const unmatched = everything && (everything.handler
     ? async (request) => everything.handler(request)
     : forwardTo(everything.to, { includeHeaders: everything.includeHeaders, timeoutMs: everything.timeoutMs, stubs: context.instance.stubs }));
-  return { routed: [...byRoute.keys()], receives, sends, unmatched };
+  for (const { api, entry } of routedSockets) context.instance.ws.route(api, entry);
+  const routedPaths = routedSockets.flatMap(({ api }) => sockets.get(api).paths.map((path) => `WS ${path}`));
+  return { routed: [...byRoute.keys(), ...routedPaths], receives, sends, unmatched };
 }
 
 /**

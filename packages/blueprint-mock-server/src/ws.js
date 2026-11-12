@@ -4,9 +4,10 @@
  *
  * An AsyncAPI document with `servers` describes a party reached over its own
  * connection, such as the transcription relay
- * (communication-transcripts-relay-asyncapi.yaml). The mock serves each such
- * document's channel as a WebSocket at `/mock/ws/{document}`, by the
- * document's file name. It answers nothing on its own, as it answers no HTTP
+ * (communication-transcripts-relay-asyncapi.yaml). The mock serves each
+ * channel of one that lists a localhost server, at that server's `pathname`
+ * and the channel's `address`, as it serves an OpenAPI document's paths under
+ * its localhost server's. It answers nothing on its own, as it answers no HTTP
  * call it can't work out from the contracts: what comes back is what a
  * WebSocket stub says, registered at `POST /mock/stubs/ws` and consumed by
  * the first message it matches, as an HTTP stub is by the first request.
@@ -19,20 +20,38 @@
  * closes the connection with 1011, naming the stub it needs, as an HTTP call
  * the mock can't answer is a 501.
  *
+ * Routing can send a document's connections elsewhere (routing.js): to a URL,
+ * or to a `handler` with the WebSocket constructor's signature, as an HTTP
+ * route goes to a URL or a function with fetch's. A stub still answers first;
+ * the rest passes through, both ways, checked the same.
+ *
  * In a page or a test, `WebSocket` is a class with the standard interface
  * that connects to these in-process, for software or a scenario to use as it
- * would the browser's.
+ * would the browser's. In Node, the server accepts real connections and hands
+ * each to `accept` (http/node-server.js).
  */
 
-import { operationsOf, messageChecker, recognize, isBinary } from './asyncapi-messages.js';
+import { operationsOf, messageChecker, recognize, isBinary, socketPaths } from './asyncapi-messages.js';
 import { assertValid, dotted } from './mock-schemas.js';
 import { resolveDotPath } from './collection-utils.js';
 import schema from '../schemas/stubs-schema.json' with { type: 'json' };
 
-/** Where the mock serves a document's WebSocket. */
-export const WS_PATH = '/mock/ws/';
-
 const fileName = (path) => String(path ?? '').split('/').pop();
+
+/** An API's name, as core gives it: the document's file name without its suffix. */
+const apiName = (path) => fileName(path).replace(/-asyncapi\.ya?ml$/, '');
+
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+/**
+ * Close codes that say the connection ended without one: a routed target's
+ * that ended this way has failed, and the client is told so with 1014, Bad
+ * Gateway (the IANA WebSocket close code registry).
+ */
+const ABNORMAL = new Set([1006, 1015]);
+
+/** A code a WebSocket's `close()` takes: 1000, or one in the range applications use. */
+const closable = (code) => (code === 1000 || (code >= 3000 && code <= 4999) ? code : 1000);
 
 /**
  * @param {import('@codeforamerica/blueprint-core').Doc[]} [docs]
@@ -42,11 +61,14 @@ export function createWs(docs = []) {
 
   // Each document reached over its own connection, by file name: which
   // messages the mock receives on each channel, which it may send, and which
-  // received messages want a reply.
-  const served = new Map();
+  // received messages want a reply. And each channel the mock serves, by the
+  // path its document's localhost server gives it.
+  const documents = new Map();
+  const paths = new Map();
   for (const doc of docs ?? []) {
     if (doc.type !== 'asyncapi' || !doc.relativePath) continue;
-    if (!doc.content?.servers || Object.keys(doc.content.servers).length === 0) continue;
+    const served = socketPaths(doc.content);
+    if (!served) continue;
     const channels = new Map();
     const channelOf = (name) => {
       if (!channels.has(name)) channels.set(name, { receives: [], sends: [], replies: new Map() });
@@ -62,16 +84,28 @@ export function createWs(docs = []) {
       }
       for (const reply of operation.reply) channelOf(reply.channel).sends.push(reply);
     }
-    served.set(fileName(doc.relativePath), { relativePath: doc.relativePath, channels });
+    const document = { relativePath: doc.relativePath, api: apiName(doc.relativePath), channels, paths: [] };
+    documents.set(fileName(doc.relativePath), document);
+    for (const [name, path] of served) {
+      if (!channels.has(name)) continue;
+      const taken = paths.get(path);
+      if (taken) {
+        throw new Error(`${doc.relativePath} serves channel ${name} at ${path}, where ${taken.document.relativePath} already serves ${taken.name}; give one a different localhost pathname or channel address`);
+      }
+      paths.set(path, { document, name, channel: channels.get(name) });
+      document.paths.push(path);
+    }
   }
 
   const stubs = [];
   const counters = new Map();
+  // Who answers a document's connections instead of its stubs, by API name.
+  const routed = new Map();
 
   /** The document and channel a stub names: `relay-asyncapi.yaml#/channels/audio`. */
   function channelNamed(ref) {
     const m = /^([^#]+)#\/channels\/(.+)$/.exec(String(ref ?? ''));
-    const document = m && served.get(fileName(m[1]));
+    const document = m && documents.get(fileName(m[1]));
     const channel = document?.channels.get(m[2].replace(/~1/g, '/').replace(/~0/g, '~'));
     return channel ? { document, channel, name: m[2] } : null;
   }
@@ -85,7 +119,7 @@ export function createWs(docs = []) {
     assertValid(schema.definitions.WsStub, stub, (pointer) => ['WebSocket stub', dotted(pointer)]);
     const found = channelNamed(stub.channel);
     if (!found) {
-      throw new Error(`WebSocket stub "channel" ${stub.channel} isn't a channel of a document the mock serves a WebSocket for: ${[...served.keys()].join(', ') || 'none'}`);
+      throw new Error(`WebSocket stub "channel" ${stub.channel} isn't a channel of a document the mock serves a WebSocket for: ${[...documents.keys()].join(', ') || 'none'}`);
     }
     if (!found.channel.receives.some((m) => m.name === stub.on)) {
       throw new Error(`WebSocket stub "on" ${stub.on} isn't a message the mock receives on ${stub.channel}: ${found.channel.receives.map((m) => m.name).join(', ')}`);
@@ -116,41 +150,124 @@ export function createWs(docs = []) {
   }
 
   /**
-   * Serve one connection: `peer` is the far end, with `send(data)` and
-   * `close(code, reason)`, and `offered` the subprotocols it asked for.
-   * Returns what to call with each frame that arrives.
+   * The connection to whoever a routed document's connections go to, opened
+   * for one client's: what the client sends is passed on once it opens, and
+   * what comes back is passed to the client if the contract lets the mock
+   * send it. A target that can't be reached, doesn't open within
+   * `timeoutMs`, or ends without closing closes the client's with 1014.
    */
-  function accept(path, peer, offered = []) {
-    const document = served.get(decodeURIComponent(String(path).slice(WS_PATH.length)));
-    if (!document) {
-      peer.close(1008, `The mock serves no WebSocket at ${path}`);
-      return () => {};
+  function upstream(entry, url, offered, peer, served) {
+    const target = entry.to ? entry.to.replace(/^http/, 'ws') : url;
+    const timeoutMs = entry.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const queued = [];
+    let done = false;
+    let socket = null;
+    let timer = null;
+    const end = () => { done = true; clearTimeout(timer); };
+    const fail = (reason) => {
+      if (done) return;
+      end();
+      try { socket?.close(); } catch { /* already closing */ }
+      peer.close(1014, reason);
+    };
+    try {
+      const Socket = entry.handler ?? globalThis.WebSocket;
+      socket = new Socket(target, offered);
+    } catch (error) {
+      queueMicrotask(() => fail(`Could not reach ${target}: ${error.message}`));
+      return { send() {}, close() {} };
     }
-    // A document's channel; one with more would need choosing, and none does yet.
-    const [[channelName, channel]] = [...document.channels.entries()];
-    return (data) => {
-      const { message, reasons } = recognize(check, document.relativePath, channel.receives, data);
+    socket.binaryType = 'arraybuffer';
+    timer = setTimeout(() => fail(`${target} did not open within ${timeoutMs}ms`), timeoutMs);
+    socket.addEventListener('open', () => {
+      clearTimeout(timer);
+      for (const data of queued.splice(0)) socket.send(data);
+    });
+    socket.addEventListener('message', (event) => {
+      if (done) return;
+      const { message, reasons } = recognize(check, served.document.relativePath, served.channel.sends, event.data);
       if (!message) {
-        peer.close(1007, `Not a message the contract lets the mock receive: ${reasons.join('; ')}`);
+        end();
+        socket.close();
+        peer.close(1007, `${target} sent a message the contract doesn't let it send: ${reasons.join('; ')}`);
         return;
       }
-      const payload = isBinary(data) ? null : JSON.parse(data);
-      const stub = takeStub(document, channelName, message, payload, offered);
-      if (stub) {
-        for (const reply of stub.send ?? []) peer.send(JSON.stringify(reply));
-        // A dropped connection, or one refused, after what it sent.
-        if (stub.close) peer.close(stub.close.code, stub.close.reason ?? '');
+      peer.send(event.data);
+    });
+    socket.addEventListener('close', (event) => {
+      if (done) return;
+      if (ABNORMAL.has(event.code)) {
+        fail(`${target} closed without a close frame (${event.code})`);
         return;
       }
-      if (channel.replies.has(message.name)) {
-        peer.close(1011, `${message.name} is answered with ${channel.replies.get(message.name).map((m) => m.name).join(' or ')}, and no WebSocket stub gives one; register one at POST /mock/stubs/ws`);
-      }
+      end();
+      peer.close(event.code === 1005 ? 1000 : event.code, event.reason ?? '');
+    });
+    return {
+      send(data) {
+        if (done) return;
+        if (socket.readyState === 1) socket.send(data);
+        else queued.push(data);
+      },
+      close(code, reason) {
+        if (done) return;
+        end();
+        try { socket.close(closable(code), reason); } catch { /* already closing */ }
+      },
+    };
+  }
+
+  /**
+   * Serve one connection: `url` is what the client connected to, `peer` the
+   * far end, with `send(data)` and `close(code, reason)`, and `offered` the
+   * subprotocols it asked for. Returns what to call with each frame that
+   * arrives, and when the client closes.
+   */
+  function accept(url, peer, offered = []) {
+    const path = new URL(url, 'ws://mock').pathname;
+    const served = paths.get(decodeURIComponent(path));
+    if (!served) {
+      peer.close(1008, `The mock serves no WebSocket at ${path}`);
+      return { message() {}, close() {} };
+    }
+    const { document, name: channelName, channel } = served;
+    const entry = routed.get(document.api);
+    let passed = null;
+    // Closing the client's connection closes the one routed for it.
+    const client = { send: (data) => peer.send(data), close: (code, reason) => { passed?.close(1000); peer.close(code, reason); } };
+    if (entry) passed = upstream(entry, url, offered, client, served);
+    return {
+      message(data) {
+        const { message, reasons } = recognize(check, document.relativePath, channel.receives, data);
+        if (!message) {
+          client.close(1007, `Not a message the contract lets the mock receive: ${reasons.join('; ')}`);
+          return;
+        }
+        const payload = isBinary(data) ? null : JSON.parse(data);
+        const stub = takeStub(document, channelName, message, payload, offered);
+        if (stub) {
+          for (const reply of stub.send ?? []) client.send(JSON.stringify(reply));
+          // A dropped connection, or one refused, after what it sent.
+          if (stub.close) client.close(stub.close.code, stub.close.reason ?? '');
+          return;
+        }
+        if (passed) {
+          passed.send(data);
+          return;
+        }
+        if (channel.replies.has(message.name)) {
+          client.close(1011, `${message.name} is answered with ${channel.replies.get(message.name).map((m) => m.name).join(' or ')}, and no WebSocket stub gives one; register one at POST /mock/stubs/ws`);
+        }
+      },
+      close(code, reason) {
+        passed?.close(code, reason);
+      },
     };
   }
 
   /**
    * A WebSocket, with the standard interface, connected in-process to the
-   * mock: `new WebSocket('ws://mock/mock/ws/<document>')`.
+   * mock: `new WebSocket('ws://localhost/communication/transcripts-relay')`.
    */
   class MockWebSocket extends EventTarget {
     static CONNECTING = 0;
@@ -181,7 +298,7 @@ export function createWs(docs = []) {
         close: (code, reason) => queueMicrotask(() => this._closed(code, reason)),
       };
       queueMicrotask(() => {
-        this._take = accept(new URL(this.url, 'ws://mock').pathname, peer, [].concat(protocols));
+        this._connection = accept(this.url, peer, [].concat(protocols));
         if (this.readyState !== MockWebSocket.CONNECTING) return;
         this.readyState = MockWebSocket.OPEN;
         fire('open');
@@ -190,12 +307,13 @@ export function createWs(docs = []) {
 
     send(data) {
       if (this.readyState !== MockWebSocket.OPEN) throw new Error('The WebSocket is not open');
-      this._take(data);
+      this._connection.message(data);
     }
 
     close(code = 1000, reason = '') {
       if (this.readyState >= MockWebSocket.CLOSING) return;
       this.readyState = MockWebSocket.CLOSING;
+      this._connection?.close(code, reason);
       queueMicrotask(() => this._closed(code, reason));
     }
   }
@@ -203,6 +321,12 @@ export function createWs(docs = []) {
   return {
     WebSocket: MockWebSocket,
     accept,
+    /** Whether the mock serves a WebSocket at this path. */
+    serves: (path) => paths.has(decodeURIComponent(path)),
+    /** Each API reached over its own connection that the mock serves: its document, and the paths it's served at. */
+    sockets: () => new Map([...documents.values()].filter((d) => d.paths.length > 0).map((d) => [d.api, { relativePath: d.relativePath, paths: [...d.paths] }])),
+    /** Send an API's connections to `entry.to` or `entry.handler` (routing.js). */
+    route: (api, entry) => routed.set(api, entry),
     registerStub,
     listStubs: () => [...stubs],
     clearStubs: () => { stubs.length = 0; counters.clear(); },

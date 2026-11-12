@@ -59,8 +59,7 @@ import { query as jsonPath } from 'jsonpath-rfc9535';
 import parseJsonPath from 'jsonpath-rfc9535/parser';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { CONTROL_OPERATIONS } from './platform-routes.js';
-import { operationsOf, messageChecker, recognize } from './asyncapi-messages.js';
-import { WS_PATH } from './ws.js';
+import { operationsOf, messageChecker, recognize, socketPaths } from './asyncapi-messages.js';
 
 /** The last part of a path or URL: what a source's URL and a document's path share. */
 const fileName = (path) => (path ?? '').split(/[?#]/)[0].split('/').pop();
@@ -124,12 +123,15 @@ export function operationIndex(docs) {
     const path = doc.relativePath ?? doc.path;
     const reached = (doc.content?.servers && Object.keys(doc.content.servers).length > 0) ? 'servers' : 'events';
     const described = operationsOf(doc.content);
+    // Where the mock serves each channel, for a document reached over its own server.
+    const sockets = reached === 'servers' ? socketPaths(doc.content) : null;
     for (const [key, operation] of Object.entries(doc.content?.operations ?? {})) {
       const channel = channelOf(doc.content, operation?.channel?.$ref);
       if (!channel) continue;
       const { messages } = described.get(key);
       index.set(inFile(path, key), {
         async: true, action: operation.action, address: channel.address, reached, document: path,
+        ...(reached === 'servers' && { socket: sockets?.get(described.get(key).channel) ?? null }),
         messages: messages.map((m) => m.name),
         binary: messages.length > 0 && messages.every((m) => m.binary),
         recognize: (data) => recognize(check, path, messages, data),
@@ -725,18 +727,19 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
 
   /**
    * This section's connection to a document's server: the mock's WebSocket
-   * for it, at /mock/ws/{document}, opened by the first step that sends on
+   * for its channel, where its localhost server puts it, opened by the first step that sends on
    * it, and opened again by one that sends after it closed, as software
    * reconnects. A step that receives reads the latest, closed or not. What
    * arrives is kept in order, each frame taken once by a step that receives
    * it.
    */
   function connectionFor(workflow, operation, { sending = false } = {}) {
-    const key = `${workflow.workflowId} ${operation.document}`;
+    const key = `${workflow.workflowId} ${operation.socket}`;
     const latest = connections.get(key);
     if (latest && !(sending && latest.closed)) return latest;
     if (!Socket) throw new Error(`A step sends or receives on ${fileName(operation.document)}, and there's no WebSocket to connect with; pass one`);
-    const url = new URL(`${WS_PATH}${encodeURIComponent(fileName(operation.document))}`, origin.replace(/^http/, 'ws'));
+    if (!operation.socket) throw new Error(`${fileName(operation.document)} lists no localhost server, so the mock serves no WebSocket for it`);
+    const url = new URL(operation.socket, origin.replace(/^http/, 'ws'));
     const socket = new Socket(url.href);
     socket.binaryType = 'arraybuffer';
     const connection = { socket, heard: [], taken: new Set(), waiting: new Set(), closed: null };

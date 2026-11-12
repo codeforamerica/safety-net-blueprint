@@ -16,7 +16,7 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));
 const docs = extract(contracts, 'docs');
 const CHANNEL = 'communication-transcripts-relay-asyncapi.yaml#/channels/audio';
-const URL_ = 'ws://localhost/mock/ws/communication-transcripts-relay-asyncapi.yaml';
+const URL_ = 'ws://localhost/communication/transcripts-relay';
 const START = { type: 'start', audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 } };
 const RESULT = { type: 'result', id: 'r1', isFinal: true, startOffsetMs: 0, endOffsetMs: 1200, alternatives: [{ transcript: 'Who lives with you?' }] };
 

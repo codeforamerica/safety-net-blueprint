@@ -25,6 +25,8 @@ curl http://localhost:1080/health
 
 **Rules endpoints** — one `POST` per ruleset, at `/{domain}` and the path the ruleset declares. See the [rules guide](rules-guide.md#endpoints).
 
+**WebSockets** — one per channel of an AsyncAPI document reached over its own connection, at its localhost server's `pathname` and the channel's `address`. See [WebSocket stubs](#websocket-stubs).
+
 Each route has one source. A transition, composition or ruleset is served from the contract that produced it; the operation resolve generated for it in an OpenAPI document only documents it. Two documents declaring the same route stop the mock from starting, with an error naming both — and `validate` reports any route two contracts claim before that, including two in the same file.
 
 Adding a new operation or resource requires only a contract change.
@@ -280,7 +282,20 @@ curl -X DELETE http://localhost:1080/mock/stubs/http                            
 
 ## WebSocket stubs
 
-Some parties are reached over a connection of their own, which an AsyncAPI document with `servers` describes: a transcription relay, say (`communication-transcripts-relay-asyncapi.yaml`). The mock serves each such document as a WebSocket at `/mock/ws/{document}`, by its file name, and answers nothing on its own. What comes back is what a WebSocket stub says. Each is consumed by the first message it matches, as an HTTP stub is by the first request.
+Some parties are reached over a connection of their own, which an AsyncAPI document with `servers` describes: a transcription relay, say (`communication-transcripts-relay-asyncapi.yaml`). The mock serves each channel of one that lists a localhost server, at that server's `pathname` and the channel's `address`, as it serves an OpenAPI document's paths under its localhost server's:
+
+```yaml
+servers:
+  relay:
+    host: "{relayHost}"
+    protocol: wss
+  local:
+    host: localhost:1080
+    pathname: /communication/transcripts-relay   # the mock serves the relay here
+    protocol: ws
+```
+
+It answers nothing on its own. What comes back is what a WebSocket stub says. Each is consumed by the first message it matches, as an HTTP stub is by the first request.
 
 ```bash
 curl -X POST http://localhost:1080/mock/stubs/ws \
@@ -302,20 +317,26 @@ curl -X POST http://localhost:1080/mock/stubs/ws \
 
 Every message is checked against the contract, both ways. One the mock isn't allowed to receive closes the connection with `1007`. One whose operation declares a `reply`, with no stub to give it, closes the connection with `1011`, the WebSocket equivalent of an HTTP call answered `501`. The mock doesn't check the token, as it doesn't check credentials over HTTP.
 
-In a page or a test, connect with `createMockServer`'s `WebSocket`, a class with the standard WebSocket interface that reaches the mock in-process:
+The Node server, `blueprint-mock`, accepts real connections there, from a browser, another service or anything else that opens a WebSocket. It answers with the first subprotocol the client offered, never a token after it, and logs each socket it serves at startup.
+
+```js
+const relay = new WebSocket('ws://localhost:1080/communication/transcripts-relay', ['blueprint.transcripts.relay.v1', token]);
+```
+
+In a page or a test, connect with `createMockServer`'s `WebSocket` instead, a class with the standard WebSocket interface that reaches the mock in-process:
 
 ```js
 const mock = await createMockServer({ contracts });
-const relay = new mock.WebSocket('ws://localhost/mock/ws/communication-transcripts-relay-asyncapi.yaml', ['blueprint.transcripts.relay.v1', token]);
+const relay = new mock.WebSocket('ws://localhost/communication/transcripts-relay', ['blueprint.transcripts.relay.v1', token]);
 ```
 
-The Node server, `blueprint-mock`, doesn't serve these WebSockets.
+A close reason over the network is cut to the 123 bytes a WebSocket frame holds, and the whole of it logged.
 
 `GET /mock/stubs/ws` lists the stubs not yet used, `DELETE /mock/stubs/ws/{id}` removes one, and `DELETE /mock/stubs/ws` clears them all. `POST /mock/reset` clears them with the others.
 
 ## Routing to a real service
 
-Routing hands a domain, an API or a single operation to something other than the mock — a real service at a URL, or a function a page passes in — while everything else stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
+Routing hands a domain, an API, a socket or a single operation to something other than the mock — a real service at a URL, or a function a page passes in — while everything else stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
 
 ```yaml
 # routing.yaml — per environment; keep it out of the contracts directory
@@ -340,13 +361,13 @@ In a page, pass the same entries to `createMockServer({ contracts, routing })`, 
 | Field | |
 |---|---|
 | `domain` | Every route the domain's APIs declare, state machine actions included, and every event their state machines receive. Named by its directory under `domains/`, or `*` for every domain, which also answers any request the mock has no route for. |
-| `api` | One API's routes and received events. Named by its OpenAPI file's name without `-openapi.yaml` — `intake`, `communication-transcripts` — which its events AsyncAPI shares. |
+| `api` | One API's routes and received events. Named by its OpenAPI file's name without `-openapi.yaml` — `intake`, `communication-transcripts` — which its events AsyncAPI shares. Or a socket, by its AsyncAPI file's name without `-asyncapi.yaml`: [Routing a socket](#routing-a-socket). |
 | `operation` | One operation, by its id: an OpenAPI `operationId`, or an AsyncAPI `receive` operation's. Bare when one API declares it; `$apis.<api>.<id>` when more than one does. |
 | `except` | What stays in the mock, inside the entry: `{ api }` or `{ operation }` on a domain, any of them on `*`, `{ operation }` on an API. Not on an operation entry. |
-| `to` | The service's base URL. For a request, its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. It may not carry a username or password. |
-| `handler` | A function that answers instead, `(request) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has. Code only, so a page can pass one and a file can't. |
+| `to` | The service's base URL. For a request, its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. For a socket, a `ws` or `wss` URL, used as written. It may not carry a username or password. |
+| `handler` | A function that answers instead, `(request) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has; for a socket, the `WebSocket` constructor's. Code only, so a page can pass one and a file can't. |
 | `includeHeaders` | Headers to pass along beyond the defaults, below. |
-| `timeoutMs` | How long to wait before answering `504`. Defaults to 10000. |
+| `timeoutMs` | How long to wait before answering `504`, or for a socket's connection to open. Defaults to 10000. |
 
 Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, a domain over `*`, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, or carries a key the schema does not.
 
@@ -397,6 +418,28 @@ The other way round: when a state machine the mock keeps reacts to an event a ro
 It starts on its own when the mock is built, one reader per service, and logs `EVENTS <types> from <service>`. An event the mock already has — one it sent there itself — is skipped, and one that arrives isn't delivered back. In a page, `mock.stopFollowing()` stops reading.
 
 Each mock keeps its own events, reactions and stubs, so a page can build one for itself and another standing in for the server, and route the first to the second's `fetch` with a `handler`.
+
+### Routing a socket
+
+A socket — an AsyncAPI document reached over its own connection, such as the relay — is routed by naming it, by its file name without `-asyncapi.yaml`. Its connections go to a real relay at a URL, or to a `handler` with the `WebSocket` constructor's signature, as a request goes to a URL or a function with `fetch`'s:
+
+```yaml
+routing:
+  - api: communication-transcripts-relay
+    to: wss://relay.state.example.gov/stream
+```
+
+```js
+// In a page or a test: anything used as `new handler(url, protocols)`, with
+// WebSocket's interface — another mock's WebSocket, or a class wrapping a provider.
+routing: [{ api: 'communication-transcripts-relay', handler: ProviderSocket }]
+```
+
+Each connection a client opens to the mock opens one to the target, as written: no path is added, since the contract's channel has no address of its own. The subprotocols the client offered are passed on, a token among them, since a browser's WebSocket sends no headers of its own; `includeHeaders` isn't taken. What the client sends waits until the target's connection opens.
+
+Every message is still checked against the contract, both ways. A [WebSocket stub](#websocket-stubs) answers first, and the message it answers isn't passed on. One the target sends that the contract doesn't let the relay send closes the client's connection with `1007`. A target that can't be reached, doesn't open within `timeoutMs`, or ends without a close frame closes it with `1014`, Bad Gateway; a close the target makes itself passes through with its code.
+
+Only an entry naming the socket routes it. A domain's `to` is a base for requests, not a socket's URL, so routing the `communication` domain leaves the relay's socket in the mock. An entry naming a socket takes no `except`, and no `operation` entry names one of its operations: its messages all travel on one connection.
 
 ### Headers
 
@@ -461,7 +504,7 @@ A step's `description` is CommonMark: its first paragraph is the step's title, a
 
 ## The mock's own endpoints
 
-The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — and the WebSockets at `/mock/ws/{document}` are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
+The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
 
 ```bash
 npx blueprint-swagger --spec=./resolved --spec=node_modules/@codeforamerica/blueprint-mock-server/contracts
@@ -534,7 +577,6 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 | `GET /mock/stubs/ws` | List active WebSocket stubs |
 | `DELETE /mock/stubs/ws/:id` | Remove a specific WebSocket stub |
 | `DELETE /mock/stubs/ws` | Clear all WebSocket stubs |
-| `/mock/ws/{document}` | The WebSocket for an AsyncAPI document with servers, in a page or test |
 
 ## Troubleshooting
 

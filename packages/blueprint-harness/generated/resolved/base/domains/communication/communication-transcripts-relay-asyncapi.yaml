@@ -29,6 +29,13 @@ servers:
         description: The relay's host, as get-connection answers with it.
     security:
       - $ref: "#/components/securitySchemes/relayToken"
+  local:
+    host: localhost:1080
+    pathname: /communication/transcripts-relay
+    protocol: ws
+    description: The mock, as the OpenAPI contracts' localhost server is.
+    security:
+      - $ref: "#/components/securitySchemes/relayToken"
 channels:
   audio:
     address: null

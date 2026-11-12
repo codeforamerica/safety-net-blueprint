@@ -48,7 +48,7 @@ import { createInstance, loadContracts } from './instance.js';
  * @param {boolean} options.seeded - Whether the store was seeded from mock data
  * @param {string} [options.baseUrl] - Base for Location headers
  * @param {string} [options.basePath] - Path prefix to strip before matching
- * @param {Array} [options.routing] - Domains, APIs and operations something else answers (#283, #520)
+ * @param {Array} [options.routing] - Domains, APIs, sockets and operations something else answers (#283, #520)
  * @returns {{ routes: Map, fetch: Function, endpoints: object[], rpcEndpoints: object[], overridden: { applied: string[], unmatched: string[] }, routed: string[], receives: object[], instance: object }}
  * @throws {Error} When a contract route collides with the mock's own, or routing names nothing
  */

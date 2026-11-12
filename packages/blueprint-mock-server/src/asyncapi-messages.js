@@ -39,6 +39,34 @@ function messageOf(content, channelName, ref) {
   return { name, channel: channelName, payload: `${pointer}/payload`, binary: contentType === 'application/octet-stream' };
 }
 
+/** A server on localhost: the mock's, as an OpenAPI contract's localhost server is. */
+const isLocal = (server) => /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(server?.host ?? ''));
+
+/**
+ * Where the mock serves each channel of a document reached over its own
+ * connection: its localhost server's `pathname`, then the channel's
+ * `address`, as the mock serves an OpenAPI document's paths under its
+ * localhost server's. A channel that lists servers without that one isn't
+ * served.
+ *
+ * @param {object} content - An AsyncAPI document
+ * @returns {Map<string, string> | null} channel name → path; null for a
+ *   document with no localhost server, which the mock doesn't serve
+ */
+export function socketPaths(content) {
+  const [localKey, server] = Object.entries(content?.servers ?? {}).find(([, s]) => isLocal(s)) ?? [];
+  if (!server) return null;
+  const base = String(server.pathname ?? '').replace(/\/$/, '');
+  const paths = new Map();
+  for (const [name, channel] of Object.entries(content?.channels ?? {})) {
+    const listed = channel?.servers ?? [];
+    if (listed.length > 0 && !listed.some((s) => lastSegment(s?.$ref) === localKey)) continue;
+    const address = channel?.address ? `/${String(channel.address).replace(/^\//, '')}` : '';
+    paths.set(name, `${base}${address}` || '/');
+  }
+  return paths;
+}
+
 /**
  * Each operation of a document: its action, its channel, the messages it
  * carries and, where it declares a `reply`, the messages that answer it.

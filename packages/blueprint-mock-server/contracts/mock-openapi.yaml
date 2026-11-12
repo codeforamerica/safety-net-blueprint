@@ -4,9 +4,7 @@ info:
   version: 1.0.0
   description: >
     The routes the mock server serves itself, which no contract declares:
-    health, stubs, reset and reseed. It also serves a WebSocket at
-    /mock/ws/{document} for each AsyncAPI document with servers, such as
-    a relay's, answering with what WebSocket stubs say. For Swagger and for reading — do not pass
+    health, stubs, reset and reseed. For Swagger and for reading — do not pass
     this to the mock as a contract. It already serves these routes, and refuses
     to start when a contract declares one of them.
 servers:
