@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- Before, a call to an operationId two APIs declare went to whichever the mock read first, and an Arazzo step qualified by its source could run another API's operation with the same id. Now a call can name one as `$apis.<api>.<id>`, a bare id more than one API declares is refused with 422 naming those forms, and a step runs the operation in its own source. (#520)
+- **Breaking:** Where you passed `--forwarding=<file>` or `createMockServer({ forwarding })`, pass `--routing=<file>` or `{ routing }`, whose entries name a domain, an API or one operation in place of an `endpoint:`, with `to:` a URL or, in a page, a `handler` function (`schemas/routing-schema.json`). The events a routed domain's state machines receive are delivered to it as CloudEvents instead of reacted to. (#283, #520)
+
+### Patch Changes
+
+- Uses @codeforamerica/blueprint-core 0.5.0, @codeforamerica/blueprint-rules-engine 0.2.1.
+
 ## 0.4.0
 
 ### Minor Changes

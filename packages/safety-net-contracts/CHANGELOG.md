@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- **Breaking:** Before, eligibility's service calls for a Medicaid decision carried `decisionId` and `applicationId` as top-level fields and asked for an `fdsh_medicare_vci` service data-exchange doesn't offer. Now they name the member as `requestingResourceId`, carry those ids in `metadata.eligibility`, and ask for `fdsh_medicare` and `fdsh_vci` separately; eligibility also gains `createDecision`, for the system only, so `eligibility.decision.created` is generated. (#520)
+
+### Patch Changes
+
+- Uses @codeforamerica/blueprint-mock-server 0.5.0.
+
 ## 0.2.0
 
 ### Minor Changes

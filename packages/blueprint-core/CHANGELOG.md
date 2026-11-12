@@ -1,5 +1,17 @@
 # @codeforamerica/blueprint-core
 
+## 0.5.0
+
+### Minor Changes
+
+- Before, a generated `<name>-events-asyncapi.yaml` listed the events its API sends as channels and messages only. Now it also has a `send` operation for each of those events and a `receive` operation, such as `receiveIntakeApplicationSubmitted`, for each event its state machines react to. (#520)
+- Before, when two APIs declared the same operationId, a state machine call or an Arazzo step naming it was checked against whichever was read first. Now `extract(docs, 'operations')` finds an operation by a bare id or by `$apis.<api>.<id>`; validation reports a bare id more than one API declares, naming the qualified forms, and an id repeated within one document; and an Arazzo step qualified by its source is checked against that source's document. (#520)
+
+### Patch Changes
+
+- Before, a state machine could write another domain's records with a call by path, which skips that domain's API and routing. Now `validate` warns about one as `call-by-path-across-domains`, saying to call the operation by its operationId. (#520)
+- Before, two OpenAPI documents declaring the same route — two adapters both at `POST /evaluate/determination`, say — passed `validate` and only stopped the mock from starting. Now `validate` reports it as `route-collision`, naming both documents. (#520)
+
 ## 0.4.0
 
 ### Minor Changes
