@@ -41,8 +41,9 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  *   path: `basePath: location.pathname.replace(/\/[^/]*$/, '')`
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {boolean} [options.verifyHash] - Check the payload against its hash
- * @param {Array} [options.forwarding] - Domains and endpoints to forward to a
- *   real service, as `schemas/forwarding-schema.json` describes the entries.
+ * @param {Array} [options.routing] - Domains, APIs and operations something
+ *   else answers — a service at a URL, or a `handler` function this page
+ *   passes — as `schemas/routing-schema.json` describes the entries.
  *   Configuration for this page, not part of the contract set.
  * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
  */
@@ -52,7 +53,7 @@ export async function createMockServer({
   baseUrl = '',
   basePath = '',
   seed = true,
-  forwarding = [],
+  routing = [],
 } = {}) {
   // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
   // wrote this and `extract(artifact, 'docs')` reads it back, rebuilding each
@@ -88,12 +89,12 @@ export async function createMockServer({
   seedConfigs(configs, store);
 
   // From here on, the same server the Node process builds.
-  const { fetch, routes, endpoints, forwarded } = assembleServer(
+  const { fetch, routes, endpoints, routed } = assembleServer(
     { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
     // A page has no directory to re-read, so reseed restores the documents the
     // artifact carries. Node passes a function that walks the directory again.
-    { store, readDocs: () => docs, seeded: seed, baseUrl, basePath, forwarding },
+    { store, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
   );
-  for (const key of forwarded) console.log(`  FORWARD ${key}`);
-  return { fetch, routes, store, endpoints, forwarded };
+  for (const key of routed) console.log(`  ROUTE ${key}`);
+  return { fetch, routes, store, endpoints, routed };
 }

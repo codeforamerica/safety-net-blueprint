@@ -1,5 +1,7 @@
 /**
- * Bundle an OpenAPI spec by inlining all external $ref references.
+ * Bundle a spec by replacing every $ref, within the file as well as to
+ * another, with what it points to — dereferenced. A circular $ref is left
+ * as it is, since it can't be expanded.
  *
  * Canonical `https://blueprint.codeforamerica.org/...` refs are identifiers,
  * not addresses — nothing is served there. They are read from disk: `base/`

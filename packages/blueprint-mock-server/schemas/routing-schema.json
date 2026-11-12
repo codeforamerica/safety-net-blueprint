@@ -1,0 +1,140 @@
+{
+  "$id": "https://blueprint.codeforamerica.org/schemas/routing-schema.json",
+  "title": "Routing",
+  "description": "Domains, APIs and operations that something other than the mock answers: a service at a URL, or a function passed in code. Per-environment configuration, read at boot; never part of a contract set.",
+  "type": "object",
+  "required": [
+    "routing"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "routing": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Route"
+      }
+    }
+  },
+  "definitions": {
+    "Route": {
+      "description": "One domain, API or operation, and who answers it: exactly one of domain, api and operation, and one of to and handler.",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "domain"
+          ]
+        },
+        {
+          "required": [
+            "api"
+          ]
+        },
+        {
+          "required": [
+            "operation"
+          ]
+        }
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "to"
+          ]
+        },
+        {
+          "required": [
+            "handler"
+          ]
+        }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "description": "A domain the contracts declare, by the name of its directory. Every route its APIs declare, and every event their state machines receive, is routed.",
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "examples": [
+            "intake",
+            "document-management"
+          ]
+        },
+        "api": {
+          "description": "An API the contracts declare, by name: its OpenAPI file's name without -openapi.yaml, which its events AsyncAPI shares. Every route it declares, and every event its state machines receive, is routed. Overrides a domain entry for that API.",
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "examples": [
+            "intake",
+            "communication-transcripts"
+          ]
+        },
+        "operation": {
+          "description": "One operation, by id: an OpenAPI operationId, or an AsyncAPI receive operation's. Bare when one API declares it, $apis.<api>.<id> when more than one does. Overrides a domain or API entry for that operation.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "createApplication",
+            "$apis.workflow.receiveIntakeApplicationSubmitted"
+          ]
+        },
+        "except": {
+          "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on an API, an operation in it. Not on an operation entry.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "api"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "api": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9-]+$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "operation"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "to": {
+          "description": "Absolute base URL of the service that answers. For a request, its path is a prefix: the request's own path is appended to it. A received event is POSTed to it as written, in the CloudEvents HTTP binding's structured mode. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
+          "type": "string",
+          "pattern": "^https?://[^/@?#]+([/?#].*)?$"
+        },
+        "handler": {
+          "description": "A function that answers instead, with fetch's signature: (Request) => Response. Passed in code only, so never in a file. A received event reaches it as the request to would have been sent. What it answers is checked against the operation's response schema."
+        },
+        "includeHeaders": {
+          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+          }
+        },
+        "timeoutMs": {
+          "description": "How long to wait for the service before answering 504. Defaults to 10000.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

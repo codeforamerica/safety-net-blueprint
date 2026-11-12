@@ -162,6 +162,13 @@ carries, the operation's guards, refusing a duplicate — and is checked only
 against the resource's full schema. A call to an operation, by its
 `operationId` (below), is the validated path.
 
+Use a call by path only for the machine's own domain's records. It skips the
+route table as well, so [routing](../../guides/mock-server.md#routing-to-a-real-service)
+never sees it: when the domain is routed elsewhere its reactions are too, so
+its own writes stay right, but another domain's records may live in a real
+service. Call another domain by `operationId`; validation warns about a call
+by path into another domain.
+
 ### Calling an operation
 
 An action, a procedure, or a machine's reaction to an event can also call an
@@ -187,6 +194,12 @@ call held in data — a suggestion's, say — with a value expression:
 ```
 
 A call to an operation is made where it stands: a step after it runs after it.
+
+An `operationId` is unique only within the document that declares it. When more
+than one API declares the one a call names, qualify it by the API's name — the
+OpenAPI file's name without `-openapi.yaml`:
+`operationId: $apis.intake.updateApplicationMember`. Validation reports a bare
+id more than one API declares, naming the qualified forms.
 
 `runAs` says who the call is made as. Either way, the call goes through the API,
 so the operation's validation, the checks on a call a record carries, its

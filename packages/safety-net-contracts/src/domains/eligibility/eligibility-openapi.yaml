@@ -118,6 +118,43 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         '500':
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    post:
+      summary: Create a decision
+      description: >
+        Create a decision for one household member and program. The system
+        creates these when a determination is created, one per member per
+        program the member applied for. Clients must not call this operation;
+        it will be limited to the system.
+      operationId: createDecision
+      tags:
+        - Determinations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Decision"
+      responses:
+        '201':
+          description: Decision created.
+          headers:
+            Location:
+              description: URL of the new decision.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+        '400':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        '404':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        '422':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        '500':
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /determinations/{determinationId}/decisions/{decisionId}:
     parameters:

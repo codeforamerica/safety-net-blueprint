@@ -126,6 +126,27 @@ describe('prefixEventTypes — AsyncAPI', () => {
     assert.equal(content.components.messages.WidgetSubmitted.name, 'org.example.test.widget.submitted');
   });
 
+  test('prefixes the channel key in a channel reference and in an operation, but not the operation id', () => {
+    const result = prefixEventTypes([asyncApi({
+      channels: { 'other.widget.sent': { $ref: '../other/other-events-asyncapi.yaml#/channels/other.widget.sent' } },
+      operations: {
+        receiveOtherWidgetSent: {
+          action: 'receive',
+          channel: { $ref: '#/channels/other.widget.sent' },
+          messages: [{ $ref: '#/channels/other.widget.sent/messages/OtherWidgetSent' }],
+        },
+      },
+    })], PREFIX);
+
+    const content = only(result);
+    assert.equal(content.channels['org.example.other.widget.sent'].$ref, '../other/other-events-asyncapi.yaml#/channels/org.example.other.widget.sent');
+    assert.deepEqual(content.operations.receiveOtherWidgetSent, {
+      action: 'receive',
+      channel: { $ref: '#/channels/org.example.other.widget.sent' },
+      messages: [{ $ref: '#/channels/org.example.other.widget.sent/messages/OtherWidgetSent' }],
+    });
+  });
+
   test('prefixes the discriminating type const in an event envelope', () => {
     // A subscriber matches on this; leaving it would have the payload claim an
     // unprefixed type while its channel says otherwise.

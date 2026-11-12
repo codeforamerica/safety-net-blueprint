@@ -111,7 +111,8 @@ Flags:
   --overlay=<path>   Path to overlay file or directory (optional; repeatable,
                      applied in the order given)
   --out=<dir>        Output directory for resolved specs (default: resolved)
-  --bundle           Inline all external $refs to produce self-contained specs
+  --bundle           Replace every $ref, internal or external, with what it
+                     points to, so each spec stands alone (a circular one stays)
   --resolve          Run relationship resolution even without an overlay
   --env-target=<env>      Environment to filter x-environments down to (optional)
   --env-variables=<file>  File of key=value pairs for \${VAR} substitution (optional)
@@ -123,7 +124,7 @@ package's own overlays — safety-net-contracts adds its roles that way — so
 pass the package's overlays first, then your own.
 
 Without --overlay, base specs are copied to --out unchanged (unless --resolve is specified).
-With --bundle, all external $ref references are dereferenced inline.
+With --bundle, every $ref is dereferenced inline, within a file as well as across files.
 With --env-target, nodes whose x-environments array doesn't include it are removed.
 With --env-variables, \${VAR} placeholders are substituted (process.env overrides file values).
 

@@ -1,13 +1,14 @@
 /**
- * Forwarding, end to end: the harness contracts, a real socket, and a small
- * server standing in for a state's backend (#283).
+ * Routing, end to end: the harness contracts, a real socket, and a small
+ * server standing in for a state's backend (#283, #520).
  *
- * `forwarding.test.js` checks the pieces against a fake `fetch`. This checks
+ * `routing.test.js` checks the pieces against a fake `fetch`. This checks
  * what those cannot: that every route a domain declares is tagged with it
  * when the real registration code runs — including state machine routes,
- * which are not in the OpenAPI document — and that a request goes out over
- * the network and comes back. The stand-in is a stand-in: it proves the
- * forwarding, not that any particular backend integrates.
+ * which are not in the OpenAPI document — that a request goes out over the
+ * network and comes back, and that an event a routed machine receives is
+ * delivered there instead of reacted to here. The stand-in is a stand-in: it
+ * proves the routing, not that any particular backend integrates.
  */
 
 import { test, describe, before, after, beforeEach } from 'node:test';
@@ -42,7 +43,7 @@ async function boot(options) {
   }
 }
 
-describe('forwarding a domain to a real service', () => {
+describe('routing a domain to a real service', () => {
   let standIn;
   let target;
   let received;
@@ -60,13 +61,13 @@ describe('forwarding a domain to a real service', () => {
   beforeEach(() => { received = []; });
 
   test('every route the domain declares reaches the service, and nothing else does', async () => {
-    const mock = await boot({ forwarding: [{ domain: 'intake', to: `${target}/state` }] });
+    const mock = await boot({ routing: [{ domain: 'intake', to: `${target}/state` }] });
 
     assert.ok(
-      mock.forwarded.includes('POST /intake/applications/{applicationId}/submit'),
+      mock.routed.includes('POST /intake/applications/{applicationId}/submit'),
       'a state machine route is the domain\'s too, though no OpenAPI path declares it',
     );
-    assert.ok(mock.forwarded.every((key) => / \/intake\//.test(key)), mock.forwarded.join('\n'));
+    assert.ok(mock.routed.every((key) => / \/intake\//.test(key)), mock.routed.join('\n'));
 
     const read = await mock.fetch(new Request('http://mock.test/intake/applications?limit=1'));
     assert.deepEqual(await read.json(), { from: 'stand-in', path: '/state/intake/applications?limit=1' });
@@ -84,7 +85,7 @@ describe('forwarding a domain to a real service', () => {
 
   test('a credential arrives only where it is named, and the service\'s cookie never comes back', async () => {
     const mock = await boot({
-      forwarding: [{ domain: 'intake', to: target, includeHeaders: ['Authorization'] }],
+      routing: [{ domain: 'intake', to: target, includeHeaders: ['Authorization'] }],
     });
 
     const response = await mock.fetch(new Request('http://mock.test/intake/applications', {
@@ -98,9 +99,9 @@ describe('forwarding a domain to a real service', () => {
     assert.equal(response.headers.get('set-cookie'), null);
   });
 
-  test('over Node, a page may send the header it is configured to forward', async () => {
+  test('over Node, a page may send the header it is configured to pass on', async () => {
     const mock = await boot({
-      forwarding: [{ domain: 'intake', to: target, includeHeaders: ['X-API-Key'] }],
+      routing: [{ domain: 'intake', to: target, includeHeaders: ['X-API-Key'] }],
     });
     const server = createNodeServer(mock.fetch);
     const base = await listen(server);
@@ -123,8 +124,8 @@ describe('forwarding a domain to a real service', () => {
     }
   });
 
-  test('a stub on a forwarded route answers instead, once', async () => {
-    const mock = await boot({ forwarding: [{ domain: 'intake', to: target }] });
+  test('a stub on a routed route answers instead, once', async () => {
+    const mock = await boot({ routing: [{ domain: 'intake', to: target }] });
 
     const registered = await mock.fetch(new Request('http://mock.test/mock/stubs/http', {
       method: 'POST',
@@ -140,11 +141,62 @@ describe('forwarding a domain to a real service', () => {
   });
 });
 
+describe('routing the events a machine receives', () => {
+  let standIn;
+  let target;
+  let received;
+
+  before(async () => {
+    standIn = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        received.push({ method: req.method, url: req.url, headers: req.headers, body: JSON.parse(body) });
+        res.statusCode = 202;
+        res.end();
+      });
+    });
+    target = await listen(standIn);
+  });
+  after(() => standIn.close());
+  beforeEach(() => { received = []; });
+
+  const caseworker = { 'content-type': 'application/json', 'x-caller-id': 'worker-1', 'x-caller-roles': 'case_worker' };
+  const DRAFT = '22222222-2222-4222-8222-222222222222';
+  const determinations = async (mock) => (await (await mock.fetch(new Request('http://mock.test/eligibility/determinations', { headers: caseworker }))).json()).items.length;
+  const submit = (mock) => mock.fetch(new Request(`http://mock.test/intake/applications/${DRAFT}/submit`, { method: 'POST', headers: caseworker, body: '{}' }));
+  const settled = () => new Promise((done) => setTimeout(done, 100));
+
+  test('without routing, eligibility reacts to a submitted application by starting a determination', async () => {
+    const mock = await boot({ seed: true });
+    const before = await determinations(mock);
+    assert.equal((await submit(mock)).status, 200);
+    await settled();
+    assert.equal(await determinations(mock), before + 1);
+  });
+
+  test('routed, the event goes to the service as a CloudEvent, and eligibility doesn\'t react here', async () => {
+    const mock = await boot({ seed: true, routing: [{ operation: '$apis.eligibility.receiveIntakeApplicationSubmitted', to: `${target}/inbox` }] });
+    const before = await determinations(mock);
+
+    assert.equal((await submit(mock)).status, 200);
+    await settled();
+
+    assert.equal(received.length, 1);
+    assert.equal(received[0].method, 'POST');
+    assert.equal(received[0].url, '/inbox');
+    assert.equal(received[0].headers['content-type'], 'application/cloudevents+json');
+    assert.equal(received[0].body.type, 'intake.application.submitted');
+    assert.equal(received[0].body.subject, DRAFT);
+    assert.equal(await determinations(mock), before);
+  });
+});
+
 describe('the mock\'s own routes', () => {
-  test('cannot be forwarded', async () => {
+  test('cannot be routed: no contract declares them', async () => {
     await assert.rejects(
-      boot({ forwarding: [{ endpoint: 'POST /mock/stubs/http', to: 'http://127.0.0.1:9' }] }),
-      /one the mock serves itself/,
+      boot({ routing: [{ operation: 'registerHttpStub', to: 'http://127.0.0.1:9' }] }),
+      /names no operation the contracts declare/,
     );
   });
 
@@ -189,5 +241,30 @@ describe('two contracts declaring one route', () => {
     const set = [...discover(harness).map(load), events];
     await assert.rejects(boot({ contracts: generate(set, 'artifact'), seed: false }),
       /GET \/platform\/events is declared by two contracts: (base\/domains\/platform\/platform-events-openapi\.yaml and domains\/platform\/platform-openapi\.yaml|domains\/platform\/platform-openapi\.yaml and base\/domains\/platform\/platform-events-openapi\.yaml)/);
+  });
+});
+
+describe('a handler\'s answer, against a response schema with refs into other files', () => {
+  test('is refused with 502 when the schema doesn\'t allow it', async () => {
+    // Application refers to Household in another file; checked without the
+    // operation's own document, the refs can't resolve and the answer passed.
+    const warn = console.warn;
+    const warnings = [];
+    console.warn = (...args) => warnings.push(args.join(' '));
+    try {
+      const mock = await boot({
+        contracts,
+        routing: [{ operation: 'getApplication', handler: async () => Response.json({ id: 42 }) }],
+      });
+      const response = await mock.fetch(new Request('http://localhost/intake/applications/11111111-1111-4111-8111-111111111111', {
+        headers: { 'x-caller-id': 'worker-1' },
+      }));
+      const body = await response.json();
+      assert.equal(response.status, 502);
+      assert.ok(body.details.some((d) => /id/.test(d.field) && /string/.test(d.message)), JSON.stringify(body.details));
+      assert.deepEqual(warnings.filter((w) => w.includes('no validator')), []);
+    } finally {
+      console.warn = warn;
+    }
   });
 });

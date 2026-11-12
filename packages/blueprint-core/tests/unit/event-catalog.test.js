@@ -45,6 +45,44 @@ const machine = toDoc({
       object: 'Case', states: [{ id: 'open', slaClock: 'stopped' }], initialState: 'open',
       emits: [{ id: 'transferred', description: 'The case moved county.', schema: { type: 'object', required: ['county'] } }],
       timers: [{ id: 'review_due', description: 'Reviews a case nobody has looked at.' }],
+      on: [
+        { type: 'case-management.review_due', steps: [] },
+        { type: 'case-management.case.created', steps: [] },
+      ],
+    }],
+  },
+});
+
+// Another domain, whose API writes nothing, so sends nothing, and whose machine
+// reacts to a case-management event.
+const noticesApi = toDoc({
+  path: '/set/domains/notices/notices-openapi.yaml',
+  relativePath: 'domains/notices/notices-openapi.yaml',
+  type: 'openapi',
+  content: {
+    openapi: '3.1.0',
+    info: { title: 'Notices', version: '1.0.0', 'x-domain': 'notices' },
+    servers: [{ url: '/notices' }],
+    paths: {
+      '/notices': { get: { responses: ok('NoticeList') } },
+      '/notices/{noticeId}': { parameters: [id('noticeId')], get: { responses: ok('Notice') } },
+    },
+    components: { schemas: { Notice: { type: 'object' }, NoticeList: { type: 'object' } } },
+  },
+});
+
+const noticesMachine = toDoc({
+  path: '/set/domains/notices/notices-state-machine.yaml',
+  relativePath: 'domains/notices/notices-state-machine.yaml',
+  type: 'state-machine',
+  content: {
+    $schema: 'state-machine-schema.yaml', version: '1.0', domain: 'notices',
+    machines: [{
+      object: 'Notice', states: [{ id: 'draft', slaClock: 'stopped' }], initialState: 'draft',
+      on: [
+        { type: 'case-management.case.transferred', steps: [] },
+        { type: 'case-management.case.transferred', steps: [] },
+      ],
     }],
   },
 });
@@ -80,6 +118,54 @@ describe('the generated event catalog', () => {
   test('leaves out an event log, whose records are events, and a call, which is no resource\'s', () => {
     const types = Object.keys(catalog.content.channels);
     assert.ok(!types.some((t) => t.includes('log_entry') || t.includes('priority')), types.join(', '));
+  });
+});
+
+describe('the operations in a generated event catalog', () => {
+  const catalogs = eventsAsyncapis([api, machine, noticesApi, noticesMachine]);
+  const cases = catalogs.find((c) => c.relativePath.startsWith('domains/case-management/'));
+  const notices = catalogs.find((c) => c.relativePath.startsWith('domains/notices/'));
+
+  test('has a send operation for each event the API sends, on its channel, with its message', () => {
+    assert.deepEqual(cases.content.operations.sendCaseManagementCaseTransferred, {
+      action: 'send',
+      channel: { $ref: '#/channels/case-management.case.transferred' },
+      messages: [{ $ref: '#/channels/case-management.case.transferred/messages/CaseManagementCaseTransferred' }],
+    });
+  });
+
+  test('has no send operation for a timer, which the timer service sends', () => {
+    assert.ok(!('sendCaseManagementReviewDue' in cases.content.operations));
+  });
+
+  test('has a receive operation for each event its machines react to, on its own channel when the API sends it', () => {
+    assert.equal(cases.content.operations.receiveCaseManagementReviewDue.action, 'receive');
+    assert.deepEqual(cases.content.operations.receiveCaseManagementCaseCreated.channel, { $ref: '#/channels/case-management.case.created' });
+  });
+
+  test('lists another document\'s channel by reference, not a copy, for an event sent there', () => {
+    assert.deepEqual(notices.content.channels['case-management.case.transferred'], {
+      $ref: '../case-management/case-management-events-asyncapi.yaml#/channels/case-management.case.transferred',
+    });
+    assert.deepEqual(notices.content.operations, {
+      receiveCaseManagementCaseTransferred: {
+        action: 'receive',
+        channel: { $ref: '#/channels/case-management.case.transferred' },
+        messages: [{ $ref: '#/channels/case-management.case.transferred/messages/CaseManagementCaseTransferred' }],
+      },
+    });
+  });
+
+  test('is written for an API that sends nothing but whose machines receive, with no messages of its own', () => {
+    assert.equal(notices.relativePath, 'domains/notices/notices-events-asyncapi.yaml');
+    assert.equal(notices.content.components, undefined);
+  });
+
+  test('a channel listed by reference is not a hand-written copy, and its messages resolve through it', () => {
+    const errors = validate([api, machine, noticesApi, noticesMachine, ...catalogs]).results
+      .filter((r) => r.path?.includes('notices-events'))
+      .flatMap((r) => r.errors);
+    assert.deepEqual(errors.filter((e) => ['channel-generated', 'unresolved-fragment-ref'].includes(e.rule)), []);
   });
 });
 

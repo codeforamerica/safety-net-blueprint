@@ -13,6 +13,8 @@
  *   registries       registry entries, keyed by the type each registry claims
  *   examples         example records, grouped by the schema each exemplifies
  *   docs             the documents inside an artifact, as a contract set
+ *   operations       every operation, OpenAPI and AsyncAPI, by API, and finding
+ *                    one by a bare or qualified id (operations.js)
  *
  * `state-machines` through `config` name contract types, so they read the same
  * vocabulary as `discover(dir, type)`. Each replaces a loader in
@@ -38,6 +40,7 @@ import { buildRelationshipIndex } from './indexes.js';
 import { readStateMachines, readSlaTypes, readMetrics, readConfigs, readRegistries, readCompositions, readRules } from './contract-readers.js';
 import { buildExamples } from './examples.js';
 import { docsFromArtifact } from './artifact.js';
+import { readOperations } from './operations.js';
 
 /** What `extract` knows how to read. */
 const READERS = {
@@ -51,12 +54,13 @@ const READERS = {
   registries: readRegistries,
   examples: buildExamples,
   docs: docsFromArtifact,
+  operations: readOperations,
 };
 
 /**
  * @param {import('../types.js').Doc[]|object} docs - A contract set, or an
  *   artifact when reading `docs`
- * @param {'relationships'|'state-machines'|'compositions'|'rules'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'} type - Which fact to read out
+ * @param {'relationships'|'state-machines'|'compositions'|'rules'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'|'operations'} type - Which fact to read out
  * @param {object} [options] - Passed to the reader that needs them
  * @returns {*} Whatever that fact is
  */

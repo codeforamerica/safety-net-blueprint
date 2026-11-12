@@ -17,9 +17,11 @@ import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
   registerRulesRoutes, buildRulesIndex,
 } from './route-generator.js';
-import { createDispatcher, overrideByOperationId, wrapRoute } from './http/route-table.js';
+import { createDispatcher, overrideByOperationId, wrapRoute, routeKey } from './http/route-table.js';
 import { jsonBody } from './http/request.js';
-import { applyForwarding } from './forwarding.js';
+import { extract } from '@codeforamerica/blueprint-core/browser';
+import { applyRouting } from './routing.js';
+import { operationsOf } from './operation-calls.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { createStepCalls } from './step-calls.js';
@@ -42,19 +44,28 @@ import { initRulesIndex } from './state-machine-engine.js';
  * @param {boolean} options.seeded - Whether the store was seeded from mock data
  * @param {string} [options.baseUrl] - Base for Location headers
  * @param {string} [options.basePath] - Path prefix to strip before matching
- * @param {Array} [options.forwarding] - Domains and endpoints to forward (#283)
- * @returns {{ routes: Map, fetch: Function, endpoints: object[], rpcEndpoints: object[], overridden: { applied: string[], unmatched: string[] }, forwarded: string[] }}
- * @throws {Error} When a contract route collides with the mock's own, or forwarding names nothing
+ * @param {Array} [options.routing] - Domains, APIs and operations something else answers (#283, #520)
+ * @returns {{ routes: Map, fetch: Function, endpoints: object[], rpcEndpoints: object[], overridden: { applied: string[], unmatched: string[] }, routed: string[], receives: object[] }}
+ * @throws {Error} When a contract route collides with the mock's own, or routing names nothing
  */
 export function assembleServer(
   { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
-  { store, readDocs, seeded, baseUrl = '', basePath = '', forwarding = [] },
+  { store, readDocs, seeded, baseUrl = '', basePath = '', routing = [] },
 ) {
   // A step's call to a record — a nested create, an update, another action, a
   // composition's patch — means what the API's route at that method and path
   // means.
   const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
-  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);
+  // Every operation the set has, as core finds them: the events documents'
+  // receive operations included, which routing a domain or API covers.
+  const docs = readDocs();
+  const operations = extract(docs, 'operations');
+  const domainOfFile = new Map(docs.map((doc) => [doc.relativePath, doc.domain]));
+  const apiOfFile = new Map((operations?.all ?? []).map((operation) => [operation.file, operation.api]));
+  // Filled in once routing is applied, below, before the first request: the
+  // received events that go elsewhere, so the reactions to them don't run here.
+  const routedEvents = { receives: [], apiOfFile };
+  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls, routedEvents);
   // Stubs are kept per module, not per server: a new server starts with none,
   // so one registered on the server it replaces cannot answer here.
   clearAllStubs();
@@ -69,6 +80,17 @@ export function assembleServer(
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
   const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
   const rpcEndpoints = registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });
+
+  // Each route a contract's operation declares, tagged with the operation and
+  // the API it belongs to, wherever it was registered from — routing and the
+  // overrides below find routes by them.
+  const details = [...operationsOf(apiSpecs)].map(([, operation]) => operation);
+  for (const operation of details) {
+    const route = routes.get(routeKey(operation.method, operation.path));
+    if (!route || route.mock) continue;
+    route.api = operation.api ?? null;
+    route.operationId ??= operation.id;
+  }
 
   // A few contract-declared endpoints cannot be served by generated CRUD.
   // Matched by operationId, so adding a platform endpoint to the contract
@@ -97,13 +119,29 @@ export function assembleServer(
     });
   }
 
-  // Last, so a route is forwarded whatever registered it, and before the
+  // Last, so a route is routed whatever registered it, and before the
   // dispatcher is built, so the first request is already answered the way
-  // the configuration says (#283).
+  // the configuration says (#283, #520).
   refuseOwnRouteCollisions(routes, apiSpecs);
-  const forwarded = applyForwarding(routes, forwarding);
+  const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]));
+  const byApiAndId = new Map(details.map((operation) => [`${operation.api}#${operation.id}`, operation]));
+  const { routed, receives } = applyRouting(routes, routing, {
+    operations,
+    domainOfApi,
+    // What a routed handler's answer is checked against.
+    responseSchema: (route, status) => {
+      const operation = byApiAndId.get(`${route.api}#${route.operationId}`);
+      const response = operation && operation.follow(operation.responses?.[status] ?? operation.responses?.default);
+      const schema = response?.content?.['application/json']?.schema;
+      if (!schema) return null;
+      // Where the schema was declared, so its refs into other files resolve.
+      const source = typeof schema.$ref === 'string' ? { relativePath: operation.relativePath, ref: schema.$ref } : null;
+      return { schema: operation.follow(schema), key: `${operation.api}-${operation.id}-response-${status}`, source };
+    },
+  });
+  routedEvents.receives = receives;
 
   // An action calling an operation as its caller sends the call through here.
   stepCalls.serve(createDispatcher(routes));
-  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, forwarded };
+  return { routes, fetch: createDispatcher(routes, { basePath }), endpoints, rpcEndpoints, overridden, routed, receives };
 }

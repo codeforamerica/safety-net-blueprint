@@ -208,7 +208,7 @@ machines:
                   in: $member.programsAppliedFor
                   as: program
                 do:
-                  - call: {POST: eligibility/determinations/decisions, requestBody: {payload: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}}
+                  - call: {operationId: createDecision, parameters: [{name: determinationId, in: path, value: $this.subject}], requestBody: {payload: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}}
       - type: eligibility.decision.completed
         description: Write the eligibility outcome back to the application member record when a per-member program decision is completed
         context:
@@ -561,7 +561,7 @@ machines:
         parameters: [serviceId]
         if: has(object.verificationType) && object.verificationType == "electronic"
         then:
-          - call: {POST: data-exchange/service-calls, requestBody: {payload: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, requestingResourceType: $object.sourceType, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}}
+          - call: {operationId: createServiceCall, requestBody: {payload: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, requestingResourceType: $object.sourceType, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}}
 guards:
   - id: callerIsApplicant
     condition: "\"applicant\" in caller.roles"

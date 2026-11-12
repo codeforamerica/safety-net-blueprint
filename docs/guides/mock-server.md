@@ -278,42 +278,78 @@ curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1 
 curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
 ```
 
-## Forwarding to a real service
+## Routing to a real service
 
-Forwarding sends a whole domain, or a single endpoint, to a real service while every other route stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment.
+Routing hands a domain, an API or a single operation to something other than the mock — a real service at a URL, or a function a page passes in — while everything else stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
 
 ```yaml
-# forwarding.yaml — per environment; keep it out of the contracts directory
-forwarding:
+# routing.yaml — per environment; keep it out of the contracts directory
+routing:
   - domain: intake
     to: https://intake.state.example.gov
     includeHeaders: [Authorization]
-  - endpoint: GET /eligibility/determinations/{determinationId}
+  - api: intake-rules
     to: http://localhost:4000
     timeoutMs: 5000
+  - domain: communication
+    except: [{ api: communication-transcripts }]
+    to: https://communication.state.example.gov
 ```
 
 ```bash
-npm run mock:start -- --spec=<contracts> --forwarding=forwarding.yaml
+npm run mock:start -- --spec=<contracts> --routing=routing.yaml
 ```
 
-In a page, pass the same entries to `createMockServer({ contracts, forwarding })`. Both are checked against [`schemas/forwarding-schema.json`](../../packages/blueprint-mock-server/schemas/forwarding-schema.json).
+In a page, pass the same entries to `createMockServer({ contracts, routing })`. Both are checked against [`schemas/routing-schema.json`](../../packages/blueprint-mock-server/schemas/routing-schema.json).
 
 | Field | |
 |---|---|
-| `domain` | Every route the domain's contracts declare, named by its directory under `domains/`. State machine operations are included. |
-| `endpoint` | One route, as `METHOD /path` with the contract's `{param}` templates. Overrides a `domain` entry for that route. |
-| `to` | The real service's base URL. Its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. It may not carry a username or password. |
+| `domain` | Every route the domain's APIs declare, state machine actions included, and every event their state machines receive. Named by its directory under `domains/`. |
+| `api` | One API's routes and received events. Named by its OpenAPI file's name without `-openapi.yaml` — `intake`, `communication-transcripts` — which its events AsyncAPI shares. |
+| `operation` | One operation, by its id: an OpenAPI `operationId`, or an AsyncAPI `receive` operation's. Bare when one API declares it; `$apis.<api>.<id>` when more than one does. |
+| `except` | What stays in the mock, inside the entry: `{ api }` or `{ operation }` on a domain, `{ operation }` on an API. Not on an operation entry. |
+| `to` | The service's base URL. For a request, its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. It may not carry a username or password. |
+| `handler` | A function that answers instead, `(request) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has. Code only, so a page can pass one and a file can't. |
 | `includeHeaders` | Headers to pass along beyond the defaults, below. |
 | `timeoutMs` | How long to wait before answering `504`. Defaults to 10000. |
 
-Each entry names exactly one of `domain` or `endpoint`. The server refuses to start when an entry names nothing the contracts declare, names the same domain or endpoint twice, names one of the mock's own routes, or carries a key the schema does not.
+Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, or carries a key the schema does not.
 
-**Prefer a domain to an endpoint.** A forwarded endpoint answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Forwarding the whole domain keeps them together.
+**Prefer a domain to an operation.** A routed operation answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Routing the whole domain keeps them together.
+
+### Answering in a page
+
+A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A demo that gets a transcription provider's short-lived credentials from Amazon Cognito, say:
+
+```js
+const mock = await createMockServer({
+  contracts,
+  routing: [{
+    operation: 'createTranscriptionConnection',
+    handler: async (request) => Response.json(await credentialsFromCognito(await request.json()), { status: 201 }),
+  }],
+});
+```
+
+What a handler answers is checked against the operation's response schema. One the schema doesn't allow is answered `502`, naming what is wrong, and logged, so a broken handler shows at once.
+
+### Events a routed domain receives
+
+Routing a domain or API also covers the events its state machines react to — its `receive` operations, in the events AsyncAPI resolve generates. The mock doesn't run those reactions; it delivers the event to whoever answers instead, so a real workflow service hears that the mock's intake submitted an application. The delivery is the [CloudEvents HTTP binding](https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md)'s structured mode:
+
+```http
+POST https://workflow.state.example.gov
+Content-Type: application/cloudevents+json
+traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+
+{ "specversion": "1.0", "type": "intake.application.submitted", "source": "/intake", "subject": "…", … }
+```
+
+It goes to `to` as written — CloudEvents defines no path, so it is the URL a webhook would be — or to a `handler` as that same request. An event is delivered once to each routed `receive` operation, however many of the API's machines react to it. A delivery that fails is logged and dropped; the mock has no queue to retry from.
 
 ### Headers
 
-Only headers that describe the request are forwarded by default: `Accept`, `Accept-Language`, `Content-Type`, `If-Match`, `If-None-Match`, `Idempotency-Key`, `traceparent` and `tracestate`. Everything else, credentials included, is dropped unless `includeHeaders` names it — so a service that needs the caller's token gets it only with `includeHeaders: [Authorization]`.
+Only headers that describe the request are passed on by default: `Accept`, `Accept-Language`, `Content-Type`, `If-Match`, `If-None-Match`, `Idempotency-Key`, `traceparent` and `tracestate`. Everything else, credentials included, is dropped unless `includeHeaders` names it — so a service that needs the caller's token gets it only with `includeHeaders: [Authorization]`.
 
 The same list governs what comes back: the real service's `Set-Cookie` reaches the caller only if `includeHeaders` names it. The service's own CORS headers never do.
 
@@ -321,22 +357,20 @@ The mock attaches no credential of its own. Where the target needs one, it is ei
 
 ### What comes back
 
-The real service's status, headers and body, unchanged except as above. A target that cannot be reached answers `502`, one that is too slow `504`, and a redirect is refused with a `502` naming where it pointed — the mock forwards only to the targets the file names.
+The real service's status, headers and body, unchanged except as above. A target that cannot be reached answers `502`, one that is too slow `504`, and a redirect is refused with a `502` naming where it pointed — the mock sends requests only to the targets the configuration names.
 
-An [HTTP stub](#http-stubs) still outranks a forwarded route: registered on one, it answers in the service's place, once, and the next request is forwarded.
+An [HTTP stub](#http-stubs) still outranks a routed route: registered on one, it answers in the service's place, once, and the next request is routed.
 
 ### In a browser
 
-A page holds no secrets, so a forwarded route in a page can reach only a service that accepts a user's own credential, or none:
+A page holds no secrets, so a route to a service from a page can reach only one that accepts a user's own credential, or none:
 
 - **CORS.** The target must allow the page's origin. A third-party service usually does not.
-- **No shared credentials.** A system credential for a federal data service cannot be in a page. Forward to an adapter that holds it — run locally by the person using the page, or hosted.
+- **No shared credentials.** A system credential for a federal data service cannot be in a page. Route to an adapter that holds it — run locally by the person using the page, or hosted — or answer with a `handler` that gets a short-lived credential for the person, as the Cognito example does.
 
-### What forwarding does not reach
+### What routing does not reach
 
-Forwarding applies to requests that come into the mock. Two things it does not reach:
-
-- **Calls between domains inside the mock.** When one domain's state machine acts on another, the mock does it in-process. A forwarded domain is not called, and its real service never sees those changes. Adapter calls made by procedures are the same: an [HTTP stub](#http-stubs) can intercept one, forwarding cannot.
+- **Calls a state machine makes by path.** A call by `operationId` goes through the route table, so it is routed; a call written as a method and path is carried out inside the mock and is not. A machine uses one only for its own domain's records, which are routed with its reactions; `validate` warns about one into another domain.
 - **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
 
 ## Scenarios
@@ -427,7 +461,7 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 | `npm run mock:start -- --seed=<dir>` | Start server and seed from `*-mock-data.yaml` files under `<dir>` |
 | `npm run mock:start -- --store=memory` | Hold resources in memory instead of SQLite — nothing written to disk, no native module |
 | `npm run mock:start -- --spec=contracts.json` | Start from a bundled contracts artifact instead of walking a directory |
-| `npm run mock:start -- --forwarding=<file>` | Forward domains or endpoints to a real service — see [Forwarding](#forwarding-to-a-real-service) |
+| `npm run mock:start -- --routing=<file>` | Route domains, APIs or operations to a real service — see [Routing](#routing-to-a-real-service) |
 | `npm run mock:seed` | Generate faker-based seed files into `packages/generated/mock-data/` |
 
 | Endpoint | Description |

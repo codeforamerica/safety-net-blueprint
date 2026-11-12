@@ -43,8 +43,9 @@ import { governedResource } from './attachment.js';
 import { readConfigs, CONFIG_METADATA_KEYS } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { polymorphicReferenceErrors } from './validator/polymorphic-validator.js';
-import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
-import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
+import { validateArazzo } from './validator/arazzo-validator.js';
+import { readOperations } from './operations.js';
+import { eventsAsyncapis } from './generate.js';
 import { unlistedCapabilityNames, withCapability } from './capabilities.js';
 
 /**
@@ -97,8 +98,8 @@ export function validate(docs) {
     docs,
     // Computed once, and only when the set has scenarios, or state machines
     // calling operations, to check.
-    operationIds: docs.some((d) => d.type === 'arazzo' || (d.type === 'state-machine' && JSON.stringify(d.content).includes('"operationId"')))
-      ? operationIdsOf(docs, { generatedOverlays, rulesApis }) : null,
+    operations: readOperations(docs),
+    routeOwners: routeOwners(docs),
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -146,7 +147,7 @@ export function validate(docs) {
   // listed says so: the unknown operation or domain is not a typo, it is a
   // capability left out. Worked out only when there is something to explain.
   if (results.some((r) => !r.ok)) {
-    const unlisted = unlistedCapabilityNames(docs, { generatedOverlays, rulesApis });
+    const unlisted = unlistedCapabilityNames(docs);
     for (const finding of results.flatMap((r) => r.errors)) {
       finding.message = withCapability(finding.message, unlisted);
     }
@@ -687,12 +688,47 @@ function eventIndex(docs) {
     // The set does not generate; that is reported where it fails.
   }
   for (const catalog of catalogs) {
-    for (const type of Object.keys(catalog.content.channels)) {
+    for (const [type, channel] of Object.entries(catalog.content.channels)) {
+      // A reference to the channel another document generates, for an event
+      // this one receives; it's generated there.
+      if (channel?.$ref) continue;
       generated.set(type, catalog.relativePath);
       channels.all.add(type);
     }
   }
   return { channels, generated };
+}
+
+/**
+ * Routes declared by more than one OpenAPI document, as the mock would serve
+ * them: the method, and the path under the base of the document's localhost
+ * server, or none. Each document after the first to declare one is listed
+ * with the document that already did.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { key: string, file: string }[]>} relativePath → its collisions
+ */
+function routeOwners(docs) {
+  const operations = readOperations(docs);
+  if (!operations) return new Map();
+  const bases = new Map();
+  for (const doc of docs.filter((d) => d.type === 'openapi')) {
+    const local = (doc.content?.servers ?? []).find((server) => server?.url?.includes('localhost'));
+    let base = '';
+    try { base = local ? new URL(local.url).pathname.replace(/\/$/, '') : ''; } catch { /* no base */ }
+    bases.set(doc.relativePath, base);
+  }
+  const owner = new Map();
+  const collisions = new Map();
+  for (const operation of operations.all.filter((o) => o.kind === 'openapi')) {
+    const key = `${operation.method} ${bases.get(operation.file) ?? ''}${operation.path}`;
+    const first = owner.get(key);
+    if (!first) { owner.set(key, operation.file); continue; }
+    if (first === operation.file) continue;
+    if (!collisions.has(operation.file)) collisions.set(operation.file, []);
+    collisions.get(operation.file).push({ key, file: first });
+  }
+  return collisions;
 }
 
 /**
@@ -707,9 +743,10 @@ function eventIndex(docs) {
  */
 function channelsGenerated(doc, generated) {
   const errors = [];
-  for (const type of Object.keys(doc.content?.channels ?? {})) {
+  for (const [type, channel] of Object.entries(doc.content?.channels ?? {})) {
     const into = generated?.get(type);
-    if (!into || into === doc.relativePath) continue;
+    // A reference to the generated channel describes nothing a second time.
+    if (!into || into === doc.relativePath || channel?.$ref) continue;
     errors.push({
       rule: 'channel-generated',
       message: `Channel "${type}" is generated into ${into} from the contracts. Remove it here.`,
@@ -745,6 +782,43 @@ function deprecatedCallBodies(doc) {
   return warnings;
 }
 
+/**
+ * Calls by method and path into another domain's records.
+ *
+ * A call by path is the machine's own direct write: it skips the API's checks
+ * and the route table, so routing never sees it. That's right for a machine
+ * writing its own domain's records — when the domain is routed, its reactions
+ * are too — and wrong for another domain's, which may be answered elsewhere.
+ * Those go through the other domain's API, by operationId.
+ *
+ * @param {import('../types.js').Doc} doc - A state-machine document
+ * @returns {object[]}
+ */
+function pathCallsAcrossDomains(doc) {
+  const own = doc.domain ?? doc.content?.domain;
+  if (!own) return [];
+  const warnings = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    const call = node.call;
+    if (call && typeof call === 'object' && !Array.isArray(call) && !call.operationId) {
+      const method = ['POST', 'PATCH', 'GET', 'DELETE'].find((m) => typeof call[m] === 'string');
+      const domain = method ? call[method].replace(/^\//, '').split('/')[0] : null;
+      if (domain && !domain.startsWith('$') && domain !== own) {
+        warnings.push({
+          rule: 'call-by-path-across-domains',
+          message: `${method} ${call[method]} is a call by path into ${domain}, so it skips that API and routing. Call the operation by its operationId.`,
+          path: `${doc.path}#${at}/call`,
+        });
+      }
+    }
+    for (const [key, value] of Object.entries(node)) walk(value, `${at}/${key}`);
+  };
+  walk(doc.content, '');
+  return warnings;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -764,6 +838,25 @@ function validateDoc(doc, context) {
 
   switch (doc.type) {
     case 'openapi': {
+      // A request goes to one operation: a route another document already
+      // declares would be two contracts for it, and the mock refuses to start.
+      for (const { key, file } of context.routeOwners?.get(doc.relativePath) ?? []) {
+        errors.push({
+          rule: 'route-collision',
+          message: `${key} is also declared by ${file}; a request to it can reach only one. Serve one of them under a different path or server.`,
+          path: doc.path,
+        });
+      }
+      // An id is how an operation is found within its document, so it's one
+      // operation's only (OpenAPI: unique among all operations described).
+      for (const operation of context.operations?.repeated ?? []) {
+        if (operation.file !== doc.relativePath) continue;
+        errors.push({
+          rule: 'operation-id-repeated',
+          message: `operationId "${operation.id}" is on more than one operation in this document; ${operation.method} ${operation.path} is one.`,
+          path: doc.path,
+        });
+      }
       // A deprecated spec is kept for consumers still on it and is not held to
       // current pattern rules.
       if (isDeprecated(doc.content)) break;
@@ -807,6 +900,7 @@ function validateDoc(doc, context) {
         });
       }
       warnings.push(...deprecatedCallBodies(doc));
+      warnings.push(...pathCallsAcrossDomains(doc));
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -819,7 +913,7 @@ function validateDoc(doc, context) {
       }
       errors.push(...validateWithinFile(doc.path, doc.content, { validRoles: context.validRoles }));
       errors.push(
-        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operationIds)
+        ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex, {}, context.operations)
       );
       errors.push(...validateEvents(doc, context.channels));
       errors.push(...resourcesNotNested(doc, context.docs));
@@ -834,7 +928,7 @@ function validateDoc(doc, context) {
       break;
 
     case 'arazzo':
-      errors.push(...validateArazzo(doc, context.operationIds));
+      errors.push(...validateArazzo(doc, context.operations));
       break;
 
     case 'sla-types':

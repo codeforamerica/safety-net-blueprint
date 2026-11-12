@@ -42,19 +42,30 @@
 
 import { query as jsonPath } from 'jsonpath-rfc9535';
 import parseJsonPath from 'jsonpath-rfc9535/parser';
+import { extract } from '@codeforamerica/blueprint-core/browser';
 import { CONTROL_OPERATIONS } from './platform-routes.js';
+
+/** The last part of a path or URL: what a source's URL and a document's path share. */
+const fileName = (path) => (path ?? '').split(/[?#]/)[0].split('/').pop();
+
+/** The key an operation has under the document it's in: `intake-openapi.yaml#createApplication`. */
+const inFile = (path, id) => `${fileName(path)}#${id}`;
 
 const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs', 'onFailure']);
 
 /**
- * Every operation in the set's OpenAPI documents, by operationId, with the
- * method and full path a request to it goes to.
+ * Every operation in the set's OpenAPI documents, with the method and full
+ * path a request to it goes to. Each is under its document's file name and
+ * id, `intake-openapi.yaml#createApplication`, which is how a step qualified
+ * by its source finds it; and under its bare id too when no other API has
+ * that id, as core finds it (extract(docs, 'operations')).
  *
- * @param {Array<{ type: string, content: object }>} docs
+ * @param {Array<{ type: string, content: object, relativePath?: string }>} docs
  * @returns {Map<string, { method: string, path: string, multipart?: boolean, files?: string[] }>}
  */
 export function operationIndex(docs) {
   const index = new Map();
+  const found = extract((docs ?? []).filter((doc) => doc.relativePath), 'operations');
   for (const doc of docs ?? []) {
     if (doc.type !== 'openapi') continue;
     const servers = doc.content?.servers ?? [];
@@ -64,7 +75,7 @@ export function operationIndex(docs) {
     for (const [path, item] of Object.entries(doc.content?.paths ?? {})) {
       for (const method of ['get', 'put', 'post', 'patch', 'delete']) {
         const id = item?.[method]?.operationId;
-        if (!id || index.has(id)) continue;
+        if (!id) continue;
         const entry = { method: method.toUpperCase(), path: `${base}${path}` };
         // An upload: which of its parts are files, so a step sends those as files.
         const form = item[method].requestBody?.content?.['multipart/form-data']?.schema;
@@ -75,7 +86,10 @@ export function operationIndex(docs) {
           entry.multipart = true;
           entry.files = Object.entries(properties).filter(([, p]) => follow(p)?.format === 'binary').map(([name]) => name);
         }
-        index.set(id, entry);
+        index.set(inFile(doc.relativePath ?? doc.path, id), entry);
+        // A set with no paths to place it by is read as before: by id, first wins.
+        const unique = found ? found.find(id).operation?.file === doc.relativePath : !index.has(id);
+        if (unique) index.set(id, entry);
       }
     }
   }
@@ -96,21 +110,24 @@ export function controlOperations(mock) {
     if (!mock?.routes?.has(key)) continue;
     const [method, path] = key.split(' ');
     index.set(operationId, { method, path });
+    index.set(inFile('mock-openapi.yaml', operationId), { method, path });
   }
   return index;
 }
 
 /**
  * The operation a step names: `createTranscript`, or qualified by the source
- * it belongs to, `$sourceDescriptions.transcripts.createTranscript`.
+ * it belongs to, `$sourceDescriptions.transcripts.createTranscript`, which
+ * is looked for in that source's document only.
  */
 function operationOf(step, sources, operations) {
   const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
   if (qualified) {
-    if (!sources.has(qualified[1])) {
+    const source = sources.get(qualified[1]);
+    if (!source) {
       throw new Error(`Step ${step.stepId} names source ${qualified[1]}, which the document's sourceDescriptions do not declare`);
     }
-    return operations.get(qualified[2]);
+    return operations.get(inFile(source.url, qualified[2]));
   }
   return operations.get(step.operationId);
 }
@@ -277,7 +294,7 @@ function formOf(payload, files) {
  */
 export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep } = {}) {
   const components = arazzo.components ?? {};
-  const sources = new Set((arazzo.sourceDescriptions ?? []).map((source) => source.name));
+  const sources = new Map((arazzo.sourceDescriptions ?? []).map((source) => [source.name, source]));
   const results = [];
   const queue = (arazzo.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => ({ workflow, step })));
   const scopes = new Map();

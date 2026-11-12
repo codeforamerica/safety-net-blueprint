@@ -7,17 +7,27 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { toDoc } from '../../src/doc.js';
 import { validateArazzo } from '../../src/validator/arazzo-validator.js';
+import { readOperations } from '../../src/operations.js';
+
+/** The set's operations: an API at `relativePath` declaring each id, as a POST. */
+const operationsIn = (ids, relativePath = 'scenarios/api-openapi.yaml') => readOperations([toDoc({
+  path: `/s/${relativePath}`, relativePath, type: 'openapi',
+  content: {
+    openapi: '3.1.0', info: { title: 'A', version: '1', 'x-domain': 'demo' },
+    paths: Object.fromEntries(ids.map((id) => [`/${id}`, { post: { operationId: id, responses: { 200: {} } } }])),
+  },
+})]);
 
 const scenario = (steps) => toDoc({
   path: '/s/scenarios/s.arazzo.yaml',
   relativePath: 'scenarios/s.arazzo.yaml',
   type: 'arazzo',
-  content: { arazzo: '1.0.1', info: { title: 'S', version: '1', 'x-domain': 'demo' }, sourceDescriptions: [{ name: 'api', url: 'api.yaml' }], workflows: [{ workflowId: 'w', steps }] },
+  content: { arazzo: '1.0.1', info: { title: 'S', version: '1', 'x-domain': 'demo' }, sourceDescriptions: [{ name: 'api', url: 'api-openapi.yaml' }], workflows: [{ workflowId: 'w', steps }] },
 });
 const rules = (errors) => errors.map((e) => e.rule);
 
 test('a step calling an operation the set does not have', () => {
-  const errors = validateArazzo(scenario([{ stepId: 'a', operationId: 'nope' }]), new Set(['createThing']));
+  const errors = validateArazzo(scenario([{ stepId: 'a', operationId: 'nope' }]), operationsIn(['createThing']));
   assert.deepEqual(rules(errors), ['unknown-operation']);
 });
 
@@ -25,13 +35,13 @@ const sections = (workflows) => toDoc({
   path: '/s/scenarios/s.arazzo.yaml',
   relativePath: 'scenarios/s.arazzo.yaml',
   type: 'arazzo',
-  content: { arazzo: '1.0.1', info: { title: 'S', version: '1', 'x-domain': 'demo' }, sourceDescriptions: [{ name: 'api', url: 'api.yaml' }], workflows },
+  content: { arazzo: '1.0.1', info: { title: 'S', version: '1', 'x-domain': 'demo' }, sourceDescriptions: [{ name: 'api', url: 'api-openapi.yaml' }], workflows },
 });
 
 test('a workflow reads what one it depends on produced, and nothing else', () => {
   const first = { workflowId: 'first', steps: [{ stepId: 'a', operationId: 'createThing', outputs: { id: '$response.body#/id' } }], outputs: { id: '$steps.a.outputs.id' } };
   const reading = (value, dependsOn) => ({ workflowId: 'second', dependsOn, steps: [{ stepId: 'b', operationId: 'createThing', parameters: [{ name: 'id', in: 'path', value }] }] });
-  const ops = new Set(['createThing']);
+  const ops = operationsIn(['createThing']);
   assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.id', ['first'])]), ops)), []);
   assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.id', [])]), ops)), ['unknown-workflow']);
   assert.deepEqual(rules(validateArazzo(sections([first, reading('$workflows.first.outputs.name', ['first'])]), ops)), ['unknown-workflow']);
@@ -43,7 +53,7 @@ test('a step carrying forward from a step that is not earlier', () => {
   const errors = validateArazzo(scenario([
     { stepId: 'a', operationId: 'createThing', parameters: [{ name: 'id', in: 'path', value: '$steps.b.outputs.id' }] },
     { stepId: 'b', operationId: 'createThing' },
-  ]), new Set(['createThing']));
+  ]), operationsIn(['createThing']));
   assert.deepEqual(rules(errors), ['unknown-step']);
 });
 
@@ -51,7 +61,7 @@ test('a step naming two targets, and a repeated stepId', () => {
   const errors = validateArazzo(scenario([
     { stepId: 'a', operationId: 'createThing', workflowId: 'other' },
     { stepId: 'a', operationId: 'createThing' },
-  ]), new Set(['createThing']));
+  ]), operationsIn(['createThing']));
   assert.deepEqual(rules(errors), ['arazzo-shape', 'arazzo-shape']);
 });
 
@@ -61,7 +71,7 @@ test('a step names only actors info.x-actors lists, and each is listed once with
     doc.content.info['x-actors'] = actors;
     return doc;
   };
-  const ops = new Set(['createThing']);
+  const ops = operationsIn(['createThing']);
   const caseworker = { id: 'caseworker', name: 'The caseworker', description: 'Reviews the application.' };
   const server = { id: 'server', name: 'The server' };
   assert.deepEqual(rules(validateArazzo(withActors([caseworker, server], [
@@ -75,7 +85,7 @@ test('a step names only actors info.x-actors lists, and each is listed once with
 });
 
 test('a sound scenario', () => {
-  assert.deepEqual(validateArazzo(scenario([{ stepId: 'a', operationId: 'createThing' }]), new Set(['createThing'])), []);
+  assert.deepEqual(validateArazzo(scenario([{ stepId: 'a', operationId: 'createThing' }]), operationsIn(['createThing'])), []);
 });
 
 describe('an Arazzo document naming more than one source', () => {
@@ -90,7 +100,8 @@ describe('an Arazzo document naming more than one source', () => {
       workflows: [{ workflowId: 'w', steps: [{ stepId: 'a', operationId }] }],
     },
   });
-  const rules = (operationId) => validateArazzo(twoSources(operationId), new Set(['createThing'])).map((e) => e.rule);
+  const operations = operationsIn(['createThing'], 'domains/demo/demo-openapi.yaml');
+  const rules = (operationId) => validateArazzo(twoSources(operationId), operations).map((e) => e.rule);
 
   test('needs each operation qualified by its source', () => {
     assert.deepEqual(rules('createThing'), ['arazzo-shape']);
@@ -101,5 +112,12 @@ describe('an Arazzo document naming more than one source', () => {
     assert.deepEqual(rules('$sourceDescriptions.api.createThang'), ['unknown-operation']);
     assert.deepEqual(rules('$sourceDescriptions.mock.registerEventStub'), []);
     assert.deepEqual(rules('$sourceDescriptions.nope.createThing'), ['arazzo-shape']);
+  });
+
+  test('looks for the operation in its source\'s document, not anywhere in the set', () => {
+    const elsewhere = operationsIn(['createThing'], 'domains/other/other-openapi.yaml');
+    const [error] = validateArazzo(twoSources('$sourceDescriptions.api.createThing'), elsewhere);
+    assert.equal(error.rule, 'unknown-operation');
+    assert.match(error.message, /doesn't declare; domains\/other\/other-openapi.yaml does/);
   });
 });

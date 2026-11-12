@@ -62,7 +62,7 @@ The work splits by layer, not by feature:
 | **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (the `transcripts` capability, in `communication`), Suggestion (the `suggestions` capability, in `decision-support`, which every domain contributes categories to), the AI service types such as fact extraction (each a capability, in `data-exchange`), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. A contract set includes each capability it lists. |
 | **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the catalog entry configuring its `fact_extraction` service. This is program policy, and belongs with the real domain contracts. |
 | **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
-| **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
+| **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises routing and stubs. Not policy. |
 
 ### Already in the contracts
 
@@ -397,7 +397,7 @@ Deployment choices, not statements about what the system must do:
 - IAM roles, the identity pool, the token function's code, and every API key.
 - Which provider and model serve each part.
 - Per-environment configuration — the same rule as the mock's
-  [forwarding](../../guides/mock-server.md#forwarding-to-a-real-service): a
+  [routing](../../guides/mock-server.md#routing-to-a-real-service): a
   contract set is shared, deployment choices are not.
 
 Prompts are **not** in that list: a service's prompt is part of its catalog
@@ -431,14 +431,14 @@ type's result schema, completes the call, and emits `call.completed`. Nothing
 about the provider is in page code; it is all in the catalog.
 
 This is the outbound half of the mock's
-[forwarding](../../guides/mock-server.md#forwarding-to-a-real-service).
-Forwarding today sends requests that come *into* the mock to a real service;
+[routing](../../guides/mock-server.md#routing-to-a-real-service).
+Routing today sends requests that come *into* the mock to a real service;
 this sends calls the mock *makes* to one. Built for AI services, it works for
 every Data Exchange service — a state testing its real income-verification
 adapter gets the same thing.
 
 **Credentials are the signed-in person's.** The page hands the mock a function
-that returns them, alongside its forwarding configuration: identity-pool
+that returns them, alongside its routing configuration: identity-pool
 credentials for AWS, a provider session token for anything else. The mock signs
 with whichever the catalog entry names. It attaches no credential of its own.
 
@@ -515,7 +515,7 @@ implementation. Within that, five things keep the design from doing harm.
 **Outbound calls go only where the catalog says.** A request template may use a
 call's input in the request body, never to choose the host. Otherwise whoever
 creates a call could point the mock at any server, carrying whatever data the
-template sends. Redirects are refused, as forwarding refuses them. A page's
+template sends. Redirects are refused, as routing refuses them. A page's
 content security policy limits it further, to the endpoints its `connect-src`
 lists.
 
@@ -554,7 +554,7 @@ mock and AI services together, with no server of our own.
 | Part | In a page? | Basis |
 |---|---|---|
 | UI, mock server, rules engine | Yes | Done in this repository: the mock and the rules engine both run in a tab, and the mock ships as one file. |
-| The mock calling AI services from the catalog | To build | The outbound half of forwarding; a `fetch` from the page, signed with the person's credentials. |
+| The mock calling AI services from the catalog | To build | The outbound half of routing; a `fetch` from the page, signed with the person's credentials. |
 | Signing in | Yes | Done in the transcription tools: a Cognito user pool's public app client with PKCE, through a popup. |
 | Credentials for AWS services | Yes | Done in the transcription tools: a Cognito identity pool exchanges the worker's token for one-hour credentials whose IAM role allows a single action. Nothing in the page is a secret. |
 | Streaming audio to AWS | Yes | Done in the transcription tools: the worker's microphone and the call's shared audio, streamed to Transcribe over a signed WebSocket from a page opened from disk. |
@@ -868,7 +868,7 @@ and every contract above, once defined — from the contract set. The provider
 session endpoint, declared as a contract, is served by the mock with a fake
 token, so a page runs end to end with nothing deployed. When a real backend
 exists for one domain, the mock's
-[forwarding](../../guides/mock-server.md#forwarding-to-a-real-service) sends
+[routing](../../guides/mock-server.md#routing-to-a-real-service) sends
 that domain to it and keeps the rest mocked.
 
 A transcript does not have to come from a live call. Added to the mock through
