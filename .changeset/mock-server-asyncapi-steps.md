@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": minor
 ---
 
-Before, an Arazzo scenario could only call HTTP operations, so the events an API sends and the messages of a party reached over a WebSocket, such as a transcription relay, couldn't be shown or checked. Now Arazzo 1.1 `send` and `receive` steps run against the mock: events on its event stream, and WebSocket messages it serves at `/mock/ws/{document}` for an AsyncAPI document with servers, answered by ws stubs registered at `POST /mock/stubs/ws` and reached in a page or test through `createMockServer`'s `WebSocket`. (#520)
+Before, an Arazzo scenario could only call HTTP operations, one step at a time. Now `runScenario` also runs Arazzo 1.1 `send` and `receive` steps, for events on the mock's event stream and for WebSocket messages it serves at `/mock/ws/{document}` (answered by ws stubs at `POST /mock/stubs/ws` and reached through `createMockServer`'s `WebSocket`), and steps that run another workflow by `workflowId`; `operationIndex` includes AsyncAPI operations to match. (#520)
