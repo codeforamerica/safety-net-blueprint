@@ -469,7 +469,7 @@ A page holds no secrets, so a route to a service from a page can reach only one 
 
 ## Scenarios
 
-A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has, refers only to earlier steps, and names only actors the scenario lists in `info.x-actors` (extensions.yaml).
+A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has, or runs a workflow it has, refers only to earlier steps, and names only actors the scenario lists in `info.x-actors` (extensions.yaml).
 
 The same file runs as a test, is one of the walkthroughs in the demo page's Show me around, drawn a step at a time, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
 
@@ -480,9 +480,11 @@ The same file runs as a test, is one of the walkthroughs in the demo page's Show
 - `successCriteria` comparisons joined by `&&`, and `jsonpath` conditions, which pass when they match anything; and `outputs`
 - workflows that depend on earlier ones, `dependsOn`, reading what they produced as `$workflows.<id>.outputs.<name>` — a long scenario in sections, one workflow each, on the same mock throughout; the demo page heads each section with its workflow's `summary`
 - `onFailure` actions of type `retry`, with `retryAfter` in seconds and `retryLimit` — for a step checking what the mock does after it answers, such as a state machine's reaction to an event, which may not have run the moment the step before it returns
+- steps that run another workflow, `workflowId`, passing its inputs as parameters with no `in` and reading what it produced as `$outputs.<name>` — for steps several workflows share, such as connecting. A workflow in another Arazzo document is named `$sourceDescriptions.<name>.<workflowId>`, where `<name>` is a source of type `arazzo`; give the runner that document in `documents`, matched to the source by the file name its `url` ends in. A document other scenarios run workflows from this way isn't a scenario of its own: the demo page leaves it out of Show me around, and shows its workflows inside the steps that run them
+- a choice of workflows to run, `workflows: [<workflowId>, …]`, each with every workflow it depends on, in the document's order. By default the runner runs every workflow no step runs, since a workflow a step runs runs there. Name one to run it on its own as well — a scenario's opening, say, that is the first workflow of its main path and the first step of each other situation. A scenario that marks its workflows `x-branch: main` or `x-branch: other` is walked a branch at a time on the demo page; to run all of it, name every workflow that has an `x-branch`
 - `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
 - more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
-- steps that send or receive a message (Arazzo 1.1), naming an AsyncAPI operation with `action: send` or `receive`. On an events document, receiving waits for the event on the mock's event stream, read as `$message.payload#/<pointer>`, and sending publishes one. On a document with `servers`, such as a relay's, both go over the mock's WebSocket for it, one connection per workflow, answered by [WebSocket stubs](#websocket-stubs). A receive step takes the first message of its kind, not taken by an earlier step, that meets its `successCriteria`, so it can pick its own record's event out of several by `subject`. It waits up to its `timeout`, in milliseconds, or 2 seconds when it gives none. A step's `dependsOn` may name earlier steps
+- steps that send or receive a message (Arazzo 1.1), naming an AsyncAPI operation with `action: send` or `receive`. On an events document, receiving waits for the event on the mock's event stream, read as `$message.payload#/<pointer>`, and sending publishes one. On a document with `servers`, such as a relay's, both go over the mock's WebSocket for it, one connection per workflow, answered by [WebSocket stubs](#websocket-stubs). The step that opens the connection may give the subprotocols it offers, a token among them, as a `Sec-WebSocket-Protocol` header parameter, the one header of a WebSocket's opening request that software sets: `{ name: Sec-WebSocket-Protocol, in: header, value: '{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}' }`. A receive step takes the first message of its kind, not taken by an earlier step, that meets its `successCriteria`, so it can pick its own record's event out of several by `subject`. It waits up to its `timeout`, in milliseconds, or 2 seconds when it gives none. A step's `dependsOn` may name earlier steps
 
 A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
 
@@ -492,9 +494,11 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const mock = await createMockServer({ contracts });
 const docs = extract(contracts, 'docs');
-const scenario = docs.find((doc) => doc.type === 'arazzo');
+const arazzo = docs.filter((doc) => doc.type === 'arazzo');
+const scenario = arazzo[0];
 const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
-const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket });
+// documents: the other Arazzo documents, whose workflows a step may run.
+const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket, documents: arazzo });
 workflow.passed; // and workflow.steps: each request, response and check
 ```
 

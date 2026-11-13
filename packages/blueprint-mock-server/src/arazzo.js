@@ -39,7 +39,9 @@
  *   - steps that run another workflow (`workflowId`), passing its inputs as
  *     parameters with no `in` and reading what it produced as
  *     `$outputs.<name>`; a workflow a step runs this way doesn't also run on
- *     its own
+ *     its own. One in another Arazzo document is named
+ *     `$sourceDescriptions.<name>.<workflowId>`, by a source of type `arazzo`,
+ *     and found among the `documents` the runner is given
  *   - steps that send or receive a message (Arazzo 1.1): an AsyncAPI
  *     operation by `operationId`, or a channel by `channelPath`, with `action`
  *     `send` or `receive`, against the platform's events. Receiving takes the
@@ -50,7 +52,9 @@
  *     milliseconds (2000 when not given); `$message.payload#/<pointer>` reads
  *     it. Sending publishes one with `publishEvent`. A step's `dependsOn` may
  *     name steps before it, which have run by then. A channel reached through
- *     its document's own servers, such as a relay's, is refused
+ *     its document's own servers, such as a relay's, is a frame on a
+ *     WebSocket; the step that opens it may set its `Sec-WebSocket-Protocol`
+ *     header parameter, the subprotocols it offers
  * Standard enough that Redocly's Respect runs the same documents against a
  * served mock.
  */
@@ -207,6 +211,15 @@ function channelPathOf(step, sources, operations) {
   if (!source) throw new Error(`Step ${step.stepId} names source ${m[1]}, which the document's sourceDescriptions do not declare`);
   const name = m[2].replace(/~1/g, '/').replace(/~0/g, '~');
   return operations.get(`${fileName(source.url)}#/channels/${name}`);
+}
+
+/** What a document's steps name things by: its sources, its components and its workflows. */
+function documentOf(arazzo) {
+  return {
+    sources: new Map((arazzo?.sourceDescriptions ?? []).map((source) => [source.name, source])),
+    components: arazzo?.components ?? {},
+    byId: new Map((arazzo?.workflows ?? []).map((workflow) => [workflow.workflowId, workflow])),
+  };
 }
 
 /** A step that sends or receives a message (Arazzo 1.1), rather than calling an HTTP operation. */
@@ -461,15 +474,25 @@ function formOf(payload, files) {
  *   says what a step would send, from what the steps before it produced;
  *   `results` are each workflow's run so far.
  */
-export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep, WebSocket: Socket = globalThis.WebSocket } = {}) {
-  const components = arazzo.components ?? {};
-  const sources = new Map((arazzo.sourceDescriptions ?? []).map((source) => [source.name, source]));
+export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep, WebSocket: Socket = globalThis.WebSocket, documents = [], workflows: chosen } = {}) {
+  const own = documentOf(arazzo);
   const results = [];
-  // A workflow another step runs by workflowId runs there, with the inputs
-  // that step gives it, and not on its own as well.
-  const byId = new Map((arazzo.workflows ?? []).map((workflow) => [workflow.workflowId, workflow]));
-  const called = new Set((arazzo.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => step.workflowId).filter(Boolean)));
-  const queue = (arazzo.workflows ?? []).filter((workflow) => !called.has(workflow.workflowId))
+  // The workflows to run: those named, with every one they depend on, in the
+  // document's order. With none named, every workflow no step runs: one
+  // another step runs by workflowId runs there, with the inputs that step
+  // gives it, and not on its own as well.
+  const all = arazzo.workflows ?? [];
+  const called = new Set(all.flatMap((workflow) => (workflow.steps ?? []).map((step) => step.workflowId).filter(Boolean)));
+  const wanted = new Set();
+  const want = (id) => {
+    if (wanted.has(id)) return;
+    const workflow = all.find((candidate) => candidate.workflowId === id);
+    if (!workflow) throw new Error(`Asked to run workflow ${id}, which the document does not declare`);
+    wanted.add(id);
+    for (const dependency of workflow.dependsOn ?? []) want(dependency);
+  };
+  if (chosen) for (const id of chosen) want(id);
+  const queue = all.filter((workflow) => (chosen ? wanted.has(workflow.workflowId) : !called.has(workflow.workflowId)))
     .flatMap((workflow) => (workflow.steps ?? []).map((step) => ({ workflow, step })));
   const scopes = new Map();
   const workflowOutputs = {}; // each finished workflow's outputs, by workflowId
@@ -482,7 +505,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
 
   const scopeOf = (workflow) => {
     if (!scopes.has(workflow.workflowId)) {
-      scopes.set(workflow.workflowId, { inputs: inputs[workflow.workflowId] ?? {}, steps: {}, workflows: workflowOutputs });
+      scopes.set(workflow.workflowId, { inputs: inputs[workflow.workflowId] ?? {}, steps: {}, workflows: workflowOutputs, document: own });
       results.push({ workflowId: workflow.workflowId, summary: workflow.summary, passed: true, steps: [] });
     }
     return scopes.get(workflow.workflowId);
@@ -503,6 +526,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   function requestOf(step, scope) {
     const unsupported = Object.keys(step).filter((k) => !SUPPORTED_STEP_FIELDS.has(k) && !k.startsWith('x-'));
     if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
+    const { sources, components } = scope.document;
     const operation = operationOf(step, sources, operations);
     if (!operation) throw new Error(`Step ${step.stepId} names operation ${step.operationId}, which no API in the set declares`);
 
@@ -590,6 +614,30 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   /**
+   * The workflow a step runs, and the document it's in: this one's, by its
+   * `workflowId`, or another Arazzo document's, by
+   * `$sourceDescriptions.<name>.<workflowId>`, where `<name>` is a source of
+   * type `arazzo` whose `url` ends in one of the `documents`' file names.
+   */
+  function workflowOf(step, document) {
+    const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.workflowId ?? '');
+    if (!qualified) {
+      const workflow = document.byId.get(step.workflowId);
+      if (!workflow) throw new Error(`Step ${step.stepId} runs workflow ${step.workflowId}, which the document does not declare`);
+      return { workflow, document };
+    }
+    const source = document.sources.get(qualified[1]);
+    if (!source) throw new Error(`Step ${step.stepId} names source ${qualified[1]}, which the document's sourceDescriptions do not declare`);
+    if (source.type !== 'arazzo') throw new Error(`Step ${step.stepId} runs a workflow from ${qualified[1]}, which is a source of type ${source.type}, not arazzo`);
+    const found = documents.find((doc) => fileName(doc.relativePath ?? doc.path) === fileName(source.url));
+    if (!found) throw new Error(`Step ${step.stepId} runs a workflow from ${source.url}, which isn't among the documents given to the runner`);
+    const other = documentOf(found.content);
+    const workflow = other.byId.get(qualified[2]);
+    if (!workflow) throw new Error(`Step ${step.stepId} runs workflow ${qualified[2]}, which ${source.url} does not declare`);
+    return { workflow, document: other };
+  }
+
+  /**
    * A step that runs another workflow (`workflowId`), as Arazzo describes:
    * its parameters, with no `in`, are the workflow's inputs, and what the
    * workflow produces is `$outputs.<name>` in the step's own checks and
@@ -597,17 +645,17 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
    * failed one fails the step.
    */
   async function workflowStep(section, step, scope) {
-    if (String(step.workflowId).startsWith('$')) throw new Error(`Step ${step.stepId}: a workflow in another Arazzo document isn't one this runner runs`);
-    const workflow = byId.get(step.workflowId);
-    if (!workflow) throw new Error(`Step ${step.stepId} runs workflow ${step.workflowId}, which the document does not declare`);
+    const { workflow, document } = workflowOf(step, scope.document);
     const given = {};
     for (const raw of step.parameters ?? []) {
-      const parameter = raw.reference ? components.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')] : raw;
+      const parameter = raw.reference ? scope.document.components.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')] : raw;
       if (!parameter) throw new Error(`Step ${step.stepId} references ${raw.reference}, which the document's components do not declare`);
       if (parameter.in) throw new Error(`Step ${step.stepId}: a parameter passed to a workflow has no "in", as Arazzo says; ${parameter.name} has one`);
       given[parameter.name] = resolve(raw.value ?? parameter.value, scope);
     }
-    const inner = { inputs: given, steps: {}, workflows: workflowOutputs };
+    // Its steps name operations and parameters by its own document's sources
+    // and components.
+    const inner = { inputs: given, steps: {}, workflows: workflowOutputs, document };
     const steps = [];
     const checks = [];
     let passed = true;
@@ -664,6 +712,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
    */
   async function messageStep(step, scope, workflow) {
     const request = messageOf(step, scope);
+    const { sources } = scope.document;
     const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
     if (operation.reached === 'servers') return socketStep(step, scope, workflow, operation, request);
     if (request.action === 'receive') {
@@ -710,37 +759,61 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
     if (step.action !== 'send' && step.action !== 'receive') throw new Error(`Step ${step.stepId}: a message step's action is send or receive, not ${step.action}`);
     if (step.onFailure) throw new Error(`Step ${step.stepId}: onFailure on a message step is not supported`);
-    if (step.parameters?.length) throw new Error(`Step ${step.stepId}: parameters on a message step are not supported`);
+    const { sources } = scope.document;
     const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
     if (!operation) throw new Error(`Step ${step.stepId} names ${step.channelPath ?? step.operationId}, which no AsyncAPI document in the set declares`);
     if (!operation.async) throw new Error(`Step ${step.stepId} has an action, but ${step.operationId} is an HTTP operation`);
     if (operation.reached === 'servers' && !operation.recognize) {
       throw new Error(`Step ${step.stepId}: give a message step on a document reached over its own server by operationId, not channelPath, so the runner knows which message it is`);
     }
+    const protocols = handshakeProtocols(step, operation, scope);
     const body = step.action === 'send' && step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
     return {
       action: step.action, channel: operation.address,
       ...(operation.reached === 'servers' && { message: operation.messages.join(' or '), document: operation.document }),
+      ...(protocols && { protocols }),
       ...(body !== undefined && { body }),
     };
+  }
+
+  /**
+   * The subprotocols a message step offers when it opens a connection: its
+   * `Sec-WebSocket-Protocol` header parameter, the one header of a WebSocket's
+   * opening request that software sets, which a relay's token travels in
+   * (communication-transcripts-relay-asyncapi.yaml). The only parameter a
+   * message step takes, and only on a document reached over its own server.
+   */
+  function handshakeProtocols(step, operation, scope) {
+    if (!step.parameters?.length) return null;
+    const protocols = [];
+    for (const parameter of step.parameters) {
+      if (operation.reached !== 'servers' || parameter.in !== 'header' || String(parameter.name).toLowerCase() !== 'sec-websocket-protocol') {
+        throw new Error(`Step ${step.stepId}: a message step takes one parameter, the Sec-WebSocket-Protocol header of the connection it opens, on a document reached over its own server`);
+      }
+      protocols.push(...String(resolve(parameter.value, scope)).split(',').map((p) => p.trim()).filter(Boolean));
+    }
+    return protocols;
   }
 
   /**
    * This section's connection to a document's server: the mock's WebSocket
    * for its channel, where its localhost server puts it, opened by the first step that sends on
    * it, and opened again by one that sends after it closed, as software
-   * reconnects. A step that receives reads the latest, closed or not. What
+   * reconnects, offering the subprotocols that step's header parameter gives. A step that receives reads the latest, closed or not. What
    * arrives is kept in order, each frame taken once by a step that receives
    * it.
    */
-  function connectionFor(workflow, operation, { sending = false } = {}) {
+  function connectionFor(workflow, operation, { sending = false, protocols = null, stepId } = {}) {
     const key = `${workflow.workflowId} ${operation.socket}`;
     const latest = connections.get(key);
-    if (latest && !(sending && latest.closed)) return latest;
+    if (latest && !(sending && latest.closed)) {
+      if (protocols) throw new Error(`Step ${stepId} sets Sec-WebSocket-Protocol, but the connection is already open; set it on the step that opens one`);
+      return latest;
+    }
     if (!Socket) throw new Error(`A step sends or receives on ${fileName(operation.document)}, and there's no WebSocket to connect with; pass one`);
     if (!operation.socket) throw new Error(`${fileName(operation.document)} lists no localhost server, so the mock serves no WebSocket for it`);
     const url = new URL(operation.socket, origin.replace(/^http/, 'ws'));
-    const socket = new Socket(url.href);
+    const socket = new Socket(url.href, protocols ?? []);
     socket.binaryType = 'arraybuffer';
     const connection = { socket, heard: [], taken: new Set(), waiting: new Set(), closed: null };
     const wake = () => { for (const fn of connection.waiting) fn(); };
@@ -765,7 +838,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
    * step's successCriteria.
    */
   async function socketStep(step, scope, workflow, operation, request) {
-    const connection = connectionFor(workflow, operation, { sending: request.action === 'send' });
+    const connection = connectionFor(workflow, operation, { sending: request.action === 'send', protocols: request.protocols ?? null, stepId: step.stepId });
     const open = await connection.opened;
     if (!open) return { request, stepScope: scope, checks: [closedCheck(connection)], passed: false };
     const payloadOf = (data) => (typeof data === 'string' ? JSON.parse(data) : null);
@@ -880,7 +953,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   function preview(workflowId, step) {
-    const scope = scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {}, workflows: workflowOutputs };
+    const scope = scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {}, workflows: workflowOutputs, document: own };
     try {
       if (step.workflowId !== undefined) return { workflowId: step.workflowId };
       if (isMessageStep(step)) return messageOf(step, scope);
@@ -928,6 +1001,14 @@ function retryOf(step) {
  * @param {object} [options.inputs] - Workflow inputs, by workflowId
  * @param {string} [options.origin] - Request origin, for building URLs
  * @param {Function} [options.onStep] - Called with each step's result as it finishes
+ * @param {Array<{ relativePath: string, content: object }>} [options.documents] - Other
+ *   Arazzo documents, whose workflows a step runs by
+ *   `$sourceDescriptions.<name>.<workflowId>`; matched to a source by the file
+ *   name its `url` ends in
+ * @param {string[]} [options.workflows] - The workflows to run, by workflowId,
+ *   with every one they depend on, in the document's order; by default, every
+ *   workflow no step runs. A workflow a step runs can be named too, to run on
+ *   its own as well.
  * @param {{ workflowId: string, stepId: string }} [options.until] - Stop after this step
  * @returns {Promise<Array<{ workflowId: string, passed: boolean, steps: object[] }>>}
  */

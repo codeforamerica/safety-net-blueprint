@@ -189,3 +189,32 @@ test('a scenario connects again by sending after the connection closed', async (
   const [run] = await runScenario(scenario, { fetch: mock.fetch, operations, WebSocket: mock.WebSocket });
   assert.ok(run.passed, JSON.stringify(run.steps.filter((s) => !s.passed).map((s) => [s.stepId, s.checks])));
 });
+
+test('a step that opens the connection offers the subprotocols its Sec-WebSocket-Protocol header parameter gives', async () => {
+  const mock = await quietMock();
+  const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+  const relay = (key) => `$sourceDescriptions.relay.${key}`;
+  const header = (value) => [{ name: 'Sec-WebSocket-Protocol', in: 'header', value }];
+  const scenario = (steps) => ({
+    arazzo: '1.1.0', info: { title: 't', version: '1' },
+    sourceDescriptions: [
+      { name: 'relay', url: '../base/domains/communication/communication-transcripts-relay-asyncapi.yaml', type: 'asyncapi' },
+      { name: 'mock', url: 'https://blueprint.codeforamerica.org/mock/mock-openapi.yaml', type: 'openapi' },
+    ],
+    workflows: [{ workflowId: 'w', inputs: { type: 'object' }, steps }],
+  });
+  const refusal = { stepId: 'refuse', operationId: '$sourceDescriptions.mock.registerWsStub', requestBody: { payload: { channel: CHANNEL, on: 'start', protocols: ['old-token'], send: [{ type: 'error', code: 'not-allowed', message: 'expired' }], close: { code: 1008 } } } };
+  const [run] = await runScenario(scenario([
+    refusal,
+    { stepId: 'start', operationId: relay('receiveStart'), action: 'send', parameters: header('blueprint.transcripts.relay.v1, {$inputs.token}'), requestBody: { payload: START } },
+    { stepId: 'refused', operationId: relay('sendError'), action: 'receive', successCriteria: [{ condition: "$message.payload#/code == 'not-allowed'" }] },
+  ]), { fetch: mock.fetch, operations, WebSocket: mock.WebSocket, inputs: { w: { token: 'old-token' } } });
+  assert.ok(run.passed, JSON.stringify(run.steps.filter((s) => !s.passed).map((s) => [s.stepId, s.checks])));
+  assert.deepStrictEqual(run.steps[1].request.protocols, ['blueprint.transcripts.relay.v1', 'old-token']);
+
+  await assert.rejects(runScenario(scenario([
+    { stepId: 'ok', operationId: '$sourceDescriptions.mock.registerWsStub', requestBody: { payload: { channel: CHANNEL, on: 'start', send: [{ type: 'started' }] } } },
+    { stepId: 'start', operationId: relay('receiveStart'), action: 'send', requestBody: { payload: START } },
+    { stepId: 'again', operationId: relay('receiveKeepalive'), action: 'send', parameters: header('x'), requestBody: { payload: { type: 'keepalive' } } },
+  ]), { fetch: mock.fetch, operations, WebSocket: mock.WebSocket }), /already open; set it on the step that opens one/);
+});

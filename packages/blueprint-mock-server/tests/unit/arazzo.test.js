@@ -283,3 +283,49 @@ test('a step runs another workflow with its inputs, reads its outputs, and that 
   const broken = { ...main, steps: [{ stepId: 'makeOne', workflowId: 'make', parameters: [{ name: 'name', in: 'query', value: 'x' }] }] };
   await assert.rejects(runScenario({ arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [broken, make] }, { fetch, operations }), /has no "in"/);
 });
+
+test('workflows named to run run with what they depend on, in order; one a step runs can run on its own too', async () => {
+  const { fetch } = fakeFetch();
+  const opening = { workflowId: 'opening', steps: [{ stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'a' } }, outputs: { id: '$response.body#/id' } }], outputs: { thing: '$steps.create.outputs.id' } };
+  const next = { workflowId: 'next', dependsOn: ['opening'], steps: [{ stepId: 'read', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: '$workflows.opening.outputs.thing' }] }] };
+  const elsewhere = { workflowId: 'elsewhere', steps: [{ stepId: 'open', workflowId: 'opening' }] };
+  const document = { arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [opening, next, elsewhere] };
+
+  assert.deepStrictEqual((await runScenario(document, { fetch, operations })).map((r) => r.workflowId), ['next', 'elsewhere'],
+    'by default, opening runs only where a step runs it');
+  const named = await runScenario(document, { fetch, operations, workflows: ['next'] });
+  assert.deepStrictEqual(named.map((r) => [r.workflowId, r.passed]), [['opening', true], ['next', true]]);
+  assert.deepStrictEqual((await runScenario(document, { fetch, operations, workflows: ['elsewhere', 'opening'] })).map((r) => r.workflowId), ['opening', 'elsewhere']);
+  await assert.rejects(runScenario(document, { fetch, operations, workflows: ['nowhere'] }), /workflow nowhere, which the document does not declare/);
+});
+
+test('a step runs a workflow from another Arazzo document, named by its source, with that document\'s own components', async () => {
+  const { fetch, seen } = fakeFetch();
+  // The other document: its workflow sends a header from its own components.
+  const shared = { relativePath: 'scenarios/shared.arazzo.yaml', content: {
+    arazzo: '1.1.0', info: { title: 'shared', version: '1' },
+    components: { parameters: { caller: { name: 'X-Caller-Id', in: 'header', value: 'from-shared' } } },
+    workflows: [{ workflowId: 'make', steps: [
+      { stepId: 'create', operationId: 'createThing', parameters: [{ reference: '$components.parameters.caller' }],
+        requestBody: { payload: { name: '$inputs.name' } }, outputs: { id: '$response.body#/id' } },
+    ], outputs: { thing: '$steps.create.outputs.id' } }],
+  } };
+  const main = (workflowId, sources = [{ name: 'shared', url: './shared.arazzo.yaml', type: 'arazzo' }]) => ({
+    arazzo: '1.1.0', info: { title: 't', version: '1' }, sourceDescriptions: sources,
+    workflows: [{ workflowId: 'main', steps: [
+      { stepId: 'makeOne', workflowId, parameters: [{ name: 'name', value: 'from main' }], outputs: { made: '$outputs.thing' } },
+    ] }],
+  });
+  const [run] = await runScenario(main('$sourceDescriptions.shared.make'), { fetch, operations, documents: [shared] });
+  assert.ok(run.passed);
+  assert.deepStrictEqual(run.steps[0].steps.map((s) => s.stepId), ['create']);
+  assert.strictEqual(run.steps[0].outputs.made, 't1');
+  assert.strictEqual(JSON.parse(seen[0].body).name, 'from main');
+  assert.strictEqual(seen[0].headers['x-caller-id'], 'from-shared');
+
+  const refuse = (document, options, pattern) => assert.rejects(runScenario(document, { fetch, operations, ...options }), pattern);
+  await refuse(main('$sourceDescriptions.shared.make'), {}, /isn't among the documents given/);
+  await refuse(main('$sourceDescriptions.shared.nope'), { documents: [shared] }, /runs workflow nope, which .*shared\.arazzo\.yaml does not declare/);
+  await refuse(main('$sourceDescriptions.other.make'), { documents: [shared] }, /names source other/);
+  await refuse(main('$sourceDescriptions.shared.make', [{ name: 'shared', url: 'shared-openapi.yaml', type: 'openapi' }]), { documents: [shared] }, /not arazzo/);
+});
