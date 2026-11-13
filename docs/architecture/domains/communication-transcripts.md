@@ -1096,6 +1096,13 @@ service doesn't hear it decides what pausing has to do to the connection.
 service, and resuming reuses the reconnect path. Resuming takes as long as
 connecting, about a second.
 
+**Scope:** This decides pausing for transcription, where a new connection
+loses nothing. A vendor that holds the conversation itself, such as a voice
+agent that remembers the call, would lose it by reconnecting. The
+browser-to-vendor stream pattern lets that case stay connected while paused,
+sending no audio and keeping the session paused, so nothing is heard and the
+record still shows the pause. Transcription never takes that exception.
+
 ### Decision 16: Everything the Client tells the session goes in as an action, and each action sends an event out
 
 **Status:** Decided: B

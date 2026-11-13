@@ -69,12 +69,22 @@ rules:
     state runs the relay, which implements it toward the client and speaks the
     vendor's protocol toward the vendor.
   - >-
+    Have the relay check the credential during the handshake, before it
+    accepts the connection. When the check fails, the relay refuses the
+    upgrade with HTTP 401, or accepts, sends an error saying the caller isn't
+    allowed, and closes at once with code 1008. Nothing else flows on a
+    connection that failed the check.
+  - >-
     Name the session's states from a standard for a connection's states where
     one fits (WebRTC's), and name actions, states and events with one word each
     (naming.yaml, state_machine_names).
   - >-
     When the user goes off the record, stop the stream to the vendor, not only
-    what's kept: disconnect, and connect again to resume.
+    what's kept: disconnect, and connect again to resume. Stay connected only
+    when the vendor holds state the conversation needs that a new connection
+    would lose, such as a voice agent's memory of the call. Then send no
+    audio, keep the connection alive the vendor's way, and still move the
+    session to paused, so the record shows the audio stopped.
   - >-
     Draw the flow as the diagrams convention says (diagrams.yaml, flows),
     showing where each part runs.

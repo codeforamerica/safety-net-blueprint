@@ -24,6 +24,13 @@ info:
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
     6750). The relay answers with the subprotocol's name only, never the token.
 
+    The relay checks the token before it accepts the connection. When the
+    token is missing, expired, or for another relay, the relay either refuses
+    the upgrade with HTTP 401, or accepts, sends `error` with `not-allowed`,
+    and closes with code 1008. It sends nothing else either way. Either way,
+    the software asks for a new connection once, since a new token fixes one
+    that expired, and reports the failure if that one is refused too.
+
     The software sends `start`, then the audio as binary frames, and `end`
     when it's done; the relay answers `started`, sends results as the service
     hears, and after `end` its last results and `ended`, then closes the
