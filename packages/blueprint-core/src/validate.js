@@ -953,7 +953,7 @@ function validateDoc(doc, context) {
       break;
 
     case 'arazzo':
-      errors.push(...validateArazzo(doc, context.operations));
+      errors.push(...validateArazzo(doc, context.operations, context.docs));
       break;
 
     case 'sla-types':
