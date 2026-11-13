@@ -312,8 +312,29 @@ curl -X POST http://localhost:1080/mock/stubs/ws \
 - `on` is the message to answer, by its name in the channel: one the mock receives there.
 - `match` narrows it by fields of the message, as dot paths with the values they must equal.
 - `send` is what to send back, in order. Each must be a message the contract lets the mock send there, or the stub is refused with `422`.
-- `close` closes the connection after sending: `{ "code": 1006 }` for a connection that drops, `{ "code": 1008, "reason": "not-allowed" }` for one refused.
+- `atMs` says when to send each message, in milliseconds from when the stub matched, one per message and none earlier than the one before it. Without it, they're all sent at once.
+- `close` closes the connection after sending: `{ "code": 1006 }` for a connection that drops, `{ "code": 1008, "reason": "not-allowed" }` for one refused. Its own `atMs` says when, no earlier than the last message; without it, the connection closes right after the last message.
 - `protocols` matches only a connection that offered each of them, such as a token sent beside the subprotocol's name, so one stub can refuse an expired token while another answers the rest.
+
+With `atMs`, a stub plays a script. This one is a fake transcription service that hears the first audio and answers with three lines as they'd be spoken, then drops the connection:
+
+```bash
+curl -X POST http://localhost:1080/mock/stubs/ws \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "communication-transcripts-relay-asyncapi.yaml#/channels/audio",
+    "on": "audio",
+    "send": [
+      { "type": "result", "id": "r1", "isFinal": true, "startOffsetMs": 0, "endOffsetMs": 1800, "alternatives": [{ "transcript": "Who lives with you?" }] },
+      { "type": "result", "id": "r2", "isFinal": true, "startOffsetMs": 2500, "endOffsetMs": 3400, "alternatives": [{ "transcript": "My daughter." }] },
+      { "type": "result", "id": "r3", "isFinal": true, "startOffsetMs": 4000, "endOffsetMs": 5200, "alternatives": [{ "transcript": "Anyone else?" }] }
+    ],
+    "atMs": [1800, 3400, 5200],
+    "close": { "code": 1006, "atMs": 6000 }
+  }'
+```
+
+Each stub keeps its own time, so when two answer on one connection at once their messages interleave. Once either side closes, nothing a stub has still to send is sent. A scenario that receives a message sent later than 2 seconds gives its receive step a longer `timeout` (see [Scenarios](#scenarios)).
 
 Every message is checked against the contract, both ways. One the mock isn't allowed to receive closes the connection with `1007`. One whose operation declares a `reply`, with no stub to give it, closes the connection with `1011`, the WebSocket equivalent of an HTTP call answered `501`. The mock doesn't check the token, as it doesn't check credentials over HTTP.
 

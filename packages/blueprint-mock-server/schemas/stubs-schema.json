@@ -143,6 +143,21 @@
             ]
           ]
         },
+        "atMs": {
+          "description": "When to send each message in send, in milliseconds from when the stub matched, one per message and none earlier than the one before it. Omitted sends them all at once. Each stub keeps its own time, so two stubs sending on one connection at once interleave their messages.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "examples": [
+            [
+              0,
+              2000,
+              3500
+            ]
+          ]
+        },
         "protocols": {
           "description": "Subprotocols the connection must have offered for this stub to match, such as a token sent beside the subprotocol's name. Omitted matches any connection.",
           "type": "array",
@@ -171,6 +186,11 @@
             },
             "reason": {
               "type": "string"
+            },
+            "atMs": {
+              "description": "When to close, in milliseconds from when the stub matched, no earlier than the last message. Omitted closes right after the last message.",
+              "type": "integer",
+              "minimum": 0
             }
           },
           "examples": [

@@ -160,6 +160,66 @@ test('a stub can drop the connection after what it sends, or answer only a conne
   assert.strictEqual(expiredHeard[0].code, 'not-allowed');
 });
 
+const line = (id, transcript) => ({ ...RESULT, id, alternatives: [{ transcript }] });
+const wait = (ms) => new Promise((settle) => setTimeout(settle, ms));
+
+test('a stub sends each message at its time from when it matched, in order, then closes at its own', async () => {
+  const mock = await quietMock();
+  const lines = [line('r1', 'Who lives with you?'), line('r2', 'My daughter.'), line('r3', 'Anyone else?')];
+  await stub(mock, { channel: CHANNEL, on: 'audio', send: lines, atMs: [0, 40, 80], close: { code: 1006, atMs: 120 } });
+  const { socket, heard, closed, opened } = connect(mock);
+  await opened;
+  const started = Date.now();
+  const arrived = [];
+  socket.addEventListener('message', () => arrived.push(Date.now() - started));
+  socket.send(new Uint8Array([1]));
+  await tick();
+  assert.deepStrictEqual(heard, [lines[0]], 'the first, at 0, comes at once');
+  const { code } = await closed;
+  const closedAt = Date.now() - started;
+  assert.strictEqual(code, 1006);
+  assert.deepStrictEqual(heard, lines, 'all three, in order');
+  assert.ok(arrived[1] >= 35 && arrived[2] >= 75, `each at its time: ${arrived.join(', ')}`);
+  assert.ok(closedAt >= 115 && closedAt >= arrived[2], `the close came at its time, after the last message: ${closedAt}`);
+});
+
+test('nothing a stub has still to send arrives after the client closes', async () => {
+  const mock = await quietMock();
+  await stub(mock, { channel: CHANNEL, on: 'audio', send: [line('r1', 'One.'), line('r2', 'Two.')], atMs: [0, 30] });
+  const { socket, heard, opened } = connect(mock);
+  await opened;
+  socket.send(new Uint8Array([1]));
+  await tick();
+  socket.close();
+  await wait(60);
+  assert.deepStrictEqual(heard.map((m) => m.id), ['r1'], 'the second, due after the close, never came');
+});
+
+test('two stubs sending at once interleave, each at its own time', async () => {
+  const mock = await quietMock();
+  await stub(mock, { channel: CHANNEL, on: 'audio', send: [line('a1', 'A.'), line('a2', 'A again.')], atMs: [0, 60] });
+  await stub(mock, { channel: CHANNEL, on: 'audio', send: [line('b1', 'B.')], atMs: [20] });
+  const { socket, heard, opened } = connect(mock);
+  await opened;
+  socket.send(new Uint8Array([1]));
+  socket.send(new Uint8Array([2]));
+  await wait(90);
+  assert.deepStrictEqual(heard.map((m) => m.id), ['a1', 'b1', 'a2']);
+});
+
+test('a stub is refused when its times don\'t fit what it sends', async () => {
+  const mock = await quietMock();
+  const refused = async (body, pattern) => {
+    const response = await stub(mock, body);
+    assert.strictEqual(response.status, 422);
+    assert.match((await response.json()).message, pattern);
+  };
+  const two = [line('r1', 'One.'), line('r2', 'Two.')];
+  await refused({ channel: CHANNEL, on: 'audio', send: two, atMs: [0] }, /"atMs" has 1 times for 2 messages/);
+  await refused({ channel: CHANNEL, on: 'audio', send: two, atMs: [50, 10] }, /"atMs\.1" is 10, before the message ahead of it/);
+  await refused({ channel: CHANNEL, on: 'audio', send: two, atMs: [0, 50], close: { code: 1006, atMs: 20 } }, /"close\.atMs" is 20, before the last message/);
+});
+
 test('a scenario connects again by sending after the connection closed', async () => {
   const mock = await quietMock();
   const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);

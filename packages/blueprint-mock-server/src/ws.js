@@ -11,6 +11,10 @@
  * call it can't work out from the contracts: what comes back is what a
  * WebSocket stub says, registered at `POST /mock/stubs/ws` and consumed by
  * the first message it matches, as an HTTP stub is by the first request.
+ * A stub can say when to send each message and when to close (`atMs`, from
+ * when it matched), so it plays a script — a fake service's lines as they'd
+ * be spoken, a connection that drops partway — and nothing more is sent once
+ * either side closes.
  *
  * Every message is checked against the contract, both ways. One that arrives
  * and is none of the messages the mock receives on the channel closes the
@@ -128,6 +132,17 @@ export function createWs(docs = []) {
       const { message, reasons } = recognize(check, found.document.relativePath, found.channel.sends, JSON.stringify(payload));
       if (!message) throw new Error(`WebSocket stub "send.${index}" isn't a message the mock may send on ${stub.channel}: ${reasons.join('; ')}`);
     }
+    // Messages go in the order send lists them, so their times can't go back,
+    // and a close can't come before the last of them.
+    const at = stub.atMs ?? [];
+    if (stub.atMs && at.length !== (stub.send ?? []).length) {
+      throw new Error(`WebSocket stub "atMs" has ${at.length} times for ${(stub.send ?? []).length} messages in send; give one per message`);
+    }
+    const back = at.findIndex((ms, index) => index > 0 && ms < at[index - 1]);
+    if (back !== -1) throw new Error(`WebSocket stub "atMs.${back}" is ${at[back]}, before the message ahead of it at ${at[back - 1]}; messages go in the order send lists them`);
+    if (stub.close?.atMs !== undefined && at.length && stub.close.atMs < at.at(-1)) {
+      throw new Error(`WebSocket stub "close.atMs" is ${stub.close.atMs}, before the last message at ${at.at(-1)}`);
+    }
     const n = (counters.get(stub.on) ?? 0) + 1;
     counters.set(stub.on, n);
     const registered = { ...stub, type: 'ws', id: `ws.${stub.on}-${n}` };
@@ -233,8 +248,31 @@ export function createWs(docs = []) {
     const { document, name: channelName, channel } = served;
     const entry = routed.get(document.api);
     let passed = null;
+    // What stubs have still to send, each at its time. Once either side
+    // closes, none of it is sent.
+    const pending = new Set();
+    let ended = false;
+    const end = () => {
+      ended = true;
+      for (const timer of pending) clearTimeout(timer);
+      pending.clear();
+    };
+    const after = (ms, then) => {
+      if (!ms) { then(); return; }
+      const timer = setTimeout(() => { pending.delete(timer); if (!ended) then(); }, ms);
+      pending.add(timer);
+    };
     // Closing the client's connection closes the one routed for it.
-    const client = { send: (data) => peer.send(data), close: (code, reason) => { passed?.close(1000); peer.close(code, reason); } };
+    const client = { send: (data) => peer.send(data), close: (code, reason) => { end(); passed?.close(1000); peer.close(code, reason); } };
+    // A stub's messages in order, each at its time from now, then its close:
+    // at its own time, or right after the last message. Each stub keeps its
+    // own time, so two at once interleave.
+    const play = (stub) => {
+      const at = stub.atMs ?? [];
+      for (const [index, reply] of (stub.send ?? []).entries()) after(at[index], () => client.send(JSON.stringify(reply)));
+      // A dropped connection, or one refused, after what it sent.
+      if (stub.close) after(stub.close.atMs ?? at.at(-1), () => client.close(stub.close.code, stub.close.reason ?? ''));
+    };
     if (entry) passed = upstream(entry, url, offered, client, served);
     return {
       message(data) {
@@ -246,9 +284,7 @@ export function createWs(docs = []) {
         const payload = isBinary(data) ? null : JSON.parse(data);
         const stub = takeStub(document, channelName, message, payload, offered);
         if (stub) {
-          for (const reply of stub.send ?? []) client.send(JSON.stringify(reply));
-          // A dropped connection, or one refused, after what it sent.
-          if (stub.close) client.close(stub.close.code, stub.close.reason ?? '');
+          play(stub);
           return;
         }
         if (passed) {
@@ -260,6 +296,7 @@ export function createWs(docs = []) {
         }
       },
       close(code, reason) {
+        end();
         passed?.close(code, reason);
       },
     };
