@@ -7,10 +7,30 @@ domain: communication
 capability: transcripts
 type: transcription-services
 
+# How a browser reaches each is in docs/architecture/domains/communication-transcripts.md,
+# Decision 11; a service it can't reach sits behind a relay (Decision 12).
 entries:
   aws-transcribe:
-    description: Amazon Transcribe streaming.
+    description: Amazon Transcribe streaming. The software connects to a presigned URL.
+  assemblyai:
+    description: AssemblyAI Universal-Streaming. The software connects with a temporary token.
+  azure-speech:
+    description: Azure AI Speech. The software connects through Azure's Speech SDK with an authorization token, renewed during a session.
+  deepgram:
+    description: Deepgram streaming. The software connects with a temporary token.
   elevenlabs-scribe:
-    description: ElevenLabs Scribe realtime.
+    description: ElevenLabs Scribe realtime. The software connects with a single-use token.
+  gladia:
+    description: Gladia live. The software connects to a session URL that carries its token.
+  google-cloud-speech:
+    description: Google Cloud Speech-to-Text. It takes only gRPC, which a browser can't open, so the software connects to a relay the state runs.
+  google-gemini-live:
+    description: Google's Gemini Live API, transcribing. The software connects with an ephemeral token.
+  openai-realtime:
+    description: OpenAI Realtime, transcribing. The software connects over WebRTC or a WebSocket with a client secret.
+  soniox:
+    description: Soniox real-time. The software connects with a temporary key.
+  speechmatics:
+    description: Speechmatics real-time. The software connects with a temporary key.
   none:
     description: No transcription service — a chat, or lines a person typed. A transcript naming it has no model.

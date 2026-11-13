@@ -3,8 +3,6 @@
  */
 
 import { emitEvent } from '../emit-event.js';
-import { isConfigManaged } from '../config-registry.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { assertFetchShaped } from '../http/request.js';
@@ -19,12 +17,12 @@ import { deletionOf } from '../references.js';
  * @param {Object} endpoint - Endpoint metadata
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Response}
  */
-export function createDeleteHandler(apiMetadata, endpoint, { store, referencesTo } = {}) {
+export function createDeleteHandler(apiMetadata, endpoint, { store, instance, referencesTo } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createDeleteHandler').url);
 
-    const httpStub = matchAndPopHttp(request.method, pathname);
+    const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
     if (httpStub) {
       const status = httpStub.response?.status ?? 204;
       return status === 204 || !httpStub.response?.body
@@ -44,7 +42,7 @@ export function createDeleteHandler(apiMetadata, endpoint, { store, referencesTo
     }
 
     // Block deletion of config-managed resources
-    if (isConfigManaged(endpoint.collectionName, resourceId)) {
+    if (instance.configManaged.isManaged(endpoint.collectionName, resourceId)) {
       return Response.json({
         code: 'CONFIG_MANAGED',
         message: `${capitalize(paramName.replace(/Id$/, ''))} is managed by deployment configuration and cannot be deleted`
@@ -70,7 +68,7 @@ export function createDeleteHandler(apiMetadata, endpoint, { store, referencesTo
       const object = reference ? reference.resource.eventName : endpoint.resource?.eventName;
       if (object) try {
         emitEvent({
-          store,
+          instance,
           domain: eventDomainOf(api),
           object,
           action: 'deleted',

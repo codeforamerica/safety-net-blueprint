@@ -94,6 +94,23 @@ export const zEventList = z.object({
     })))
 }));
 
+/**
+ * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+ *
+ */
+export const zTypeFilter = z.string();
+
+/**
+ * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+ */
+export const zSourceFilter = z.string();
+
+/**
+ * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+ *
+ */
+export const zSubjectFilter = z.uuid();
+
 export const zListEventsData = z.object({
     body: z.optional(z.never()),
     path: z.optional(z.never()),
@@ -255,13 +272,59 @@ export const zPublishEventResponse = z.object({
 export const zStreamEventsData = z.object({
     body: z.optional(z.never()),
     path: z.optional(z.never()),
-    query: z.optional(z.never())
+    query: z.optional(z.object({
+        type: z.optional(z.string()),
+        source: z.optional(z.string()),
+        subject: z.optional(z.uuid())
+    })),
+    headers: z.optional(z.object({
+        'Last-Event-ID': z.optional(z.string())
+    }))
 });
 
 /**
- * Newline-delimited SSE frames, each containing a JSON Event.
+ * SSE stream of domain events.
  */
-export const zStreamEventsResponse = z.string();
+export const zStreamEventsResponse = z.object({
+    type: z.string(),
+    description: z.optional(z.string())
+}).and(z.object({
+    subject: z.optional(z.string()),
+    causationid: z.optional(z.string()),
+    data: z.optional(z.record(z.string(), z.unknown()))
+})).and(z.object({
+    specversion: z.literal('1.0'),
+    id: z.uuid(),
+    source: z.string(),
+    subject: z.uuid(),
+    time: z.iso.datetime({ offset: true }),
+    datacontenttype: z.literal('application/json'),
+    traceparent: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    causationid: z.optional(z.union([
+        z.uuid(),
+        z.null()
+    ])),
+    partitionkey: z.optional(z.union([
+        z.string().min(1),
+        z.null()
+    ])),
+    authid: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    authtype: z.optional(z.nullable(z.enum([
+        'user',
+        'service_account',
+        'api_key',
+        'system',
+        'unauthenticated',
+        'unknown'
+    ]))),
+    data: z.optional(z.record(z.string(), z.unknown()))
+}));
 
 export const zGetEventData = z.object({
     body: z.optional(z.never()),

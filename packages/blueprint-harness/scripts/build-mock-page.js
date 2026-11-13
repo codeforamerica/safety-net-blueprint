@@ -3,7 +3,7 @@
  *
  * A harness script rather than a CLI bin, and deliberately not publishable.
  * Building a demo page is not a capability anyone deploying this needs — what
- * they need is what the page imports, `@codeforamerica/blueprint-mock-server/browser`
+ * they need is what the page imports, `@codeforamerica/blueprint-mock-server/server`
  * and `blueprint-bundle-contracts`. This assembles one worked example of the
  * two, which is what the harness is for, and its output lands in
  * `generated/mock/` beside the explorer, the schemas and the clients.
@@ -62,7 +62,7 @@ const MOCK_ENTRY = resolve(here, '../mock/runtime.js');
 
 // Asserted rather than used: the runtime shim imports by package name, and
 // this fails the build loudly if that export ever stops existing.
-import.meta.resolve('@codeforamerica/blueprint-mock-server/browser');
+import.meta.resolve('@codeforamerica/blueprint-mock-server/server');
 import.meta.resolve('@codeforamerica/blueprint-core/browser');
 
 /** Where `blueprint-bundle-contracts` lives in this workspace. */

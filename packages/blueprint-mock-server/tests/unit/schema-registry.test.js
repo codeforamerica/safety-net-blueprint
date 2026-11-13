@@ -312,10 +312,10 @@ describe('validate degrades rather than throwing', () => {
     // core retries it with the `../` stripped, ajv does not. So a malformed
     // set can reach `validate` with a schema ajv cannot compile — and
     // compiling it raised MissingRefError from inside a request handler.
-    const { validate, initSchemaRegistry } = await import('../../src/validator.js');
+    const { createSchemaRegistry } = await import('../../src/validator.js');
 
     withSet(({ docs }) => {
-      initSchemaRegistry(docs);
+      const { validate } = createSchemaRegistry(docs);
 
       const broken = { allOf: [{ $ref: '../nowhere/missing.yaml#/$defs/Gone' }] };
       const warnings = [];

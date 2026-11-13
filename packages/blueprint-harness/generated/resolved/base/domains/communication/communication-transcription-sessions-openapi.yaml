@@ -1,0 +1,768 @@
+openapi: 3.1.0
+info:
+  title: Transcription sessions
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    The transcription software's connection to its transcription service,
+    for one browser tab. Designed to run in the page, beside the software,
+    while the transcript it writes to lives on the server.
+
+    Creating a session says which transcript it writes to: an existing one,
+    to carry on after a session failed, or what to start a new one with. A
+    new transcript is started the first time the software asks how to
+    stream. The session's actions are what the client tells it — how do I stream, the connection is open or dropped, a line in
+    progress or finished, pause, resume, stop, close, give up — and each
+    sends an event, which is how the client follows it.
+servers:
+  - url: https://api.example.com/communication
+    description: Production server
+  - url: http://localhost:1080/communication
+    description: Local development server
+tags:
+  - name: Transcription sessions
+    description: The transcription software's connection to its transcription service.
+paths:
+  /transcription-sessions:
+    post:
+      summary: Start a transcription session
+      description: |
+        Start keeping track of the software's connection, for a transcript.
+        Name an existing transcript with `transcriptId` to carry on after a
+        session failed; otherwise give what a new transcript is started with
+        — `profileId`, `client` and `startedAt`, and `model` unless the
+        profile's service is `none` — and it's started the first time the
+        software asks how to stream. The session begins in `created`.
+      operationId: createTranscriptionSession
+      tags:
+        - Transcription sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionSessionCreate"
+      responses:
+        "201":
+          description: Session started.
+          headers:
+            Location:
+              description: URL of the new session.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "409":
+          $ref: ../../components/responses.yaml#/Conflict
+          description: |
+            The session is refused: it names a transcript that doesn't exist,
+            or gives neither a transcript nor what to start one with.
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /transcription-sessions/{transcriptionSessionId}:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    get:
+      summary: Get a transcription session
+      description: Retrieve a session by identifier.
+      operationId: getTranscriptionSession
+      tags:
+        - Transcription sessions
+      responses:
+        "200":
+          description: Session retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+  /transcription-sessions/{transcriptionSessionId}/get-connection:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Get connection transcriptionsession
+      description: |-
+        Get where to connect and a short-lived credential, starting the transcript the first time.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: getConnectionTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetConnectionRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamConnection"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: get-connection
+  /transcription-sessions/{transcriptionSessionId}/renew-connection:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Renew connection transcriptionsession
+      description: |-
+        Get a fresh credential while connected, with no change to the session.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: renewConnectionTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetConnectionRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamConnection"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: renew-connection
+  /transcription-sessions/{transcriptionSessionId}/connect:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Connect transcriptionsession
+      description: |-
+        The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: connectTranscriptionSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: connect
+  /transcription-sessions/{transcriptionSessionId}/disconnect:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Disconnect transcriptionsession
+      description: The connection to the service dropped; the software will try again.
+      operationId: disconnectTranscriptionSession
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: disconnect
+  /transcription-sessions/{transcriptionSessionId}/update-line:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Update line transcriptionsession
+      description: A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.
+      operationId: updateLineTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LineInProgress"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: update-line
+  /transcription-sessions/{transcriptionSessionId}/add-line:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Add line transcriptionsession
+      description: |-
+        A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: addLineTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinishedLine"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: add-line
+  /transcription-sessions/{transcriptionSessionId}/pause:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Pause transcriptionsession
+      description: |-
+        Take the conversation off the record. The transcript keeps the pause; the software closes the connection.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: pauseTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: pause
+  /transcription-sessions/{transcriptionSessionId}/resume:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Resume transcriptionsession
+      description: |-
+        Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: resumeTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: resume
+  /transcription-sessions/{transcriptionSessionId}/stop:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Stop transcriptionsession
+      description: Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.
+      operationId: stopTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: stop
+  /transcription-sessions/{transcriptionSessionId}/close:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Close transcriptionsession
+      description: |-
+        The last text is in and the connection is closed; the transcript closes.
+
+        It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+      operationId: closeTranscriptionSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "422":
+          $ref: ../../components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: close
+  /transcription-sessions/{transcriptionSessionId}/fail:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    post:
+      summary: Fail transcriptionsession
+      description: The software gave up connecting or reconnecting. The transcript stays open.
+      operationId: failTranscriptionSession
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: ../../components/responses.yaml#/BadRequest
+        "403":
+          $ref: ../../components/responses.yaml#/Forbidden
+        "404":
+          $ref: ../../components/responses.yaml#/NotFound
+        "409":
+          description: The record is in a state this action can't start from, or one of its guards isn't met.
+          content:
+            application/json:
+              schema:
+                $ref: ../../components/responses.yaml#/Error
+        "500":
+          $ref: ../../components/responses.yaml#/InternalError
+      tags:
+        - Transcription Sessions
+      x-relationship:
+        type: state-machine-action
+        domain: communication
+        id: fail
+components:
+  parameters:
+    TranscriptionSessionIdParam:
+      name: transcriptionSessionId
+      in: path
+      required: true
+      description: Unique identifier of the session.
+      schema:
+        type: string
+        format: uuid
+      example: 2b7d5e1a-4c3f-4a8e-9d6b-0e1f2a3b4c5d
+  schemas:
+    TranscriptionSessionWritable:
+      type: object
+      description: |
+        Which transcript the session writes to: `transcriptId` for an existing
+        one, or what to start a new one with, which the session passes to
+        `createTranscript` the first time the software asks how to stream.
+      properties:
+        transcriptId:
+          type: string
+          format: uuid
+          description: |
+            The transcript the session writes to. Given to carry on a
+            transcript, after a session failed or in a reopened tab; otherwise
+            set when the session starts a new one. To carry on after a reload,
+            the page keeps this id, in sessionStorage for example, and reads
+            the transcript with getTranscript: one still recording or paused
+            can be carried on. A tab opened again has no id kept, and finds
+            the transcript with listTranscripts, by its subject and status:
+            `q=subjectId:{id} status:recording,paused`. A transcript with no
+            subject can't be found that way.
+          x-relationship:
+            resource: Transcript
+            style: links-only
+        profileId:
+          type: string
+          format: uuid
+          description: The profile to start a new transcript under.
+          x-relationship:
+            resource: TranscriptionProfile
+            style: links-only
+        model:
+          type: string
+          description: The transcription service's model, for a new transcript. Required unless the profile's service is `none`.
+          example: scribe_v2
+        client:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$
+          description: The transcription software, as `name/version`, for a new transcript.
+          example: interview-assistant/0.1.0
+        startedAt:
+          type: string
+          format: date-time
+          description: When the conversation began, by the client's clock, for a new transcript.
+        subjectType:
+          $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectType
+        subjectId:
+          $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectId
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            transcript:
+              type: string
+              format: uri-reference
+              description: Link to the related Transcript resource.
+            profile:
+              type: string
+              format: uri-reference
+              description: Link to the related TranscriptionProfile resource.
+    TranscriptionSession:
+      description: A transcription session, including server-managed fields.
+      unevaluatedProperties: false
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionSessionWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier, given when the record was created or else generated by the server.
+            status:
+              type: string
+              readOnly: true
+              description: Where the connection is; see the session's state machine.
+              enum:
+                - created
+                - connecting
+                - connected
+                - disconnected
+                - paused
+                - stopping
+                - closed
+                - failed
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the session was started.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the session last changed.
+    TranscriptionSessionCreate:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionSessionWritable"
+        - $ref: ../../schemas/operations.yaml#/$defs/NewId
+        - type: object
+          description: |
+            Payload to start a session: `transcriptId`, or `profileId`,
+            `client` and `startedAt` for a new transcript. id, status,
+            createdAt and updatedAt are set by the server.
+    GetConnectionRequest:
+      $ref: ./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest
+    StreamConnection:
+      $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnection
+    ConnectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        gap:
+          type: object
+          additionalProperties: false
+          required:
+            - startedAt
+            - endedAt
+          description: The stretch nothing was captured in, by the client's clock, recorded on the transcript as a gap. Send it after a reconnect, from when the connection dropped. Send it too when a new session carries on a transcript that's still recording, from the transcript's lastActivityAt to now.
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+            endedAt:
+              type: string
+              format: date-time
+    LineInProgress:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - text
+        - startedAt
+      properties:
+        key:
+          type: string
+          maxLength: 255
+          description: The line's key, the same on every update and on the finished line, and unique within the session. A service's own result id is unique only within one connection, so the client makes it unique across reconnects, for example by putting the connection's number in front.
+        text:
+          type: string
+        speaker:
+          $ref: ./communication-transcripts-openapi.yaml#/components/schemas/Speaker
+        startedAt:
+          type: string
+          format: date-time
+          description: When it began
+          by the client's clock.: null
+    FinishedLine:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - startedAt
+        - endedAt
+        - text
+        - speaker
+      properties:
+        key:
+          type: string
+          maxLength: 255
+          description: The line's key, as on its updates. The entry's Idempotency-Key is made from the session's id and this key, so a retry adds the line once and no other line is refused for it.
+        startedAt:
+          type: string
+          format: date-time
+          description: When it began
+          by the client's clock.: null
+        endedAt:
+          type: string
+          format: date-time
+          description: When it ended.
+        text:
+          type: string
+          minLength: 1
+        speaker:
+          $ref: ./communication-transcripts-openapi.yaml#/components/schemas/Speaker
+        speakerLabel:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        language:
+          $ref: ../../schemas/enums.yaml#/$defs/Language
+    AtRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - at
+      properties:
+        at:
+          type: string
+          format: date-time
+          description: When it happened, by the client's clock.

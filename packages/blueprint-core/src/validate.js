@@ -783,6 +783,30 @@ function deprecatedCallBodies(doc) {
 }
 
 /**
+ * Actions declaring `schema.response`, which said what an action answered
+ * with but gave nothing to fill it: an action answered with the record
+ * whatever it said. `response: {schema, payload}` says both. Still read, so
+ * a warning rather than an error.
+ *
+ * @param {import('../types.js').Doc} doc - A state-machine document
+ * @returns {object[]}
+ */
+function deprecatedResponseSchemas(doc) {
+  const warnings = [];
+  for (const machine of doc.content?.machines ?? []) {
+    for (const action of machine.actions ?? []) {
+      if (action?.schema?.response === undefined) continue;
+      warnings.push({
+        rule: 'deprecated-schema-response',
+        message: `${machine.object ?? 'A machine'}'s ${action.id} declares schema.response, which is deprecated: write response: {schema, payload}, giving the value it answers with beside its schema.`,
+        path: `${doc.path}#machines[${machine.object ?? '?'}].actions[${action.id}].schema.response`,
+      });
+    }
+  }
+  return warnings;
+}
+
+/**
  * Calls by method and path into another domain's records.
  *
  * A call by path is the machine's own direct write: it skips the API's checks
@@ -901,6 +925,7 @@ function validateDoc(doc, context) {
       }
       warnings.push(...deprecatedCallBodies(doc));
       warnings.push(...pathCallsAcrossDomains(doc));
+      warnings.push(...deprecatedResponseSchemas(doc));
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -928,7 +953,7 @@ function validateDoc(doc, context) {
       break;
 
     case 'arazzo':
-      errors.push(...validateArazzo(doc, context.operations));
+      errors.push(...validateArazzo(doc, context.operations, context.docs));
       break;
 
     case 'sla-types':

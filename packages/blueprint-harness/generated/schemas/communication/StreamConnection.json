@@ -1,0 +1,79 @@
+{
+  "description": "How the software connects, and nothing else.",
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "type": "object",
+      "description": "How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.\n",
+      "required": [
+        "provider",
+        "protocol",
+        "url",
+        "expiresIn"
+      ],
+      "dependentRequired": {
+        "accessToken": [
+          "tokenType"
+        ]
+      },
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "The transcription service, as the transcript's profile names it.",
+          "enum": [
+            "assemblyai",
+            "aws-transcribe",
+            "azure-speech",
+            "deepgram",
+            "elevenlabs-scribe",
+            "fake-transcription",
+            "gladia",
+            "google-cloud-speech",
+            "google-gemini-live",
+            "none",
+            "openai-realtime",
+            "soniox",
+            "speechmatics"
+          ]
+        },
+        "protocol": {
+          "type": "string",
+          "description": "How the software connects to the service.",
+          "enum": [
+            "websocket",
+            "webrtc"
+          ]
+        },
+        "subprotocol": {
+          "type": "string",
+          "description": "The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.\n"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.\n"
+        },
+        "accessToken": {
+          "type": "string",
+          "description": "The short-lived credential to present on connecting. Absent when the URL carries it.\n"
+        },
+        "tokenType": {
+          "type": "string",
+          "description": "The kind of credential accessToken is, as OAuth names it."
+        },
+        "expiresIn": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.\n"
+        },
+        "connectionParameters": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.\n"
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/StreamConnection"
+}

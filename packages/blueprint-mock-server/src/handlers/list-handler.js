@@ -3,7 +3,6 @@
  */
 
 import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, queryOf } from '../http/request.js';
@@ -38,7 +37,7 @@ function extractStringFields(schemas) {
  * @param {Object} endpoint - Endpoint metadata
  * @returns {(request: Request) => Response}
  */
-export function createListHandler(apiMetadata, endpoint, { store } = {}) {
+export function createListHandler(apiMetadata, endpoint, { store, instance } = {}) {
   // Derive searchable fields from schema string properties
   const schemaFields = extractStringFields(apiMetadata.schemas || {});
 
@@ -46,7 +45,7 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
     const { pathname } = new URL(assertFetchShaped(request, 'createListHandler').url);
     const query = queryOf(request);
     try {
-      const httpStub = matchAndPopHttp(request.method, pathname);
+      const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
       if (httpStub) {
         return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
@@ -123,13 +122,13 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
       };
 
       const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
-      const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
-      const linksFields = extractLinksFields(itemSchema, apiMetadata.resolve?.schema);
+      const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema, instance.resources);
+      const linksFields = extractLinksFields(itemSchema, apiMetadata.resolve?.schema, instance.resources);
       const derivedFields = extractDerivedFields(itemSchema, apiMetadata.resolve?.schema);
       if (expandFields.length > 0 || linksFields.length > 0 || derivedFields.length > 0) {
         safeResult.items = safeResult.items.map(item => {
           let result = expandFields.length > 0 ? applyExpand(item, expandFields, (c, id) => store.findById(c, id)) : item;
-          if (linksFields.length > 0) result = applyLinks(result, linksFields, (c, id) => store.findById(c, id));
+          if (linksFields.length > 0) result = applyLinks(result, linksFields, (c, id) => store.findById(c, id), instance.resources);
           if (derivedFields.length > 0) result = applyDerivedFields(result, derivedFields);
           return result;
         });

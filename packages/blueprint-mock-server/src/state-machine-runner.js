@@ -4,13 +4,14 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities } from './state-machine-engine.js';
+import { findOperation, evaluateGuards, applyStepsInOrder, caughtEntities, resolveBodyValue } from './state-machine-engine.js';
+import { fitToSchema } from './payload-fit.js';
 import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
-import { validate } from './validator.js';
 import { playsAnyOf } from './auth-context.js';
+import { whenFree } from './record-turns.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -76,6 +77,19 @@ const listed = (items, conjunction) => (items.length < 2 ? items.join('')
   : `${items.slice(0, -1).join(', ')} ${conjunction} ${items.at(-1)}`);
 
 /** `TranscriptEntry` → `transcript entry`, for a refusal a person reads. */
+/**
+ * The file each state machine was read from, so an action's request schema is
+ * checked as declared there: its refs into other files resolve from it.
+ */
+const declaredIn = new WeakMap();
+
+/** @param {{ stateMachine: object, relativePath?: string }[]} entries */
+export function rememberMachineFiles(entries) {
+  for (const entry of entries ?? []) {
+    if (entry?.stateMachine && entry.relativePath) declaredIn.set(entry.stateMachine, entry.relativePath);
+  }
+}
+
 export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
 
 /**
@@ -94,15 +108,37 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * @param {Object} [options.requestBody]     - Request body passed to effects as $request.*; empty for system transitions
  * @param {string} [options.traceparent]    - W3C traceparent for distributed tracing
  * @param {string} [options.causationid]    - CloudEvents causation extension: id of the triggering event
+ * @param {string} [options.authorization]  - The caller's Authorization header, which a call made
+ *   as the caller carries on; kept apart from the caller, so no expression reads it
+ * @param {Object} options.store
+ * @param {Object} options.instance         - The mock running it (instance.js)
+ * @param {{ schema: Object, follow: Function }|null} [options.responseSchema] - The 200 response schema
+ *   the action's endpoint declares, which an action's `response.payload` is fitted to
  * Steps run in order; a call to an operation is made as it is reached. When
  * one fails, its `catch:` runs instead of the action's steps and names the
  * state the action ends in, and the action answers with the call's failure
  * and the record in `details`. With no `catch:`, the action fails and
  * nothing is saved.
  *
+ * It waits for any action or reaction already changing the record, and holds
+ * the record until it's saved (record-turns.js); what it does after — its
+ * calls to other records' actions, its events — runs once it's let go, so
+ * nothing it sets off waits on it.
+ *
  * @returns {Promise<{ success: boolean, result?: Object, status?: number, code?: string, error?: string, details?: Object[] }>}
  */
-export async function executeTransition({
+export async function executeTransition(options) {
+  const { instance, resourceName, resourceId } = options;
+  let letGo = whenFree(instance, resourceName, resourceId);
+  if (typeof letGo.then === 'function') letGo = await letGo;
+  try {
+    return await transitionRecord(options, letGo);
+  } finally {
+    letGo();
+  }
+}
+
+async function transitionRecord({
   resourceName,
   resourceId,
   trigger,
@@ -115,9 +151,12 @@ export async function executeTransition({
   requestBody = {},
   traceparent = null,
   causationid = null,
+  authorization = null,
   store,
-  stepCalls = null
-}) {
+  instance,
+  stepCalls = null,
+  responseSchema = null
+}, letGo) {
   const timestamp = now || new Date().toISOString();
 
   const resource = store.findById(resourceName, resourceId);
@@ -152,11 +191,15 @@ export async function executeTransition({
   if (entities === null) {
     return { success: false, status: 409, error: `Context binding failed for action "${trigger}"` };
   }
-  const context = { ...baseContext, entities };
+  // The schemas the steps' values go into, so a null one doesn't accept is
+  // left out (step-calls.js, schemasFor).
+  const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(machine), instance };
 
   const checkBody = () => {
     if (!operation?.schema?.request) return null;
-    const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
+    const relativePath = declaredIn.get(stateMachine);
+    const source = relativePath ? { relativePath, defs: stateMachine.$defs } : null;
+    const { valid, errors } = instance.schemas.validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`, source);
     return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
   };
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
@@ -169,7 +212,7 @@ export async function executeTransition({
   // record's id as the key: accepting a suggestion calls once, and only a call
   // that succeeds is kept under the key.
   const perform = performerFor({
-    callerId, callerRoles, timestamp, traceparent, causationid: actionEventId, store, stepCalls,
+    callerId, callerRoles, authorization, timestamp, traceparent, causationid: actionEventId, store, instance, stepCalls,
     idempotencyKey: resource?.id ?? null,
   });
 
@@ -229,6 +272,7 @@ export async function executeTransition({
     if (resource[key] !== value) diff[key] = value;
   }
   const result = store.update(resourceName, resourceId, diff);
+  letGo();
 
   // A record a step creates directly has its SLA clocks started and is
   // announced as a create through the API would be, caused by the action.
@@ -268,7 +312,9 @@ export async function executeTransition({
             requestBody: body,
             traceparent,
             causationid,
+            authorization,
             store,
+            instance,
             stepCalls,
           }),
         });
@@ -292,7 +338,7 @@ export async function executeTransition({
         traceparent,
         causationid: event.causationid || causationid || undefined,
         ...authContext(callerId, callerRoles),
-      }, store);
+      }, instance);
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);
     }
@@ -310,6 +356,15 @@ export async function executeTransition({
     };
   }
 
+  // An action that says what it answers with answers with that — a value a
+  // step's call bound, say — read once the steps have run and the record is
+  // saved; one that doesn't answers with the record.
+  // A null the response schema the action's endpoint declares doesn't accept
+  // is left out (payload-fit.js).
+  if (operation.response?.payload !== undefined) {
+    const payload = resolveBodyValue(operation.response.payload, { ...context, object: result });
+    return { success: true, result: fitToSchema(payload, responseSchema?.schema, responseSchema?.follow) };
+  }
   return { success: true, result };
 }
 
@@ -335,6 +390,7 @@ function refusedBy(outcome) {
  * @param {string|null} options.traceparent
  * @param {string|null} options.causationid - The event the call's own events name as their cause
  * @param {Object} options.store
+ * @param {Object} options.instance
  * @param {Object|null} options.stepCalls
  * @returns {((call: Object, step: Object) => Promise<{ ok: boolean, status: number, body: * }>) & { settleCreated: (path: string, record: Object) => Object|null }}
  */
@@ -351,13 +407,14 @@ export function performerFor(options) {
   return perform;
 }
 
-function performCall(call, step, { callerId, callerRoles, timestamp, traceparent, causationid, store, stepCalls, idempotencyKey = null }) {
+function performCall(call, step, { callerId, callerRoles, authorization = null, timestamp, traceparent, causationid, store, instance, stepCalls, idempotencyKey = null }) {
   if (!stepCalls) {
     return Promise.resolve({ ok: false, status: 500, body: { code: 'INTERNAL_ERROR', message: 'This mock cannot make calls to operations.' } });
   }
   return stepCalls.perform(call, {
     runAs: step.runAs ?? 'system',
     caller: { id: callerId, roles: callerRoles },
+    authorization,
     traceparent,
     causationid,
     idempotencyKey,
@@ -375,7 +432,9 @@ function performCall(call, step, { callerId, callerRoles, timestamp, traceparent
       requestBody: body,
       traceparent,
       causationid,
+      authorization,
       store,
+      instance,
       stepCalls,
     }),
   });

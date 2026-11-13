@@ -801,6 +801,126 @@ schema_patterns:
       is for. Applies to event data payloads, request bodies, and responses.
     examples: [taskType, disposition, serviceType, failureReason, callMode]
 
+  null_and_absent:
+    description: |
+      Treat null and absent as different values. A property typed `string`
+      can't hold null; only `type: [string, "null"]` can. Sending null where
+      the schema doesn't accept it makes the body invalid, and breaks
+      generated clients (a Zod `.optional()` rejects null; only `.nullable()`
+      accepts it).
+      - Leave out a property that has no value. Never fill one in as null.
+      - Send null only where the property's schema accepts null.
+      - On create, default a property that is required and accepts null to
+        null, and a required array to []; leave out an optional property
+        nobody gave.
+    value_expressions: |
+      Wherever a value expression fills something in — a call's request body,
+      by method and path or by operationId; an emit's data; an action's
+      response.payload; a set:; a ruleset's inputs; a procedure's with: —
+      apply the same rule:
+      - An expression that finds nothing leaves its property out. A set: sets
+        nothing.
+      - An expression that finds null, or a literal null, is sent, unless the
+        schema the value goes into doesn't accept null there; then the
+        property is left out. That schema is the operation's request schema,
+        the event's data schema, the action's response.schema, or the field
+        on the machine's resource. Where none is declared, null is sent.
+      - A PATCH therefore leaves a property it leaves out as it was. To clear
+        one, write a literal null where the property accepts it.
+      - A required property left out fails the schema, which names it.
+    exceptions: |
+      Apply the rule only where a value is filled in. Don't apply it where one
+      is looked up — a where: in a context binding or forEach, a guard's field
+      or value: leaving a condition out of a where: would match every record.
+      What a missing value means in a lookup isn't settled yet, and differs by
+      where it comes from: in a binding, a missing $object field finds no
+      record while a missing $this or $alias field matches null; in forEach,
+      a missing $request field skips the loop while any other matches null.
+      Data a client wrote — a composition's patch, a stored call such as a
+      suggestion's — is sent as written.
+    why: |
+      Decided for records the mock creates (July 2026), after null-filling
+      optional fields gave invalid responses; extended to value expressions
+      (November 2026) when an action's response came back with nulls its
+      schema refused.
+    prior_art:
+      - Zalando RESTful API Guidelines, which treat null and absent alike only for a property that is both optional and nullable
+      - Stripe, which sends null for unset properties and marks each one nullable in its spec
+
+# =============================================================================
+# Config-managed resources
+# =============================================================================
+config_managed_resources:
+  description: >
+    Some collections contain both "system" resources (defined in a *-config.yaml
+    deployment artifact, present in every deployment) and "user" resources (created
+    at runtime via the API). The source field signals which is which, enabling
+    frontends to disable destructive actions for system resources upfront rather
+    than discovering the constraint via a 409.
+
+  industry_context: |
+    This pattern is consistent with how major platforms handle system vs. user resources:
+    - ServiceNow: sys_scope distinguishes system (global) from user/app-scoped records
+    - Salesforce: Type or source enum fields on Queue and other admin objects
+    - IBM Cúram: systemFlag boolean on reference data tables
+    - JSM: permission-based only (no field; 403/405 is the signal — less consumer-friendly)
+
+  catalog:
+    description: >
+      Every key of a config file other than the envelope ($schema, version,
+      domain) is a catalog, and declares the resource its entries are. The
+      resource is found by name among the OpenAPI documents of the config's
+      domain, never by the catalog's key or a collection name. A key in any
+      other shape is a validation error (not-a-catalog), and so is a resource
+      no API of the domain serves (unknown-config-resource).
+    example: |
+      queues:
+        resource: Queue
+        entries:
+          - id: ae5ed10f-657d-55f3-b53c-b381ec583a1e
+            name: snap-intake
+
+  source_field:
+    description: >
+      Required on every resource a catalog seeds; validation fails when it is
+      missing (config-resource-without-source). Declared once, as the shared
+      ConfigSource enum, and referenced from each resource.
+    reference: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
+    values:
+      system: Seeded from *-config.yaml. Can be changed through the API where the API allows it; cannot be deleted (409).
+      user: Created through the API; deletable where the API allows it.
+    placement: top-level resource schema property, alongside id/createdAt/updatedAt
+    example: |
+      Queue:
+        type: object
+        required: [id, name, source, createdAt, updatedAt]
+        properties:
+          source:
+            $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
+
+  deploying:
+    rule: A deploy seeds only the entries not already there. It never overwrites or removes a record.
+    rationale: >
+      A record seeded from config can be changed through the API, and that
+      change, with its update event, has to mean what it says. If a deploy
+      reset seeded records to the file, an edit would silently vanish at the
+      next deploy, while the event history still showed it.
+    consequence: >
+      After the first deploy, the file is only where an entry starts. Changing a
+      seeded entry in the file afterwards has no effect on a running system;
+      change it through the API, or as a data migration.
+
+  mock_server_behavior:
+    config_seeding: >
+      Config entries are inserted with source set to "system", into the collection
+      of the resource the catalog names, unless a record with the id is already there.
+    runtime_create: POST handler sets source to "user" for collections a catalog seeds.
+    delete_guard: DELETE returns 409 CONFIG_MANAGED for any resource with a config-managed ID.
+    reset: >
+      POST /mock/reset starts the demo over: it empties the store and seeds the
+      catalogs again, discarding changes made through the API. That is reset
+      behavior, not deploy behavior.
+
 # =============================================================================
 # File Structure# =============================================================================
 # API specs are organized flat with x-extensions for classification.

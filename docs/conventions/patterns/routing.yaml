@@ -1,0 +1,59 @@
+# Pattern — Routing
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Routing
+summary: >
+  No contract says where it runs. Configuration for each environment says
+  which domain, API or operation is answered where — in the browser, by a
+  state's service, by a stand-in for testing — so the same contracts work in
+  every arrangement.
+
+use_when:
+  - >-
+    Parts of the blueprint run in different places, such as a session in the
+    page and the record it keeps on a service.
+  - >-
+    A state builds or buys its services one domain at a time, and the rest is
+    answered by something else meanwhile.
+  - >-
+    A demo or a test answers an operation in place of the service that would,
+    such as an adapter that holds a vendor's secret.
+
+do_not_use_when:
+  - case: The contracts themselves have to differ for a state.
+    use_instead: An overlay (patterns/overlay-customization.yaml).
+  - case: The other side is a system outside the blueprint, with its own API.
+    use_instead: An adapter that implements a blueprint contract (patterns/adapter.yaml); routing then says where that adapter is.
+
+rules:
+  - >-
+    Keep where things run out of the contracts: no hosts, no "runs in the
+    browser" in a contract. It's per-environment configuration.
+  - >-
+    Call another domain's operation by operationId, so routing follows the
+    call when that domain runs elsewhere; a call by method and path stays where
+    the caller is.
+  - >-
+    Route a whole domain where you can, with exceptions for what runs
+    elsewhere. Routing single operations splits a domain's data between two
+    places, so a record one creates is missing from the other's reads.
+  - >-
+    Route a domain's events with it: what its state machines react to is
+    delivered to wherever it runs.
+  - >-
+    Pass on only the headers a request describes itself with, and a caller's
+    credentials only where the configuration names them; a page holds no
+    secrets, so what a page reaches must accept the user's own credential or
+    none.
+
+example: >
+  For transcription, the communication domain is routed to the state's
+  service except the session's API, which stays in the page; the session's
+  actions call the transcript by operationId, so those calls reach the
+  service. A demo with no backend routes nothing, and answers the adapter's
+  operation in the page.
+
+rationale: docs/architecture/domains/communication-transcripts.md

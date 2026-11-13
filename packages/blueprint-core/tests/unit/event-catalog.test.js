@@ -103,16 +103,25 @@ describe('the generated event catalog', () => {
   });
 
   test('has a channel for each timer its machine declares, carrying the timer service\'s callback', () => {
-    const data = catalog.content.components.schemas.CaseManagementReviewDueEvent.allOf[1].properties.data;
+    const data = catalog.content.components.schemas.CaseManagementReviewDueEvent.schema.allOf[1].properties.data;
     assert.deepEqual(data, { $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/TimerCallbackEvent' });
     assert.match(catalog.content.components.messages.CaseManagementReviewDue.summary, /^Reviews a case nobody has looked at\. Sent by the timer service/);
   });
 
   test('carries the resource as a created event\'s data, and the declared schema as an emitted one\'s', () => {
-    const data = (name) => catalog.content.components.schemas[name].allOf[1].properties.data;
+    const data = (name) => catalog.content.components.schemas[name].schema.allOf[1].properties.data;
     assert.deepEqual(data('CaseManagementCaseCreatedEvent'), { $ref: './case-management-openapi.yaml#/components/schemas/Case' });
     assert.deepEqual(data('CaseManagementCaseTransferredEvent'), { type: 'object', required: ['county'] });
     assert.equal(catalog.content.components.messages.CaseManagementCaseTransferred.summary, 'The case moved county.');
+  });
+
+  test('labels each event\'s schema as OpenAPI 3.1, which its data is written in', () => {
+    const format = 'application/vnd.oai.openapi;version=3.1.0';
+    for (const schema of Object.values(catalog.content.components.schemas)) assert.equal(schema.schemaFormat, format);
+    for (const message of Object.values(catalog.content.components.messages)) {
+      assert.equal(message.payload.schemaFormat, format);
+      assert.match(message.payload.schema.$ref, /^#\/components\/schemas\/\w+Event$/);
+    }
   });
 
   test('leaves out an event log, whose records are events, and a call, which is no resource\'s', () => {

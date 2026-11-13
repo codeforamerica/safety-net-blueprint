@@ -1,4 +1,4 @@
-# Design Conventions — Diagram Colors
+# Design Conventions — Diagrams
 # Part of the blueprint conventions. See conventions/ for the full set.
 #
 # Use this palette for all diagrams. Apply the colors semantically; do not
@@ -24,3 +24,44 @@ diagrams:
     light_blue: Phase and column backgrounds, secondary UI elements
     sand: Neutral structural elements, borders, dividers
     black: Text (#000000), backgrounds (#F3F3F3), white space (#FFFFFF)
+
+  # How to draw a flow between parts of a system — a page, the blueprint, an
+  # adapter, a vendor — so a person can follow it.
+  flows:
+    use_when: >-
+      Showing how several parts work together over time, in an architecture
+      doc.
+    do_not_use_when:
+      - case: One state machine's states and transitions.
+        use_instead: The generated state machine docs.
+      - case: One request and its answer.
+        use_instead: A sentence, or the operation's own docs.
+    rules:
+      - >-
+        Start with an overview: a flowchart of the parts and what passes between
+        them, in plain words, with what's optional labeled optional. Then one
+        short sequence diagram per moment, such as starting, each line, a pause,
+        a drop, stopping, each with only the parts it needs and five to fifteen
+        arrows. One large diagram answering every question at once is hard to
+        read.
+      - >-
+        Show where each part runs. Group what runs in the browser in a box, and
+        draw one system that runs in two places, such as the blueprint in the
+        page and on the server, as two participants.
+      - >-
+        Label each arrow with what the contracts name it: a request with its
+        action or operationId, an event with its name. Describe in words only
+        what isn't the blueprint's, such as a vendor's protocol or the audio.
+      - >-
+        Say which way things go. Use one-way arrows, and name what moves, such
+        as audio out and text back, rather than one two-way arrow.
+      - >-
+        Give the arrow styles a short key: a request, its answer, an event, a
+        frame on an open connection, a connection closing.
+      - >-
+        Write diagrams in Mermaid in the Markdown, where GitHub draws them, and
+        keep a semicolon out of a sequence diagram's message, which Mermaid
+        reads as the end of a line.
+    example: >-
+      docs/architecture/domains/communication-transcripts.md, "How the parts work together".
+

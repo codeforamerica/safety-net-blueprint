@@ -1,6 +1,6 @@
 # The lifecycle of a transcript. A transcript starts in `recording` when it is
 # created; pausing takes the conversation off the record, resuming puts it back,
-# and closing ends it. See docs/architecture/domains/communication.md.
+# and closing ends it. See docs/architecture/domains/communication-transcripts.md.
 #
 # Every time here is the client's — the transcript's startedAt, and the `at`
 # pause, resume and close are sent with — the same clock the times on its
@@ -45,9 +45,6 @@ machines:
       - id: atAfterPauseBegan
         description: the time given is not before the open pause began
         condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
-      - id: aPauseIsOpen
-        description: a pause is open
-        condition: openPause != null
       # A transcript naming a profile that doesn't exist is refused, and so is
       # one that doesn't say which model produced its lines — unless the
       # profile's service is `none`.
@@ -96,10 +93,13 @@ machines:
               POST: communication/transcripts/$object.id/entries
               requestBody: {payload: {kind: pause, startedAt: $request.at, endedAt: null}}
           - emit: paused
+      # Resuming a transcript that's already recording does nothing and
+      # succeeds: someone else may have resumed it first, and the session that
+      # paused with it then resumes too.
       - id: resume
-        description: Put the conversation back on the record, at the time the client says.
+        description: Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
         transition:
-          from: paused
+          from: [paused, recording]
           to: recording
         schema:
           request:
@@ -109,13 +109,49 @@ machines:
               from: communication/transcripts/entries
               where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
         guards:
-          - conditions: [aPauseIsOpen, atAfterPauseBegan]
+          - conditions: [atAfterPauseBegan]
+        steps:
+          - if: openPause != null
+            then:
+              - call:
+                  PATCH: communication/transcripts/$object.id/entries/$openPause.id
+                  requestBody: {payload: {endedAt: $request.at}}
+              - call: requestIdleCheck
+              - emit: resumed
+      # The software streams audio straight to its transcription service; this
+      # gets it what it needs to, from the transcript audio adapter, which holds the
+      # service's secret. Asking again renews the credential.
+      - id: get-connection
+        description: Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
+        transition:
+          from: recording
+        schema:
+          request:
+            $ref: "#/$defs/GetConnectionRequest"
         steps:
           - call:
-              PATCH: communication/transcripts/$object.id/entries/$openPause.id
-              requestBody: {payload: {endedAt: $request.at}}
-          - call: requestIdleCheck
-          - emit: resumed
+              operationId: issueTranscriptConnection
+              requestBody:
+                payload:
+                  provider: $profile.provider
+                  model: $object.model
+                  languages: $profile.languages
+                  audio: $request.audio
+                  protocols: $request.protocols
+                  metadata: {transcriptId: $object.id}
+            bind: $connection
+        response:
+          schema:
+            $ref: "#/$defs/StreamConnection"
+          payload:
+            provider: $connection.provider
+            protocol: $connection.protocol
+            subprotocol: $connection.subprotocol
+            url: $connection.url
+            accessToken: $connection.accessToken
+            tokenType: $connection.tokenType
+            expiresIn: $connection.expiresIn
+            connectionParameters: $connection.connectionParameters
       - id: close
         description: End the transcript, at the time the client says. A pause still open ends then too.
         transition:
@@ -219,6 +255,10 @@ machines:
             - actors: [system]
 
 $defs:
+  GetConnectionRequest:
+    $ref: "./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest"
+  StreamConnection:
+    $ref: "./communication-transcripts-schema.yaml#/$defs/StreamConnection"
   AtRequest:
     type: object
     additionalProperties: false

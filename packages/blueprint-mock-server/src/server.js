@@ -1,12 +1,13 @@
 /**
- * The mock server, without a server.
+ * The mock server, without a server: the server's side, in a page or in Node.
+ * The page's side is client.js.
  *
  * Hand it a contracts artifact and it returns the same route table the Node
  * process builds, plus a `fetch` that serves it. No HTTP, no filesystem, no
  * native module — the handlers were always ordinary JavaScript; what bound
  * them to Node was the shell around them (#448).
  *
- *   import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+ *   import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
  *
  *   const contracts = await (await fetch('./contracts.json')).json();
  *   const mock = await createMockServer({ contracts });
@@ -21,13 +22,11 @@ import { createMemoryStore } from './stores/memory-store.js';
 import { apiSpecsFromDocs } from './spec-loader.js';
 import { seedAllDatabases } from './seeder.js';
 import { seedConfigs } from './config-registry.js';
-import { initSchemaRegistry } from './validator.js';
+import { createInstance } from './instance.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { assembleServer } from './assemble-server.js';
 export { runScenario, startScenario, operationIndex, controlOperations } from './arazzo.js';
-
-
 
 /**
  * Build a mock server from a contracts artifact.
@@ -45,7 +44,9 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  *   else answers — a service at a URL, or a `handler` function this page
  *   passes — as `schemas/routing-schema.json` describes the entries.
  *   Configuration for this page, not part of the contract set.
- * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
+ * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void, WebSocket: typeof WebSocket }>}
+ *   `stopFollowing` stops reading the events of services routing sends to,
+ *   which starts when a state machine here reacts to one (routed-events.js).
  */
 export async function createMockServer({
   contracts,
@@ -62,13 +63,14 @@ export async function createMockServer({
   // and shape, so there is nothing left for this entry to assert (#448).
   const docs = extract(contracts, 'docs');
 
-  // The request validator resolves $refs against the set, same as in Node.
-  initSchemaRegistry(docs);
-
   // From the documents, not a separate `specs` key. The artifact used to carry
   // the OpenAPI documents twice — once with refs, once dereferenced — which is
   // most of why it was 3.95 MB rather than 0.67 MB.
   const apiSpecs = apiSpecsFromDocs(docs);
+
+  // This mock's own state, so another in the same page shares none of it. Its
+  // request validator resolves $refs against the set, same as in Node.
+  const instance = createInstance({ store, docs, apiSpecs });
 
   const stateMachines = extract(docs, 'state-machines');
   const slaTypes = extract(docs, 'sla-types');
@@ -86,15 +88,17 @@ export async function createMockServer({
   // Seed before routing so a list endpoint answers on the first request.
   if (seed) seedAllDatabases(docs, store, { seeded: true });
 
-  seedConfigs(configs, store);
+  seedConfigs(configs, instance);
 
   // From here on, the same server the Node process builds.
-  const { fetch, routes, endpoints, routed } = assembleServer(
+  const { fetch, routes, endpoints, routed, stopFollowing } = assembleServer(
     { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries },
     // A page has no directory to re-read, so reseed restores the documents the
     // artifact carries. Node passes a function that walks the directory again.
-    { store, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
+    { store, instance, readDocs: () => docs, seeded: seed, baseUrl, basePath, routing },
   );
   for (const key of routed) console.log(`  ROUTE ${key}`);
-  return { fetch, routes, store, endpoints, routed };
+  // A WebSocket connected in-process to the documents the mock serves one
+  // for, such as a relay's (ws.js).
+  return { fetch, routes, store, endpoints, routed, stopFollowing, WebSocket: instance.ws.WebSocket };
 }

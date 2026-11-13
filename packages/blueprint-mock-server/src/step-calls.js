@@ -19,10 +19,11 @@
 
 import { deriveCollectionName } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
-import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
 import { extractExpandFields, applyExpand, propertiesOf } from './handlers/expand-utils.js';
 import { operationsOf } from './operation-calls.js';
+import { fitToSchema } from './payload-fit.js';
+import { resolverFor } from './schema-refs.js';
 import { startSlaClocks, earliestDeadline } from './sla-engine.js';
 import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
 
@@ -32,9 +33,10 @@ import { causedBy, asSystem, areSystemRoles } from './auth-context.js';
  * @param {Array}  options.stateMachines - From `extract(docs, 'state-machines')`
  * @param {Array}  [options.slaTypes]    - From `extract(docs, 'sla-types')`, for an action a call runs
  * @param {Object} options.store
+ * @param {Object} options.instance - The mock making the calls (instance.js)
  * @returns {{ resolve: Function, apply: Function, perform: Function, settleCreated: Function, startClocksAt: Function, serve: Function, slaTypesFor: Function }}
  */
-export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store }) {
+export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store, instance, docs = [] }) {
   // Every operation by operationId, including those a state machine adds, for
   // a call that names one; and the mock's own fetch, once its routes exist,
   // for a call made as the caller.
@@ -48,6 +50,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
       domain: spec.domain,
       doc: spec.doc,
       model: spec.doc.model(),
+      follow: spec.resolve?.schema ?? ((x) => x),
     }));
 
   const machineFor = (api, resource) => (stateMachines ?? []).find((entry) =>
@@ -105,13 +108,79 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /** The collection a resource is stored in, as the mock names it. */
   const collectionOf = (resource) => deriveCollectionName(resource.path('collection'), '');
 
-  /** A resource's schema, and how to follow a `$ref` within its document. */
+  /** A resource's schema, and how to follow a `$ref` from it. */
   function schemaOf(resolved) {
     const schema = resolved.api.doc.content?.components?.schemas?.[resolved.resource.name];
-    const follow = (node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
-      ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], resolved.api.doc.content) ?? node
-      : node);
-    return { schema, follow };
+    return { schema, follow: resolved.api.follow };
+  }
+
+  /**
+   * A call's body with each null its route's request schema doesn't accept
+   * left out (payload-fit.js): the create's, the update's or the action's, as
+   * the API declares it at that method and path. A path no API declares is
+   * left to fail where it's used.
+   *
+   * @param {string} method - POST, PATCH
+   * @param {string} path - Interpolated, as for resolve
+   * @param {Object} body
+   * @returns {Object}
+   */
+  function fitBody(method, path, body) {
+    let resolved;
+    try { resolved = resolve(method, path); } catch { return body; }
+    const at = resolved.kind === 'create' ? resolved.resource.path('collection')
+      : resolved.kind === 'update' ? resolved.resource.path('item')
+      : `${resolved.resource.path('item')}/${resolved.action}`;
+    const schema = resolved.api.doc.content?.paths?.[at]?.[method.toLowerCase()]?.requestBody?.content?.['application/json']?.schema;
+    return fitToSchema(body, schema, resolved.api.follow);
+  }
+
+  // The schema of each event's data, by its type, from the events documents.
+  const eventData = new Map();
+  for (const doc of docs.filter((d) => d.type === 'asyncapi')) {
+    const resolveRef = resolverFor(doc, docs).schema;
+    // An AsyncAPI multi-format schema holds the schema itself under `schema`,
+    // and a message's may name a component that is one too.
+    const follow = (node) => {
+      let resolved = resolveRef(node);
+      while (resolved && resolved.schemaFormat !== undefined && resolved.schema) resolved = resolveRef(resolved.schema);
+      return resolved;
+    };
+    for (const entry of Object.values(doc.content?.components?.messages ?? {})) {
+      const message = resolveRef(entry);
+      if (!message?.name || !message.payload || eventData.has(message.name)) continue;
+      // The envelope declares data too, as anything; the event narrows it.
+      const declared = propertiesOf(message.payload, follow).filter((properties) => 'data' in properties).map((properties) => properties.data);
+      if (declared.length > 0) eventData.set(message.name, { schema: { allOf: declared }, follow });
+    }
+  }
+
+  /**
+   * Where a machine's steps fill values in, the schemas each goes into, so a
+   * null one doesn't accept is left out (payload-fit.js): a call's request
+   * body, by method and path or by operationId; an event's data, by its type;
+   * a field `set:` writes, on the machine's resource.
+   *
+   * @param {Object|null} machine - The machine whose steps run
+   * @returns {{ body: Function, call: Function, event: Function, field: Function }}
+   */
+  function schemasFor(machine) {
+    const entry = machine ? (stateMachines ?? []).find((e) => e.machine === machine) : null;
+    const api = entry ? apis.find((a) => a.doc === entry.api) : null;
+    const record = api && entry.resource?.name ? api.doc.content?.components?.schemas?.[entry.resource.name] : null;
+    return {
+      body: (method, path, body) => fitBody(method, path, body),
+      call: (operationId, contentType, payload) => {
+        const operation = operations.get(operationId);
+        const media = operation?.bodies?.[contentType ?? 'application/json'];
+        return media?.schema ? fitToSchema(payload, media.schema, operation.follow) : payload;
+      },
+      event: (type, data) => {
+        const found = eventData.get(type);
+        return found && data ? fitToSchema(data, found.schema, found.follow) : data;
+      },
+      field: (name, value) => (record ? name in fitToSchema({ [name]: value }, record, api.follow) : true),
+    };
   }
 
   /**
@@ -122,9 +191,9 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   function checkRecord(resolved, stored) {
     const { schema, follow } = schemaOf(resolved);
     if (!schema) return;
-    const record = applyExpand(stored, extractExpandFields(schema, follow), store.findById);
+    const record = applyExpand(stored, extractExpandFields(schema, follow, instance.resources), store.findById);
     const source = { relativePath: resolved.api.doc.relativePath, ref: `#/components/schemas/${resolved.resource.name}` };
-    const { valid, errors } = validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
+    const { valid, errors } = instance.schemas.validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
     if (!valid) {
       throw new Error(`call wrote a ${resolved.resource.name} its schema refuses: ${errors.map((e) => `${e.field} ${e.message}`).join('; ')}`);
     }
@@ -148,7 +217,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     // Named for the resource, as a client's write is: a machine's write is
     // the same event.
     const event = (action, resourceId, data) => resolved.resource.eventName && emitEvent({
-      store,
+      instance,
       domain: resolved.api.domain,
       object: resolved.resource.eventName,
       action,
@@ -212,12 +281,16 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * @param {Object} options
    * @param {'system'|'caller'} [options.runAs]
    * @param {{ id: string|null, roles: string[] }} options.caller
+   * @param {string|null} [options.authorization] - The caller's Authorization
+   *   header, sent with a call made as the caller, as a gateway relays the
+   *   token it was given; where routing sends the call, it goes on only when
+   *   includeHeaders names it
    * @param {string|null} [options.traceparent]
    * @param {string|null} [options.causationid] - The event the call's own events name as their cause
    * @param {string|null} [options.idempotencyKey] - Sent as the Idempotency-Key when the operation requires one and the call has none
    * @returns {Promise<{ ok: boolean, status: number, body: * }>}
    */
-  async function perform(call, { runAs = 'system', caller, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
+  async function perform(call, { runAs = 'system', caller, authorization = null, traceparent = null, causationid = null, idempotencyKey = null } = {}) {
     const operation = operations.get(call.operationId);
     if (!operation) return failure(422, 'VALIDATION_ERROR', operations.whyNot(call.operationId));
     if (!fetchHere) return failure(500, 'INTERNAL_ERROR', 'The mock has no routes to send a call through yet.');
@@ -244,12 +317,14 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     } else {
       if (caller?.id) headers['x-caller-id'] = caller.id;
       if (caller?.roles?.length) headers['x-caller-roles'] = caller.roles.join(',');
+      if (authorization) headers.authorization = authorization;
     }
     if (traceparent) headers.traceparent = traceparent;
+    const payload = call.requestBody?.payload;
     const request = causedBy(new Request(`http://mock.internal${path}${query.size ? `?${query}` : ''}`, {
       method: operation.method,
       headers,
-      body: call.requestBody?.payload === undefined ? undefined : JSON.stringify(call.requestBody.payload),
+      body: payload === undefined ? undefined : JSON.stringify(payload),
     }), causationid);
     if (system) asSystem(request);
 
@@ -324,7 +399,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
     try { resolved = resolve('POST', path); } catch { return false; }
     if (resolved.kind !== 'create' || !resolved.resource.eventName) return false;
     emitEvent({
-      store,
+      instance,
       domain: resolved.api.domain,
       object: resolved.resource.eventName,
       action: 'created',
@@ -346,7 +421,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /** A domain's SLA types, for running one of its actions. */
   const slaTypesFor = (domain) => slaTypes.filter((s) => s.domain === domain).flatMap((s) => s.slaTypes ?? []);
 
-  return { resolve, apply, perform, settleCreated, startClocksAt, serve, slaTypesFor };
+  return { resolve, apply, perform, schemasFor, settleCreated, startClocksAt, serve, slaTypesFor };
 }
 
 /** An outcome that failed, in the shared Error shape. */

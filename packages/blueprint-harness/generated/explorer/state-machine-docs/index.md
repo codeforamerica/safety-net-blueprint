@@ -8,6 +8,7 @@ See also: [Published events](events.md)
 
 | Machine | States |
 |---|---|
+| [Communication — TranscriptionSession](communication.md) | `created`, `connecting`, `connected`, `disconnected`, `paused`, `stopping`, `closed`, `failed` |
 | [Communication — Transcript](communication.md) | `recording`, `paused`, `closed` |
 | [Decision Support — Suggestion](decision-support.md) | `proposed`, `accepted`, `refused`, `dismissed`, `expired` |
 | [Eligibility — Determination](eligibility.md) | `pending`, `completed` |

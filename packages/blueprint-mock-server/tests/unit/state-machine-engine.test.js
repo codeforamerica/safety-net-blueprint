@@ -19,7 +19,6 @@ import {
   applyCreateEffect,
   applyEffects,
   applySteps,
-  initRulesIndex,
 } from '../../src/state-machine-engine.js';
 import { generate } from '@codeforamerica/blueprint-core';
 import { ROLES } from '../roles.js';
@@ -710,10 +709,11 @@ const _simpleRuleset = {
   outputs: { eligible: { type: 'boolean' } },
 };
 const _simpleGraph = graphFor({ domain: 'test', rulesets: { simple: _simpleRuleset } }, 'simple');
-initRulesIndex({ simple: _simpleGraph });
+// The rulesets a mock's evaluate: steps run, read from the step context.
+const rules = { rulesIndex: { simple: _simpleGraph } };
 
 test('applySteps — evaluate: string bind stores nodes map in context.entities', () => {
-  const context = { entities: {} };
+  const context = { entities: {}, instance: rules };
   applySteps([{
     evaluate: 'simple',
     inputs: { person: { age: 25 } },
@@ -725,7 +725,7 @@ test('applySteps — evaluate: string bind stores nodes map in context.entities'
 });
 
 test('applySteps — evaluate: string bind without $ prefix works the same', () => {
-  const context = { entities: {} };
+  const context = { entities: {}, instance: rules };
   applySteps([{
     evaluate: 'simple',
     inputs: { person: { age: 25 } },
@@ -736,7 +736,7 @@ test('applySteps — evaluate: string bind without $ prefix works the same', () 
 });
 
 test('applySteps — evaluate: map bind stores selected fact values in context.entities', () => {
-  const context = { entities: {} };
+  const context = { entities: {}, instance: rules };
   applySteps([{
     evaluate: 'simple',
     inputs: { person: { age: 15 } },
@@ -747,7 +747,7 @@ test('applySteps — evaluate: map bind stores selected fact values in context.e
 
 test('applySteps — evaluate: result available to subsequent steps in same block', () => {
   const resource = {};
-  const context = { entities: {} };
+  const context = { entities: {}, instance: rules };
   applySteps([
     { evaluate: 'simple', inputs: { person: { age: 20 } }, bind: '$eval' },
     { set: { field: 'status', value: '$eval.eligible.value' } },
@@ -756,7 +756,7 @@ test('applySteps — evaluate: result available to subsequent steps in same bloc
 });
 
 test('applySteps — evaluate: missing ruleset warns and skips without throwing', () => {
-  const context = { entities: {} };
+  const context = { entities: {}, instance: rules };
   assert.doesNotThrow(() => {
     applySteps([{ evaluate: 'nonexistent' }], {}, context, store);
   });

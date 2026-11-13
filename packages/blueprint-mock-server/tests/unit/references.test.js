@@ -17,7 +17,7 @@
 
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
 
 const ok = (schema, status = 200) => ({ [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });

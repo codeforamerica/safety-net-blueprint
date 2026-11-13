@@ -9,17 +9,16 @@
  * See packages/mock-server/mock-rules/README.md for stub registration examples.
  */
 
-import { matchAndPopHttp } from './mock-stub-engine.js';
-
 /**
  * Make an outbound HTTP call, returning the stub response if one is registered.
  *
+ * @param {object} stubs   - The mock's stubs (mock-stub-engine.js `createStubs`)
  * @param {string} method  - HTTP method (e.g., "POST")
  * @param {string} url     - Full URL or path (e.g., "http://adapter.example.com/evaluate/expedited-screening")
  * @param {*} [body]       - Request body (JSON-serializable)
  * @returns {Promise<{status: number, body: *}>}
  */
-export async function callHttp(method, url, body) {
+export async function callHttp(stubs, method, url, body) {
   // Normalize to path-only for stub matching (stubs register against paths, not full URLs)
   let matchUrl;
   try {
@@ -28,7 +27,7 @@ export async function callHttp(method, url, body) {
     matchUrl = url;
   }
 
-  const stub = matchAndPopHttp(method, matchUrl);
+  const stub = stubs.matchAndPopHttp(method, matchUrl);
   if (stub) {
     return {
       status: stub.response?.status ?? 200,

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discover, load, generate } from '@codeforamerica/blueprint-core';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const harness = resolve(packageRoot, '../blueprint-harness/generated/resolved');

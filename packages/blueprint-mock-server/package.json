@@ -12,7 +12,12 @@
   ],
   "exports": {
     ".": "./src/index.js",
-    "./browser": "./src/browser.js",
+    "./client": "./src/client.js",
+    "./server": {
+      "node": "./src/server.node.js",
+      "default": "./src/server.js"
+    },
+    "./browser": "./src/server.js",
     "./dist/blueprint-mock-server.esm-browser.js": "./dist/blueprint-mock-server.esm-browser.js",
     "./store": "./src/stores/memory-store.js",
     "./test-utils": "./src/test-utils.js",
@@ -57,12 +62,14 @@
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "better-sqlite3": "^11.0.0",
+    "eventsource-parser": "^4.1.3",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "json-logic-js": "^2.0.5",
     "jsonpath-rfc9535": "^1.3.0",
     "rfc6902": "^5.4.0",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "ws": "^8.22.2"
   },
   "devDependencies": {
     "axios": "^1.7.0",

@@ -1,0 +1,141 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://blueprint.codeforamerica.org/base/domains/communication/communication-transcripts-schema.yaml
+title: Transcription streaming
+domain: communication
+capability: transcripts
+description: |
+  What transcription software and the server say to each other about streaming audio to a transcription service: the audio the software will send, and how it connects. Used by the transcript's get-connection action, the transcript audio adapter and the relay contract, so all three agree. See docs/architecture/domains/communication-transcripts.md, Decisions 11 to 13.
+$defs:
+  AudioEncoding:
+    type: string
+    description: |
+      How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+    enum:
+      - linear16
+      - flac
+      - mulaw
+      - alaw
+      - amr
+      - amr_wb
+      - ogg_opus
+      - webm_opus
+      - speex_with_header_byte
+      - mp3
+  AudioFormat:
+    type: object
+    description: |
+      The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
+    additionalProperties: false
+    required:
+      - encoding
+      - sampleRateHertz
+      - channelCount
+    properties:
+      encoding:
+        $ref: "#/$defs/AudioEncoding"
+      sampleRateHertz:
+        type: integer
+        minimum: 8000
+        description: Samples per second, e.g. 16000.
+        example: 16000
+      channelCount:
+        type: integer
+        minimum: 1
+        description: |
+          Channels in the audio. One means the service tells speakers apart by voice; more, that each speaker is on a channel of their own, as a phone call recorded with each side on its own channel is.
+        example: 1
+  StreamProtocol:
+    type: string
+    description: How the software connects to the service.
+    enum:
+      - websocket
+      - webrtc
+  GetConnectionRequest:
+    type: object
+    description: |
+      What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+    additionalProperties: false
+    required:
+      - audio
+      - protocols
+    properties:
+      audio:
+        $ref: "#/$defs/AudioFormat"
+      protocols:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          $ref: "#/$defs/StreamProtocol"
+        description: The protocols the software can connect over. The adapter picks one of them.
+  StreamConnection:
+    description: How the software connects, and nothing else.
+    unevaluatedProperties: false
+    allOf:
+      - $ref: "#/$defs/StreamConnectionFields"
+  StreamConnectionFields:
+    type: object
+    description: |
+      How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+    required:
+      - provider
+      - protocol
+      - url
+      - expiresIn
+    dependentRequired:
+      accessToken:
+        - tokenType
+    properties:
+      provider:
+        type: string
+        description: The transcription service, as the transcript's profile names it.
+        example: elevenlabs-scribe
+        enum:
+          - assemblyai
+          - aws-transcribe
+          - azure-speech
+          - deepgram
+          - elevenlabs-scribe
+          - fake-transcription
+          - gladia
+          - google-cloud-speech
+          - google-gemini-live
+          - none
+          - openai-realtime
+          - soniox
+          - speechmatics
+      protocol:
+        $ref: "#/$defs/StreamProtocol"
+      subprotocol:
+        type: string
+        description: |
+          The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
+        example: blueprint.transcripts.relay.v1
+      url:
+        type: string
+        format: uri
+        description: |
+          Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
+        example: wss://api.elevenlabs.io/v1/speech-to-text/realtime
+      accessToken:
+        type: string
+        description: |
+          The short-lived credential to present on connecting. Absent when the URL carries it.
+      tokenType:
+        type: string
+        description: The kind of credential accessToken is, as OAuth names it.
+        example: Bearer
+      expiresIn:
+        type: integer
+        minimum: 1
+        description: |
+          Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.
+        example: 900
+      connectionParameters:
+        type: object
+        additionalProperties: true
+        description: |
+          Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.
+        example:
+          model_id: scribe_v2_realtime
+          language_code: en

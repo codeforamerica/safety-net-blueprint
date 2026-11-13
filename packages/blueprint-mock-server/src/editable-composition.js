@@ -17,11 +17,8 @@
  */
 
 import { applyPatch } from 'rfc6902';
-import { eventBus } from './event-bus.js';
 import { openUndoLog } from './undo-log.js';
-import { parentLinkRegistry } from './composition-assembler.js';
 import { operationsOf } from './operation-calls.js';
-import { validate } from './validator.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, causationOf } from './auth-context.js';
 import {
   extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields,
@@ -70,21 +67,21 @@ export function rootKeyOf(composition) {
   return composition.resource.charAt(0).toLowerCase() + composition.resource.slice(1);
 }
 
-/** A stored record as its own GET answers with it. */
-function present(record, info, store) {
+/** A stored record as its own GET answers with it, in the mock it's kept in. */
+function present(record, info, instance) {
   if (!record || !info?.schema) return record;
   const follow = info.api.resolve?.schema ?? ((x) => x);
   const schema = follow(info.schema);
-  const lookup = (c, id) => store.findById(c, id);
-  const expand = extractExpandFields(schema, follow);
-  const links = extractLinksFields(schema, follow);
+  const lookup = (c, id) => instance.store.findById(c, id);
+  const expand = extractExpandFields(schema, follow, instance.resources);
+  const links = extractLinksFields(schema, follow, instance.resources);
   const derived = extractDerivedFields(schema, follow);
   let out = expand.length > 0 ? applyExpand(record, expand, lookup) : record;
-  if (links.length > 0) out = applyLinks(out, links, lookup);
+  if (links.length > 0) out = applyLinks(out, links, lookup, instance.resources);
   if (derived.length > 0) out = applyDerivedFields(out, derived);
   // Links to the compositions built around this record (parentLink), as its
   // own read adds them, the path's parameters filled from the record.
-  const parentLinks = parentLinkRegistry.get(info.itemPath);
+  const parentLinks = instance.parentLinks.get(info.itemPath);
   if (parentLinks) {
     const fill = (href) => href.replace(/\{([^}]+)\}/g, (_, name) => (name === info.itemParameter ? record.id : record[name]) ?? `{${name}}`);
     out = { ...out, _links: Object.fromEntries(Object.entries(parentLinks).map(([key, link]) => [key, { href: fill(link.href) }])) };
@@ -110,11 +107,11 @@ function shownOnly(info) {
  * Assemble an editable composition's document, or null when its root record
  * doesn't exist.
  */
-export function assembleEditable(composition, params, { resources, store, primaryParam }) {
+export function assembleEditable(composition, params, { resources, store, primaryParam, instance }) {
   const rootInfo = resources.get(composition.resource);
   const root = rootInfo?.collection ? store.findById(rootInfo.collection, params[primaryParam]) : null;
   if (!root) return null;
-  const document = { [rootKeyOf(composition)]: present(root, rootInfo, store) };
+  const document = { [rootKeyOf(composition)]: present(root, rootInfo, instance) };
   for (const [key, include] of Object.entries(composition.include ?? {})) {
     const info = resources.get(include.resource);
     const bind = typeof include.bind === 'string' ? include.bind : primaryParam;
@@ -122,8 +119,8 @@ export function assembleEditable(composition, params, { resources, store, primar
       ? store.findAll(info.collection, { [bind]: params[bind] ?? params[primaryParam] }, { limit: null })
       : { items: [] };
     document[key] = info?.singleton
-      ? (items[0] ? present(items[0], info, store) : null)
-      : Object.fromEntries(items.map((item) => [item.id, present(item, info, store)]));
+      ? (items[0] ? present(items[0], info, instance) : null)
+      : Object.fromEntries(items.map((item) => [item.id, present(item, info, instance)]));
   }
   return document;
 }
@@ -238,24 +235,17 @@ function plan(composition, before, after, { resources, params, primaryParam }) {
   return { steps: [...ordered, ...steps.filter((s) => s.kind === 'update'), ...steps.filter((s) => s.kind === 'remove')] };
 }
 
-// Each editable composition by its update's operationId, for checking a
-// suggestion whose call is a patch to one.
-const byOperation = new Map();
-
-/** Forget the compositions a previous server registered. */
-export function clearEditableOperations() {
-  byOperation.clear();
-}
-
 /**
- * Remember an editable composition under its update's operationId.
+ * Remember an editable composition under its update's operationId, in the
+ * mock that serves it (`instance.editableOperations`), for checking a
+ * suggestion whose call is a patch to one.
  *
  * @param {string} operationId
  * @param {object} composition
  * @param {object} options - As createEditablePatchHandler takes them
  */
 export function registerEditableOperation(operationId, composition, options) {
-  byOperation.set(operationId, { composition, options });
+  options.instance.editableOperations.set(operationId, { composition, options });
 }
 
 /**
@@ -264,14 +254,15 @@ export function registerEditableOperation(operationId, composition, options) {
  * Refused as the composition's PATCH refuses it, except that a failed `test`
  * is told apart (409) from a path that names nothing (422).
  *
+ * @param {object} instance - The mock serving it (instance.js)
  * @param {string} operationId - The composition's update
  * @param {object} params - Its path parameters, by name
  * @param {object[]} patch
  * @returns {Promise<{ before: object, after: object, steps: object[], store: object } | { refused: { status: number, body: object } } | null>}
  *   Null when no editable composition has that update.
  */
-export async function previewPatch(operationId, params, patch) {
-  const registered = byOperation.get(operationId);
+export async function previewPatch(instance, operationId, params, patch) {
+  const registered = instance.editableOperations.get(operationId);
   if (!registered) return null;
   const { composition, options } = registered;
   const no = (status, code, message, details) => ({ refused: { status, body: { code, message, ...(details ? { details } : {}) } } });
@@ -329,7 +320,7 @@ function statusFor(status) {
  *
  * @returns {(request: Request, ctx: { params: object }) => Promise<Response>}
  */
-export function createEditablePatchHandler(composition, { resources, store, stepCalls, primaryParam, requestSchema }) {
+export function createEditablePatchHandler(composition, { resources, store, instance, stepCalls, primaryParam, requestSchema }) {
   return async (request, { params }) => {
     const type = (callerHeader(request, 'content-type') ?? '').split(';')[0].trim();
     if (type !== 'application/json-patch+json') {
@@ -341,12 +332,12 @@ export function createEditablePatchHandler(composition, { resources, store, step
     }
     // Checked against the schema the operation's request body names in the
     // contract (JsonPatch, in the base contracts), as the document declares it.
-    const { valid, errors } = validate(patch, requestSchema.schema, `${requestSchema.relativePath}-patch`, requestSchema);
+    const { valid, errors } = instance.schemas.validate(patch, requestSchema.schema, `${requestSchema.relativePath}-patch`, requestSchema);
     if (!valid) {
       return refusal(400, 'BAD_REQUEST', 'The body is not a JSON Patch.', errors.map((e) => ({ field: e.field || 'body', message: e.message })));
     }
 
-    const before = assembleEditable(composition, params, { resources, store, primaryParam });
+    const before = assembleEditable(composition, params, { resources, store, primaryParam, instance });
     if (!before) return refusal(404, 'NOT_FOUND', `${composition.resource} not found.`);
 
     const after = structuredClone(before);
@@ -363,7 +354,7 @@ export function createEditablePatchHandler(composition, { resources, store, step
     // The patch's events name what caused it, such as the acceptance of a
     // suggestion that carried it, or the patch itself when nothing did.
     const patchId = causationOf(request) ?? crypto.randomUUID();
-    const events = eventBus.hold((event) => event?.causationid === patchId);
+    const events = instance.bus.hold((event) => event?.causationid === patchId);
     const undo = openUndoLog(store);
     for (const step of planned.steps) {
       const result = await stepCalls.perform(callFor(step, params), {
@@ -380,6 +371,6 @@ export function createEditablePatchHandler(composition, { resources, store, step
     }
     undo.commit();
     events.release();
-    return Response.json(assembleEditable(composition, params, { resources, store, primaryParam }));
+    return Response.json(assembleEditable(composition, params, { resources, store, primaryParam, instance }));
   };
 }

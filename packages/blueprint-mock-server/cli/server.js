@@ -20,9 +20,8 @@ import { createNodeServer } from '../src/http/node-server.js';
 import { seedAllDatabases } from '../src/seeder.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
-import { registerStub, registerHttpStub, listStubs, listHttpStubs, removeStub, removeHttpStub, clearStubs, clearHttpStubs, clearAllStubs } from '../src/mock-stub-engine.js';
-import { registerConfigManaged } from '../src/config-registry.js';
 import { assembleServer } from '../src/assemble-server.js';
+import { createInstance } from '../src/instance.js';
 
 const HOST = process.env.MOCK_SERVER_HOST || 'localhost';
 const PORT = parseInt(process.env.MOCK_SERVER_PORT || '1080', 10);
@@ -238,10 +237,12 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     let allRulesFiles = [];
     let allGraphs = [];
     const allRegistries = {};
+    // This server's own state, kept apart from any other mock in the process.
+    const instance = createInstance({ store });
     for (const specsDir of specDirs) {
       const result = isArtifactPath(specsDir)
-        ? await performSetup({ docs: docsFromArtifactFile(specsDir), seedDir, verbose: true, store })
-        : await performSetup({ specsDir, seedDir, verbose: true, store });
+        ? await performSetup({ docs: docsFromArtifactFile(specsDir), seedDir, verbose: true, store, instance })
+        : await performSetup({ specsDir, seedDir, verbose: true, store, instance });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
@@ -267,7 +268,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
           configs: allConfigs, compositions: allCompositions, rulesFiles: allRulesFiles,
           graphs: allGraphs, registries: allRegistries,
         },
-        { store, readDocs, seeded: Boolean(seedDir), baseUrl, routing: routing ?? [] },
+        { store, instance, readDocs, seeded: Boolean(seedDir), baseUrl, routing: routing ?? [] },
       );
     } catch (err) {
       console.error(`Error: ${err.message}`);
@@ -283,7 +284,10 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
-    const server = createNodeServer(createDispatcher(routes));
+    const server = createNodeServer(createDispatcher(routes), { sockets: instance.ws });
+    for (const { paths } of instance.ws.sockets().values()) {
+      for (const path of paths) console.log(`  WS     ${path} - WebSocket`);
+    }
 
     // Start the server — if the port is in use, kill the existing process and retry once.
     await new Promise((resolve, reject) => {

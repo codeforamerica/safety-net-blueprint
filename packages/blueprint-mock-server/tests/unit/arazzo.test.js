@@ -142,3 +142,190 @@ test('a jsonpath criterion passes when it matches something, with runtime expres
   assert.strictEqual((await check("$.items[?@.id == '{$steps.make.outputs.id}']"))[0].passed, true);
   assert.strictEqual((await check("$.items[?@.id == 'nope']"))[0].passed, false);
 });
+
+// ── Message steps (Arazzo 1.1) ──────────────────────────────────────────────
+
+const messaging = new Map([
+  ...operations,
+  ['streamEvents', { method: 'GET', path: '/platform/events/stream' }],
+  ['publishEvent', { method: 'POST', path: '/platform/events' }],
+  ['things-events-asyncapi.yaml#sendThingCreated', { async: true, action: 'send', address: 'demo.thing.created', reached: 'events' }],
+  ['things-events-asyncapi.yaml#receiveThingNoticed', { async: true, action: 'receive', address: 'demo.thing.noticed', reached: 'events' }],
+  ['things-events-asyncapi.yaml#/channels/demo.thing.created', { async: true, address: 'demo.thing.created', reached: 'events' }],
+  ['relay-asyncapi.yaml#/channels/audio', { async: true, address: 'audio', reached: 'servers' }],
+]);
+
+/**
+ * A server with an event stream: creating a thing sends `demo.thing.created`,
+ * and anything published is sent on too, as the mock's platform events are.
+ */
+function eventServer() {
+  const listeners = new Set();
+  const published = [];
+  const encoder = new TextEncoder();
+  const send = (event) => { for (const listen of listeners) listen(event); };
+  const fetch = async (request) => {
+    const { pathname } = new URL(request.url);
+    if (pathname === '/platform/events/stream') {
+      let listen;
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(': connected\n\n'));
+          listen = (event) => controller.enqueue(encoder.encode(`id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`));
+          listeners.add(listen);
+          request.signal.addEventListener('abort', () => { listeners.delete(listen); controller.close(); });
+        },
+      });
+      return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
+    }
+    if (pathname === '/platform/events') {
+      const event = await request.json();
+      published.push(event);
+      send({ id: `e${published.length}`, ...event });
+      return Response.json(event, { status: 201 });
+    }
+    if (request.method === 'POST') {
+      // Sent after answering, as a reaction would be.
+      setTimeout(() => send({ id: 'c1', type: 'demo.thing.created', subject: 't1', data: { id: 't1', status: 'new' } }), 5);
+      return Response.json({ id: 't1' }, { status: 201 });
+    }
+    return Response.json({ id: 't1' });
+  };
+  return { fetch, published, listeners };
+}
+
+const sources = [{ name: 'things', url: './things-events-asyncapi.yaml', type: 'asyncapi' }, { name: 'relay', url: './relay-asyncapi.yaml', type: 'asyncapi' }];
+const messages = (steps) => ({ ...doc(steps), arazzo: '1.1.0', sourceDescriptions: sources });
+
+test('a receive step takes the event a step before it caused, and reads it as $message.payload', async () => {
+  const server = eventServer();
+  const [run] = await runScenario(messages([
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'x' } }, outputs: { id: '$response.body#/id' } },
+    { stepId: 'created', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'receive', dependsOn: ['create'],
+      successCriteria: [{ condition: '$message.payload#/subject == $steps.create.outputs.id && $message.payload.data.status == \'new\'' }],
+      outputs: { status: '$message.payload#/data/status' } },
+  ]), { fetch: server.fetch, operations: messaging });
+
+  assert.ok(run.passed, JSON.stringify(run.steps.at(-1)?.checks));
+  const received = run.steps[1];
+  assert.deepStrictEqual(received.request, { action: 'receive', channel: 'demo.thing.created' });
+  assert.strictEqual(received.message.payload.subject, 't1');
+  assert.deepStrictEqual(received.outputs, { status: 'new' });
+  assert.strictEqual(server.listeners.size, 0, 'the run closed the stream when it finished');
+});
+
+test('a receive step by channelPath; an event is taken once', async () => {
+  const server = eventServer();
+  const receive = (stepId) => ({ stepId, channelPath: '{$sourceDescriptions.things.url}#/channels/demo.thing.created', action: 'receive', timeout: 100 });
+  const [run] = await runScenario(messages([
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'x' } } },
+    receive('first'),
+    receive('again'),
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.deepStrictEqual(run.steps.map((s) => s.passed), [true, true, false]);
+  assert.deepStrictEqual(run.steps[2].checks, [{ condition: 'received demo.thing.created within 100 ms', passed: false }]);
+});
+
+test('a send step publishes the event, with the channel as its type', async () => {
+  const server = eventServer();
+  const [run] = await runScenario(messages([
+    { stepId: 'notice', operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'send',
+      requestBody: { payload: { subject: 't1', data: { by: 'tester' } } } },
+    { stepId: 'heard', operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'receive',
+      successCriteria: [{ condition: '$message.payload#/data/by == \'tester\'' }] },
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.ok(run.passed, JSON.stringify(run.steps.map((s) => s.checks)));
+  assert.strictEqual(server.published[0].type, 'demo.thing.noticed');
+  assert.strictEqual(server.published[0].specversion, '1.0');
+});
+
+test('refuses message steps it cannot run, by name', async () => {
+  const server = eventServer();
+  const refuse = (steps, pattern) => assert.rejects(runScenario(messages(steps), { fetch: server.fetch, operations: messaging }), pattern);
+  await refuse([{ stepId: 's', channelPath: '{$sourceDescriptions.relay.url}#/channels/audio', action: 'send' }], /by operationId, not channelPath/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'publish' }], /action is send or receive/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.nothingLikeThis', action: 'receive' }], /no AsyncAPI document in the set declares/);
+  await refuse([{ stepId: 's', operationId: 'createThing', action: 'receive' }], /is an HTTP operation/);
+  await refuse([{ stepId: 's', operationId: 'createThing', dependsOn: ['later'] }, { stepId: 'later', operationId: 'createThing' }], /depends on later, which isn't a step before it/);
+  await refuse([{ stepId: 's', channelPath: '#/channels/x', action: 'receive' }], /is not \{\$sourceDescriptions/);
+});
+
+test('a receive step takes the event that meets its criteria, leaving another\'s of the same type', async () => {
+  const server = eventServer();
+  const publish = (stepId, subject) => ({ stepId, operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'send', requestBody: { payload: { subject } } });
+  const receive = (stepId, subject) => ({ stepId, operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'receive', timeout: 100,
+    successCriteria: [{ condition: `$message.payload#/subject == '${subject}'` }] });
+  const [run] = await runScenario(messages([
+    publish('other', 'b'), publish('mine', 'a'),
+    receive('forA', 'a'), receive('forB', 'b'), receive('forAAgain', 'a'),
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.deepStrictEqual(run.steps.map((s) => s.passed), [true, true, true, true, false]);
+  assert.deepStrictEqual(run.steps[4].checks.map((c) => c.condition), ['received demo.thing.noticed meeting its criteria within 100 ms']);
+});
+
+test('a step runs another workflow with its inputs, reads its outputs, and that workflow runs only there', async () => {
+  const { fetch, seen } = fakeFetch();
+  const make = { workflowId: 'make', inputs: { type: 'object' }, steps: [
+    { stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: '$inputs.name' } }, outputs: { id: '$response.body#/id' } },
+  ], outputs: { thing: '$steps.create.outputs.id' } };
+  const main = { workflowId: 'main', steps: [
+    { stepId: 'makeOne', workflowId: 'make', parameters: [{ name: 'name', value: 'from main' }],
+      successCriteria: [{ condition: '$outputs.thing == \'t1\'' }], outputs: { made: '$outputs.thing' } },
+    { stepId: 'read', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: '$steps.makeOne.outputs.made' }] },
+  ] };
+  const results = await runScenario({ arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [main, make] }, { fetch, operations });
+  assert.deepStrictEqual(results.map((r) => r.workflowId), ['main'], 'make ran inside main, not on its own');
+  assert.ok(results[0].passed);
+  assert.strictEqual(JSON.parse(seen[0].body).name, 'from main');
+  assert.deepStrictEqual(results[0].steps[0].steps.map((s) => s.stepId), ['create']);
+  assert.strictEqual(seen[1].url, '/demo/things/t1');
+
+  const broken = { ...main, steps: [{ stepId: 'makeOne', workflowId: 'make', parameters: [{ name: 'name', in: 'query', value: 'x' }] }] };
+  await assert.rejects(runScenario({ arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [broken, make] }, { fetch, operations }), /has no "in"/);
+});
+
+test('workflows named to run run with what they depend on, in order; one a step runs can run on its own too', async () => {
+  const { fetch } = fakeFetch();
+  const opening = { workflowId: 'opening', steps: [{ stepId: 'create', operationId: 'createThing', requestBody: { payload: { name: 'a' } }, outputs: { id: '$response.body#/id' } }], outputs: { thing: '$steps.create.outputs.id' } };
+  const next = { workflowId: 'next', dependsOn: ['opening'], steps: [{ stepId: 'read', operationId: 'getThing', parameters: [{ name: 'thingId', in: 'path', value: '$workflows.opening.outputs.thing' }] }] };
+  const elsewhere = { workflowId: 'elsewhere', steps: [{ stepId: 'open', workflowId: 'opening' }] };
+  const document = { arazzo: '1.1.0', info: { title: 't', version: '1' }, workflows: [opening, next, elsewhere] };
+
+  assert.deepStrictEqual((await runScenario(document, { fetch, operations })).map((r) => r.workflowId), ['next', 'elsewhere'],
+    'by default, opening runs only where a step runs it');
+  const named = await runScenario(document, { fetch, operations, workflows: ['next'] });
+  assert.deepStrictEqual(named.map((r) => [r.workflowId, r.passed]), [['opening', true], ['next', true]]);
+  assert.deepStrictEqual((await runScenario(document, { fetch, operations, workflows: ['elsewhere', 'opening'] })).map((r) => r.workflowId), ['opening', 'elsewhere']);
+  await assert.rejects(runScenario(document, { fetch, operations, workflows: ['nowhere'] }), /workflow nowhere, which the document does not declare/);
+});
+
+test('a step runs a workflow from another Arazzo document, named by its source, with that document\'s own components', async () => {
+  const { fetch, seen } = fakeFetch();
+  // The other document: its workflow sends a header from its own components.
+  const shared = { relativePath: 'scenarios/shared.arazzo.yaml', content: {
+    arazzo: '1.1.0', info: { title: 'shared', version: '1' },
+    components: { parameters: { caller: { name: 'X-Caller-Id', in: 'header', value: 'from-shared' } } },
+    workflows: [{ workflowId: 'make', steps: [
+      { stepId: 'create', operationId: 'createThing', parameters: [{ reference: '$components.parameters.caller' }],
+        requestBody: { payload: { name: '$inputs.name' } }, outputs: { id: '$response.body#/id' } },
+    ], outputs: { thing: '$steps.create.outputs.id' } }],
+  } };
+  const main = (workflowId, sources = [{ name: 'shared', url: './shared.arazzo.yaml', type: 'arazzo' }]) => ({
+    arazzo: '1.1.0', info: { title: 't', version: '1' }, sourceDescriptions: sources,
+    workflows: [{ workflowId: 'main', steps: [
+      { stepId: 'makeOne', workflowId, parameters: [{ name: 'name', value: 'from main' }], outputs: { made: '$outputs.thing' } },
+    ] }],
+  });
+  const [run] = await runScenario(main('$sourceDescriptions.shared.make'), { fetch, operations, documents: [shared] });
+  assert.ok(run.passed);
+  assert.deepStrictEqual(run.steps[0].steps.map((s) => s.stepId), ['create']);
+  assert.strictEqual(run.steps[0].outputs.made, 't1');
+  assert.strictEqual(JSON.parse(seen[0].body).name, 'from main');
+  assert.strictEqual(seen[0].headers['x-caller-id'], 'from-shared');
+
+  const refuse = (document, options, pattern) => assert.rejects(runScenario(document, { fetch, operations, ...options }), pattern);
+  await refuse(main('$sourceDescriptions.shared.make'), {}, /isn't among the documents given/);
+  await refuse(main('$sourceDescriptions.shared.nope'), { documents: [shared] }, /runs workflow nope, which .*shared\.arazzo\.yaml does not declare/);
+  await refuse(main('$sourceDescriptions.other.make'), { documents: [shared] }, /names source other/);
+  await refuse(main('$sourceDescriptions.shared.make', [{ name: 'shared', url: 'shared-openapi.yaml', type: 'openapi' }]), { documents: [shared] }, /not arazzo/);
+});

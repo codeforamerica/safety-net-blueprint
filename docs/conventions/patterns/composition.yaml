@@ -1,0 +1,115 @@
+# Pattern — Composition
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Composition
+summary: >
+  One endpoint that assembles several related resources into the shape a
+  screen, an export or another domain needs, declared in config rather than
+  written as a handler, so the contract and the assembly can't drift apart.
+
+use_when:
+  - >-
+    A client needs several related resources together, such as an application
+    with its members and incomes, and would otherwise make a call for each and
+    join them itself.
+  - >-
+    Another domain needs this domain's data assembled or reduced in a way its
+    resources don't give (patterns/cross-domain-communication.yaml, read).
+  - >-
+    A client edits several records that change together and should be saved
+    together or not at all.
+
+do_not_use_when:
+  - case: One resource already gives the client what it needs.
+    use_instead: That resource's own operations.
+  - case: The value is computed from one record's own fields.
+    use_instead: A derived field on the schema (x-derived), or a derive on the composition that already serves it.
+  - case: The data belongs to a ruleset's inputs, in the ruleset's own vocabulary.
+    use_instead: >-
+      A mapping in the ruleset's domain over what the owning domains publish
+      (an anti-corruption layer), not a composition reshaped into the
+      ruleset's terms.
+  - case: The work changes records in another domain.
+    use_instead: A command to that domain (patterns/cross-domain-communication.yaml).
+
+choose:
+  question: >
+    Does the client only read it? Use a view. Is it a set of named sections a
+    worker steps through, each backed by its own resource? Use a sectionView.
+    Does the client change the records together? Use editable.
+
+options:
+  view:
+    summary: The default; a read-only assembled response.
+    use_when:
+      - >-
+        A screen, an export or another domain reads the assembled records and
+        changes nothing through it.
+    rules:
+      - >-
+        Bind each include to its parent with bind:, and narrow it with filter:
+        and fields: rather than sending everything.
+      - >-
+        Set links: true on a node whose items the client edits, so it gets
+        each record's own URL to write to.
+
+  sectionView:
+    summary: Named sections, each its own endpoint, with an index that links to them.
+    use_when:
+      - >-
+        A worker moves through sections of a record, such as identity, income
+        and household on a review screen, and each section is a different
+        resource.
+      - >-
+        Progress or notes are kept per section, or per item in a section.
+    rules:
+      - >-
+        Keep progress per section in the composition's state:, which the
+        framework creates endpoints for; don't add fields to the underlying
+        resources for it.
+      - >-
+        Say in the state machine who creates the initial state records.
+
+  editable:
+    summary: The records that change together, read as one document and changed with one JSON Patch.
+    use_when:
+      - >-
+        A client edits an aggregate — an application with its members and
+        incomes — and the change must be kept whole or not at all.
+    rules:
+      - >-
+        Include whole records, with no fields, filter or nested includes; a
+        patch has to see every record.
+      - >-
+        Rely on each record's own operation to apply its part of the patch, so
+        its permissions, guards and events apply; don't add rules to the
+        composition.
+
+rules:
+  - >-
+    Declare it in {domain}-compositions.yaml, in the domain that owns the root
+    resource; resolve generates its endpoint and schemas.
+  - >-
+    Name it for what it holds, not for who reads it, so a second reader can use
+    it.
+  - >-
+    Write only through the records' own operations. A view and a sectionView
+    write nothing to the resources they include; an editable composition
+    applies each change through that record's operation.
+  - >-
+    Set parentLink: true when clients reach it from the parent record, so they
+    follow a link rather than building the path.
+  - >-
+    A state changes a composition with an overlay on the compositions file
+    (patterns/overlay-customization.yaml).
+
+example: >
+  applicationReview in intake is a sectionView of an application's identity,
+  household and income sections, with review progress kept per section.
+  applicationDetails is editable: the application, its members and incomes,
+  changed with one JSON Patch.
+
+rationale: docs/architecture/cross-cutting/resource-composition.md

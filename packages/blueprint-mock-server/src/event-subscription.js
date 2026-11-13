@@ -11,14 +11,16 @@
  * the envelope fields (e.g., from: subject looks up the subject entity by ID).
  */
 
-import { eventBus } from './event-bus.js';
 import { deliverEvent } from './routing.js';
+import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
+import { busyWith, takeTurn } from './record-turns.js';
 import { executeTransition, performerFor } from './state-machine-runner.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
+import { referencesByTarget } from './references.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -60,9 +62,9 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
  * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
  * The path is fully interpolated: domain/collection/uuid/operation.
  */
-function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, store) {
-  if (currentStepCalls) {
-    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store });
+function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, { store, instance, stepCalls }) {
+  if (stepCalls) {
+    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store, instance, stepCalls });
     return;
   }
   const parts = path.split('/');
@@ -87,6 +89,7 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
     // after that is reported here rather than left unhandled.
     executeTransition({
       store,
+      instance,
       resourceName: collection,
       resourceId,
       trigger: operation,
@@ -108,9 +111,9 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
 /**
  * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
  */
-function executePendingAppend({ path, body }, store) {
-  if (currentStepCalls) {
-    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store });
+function executePendingAppend({ path, body }, { store, instance, stepCalls }) {
+  if (stepCalls) {
+    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store, instance, stepCalls });
     return;
   }
   const parts = path.split('/');
@@ -139,20 +142,16 @@ function executePendingAppend({ path, body }, store) {
 }
 
 /**
- * Register event subscriptions for all state machines that declare `events:` entries.
- * Call once at server startup after state machines are loaded.
+ * Run each of a function's calls for one key after the one before it settles,
+ * and a call for a key with nothing running at once. The reactions to events
+ * that share a partitionkey run in order this way; events with no key wait
+ * for nothing.
  *
- * @param {Array} allStateMachines - from discoverStateMachines()
- * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
+ * @param {Map<unknown, Promise<void>>} running - The mock's reactions still running, by key
+ * @param {unknown} key
+ * @param {() => unknown} run
  */
-let currentDispatch = null;
-
-// The reactions still running for each partitionkey. One whose key has a
-// reaction running waits for it; one whose key has none runs at once, as it
-// always has. Events with no key wait for nothing.
-const running = new Map();
-
-export function inOrder(key, run) {
+export function inOrder(running, key, run) {
   if (key == null) return run();
   const before = running.get(key);
   const result = before ? before.then(run) : run();
@@ -162,25 +161,22 @@ export function inOrder(key, run) {
   settled.then(() => { if (running.get(key) === settled) running.delete(key); });
 }
 
-// What a step's call means, read against the API (step-calls.js). Set when
-// subscriptions are registered; without it, calls fall back to reading the
-// path by convention, which cannot create a nested record.
-let currentStepCalls = null;
-
 /**
- * Do a reaction's call the way the API's route at that method and path means:
- * a nested create, an update, or an action, which runs as the system.
+ * Do a reaction's call the way the API's route at that method and path means
+ * (step-calls.js): a nested create, an update, or an action, which runs as the
+ * system.
  */
-function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store }) {
+function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store, instance, stepCalls }) {
   const actor = { id: caller?.id || 'system', roles: caller?.roles || ['system'] };
   try {
-    const done = currentStepCalls.apply(call, {
+    const done = stepCalls.apply(call, {
       caller: actor,
       traceparent,
       causationid,
       now,
       runAction: ({ entry, collection, id, action, body }) => executeTransition({
         store,
+        instance,
         resourceName: collection,
         resourceId: id,
         trigger: action,
@@ -188,12 +184,12 @@ function applyThroughRoutes(call, { now, caller, traceparent = null, causationid
         callerRoles: actor.roles,
         stateMachine: entry.stateMachine,
         machine: entry.machine,
-        slaTypes: currentStepCalls.slaTypesFor(entry.domain),
+        slaTypes: stepCalls.slaTypesFor(entry.domain),
         requestBody: body || {},
         traceparent,
         causationid,
         now,
-        stepCalls: currentStepCalls,
+        stepCalls,
       }),
     });
     // An action it runs returns a promise; report its failure here.
@@ -224,27 +220,31 @@ function aboutOwnResource(type, domain, eventName) {
 }
 
 /**
+ * Register event subscriptions for all state machines that declare `on:`
+ * entries, on the mock's own bus. Call once, when the mock is assembled.
+ *
  * @param {object[]} allStateMachines
  * @param {object[]} [allSlaTypes]
  * @param {object[]} [apiSpecs]
- * @param {object} store
- * @param {object|null} [stepCalls]
+ * @param {object} instance - The mock reacting (instance.js)
+ * @param {object|null} [stepCalls] - What a step's call means, read against
+ *   the API (step-calls.js); without it, calls fall back to reading the path
+ *   by convention, which cannot create a nested record
  * @param {{ receives: Array<{ api: string, event: string, id: string, entry: object }>, apiOfFile: Map<string, string> }} [routedEvents]
  *   The received events routing sends elsewhere (routing.js); read when an
  *   event fires, so it can be filled in after this registers.
  */
-export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null, routedEvents = { receives: [], apiOfFile: new Map() }) {
-  currentStepCalls = stepCalls;
-  // Replace rather than accumulate. Registering twice — a second server in
-  // the same process, or a page rebooting one from an edited contract set —
-  // otherwise leaves the first set of handlers attached, so every event is
-  // handled twice and every subscription acts twice on it. Mirrors what
-  // `subscribeStubDispatch` already does.
-  if (currentDispatch) {
-    eventBus.off('domain-event', currentDispatch);
-    currentDispatch = null;
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], instance, stepCalls = null, routedEvents = { receives: [], apiOfFile: new Map() }) {
+  const { store, reactions } = instance;
+  // Replace rather than accumulate, for a mock rebuilt from an edited
+  // contract set: otherwise the first set of handlers stays attached, and
+  // every event is handled twice.
+  if (reactions.dispatch) {
+    instance.bus.off('domain-event', reactions.dispatch);
+    reactions.dispatch = null;
   }
-  running.clear();
+  reactions.running.clear();
+  const deps = { store, instance, stepCalls };
 
   // Collect each machine's on: entries — the events it reacts to
   const machineEventSubs = [];
@@ -265,25 +265,63 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.type}`);
   }
 
+  // Which resource each event names, and which records name each resource.
+  const resourceOfEvent = new Map();
+  for (const api of apiSpecs) {
+    for (const top of api.doc?.model?.()?.resources ?? []) {
+      for (const resource of [top, ...top.children, ...top.singletons]) {
+        if (resource.name && resource.eventName) resourceOfEvent.set(resource.eventName, resource.name);
+      }
+    }
+  }
+  const references = referencesByTarget(apiSpecs);
+
+  /**
+   * For a transition on an event about another resource, this machine's
+   * records that name the event's subject through a declared relationship
+   * (validation requires exactly one). Null when the event is about the
+   * machine's own resource: then the record is the subject.
+   */
+  function relatedRecords(smEntry, event) {
+    if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) return null;
+    const parts = String(event.type ?? '').split('.');
+    const named = resourceOfEvent.get(parts[parts.length - 2]);
+    const collection = collectionOf(smEntry);
+    const via = (references.get(named) ?? []).filter((reference) => reference.collection === collection);
+    if (via.length !== 1) return null;
+    const [{ path }] = via;
+    return store.findAll(collection, {}, { limit: null }).items
+      .filter((record) => path.reduce((value, key) => value?.[key], record) === event.subject);
+  }
+
   // Each subscription to an event's type handles it, in order with the
   // events before it that share its partitionkey (inOrder below). One whose
   // API's receive operation is routed doesn't run here: the event is
   // delivered to whoever answers it instead, once, however many of the API's
   // machines react to it.
-  currentDispatch = (event) => {
+  reactions.dispatch = (event) => {
     const routed = routedEvents.receives.filter((receive) => eventTypeMatches(event.type, receive.event));
-    for (const receive of routed) deliverEvent(event, receive);
+    // One that came from a service isn't sent back to it.
+    const from = arrivedThrough(instance, event);
+    for (const receive of routed) if (receive.entry !== from) deliverEvent(event, receive);
     for (const { smEntry, entry } of machineEventSubs) {
       if (!eventTypeMatches(event.type, entry.type)) continue;
       const api = routedEvents.apiOfFile.get(smEntry.api?.relativePath);
       if (routed.some((receive) => receive.api === api)) continue;
-      inOrder(event.partitionkey, () => react(smEntry, entry, event));
+      // A transition on an event about another resource applies to this
+      // machine's records that name it, through their declared relationship.
+      const related = entry.transition ? relatedRecords(smEntry, event) : null;
+      if (related) {
+        for (const record of related) inOrder(reactions.running, event.partitionkey, () => react(smEntry, entry, event, record));
+      } else {
+        inOrder(reactions.running, event.partitionkey, () => react(smEntry, entry, event));
+      }
     }
   };
 
   // One subscription handling one event. What it returns settles when the
   // reaction, and every call it makes, is done.
-  function react(smEntry, entry, event) {
+  function react(smEntry, entry, event, relatedRecord = null) {
     try {
       const now = new Date().toISOString();
       const caller = theSystem();
@@ -299,10 +337,21 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
           return;
         }
-        const found = store.findById(targetCollection, event.subject);
+        const found = relatedRecord ?? store.findById(targetCollection, event.subject);
         if (!found) {
           console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
           return;
+        }
+        // An action or reaction already changing the record finishes first,
+        // and this one then starts over, reading the record as it was left
+        // (record-turns.js).
+        const busy = busyWith(instance, targetCollection, found.id);
+        if (busy) {
+          return busy.then(() => {
+            const again = relatedRecord ? store.findById(targetCollection, relatedRecord.id) : null;
+            if (relatedRecord && !again) return undefined;
+            return react(smEntry, entry, event, again);
+          });
         }
         const from = entry.transition.from;
         if (from) {
@@ -342,7 +391,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
         return;
       }
-      const context = { ...baseContext, entities };
+      // The schemas the steps' values go into, so a null one doesn't accept is
+      // left out (step-calls.js, schemasFor).
+      const context = { ...baseContext, entities, schemas: stepCalls?.schemasFor?.(smEntry.machine), instance };
 
       // Evaluate guards if defined on this onEvent entry
       const guardConditions = entry.guards?.conditions || [];
@@ -361,7 +412,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       // none, nothing it did is saved.
       const perform = performerFor({
         callerId: caller.id, callerRoles: caller.roles, timestamp: now,
-        traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, stepCalls: currentStepCalls,
+        traceparent: event.traceparent ?? null, causationid: event.id ?? null, store, instance, stepCalls,
       });
       const before = { ...resource };
       const restore = () => {
@@ -391,6 +442,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           handled.failed ? unhandled(handled.failed) : finish(handled, failureContext, step.catch.to ?? entry.transition?.to));
       });
       if (reaction && typeof reaction.then === 'function') {
+        // It waits on a call: the record is its own until it's done.
+        if (entry.transition) reaction.finally(takeTurn(instance, targetCollection, resource.id)).catch(() => {});
         reaction.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
       }
       return reaction;
@@ -407,16 +460,16 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
           try {
             const stored = store.create(entity, data);
-            const created = currentStepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
+            const created = stepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
             // Named for the resource the API serves at that path, where the
             // route can be found; otherwise for the path's last segment.
             let object = eventObject || entity.replace(/s$/, '');
             try {
-              const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+              const resolved = stepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
               if (resolved?.resource?.eventName) object = resolved.resource.eventName;
             } catch { /* not a declared route: keep the path's name */ }
             emitEvent({
-              store,
+              instance,
               domain: entDomain || smEntry.domain,
               object,
               action: 'created',
@@ -436,7 +489,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle array appends
         for (const append of pendingAppends) {
           try {
-            executePendingAppend(append, store);
+            executePendingAppend(append, deps);
           } catch (e) {
             console.error(`onEvent append failed for "${append.path}":`, e.message);
           }
@@ -445,7 +498,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle operation triggers
         for (const op of pendingOperations) {
           try {
-            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
           } catch (e) {
             console.error(`onEvent operation failed for "${op.path}":`, e.message);
           }
@@ -453,7 +506,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
         // Handle events emitted directly by onEvent steps
         const domain = smEntry.domain;
-        const subjectId = entry.transition ? event.subject : null;
+        // The record transitioned: the subject, or one naming it.
+        const recordId = relatedRecord?.id ?? event.subject;
+        const subjectId = entry.transition ? recordId : null;
         const allPendingEvents = [...(pendingEvents || [])];
 
         // Procedure calls (call: steps in on: blocks) run before anything is
@@ -467,7 +522,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           if (failed) return unhandled(failed);
           for (const op of procOps) {
             try {
-              executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
+              executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
             } catch (e) {
               console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
             }
@@ -483,7 +538,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               }
             }
             if (Object.keys(diff).length > 0) {
-              store.update(targetCollection, event.subject, diff);
+              store.update(targetCollection, recordId, diff);
             }
           }
 
@@ -498,7 +553,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
                 causationid: event.id,
                 time: now,
                 ...authContext('system'),
-              }, store);
+              }, instance);
             } catch (e) {
               console.error(`onEvent emit "${evt.type}" failed:`, e.message);
             }
@@ -510,5 +565,5 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     }
   }
 
-  eventBus.on('domain-event', currentDispatch);
+  instance.bus.on('domain-event', reactions.dispatch);
 }

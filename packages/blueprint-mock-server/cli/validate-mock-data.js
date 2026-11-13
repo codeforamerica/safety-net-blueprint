@@ -10,6 +10,7 @@ import { validateMockData } from '../src/mock-data-validator.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { seedAllDatabases } from '../src/seeder.js';
 import { seedConfigs } from '../src/config-registry.js';
+import { createInstance } from '../src/instance.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -49,7 +50,7 @@ Flags:
     // kept its bare profileId, which the read schema doesn't have.
     const store = createMemoryStore();
     seedAllDatabases(docs, store, { seeded: true });
-    seedConfigs(extract(docs, 'config'), store, { verbose: false });
+    seedConfigs(extract(docs, 'config'), createInstance({ store }), { verbose: false });
     const errors = validateMockData(docs, apiSpecsFromDocs(docs), {
       lookup: (collection, id) => store.findById(collection, id),
     });

@@ -2,8 +2,7 @@
  * Handler for PATCH /resources/{id} (store.update)
  */
 
-import { validate, createErrorResponse } from '../validator.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { createErrorResponse } from '../validator.js';
 import { extractPrimaryParam, capitalize, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf, causationOf, areSystemRoles } from '../auth-context.js';
@@ -60,7 +59,7 @@ export function buildChanges(before, after) {
  * @param {Object|null} stateMachine - State machine contract
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store } = {}) {
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store, instance } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   // The resource updated, in the API's model, for the records it's under.
   const model = apiMetadata.doc?.model?.();
@@ -69,7 +68,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
     const { params = {}, body: bodyOverride } = ctx;
     const { pathname } = new URL(assertFetchShaped(request, 'createUpdateHandler').url);
     try {
-      const httpStub = matchAndPopHttp(request.method, pathname);
+      const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
       if (httpStub) {
         return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
@@ -142,7 +141,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         const dataForValidation = Object.fromEntries(
           Object.entries(mergedData).filter(([k, v]) => v !== null || clientFields.has(k))
         );
-        const { valid, errors } = validate(
+        const { valid, errors } = instance.schemas.validate(
           dataForValidation,
           endpoint.requestSchema,
           `${endpoint.collectionName}-update`,
@@ -156,7 +155,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
       // Only the ids the client sent: one already stored was checked when it was written.
       const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
-        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
+        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas, instance,
       });
       if (missing.length > 0) {
         return Response.json(createErrorResponse(missing, 422), { status: 422 });
@@ -176,7 +175,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         const domain = eventDomainOf(apiMetadata);
         const object = endpoint.resource.eventName;
         emitEvent({
-        store,
+          instance,
           domain,
           object,
           action: 'updated',
@@ -193,11 +192,11 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         console.error('Failed to emit updated event:', eventError.message);
       }
 
-      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
-      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
+      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id), instance.resources);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       return Response.json(responseBody);
     } catch (error) {

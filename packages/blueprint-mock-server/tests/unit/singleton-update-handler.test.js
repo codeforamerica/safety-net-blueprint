@@ -8,11 +8,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 
 // A store of this file's own, rather than one shared through a module-level
 // singleton. In memory because these cases do not need a database — and
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
+const instance = createInstance({ store });
 import { registerRoutes } from '../../src/route-generator.js';
 import { makeRequest, readResponse } from '../helpers/fetch.js';
 
@@ -67,7 +69,7 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
 
   const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
   const res = await callRoute(route,
@@ -103,7 +105,7 @@ test('singleton PATCH — update: emits .updated with changes diff', async () =>
 
   const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
   const res = await callRoute(route,
@@ -139,7 +141,7 @@ test('singleton PATCH — update with no meaningful change: emits .updated with 
 
   const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
   const res = await callRoute(route,

@@ -6,11 +6,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 
 // A store of this file's own, rather than one shared through a module-level
 // singleton. In memory because these cases do not need a database — and
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
+const instance = createInstance({ store });
 import { emitEvent, emitEventEnvelope } from '../../src/emit-event.js';
 
 test('emitEvent', async (t) => {
@@ -21,7 +23,7 @@ test('emitEvent', async (t) => {
 
   await t.test('produces a valid CloudEvents 1.0 envelope', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -45,7 +47,7 @@ test('emitEvent', async (t) => {
 
   await t.test('derives type from domain + object + action', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'intake',
       object: 'application',
       action: 'submitted',
@@ -61,7 +63,7 @@ test('emitEvent', async (t) => {
 
   await t.test('keeps a hyphenated domain as declared in the event type', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'data-exchange',
       object: 'external_service_call',
       action: 'created',
@@ -77,8 +79,8 @@ test('emitEvent', async (t) => {
 
   await t.test('generates a unique id for each event', () => {
     store.clearAll('events');
-    const e1 = emitEvent({ store: store, domain: 'x', object: 'y', action: 'z', resourceId: '1', source: '/x', data: null, now: '2024-01-01T00:00:00.000Z' });
-    const e2 = emitEvent({ store: store, domain: 'x', object: 'y', action: 'z', resourceId: '1', source: '/x', data: null, now: '2024-01-01T00:00:00.000Z' });
+    const e1 = emitEvent({ instance, domain: 'x', object: 'y', action: 'z', resourceId: '1', source: '/x', data: null, now: '2024-01-01T00:00:00.000Z' });
+    const e2 = emitEvent({ instance, domain: 'x', object: 'y', action: 'z', resourceId: '1', source: '/x', data: null, now: '2024-01-01T00:00:00.000Z' });
 
     assert.notStrictEqual(e1.id, e2.id);
     console.log('  ✓ Generates a unique id for each event');
@@ -91,7 +93,7 @@ test('emitEvent', async (t) => {
   await t.test('includes traceparent when provided', () => {
     store.clearAll('events');
     const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'claimed',
@@ -109,7 +111,7 @@ test('emitEvent', async (t) => {
 
   await t.test('leaves traceparent out when not provided', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -129,7 +131,7 @@ test('emitEvent', async (t) => {
 
   await t.test('persists event to the events collection', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -147,8 +149,8 @@ test('emitEvent', async (t) => {
 
   await t.test('multiple calls produce multiple stored events', () => {
     store.clearAll('events');
-    emitEvent({ store: store, domain: 'a', object: 'b', action: 'c', resourceId: '1', source: '/a', data: null, now: '2024-01-01T00:00:00.000Z' });
-    emitEvent({ store: store, domain: 'a', object: 'b', action: 'd', resourceId: '1', source: '/a', data: null, now: '2024-01-01T00:00:00.000Z' });
+    emitEvent({ instance, domain: 'a', object: 'b', action: 'c', resourceId: '1', source: '/a', data: null, now: '2024-01-01T00:00:00.000Z' });
+    emitEvent({ instance, domain: 'a', object: 'b', action: 'd', resourceId: '1', source: '/a', data: null, now: '2024-01-01T00:00:00.000Z' });
 
     const result = store.findAll('events', {});
     assert.strictEqual(result.items.length, 2);
@@ -161,7 +163,7 @@ test('emitEvent', async (t) => {
 
   await t.test('leaves data out when not provided', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'deleted',
@@ -178,7 +180,7 @@ test('emitEvent', async (t) => {
   await t.test('stores event payload in data field', () => {
     store.clearAll('events');
     const payload = { outcome: 'approved', notes: 'looks good' };
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'completed',
@@ -205,7 +207,7 @@ test('emitEvent', async (t) => {
       subject: 'interview-1',
       time: '2026-04-15T10:00:00.000Z',
       data: { completedAt: '2026-04-15T10:00:00.000Z' },
-    }, store);
+    }, instance);
 
     assert.strictEqual(stored.specversion, '1.0');
     assert.strictEqual(stored.type, 'intake.interview.completed');
@@ -223,7 +225,7 @@ test('emitEvent', async (t) => {
       source: '/intake',
       subject: 'interview-2',
       data: null,
-    }, store);
+    }, instance);
 
     const result = store.findAll('events', {});
     assert.strictEqual(result.items.length, 1);
@@ -240,7 +242,7 @@ test('emitEvent', async (t) => {
       subject: 'interview-3',
       id: 'my-explicit-id',
       data: null,
-    }, store);
+    }, instance);
 
     assert.strictEqual(stored.id, 'my-explicit-id');
     console.log('  ✓ emitEventEnvelope preserves provided id');
@@ -254,7 +256,7 @@ test('emitEvent', async (t) => {
       source: '/intake',
       subject: 'interview-4',
       data: null,
-    }, store);
+    }, instance);
 
     assert.ok(stored.id && stored.id.length > 0, 'Should generate an id');
     console.log('  ✓ emitEventEnvelope generates id when not provided');
@@ -271,7 +273,7 @@ test('emitEvent', async (t) => {
       authid: null,
       authtype: null,
       data: null,
-    }, store);
+    }, instance);
 
     for (const name of ['traceparent', 'causationid', 'authid', 'authtype', 'data']) {
       assert.ok(!(name in stored), `${name} is left out`);
@@ -284,9 +286,9 @@ test('emitEvent', async (t) => {
 
   await t.test('an event carries no createdAt or updatedAt, only its time', () => {
     store.clearAll('events');
-    const built = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+    const built = emitEvent({ instance, domain: 'workflow', object: 'task', action: 'created',
       resourceId: 'abc123', source: '/workflow', now: '2024-01-01T00:00:00.000Z' });
-    const injected = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-1' }, store);
+    const injected = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-1' }, instance);
 
     for (const event of [built, injected]) {
       const stored = store.findById('events', event.id);
@@ -298,7 +300,7 @@ test('emitEvent', async (t) => {
 
   await t.test('a store without append still saves events, with its own timestamps', () => {
     const { append, ...older } = createMemoryStore();
-    const stored = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-2' }, older);
+    const stored = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-2' }, createInstance({ store: older }));
 
     assert.strictEqual(typeof append, 'function');
     assert.ok(older.findById('events', stored.id), 'saved through insertResource');
@@ -311,7 +313,7 @@ test('emitEvent', async (t) => {
       source: '/intake',
       subject: 'interview-5',
       data: null,
-    }, store);
+    }, instance);
 
     assert.strictEqual(stored.specversion, '1.0');
     assert.strictEqual(stored.datacontenttype, 'application/json');
@@ -324,7 +326,7 @@ test('emitEvent', async (t) => {
 
   await t.test('sets authid and authtype when callerId and callerRoles are provided', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -343,7 +345,7 @@ test('emitEvent', async (t) => {
 
   await t.test('sets authtype to system when caller role is system', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -362,7 +364,7 @@ test('emitEvent', async (t) => {
 
   await t.test('sets authtype to service_account when caller role is service_account', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -380,7 +382,7 @@ test('emitEvent', async (t) => {
 
   await t.test('a caller with no role naming a kind is a user', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+    const stored = emitEvent({ instance, domain: 'workflow', object: 'task', action: 'created',
       resourceId: 'abc123', source: '/workflow', callerId: 'the-explorer', now: '2024-01-01T00:00:00.000Z' });
 
     assert.strictEqual(stored.authid, 'the-explorer');
@@ -389,7 +391,7 @@ test('emitEvent', async (t) => {
 
   await t.test("the mock's own system caller is a system actor", () => {
     store.clearAll('events');
-    const stored = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+    const stored = emitEvent({ instance, domain: 'workflow', object: 'task', action: 'created',
       resourceId: 'abc123', source: '/workflow', callerId: 'system', now: '2024-01-01T00:00:00.000Z' });
 
     assert.strictEqual(stored.authtype, 'system');
@@ -397,7 +399,7 @@ test('emitEvent', async (t) => {
 
   await t.test('leaves authid and authtype out when no callerId', () => {
     store.clearAll('events');
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -419,7 +421,7 @@ test('emitEvent', async (t) => {
   await t.test('defaults time to current timestamp when now is not provided', () => {
     store.clearAll('events');
     const before = new Date().toISOString();
-    const stored = emitEvent({ store: store,
+    const stored = emitEvent({ instance,
       domain: 'workflow',
       object: 'task',
       action: 'created',
@@ -437,23 +439,22 @@ test('emitEvent', async (t) => {
 
 console.log('\n✓ All emitEvent tests passed\n');
 
-test('an event is keyed by the record at the top of the one it is about', async (t) => {
-  const { registerEventOwners } = await import('../../src/emit-event.js');
+test('an event is keyed by the record at the top of the one it is about', async () => {
   const keyed = createMemoryStore();
-  registerEventOwners(new Map([
+  const mock = createInstance({ store: keyed });
+  mock.eventOwners = new Map([
     ['intake.application', { collection: 'applications', parent: null, parentField: null }],
     ['intake.application_income', { collection: 'incomes', parent: 'intake.application', parentField: 'applicationId' }],
-  ]));
-  t.after(() => registerEventOwners(new Map()));
+  ]);
   keyed.insertResource('applications', { id: 'app-1' });
   keyed.insertResource('incomes', { id: 'income-1', applicationId: 'app-1' });
 
-  const income = emitEvent({ store: keyed, domain: 'intake', object: 'application_income', action: 'updated', resourceId: 'income-1', data: { changes: [] } });
+  const income = emitEvent({ instance: mock, domain: 'intake', object: 'application_income', action: 'updated', resourceId: 'income-1', data: { changes: [] } });
   assert.strictEqual(income.partitionkey, 'app-1', "an income's events carry its application's id");
 
-  const application = emitEvent({ store: keyed, domain: 'intake', object: 'application', action: 'updated', resourceId: 'app-1' });
+  const application = emitEvent({ instance: mock, domain: 'intake', object: 'application', action: 'updated', resourceId: 'app-1' });
   assert.strictEqual(application.partitionkey, 'app-1', "an application's carry its own");
 
-  const unknown = emitEventEnvelope({ type: 'platform.timer.requested', subject: 'x' }, keyed);
+  const unknown = emitEventEnvelope({ type: 'platform.timer.requested', subject: 'x' }, mock);
   assert.strictEqual('partitionkey' in unknown, false, 'an event about no resource the APIs serve has none');
 });

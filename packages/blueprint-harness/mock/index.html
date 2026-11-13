@@ -141,6 +141,26 @@
   /* A long title wraps under itself, not under its number. */
   .op.step .n { flex: none; }
   .op.step .title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* How a step travels: an HTTP call, an event on the stream, or a WebSocket message. */
+  .via {
+    flex: none; align-self: center; font-family: var(--mono); font-size: .62rem; font-weight: 600;
+    padding: 0 .3rem; border-radius: 3px; border: 1px solid; line-height: 1.5;
+  }
+  .via-http { color: #555; background: #f2f2f2; border-color: #dcdcdc; }
+  .via-event { color: #24613a; background: #e7f4ea; border-color: #bcdcc5; }
+  .via-ws { color: #5d2f7a; background: #f1e8f6; border-color: #d7c2e4; }
+  /* Something the step can't show, which a "Not shown:" bullet names. */
+  .via-workflow { color: #1f4f86; background: #e6f0fb; border-color: #b9d2ef; }
+  .panel ol.inner { margin: .6rem 0 0; padding-left: 0; list-style: none; font-size: .88rem; }
+  .panel ol.inner li { margin: .15rem 0; }
+  .panel ol.inner .tag { margin-left: .4rem; }
+  .via-gap { color: #8a5a00; background: #fdf3dc; border-color: #ecd49a; }
+  .via-stub { color: #777; background: transparent; border-style: dashed; border-color: #c8c8c8; }
+  /* Setup, not the flow: there to be skipped by eye. */
+  .op.step.stub .title { color: var(--faint); }
+  .op.step .title .between { display: block; font-size: .74rem; color: var(--faint); margin-top: .05rem; }
+  .op.step .title .between b { font-weight: 600; color: var(--actor-ink, inherit); }
+  .panel .kindline .via { margin-left: .4rem; letter-spacing: 0; text-transform: none; }
   /* A tour in sections — one workflow each — names each where it starts. */
   .steps .section {
     margin: .8rem 0 .2rem .45rem; font-size: .78rem; font-weight: 700; color: var(--ink);
@@ -151,7 +171,42 @@
     all: unset; cursor: pointer; font: inherit; color: inherit;
   }
   .steps .section-link:hover, .steps .section-link:focus-visible { text-decoration: underline; }
+  .steps .section-link .count { font-weight: 400; color: var(--faint); font-family: var(--mono); font-size: .7rem; }
+  /* A branched scenario's two lists: the main path, and the other situations. */
+  .steps .branch {
+    margin: 1rem 0 .1rem .45rem; font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .steps .branch:first-child { margin-top: .2rem; }
+  .steps .branch-toggle { all: unset; cursor: pointer; font: inherit; letter-spacing: inherit; color: inherit; }
+  .steps .branch-toggle:hover, .steps .branch-toggle:focus-visible { color: var(--accent); }
+  .steps .branch-toggle .count { letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--faint); font-family: var(--mono); }
+  /* What a list down the side holds: the branches, or a branch's workflows. */
+  .steps .caption {
+    margin: .7rem 0 .1rem .45rem; font-size: .62rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .steps .section.here .section-link { color: var(--accent); }
+  /* A workflow's name, with a button at the right that runs all of it. */
+  .steps .section { display: flex; align-items: baseline; gap: .5rem; }
+  .steps .section .section-link { flex: 1; }
+  .steps .workflow-run {
+    flex: none; font: inherit; font-size: .68rem; font-weight: 600; color: var(--muted);
+    background: none; border: 1px dashed var(--line); border-radius: 4px; padding: .05rem .4rem; cursor: pointer;
+  }
+  .steps .workflow-run:hover, .steps .workflow-run:focus-visible { color: var(--accent); border-color: var(--accent); border-style: solid; }
+  .steps .workflow-run:disabled { opacity: .6; cursor: progress; }
+  .panel ul.situations { list-style: none; padding: 0; margin: .4rem 0 0; }
+  .panel ul.situations li { margin: 0 0 .45rem; }
+  .panel ul.situations .section-link {
+    all: unset; cursor: pointer; color: var(--accent); font-weight: 600;
+  }
+  .panel ul.situations .section-link:hover, .panel ul.situations .section-link:focus-visible { text-decoration: underline; }
+  .panel ul.situations .about { display: block; color: var(--muted); font-size: .85rem; }
   #stage > h2.section-heading { margin: 1.6rem 0 .6rem; font-size: 1.05rem; color: var(--ink); }
+  #stage > h2.section-heading .kicker {
+    display: block; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  }
   #stage > .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
   #stage > ul.note { padding-left: 1.1rem; }
   #stage > ul.note li { margin: 0 0 .25rem; }
@@ -161,6 +216,8 @@
     display: inline-block; min-width: 1.9rem;
   }
   .op.step.here .n { color: var(--accent); }
+  /* The step picked on the whole page, matching its place in the list. */
+  #stage > .panel.here { outline: 2px solid var(--accent); outline-offset: 2px; }
   .panel .watch {
     margin: 1rem 0 0; padding: .8rem 1rem .9rem; font-size: .9rem; color: var(--ink);
     background: #f4f9f4; border: 1px solid #d6e8d6; border-radius: 4px; max-width: 48rem;
@@ -227,6 +284,7 @@
   button.run-all:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
   button.run-all:disabled { opacity: .6; cursor: progress; }
   #groups button.run-all { display: block; width: 100%; margin: .7rem 0 .3rem; }
+  #groups .branch-run button.run-all { margin: .35rem 0 .2rem; }
   .pager {
     display: flex; gap: .6rem; align-items: center; justify-content: space-between;
     margin-top: 1rem;
@@ -236,6 +294,7 @@
     border-radius: 4px; border: 1px solid var(--line); background: var(--card); color: var(--muted);
   }
   .pager .step-back:hover { color: var(--ink); border-color: #cfd6de; }
+  .panel .runs { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--line); }
   /* Pushed right when it is the only one, so it sits where it always sits. */
   .pager .next-step { margin-left: auto; }
   /* The steps either side's titles, however long, wrap inside their buttons. */
@@ -396,6 +455,12 @@ let tourStep = null;
 let tourRunner = null;          // the run in progress, a step at a time on this server
 const tourResults = new Map();  // workflow/step → what it answered
 let tourWhole = false;          // the whole tour on one page, rather than a step at a time
+// A scenario whose workflows say which branch they're on (`x-branch`) is
+// walked one branch at a time: the main path, or the other situations.
+let tourBranch = 'main';
+let tourScope = null;           // the workflows the run covers, when it started partway in
+let tourLast = null;            // the last step this run ran, by workflow/step
+let branchClosed = false;       // the branch being walked, closed in the list down the side
 const made = new Map();  // collection → the id the walk created there
 const built = new Map(); // schema name → the id the walk created of that shape
 const answers = new Map(); // step → what it answered, so going back shows it
@@ -1065,6 +1130,18 @@ const GROUPS = [
     holds: (kind) => kind === 'rules',
   },
   {
+    id: 'events',
+    title: 'Events',
+    about: 'Messages an API sends or receives, as its AsyncAPI document declares them: what happened, for whoever is following.',
+    holds: (kind) => kind === 'message',
+  },
+  {
+    id: 'ws',
+    title: 'WebSocket',
+    about: 'Messages over a connection an AsyncAPI document describes, such as the relay contract\'s: what the client and the service say to each other.',
+    holds: (kind) => kind === 'ws',
+  },
+  {
     id: 'control',
     title: 'The mock itself',
     about: 'The only endpoints here that no contract declares. They belong to the harness, not to the system it is running — resetting it, reseeding it, and standing in for whatever has not been built.',
@@ -1279,8 +1356,23 @@ const controlSteps = () => [
 // is drawn the same way: what it sends, which schemas say so, what came back,
 // and what to notice, revealed as it is run.
 
-/** The set's Arazzo scenarios, found by contract type. */
-const scenarios = () => docs.filter((doc) => doc.type === 'arazzo');
+/** The file name a path or URL ends in. */
+const fileNameOf = (path) => String(path ?? '').split(/[?#]/)[0].split('/').pop();
+
+/** The set's Arazzo documents, found by contract type. */
+const arazzoDocs = () => docs.filter((doc) => doc.type === 'arazzo');
+
+/**
+ * The set's Arazzo scenarios: every Arazzo document but one that others name
+ * as a source of type arazzo, which holds workflows they run, and runs inside
+ * them, not on its own.
+ */
+const scenarios = () => {
+  const all = arazzoDocs();
+  const runIn = new Set(all.flatMap((doc) => (doc.content.sourceDescriptions ?? [])
+    .filter((source) => source.type === 'arazzo').map((source) => fileNameOf(source.url))));
+  return all.filter((doc) => !runIn.has(fileNameOf(doc.relativePath)));
+};
 
 /** The tour Show me around is on: the one picked, else the one the page was built to open with, else the first. */
 const currentScenario = () => {
@@ -1305,9 +1397,46 @@ const asWritten = (url) => {
 /** A section's name: its workflow's summary, or its id. */
 const sectionOf = (workflow) => workflow.summary ?? workflow.workflowId;
 
-/** Every step of a scenario, in order, across its workflows. */
-const scenarioSteps = (doc) => (doc.content.workflows ?? []).flatMap((workflow) =>
+/**
+ * Every step of a scenario, in order, across its workflows — but for a
+ * workflow another step runs (`workflowId`), which shows inside that step.
+ */
+const calledWorkflows = (doc) => new Set((doc.content.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => step.workflowId).filter(Boolean)));
+const tourWorkflows = (doc) => {
+  const called = calledWorkflows(doc);
+  return (doc.content.workflows ?? []).filter((workflow) => !called.has(workflow.workflowId));
+};
+
+/**
+ * The workflows a scenario walks. One whose workflows say which branch
+ * they're on (`x-branch: main` or `other`) has two lists: the main path, and
+ * the other situations. A workflow on a branch is walked even when a step runs
+ * it too — the main path's opening, which each other situation starts with.
+ * Another scenario has one list: every workflow no step runs.
+ */
+const isBranched = (doc) => (doc.content.workflows ?? []).some((workflow) => workflow['x-branch']);
+const workflowsOn = (doc, branch) => (isBranched(doc)
+  ? (doc.content.workflows ?? []).filter((workflow) => workflow['x-branch'] === branch)
+  : tourWorkflows(doc));
+const workflowsOf = (doc) => workflowsOn(doc, tourBranch);
+const BRANCH_NAMES = { main: 'Main path', other: 'Other situations' };
+const BRANCH_PHRASES = { main: 'the main path', other: 'other situations' };
+
+const scenarioSteps = (doc) => workflowsOf(doc).flatMap((workflow) =>
   (workflow.steps ?? []).map((step) => ({ workflow, step, key: `${workflow.workflowId}/${step.stepId}` })));
+
+/** The workflows a run of these runs: them and what they depend on, in the document's order. */
+const runOrder = (doc, ids) => {
+  const all = doc.content.workflows ?? [];
+  const wanted = new Set();
+  const want = (id) => {
+    if (wanted.has(id)) return;
+    wanted.add(id);
+    for (const dependency of all.find((workflow) => workflow.workflowId === id)?.dependsOn ?? []) want(dependency);
+  };
+  ids.forEach(want);
+  return all.filter((workflow) => wanted.has(workflow.workflowId));
+};
 
 /**
  * A step's title and key points, from its description: the first paragraph is
@@ -1321,6 +1450,70 @@ const describe = (step) => {
     .filter((line) => line.startsWith('- '))
     .map((line) => line.slice(2));
   return { title: first.trim().replace(/\s+/g, ' ') || step.stepId, points };
+};
+
+/**
+ * How a step travels: `ws` for a message on a connection an AsyncAPI document
+ * with servers describes, such as the relay's; `event` for one on the event
+ * stream; `http` for a call.
+ */
+const transportOf = (doc, step, ops) => {
+  if (step.workflowId !== undefined) return 'workflow';
+  if (step.action === undefined && step.channelPath === undefined) return 'http';
+  const named = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
+  const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
+  const ref = source && ops.get(`${String(source.url).split('/').pop()}#${named[2]}`);
+  return ref?.reached === 'servers' ? 'ws' : 'event';
+};
+const TRANSPORT_TAGS = { http: 'HTTP', event: 'Event', ws: 'WS', workflow: 'Steps' };
+
+/**
+ * The workflow a step runs, and the document it's in: the scenario's own, by
+ * its id, or another Arazzo document's, by `$sourceDescriptions.<name>.<id>`.
+ */
+const workflowFor = (doc, id) => {
+  const named = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(String(id));
+  const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
+  const home = named ? arazzoDocs().find((other) => source && fileNameOf(other.relativePath) === fileNameOf(source.url)) : doc;
+  const workflow = (home?.content.workflows ?? []).find((candidate) => candidate.workflowId === (named ? named[2] : id));
+  return workflow ? { workflow, doc: home } : { workflow: null, doc };
+};
+
+/** What a step can't show: its description's bullets that start "Not shown:". */
+const notShown = (step) => describe(step).points.filter((point) => /^Not shown:/.test(point));
+const gapTag = (step) => {
+  const gaps = notShown(step);
+  if (gaps.length === 0) return null;
+  const tag = el('span', 'Gap', 'via via-gap');
+  tag.title = gaps.join('\n');
+  return tag;
+};
+
+/** Whether a step calls the mock's own routes, as one standing in for an adapter, a service or a relay does. */
+const isStub = (doc, step) => {
+  const named = /^\$sourceDescriptions\.([^.]+)\./.exec(step.operationId ?? '');
+  const source = named && (doc.content.sourceDescriptions ?? []).find((candidate) => candidate.name === named[1]);
+  return Boolean(source && /\/mock\/mock-openapi\.yaml$/.test(String(source.url)));
+};
+
+/**
+ * Who a step is between, for the list down the side: its `x-actors` in order,
+ * `Client → Session`, each in its own color. A stub names the one part it
+ * stands in for, `Adapter (stub)`. None for any other step that names one or none.
+ */
+const betweenLine = (doc, step) => {
+  const known = actorsOf(doc);
+  const order = [...known.keys()];
+  const ids = (step['x-actors'] ?? []).filter((id) => known.has(id));
+  const stub = isStub(doc, step);
+  if (ids.length < (stub ? 1 : 2)) return null;
+  const line = el('span', '', 'between');
+  ids.forEach((id, i) => {
+    if (i > 0) line.append(' → ');
+    line.append(el('b', known.get(id).name.replace(/^The (.)/, (_, c) => c.toUpperCase()), `actor-${order.indexOf(id) % 6}`));
+  });
+  if (stub) line.append(' (stub)');
+  return line;
 };
 
 /** Every operation a scenario can call: the contracts', and the mock's own. */
@@ -1404,17 +1597,85 @@ const runnerFor = (doc) => {
       const { pathname, search } = new URL(request.url);
       return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
     };
-    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations() });
+    // The mock's WebSocket, for steps on a connection an AsyncAPI document
+    // describes, such as the relay's.
+    // A branched scenario runs one branch's workflows, from where the run
+    // started; another runs every workflow no step runs.
+    const workflows = isBranched(doc) ? (tourScope ?? workflowsOf(doc).map((workflow) => workflow.workflowId)) : undefined;
+    tourRunner = startScenario(doc.content, { fetch: fetchHere, operations: scenarioOperations(), WebSocket: mock.WebSocket, documents: arazzoDocs(), workflows });
+    tourLast = null;
   }
   return tourRunner;
 };
 
+/**
+ * Start the run again at a workflow, on the same server: first running,
+ * without stopping, whatever it depends on, then waiting at its first step.
+ */
+const restartAt = async (doc, workflow, say) => {
+  tourRunner?.close();
+  tourRunner = null;
+  const ids = workflowsOf(doc).map((other) => other.workflowId);
+  tourScope = ids.slice(ids.indexOf(workflow.workflowId));
+  const before = runOrder(doc, tourScope);
+  const needed = before.slice(0, before.indexOf(workflow)).filter((other) => (other.steps ?? []).length > 0);
+  const last = needed.at(-1);
+  if (last) await runOn(doc, { workflowId: last.workflowId, stepId: last.steps.at(-1).stepId }, say);
+  else runnerFor(doc);
+};
+
+/**
+ * Make sure running on reaches a step from within its own workflow. A run
+ * that stopped (on a switch of branch), or that is in another workflow,
+ * would get there through the workflows before it — other situations, say —
+ * so it starts again at this one.
+ */
+const runTo = async (doc, index, say) => {
+  const entries = scenarioSteps(doc);
+  const { workflow } = entries[index];
+  const start = entries.findIndex((entry) => entry.workflow === workflow);
+  const last = tourLast ? entries.findIndex((entry) => entry.key === tourLast) : -1;
+  const onTheWay = tourRunner && (last === -1 ? tourScope?.[0] === workflow.workflowId : last >= start - 1 && last < index);
+  if (!onTheWay) await restartAt(doc, workflow, say);
+  await runOn(doc, { workflowId: workflow.workflowId, stepId: entries[index].step.stepId }, say);
+};
+
+/**
+ * Go to a workflow, on either branch. One that has run, or that the run is
+ * about to reach, is just shown. Otherwise the run starts again from it, so a
+ * reader can go straight to any workflow.
+ */
+const goToWorkflow = async (doc, workflow, say) => {
+  branchClosed = false;
+  const branch = workflow['x-branch'] ?? tourBranch;
+  if (branch !== tourBranch) {
+    tourRunner?.close();
+    tourRunner = null;
+    tourScope = null;
+    tourBranch = branch;
+  }
+  tourWhole = false;
+  const entries = scenarioSteps(doc);
+  const first = entries.findIndex((entry) => entry.workflow === workflow);
+  const ready = tourResults.has(entries[first].key)
+    || (first === 0 ? !tourRunner : tourRunner && tourLast === entries[first - 1].key);
+  if (!ready) await restartAt(doc, workflow, say);
+  tourStep = first;
+  renderGroups();
+  await renderStage();
+};
+
 /** Forget a tour's run, as a new server does. */
 const resetTour = () => {
+  // Stop listening for the old run's events.
+  tourRunner?.close();
   tourRunner = null;
   tourResults.clear();
   tourStep = null;
   tourWhole = false;
+  tourScope = null;
+  tourLast = null;
+  branchClosed = false;
 };
 
 /** Run on, through the given step or to the end, remembering each answer. */
@@ -1426,6 +1687,7 @@ const runOn = async (doc, until, say) => {
   while ((result = await runner.next())) {
     count += 1;
     tourResults.set(`${result.workflowId}/${result.stepId}`, result);
+    tourLast = `${result.workflowId}/${result.stepId}`;
     const at = entries.findIndex((entry) => entry.key === `${result.workflowId}/${result.stepId}`);
     say?.(`Running… ${at + 2 > entries.length ? entries.length : at + 2} of ${entries.length}`);
     if (until && result.workflowId === until.workflowId && result.stepId === until.stepId) break;
@@ -1443,95 +1705,281 @@ const runWholeTour = async (doc, say) => {
   tourStep = null;
 };
 
+/**
+ * A branch's name in the list: the one being walked opens and closes; the
+ * other is walked, from its first workflow.
+ */
+const goToBranch = async (doc, branch) => {
+  if (branch === tourBranch) {
+    branchClosed = !branchClosed;
+    renderGroups();
+    return;
+  }
+  await goToWorkflow(doc, workflowsOn(doc, branch)[0]);
+};
+
+/**
+ * Run the whole of one branch — or of a scenario without branches — from
+ * wherever the reader is. A run that started partway into it would leave out
+ * the workflows before, so that one starts again from the first, on the same
+ * server.
+ */
+const runBranch = async (doc, branch, say) => {
+  branchClosed = false;
+  if (branch !== tourBranch) {
+    tourRunner?.close();
+    tourRunner = null;
+    tourScope = null;
+    tourBranch = branch;
+  }
+  const skipped = tourScope && scenarioSteps(doc)
+    .some((entry) => !tourScope.includes(entry.workflow.workflowId) && !tourResults.has(entry.key));
+  if (skipped) {
+    tourRunner?.close();
+    tourRunner = null;
+    tourScope = null;
+  }
+  await runWholeTour(doc, say);
+};
+
+/**
+ * Run one workflow's steps at once — first going to its start, which runs what
+ * it depends on — and show it on the whole page, in place.
+ */
+const runWorkflow = async (doc, workflow, say) => {
+  const steps = workflow.steps ?? [];
+  const done = steps.every((step) => tourResults.has(`${workflow.workflowId}/${step.stepId}`));
+  if (!done) {
+    await goToWorkflow(doc, workflow, say);
+    const entries = scenarioSteps(doc);
+    const unrun = entries.findIndex((entry) => entry.workflow === workflow && !tourResults.has(entry.key));
+    const end = entries.findLastIndex((entry) => entry.workflow === workflow);
+    await runTo(doc, unrun, say);
+    if (end > unrun) await runOn(doc, { workflowId: workflow.workflowId, stepId: entries[end].step.stepId }, say);
+  }
+  tourWhole = true;
+  tourStep = scenarioSteps(doc).findIndex((entry) => entry.workflow === workflow);
+  renderGroups();
+  await renderStage();
+  document.getElementById(`tour-section-${workflow.workflowId}`)?.scrollIntoView({ block: 'start' });
+};
+
 /** Show me around's choice of tour. */
 const tourPicker = () => {
   const field = el('label', '', 'tour-picker');
-  field.append(el('span', 'Show me'));
+  field.append(el('span', 'Scenario'));
   const picker = el('select');
-  for (const doc of scenarios()) {
+  // A scenario of a framework capability, which it declares in
+  // info.x-capability, is grouped with the others of that capability; one of
+  // no capability stands on its own, first. Within a group, by file name
+  // without its extension, so `transcription` comes before `transcription-relay`.
+  const stem = (doc) => fileNameOf(doc.relativePath).replace(/\.arazzo\.ya?ml$/, '');
+  const optionOf = (doc) => {
     const option = el('option', doc.content.info?.title ?? doc.relativePath);
     option.value = doc.relativePath;
-    picker.append(option);
+    return option;
+  };
+  const groups = new Map();
+  for (const doc of scenarios()) {
+    const capability = doc.content.info?.['x-capability'];
+    if (!capability) { picker.append(optionOf(doc)); continue; }
+    if (!groups.has(capability)) groups.set(capability, []);
+    groups.get(capability).push(doc);
+  }
+  for (const [capability, inCapability] of groups) {
+    const group = el('optgroup');
+    group.label = capability.replace(/(^|-)(.)/g, (_, dash, c) => `${dash ? ' ' : ''}${c.toUpperCase()}`);
+    group.append(...inCapability.sort((a, b) => stem(a).localeCompare(stem(b))).map(optionOf));
+    picker.append(group);
   }
   picker.value = currentScenario()?.relativePath ?? '';
   // Another tour starts on fresh data, so nothing the last one made is in its way.
-  picker.onchange = async () => { tour = picker.value; await derive({ seed: true }); };
+  picker.onchange = async () => { tour = picker.value; tourBranch = 'main'; await derive({ seed: true }); };
   field.append(picker);
   return field;
 };
 
-/** A tour's steps down the side: everything run, and the one to do next. */
+/**
+ * A tour down the side, the same for every scenario. A branched scenario
+ * lists its branches, each opening and closing by its name, one open at a
+ * time; another is one list. Each list starts with a button that runs all of
+ * it, then names every workflow from the start, with its steps counted and a
+ * button that runs just that one, and lists the steps of each workflow that
+ * has run or that the walk is in. Any workflow can be gone to.
+ */
 const renderTourNav = (nav, doc) => {
   const entries = scenarioSteps(doc);
-  // Shown: everything already run, plus the one to do next. The rest are
-  // counted, not listed, so nobody wonders how long this goes on for.
-  const reached = entries.findIndex((entry) => !tourResults.get(entry.key)?.passed);
-  const upTo = reached === -1 ? entries.length : reached + 1;
   const list = el('ol', '', 'ops steps');
-  const sectioned = (doc.content.workflows ?? []).length > 1;
-  for (const [index, entry] of entries.slice(0, upTo).entries()) {
-    if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-      // A section's name goes to where its description is: its first step,
-      // or its heading when the whole walk is on one page.
-      const section = el('li', '', 'section');
-      const go = el('button', sectionOf(entry.workflow), 'section-link');
-      go.onclick = () => {
-        tourStep = index;
+  const branched = isBranched(doc);
+  const ops = scenarioOperations();
+  // Before the walk starts, the workflow Start begins with is picked here.
+  const starting = tourStep === null && !tourWhole ? startingWorkflow(doc) : null;
+
+  // A workflow's name goes to where its description is: its first step, or
+  // its heading when the whole walk is on one page.
+  const workflowItem = (workflow) => {
+    const section = el('li', '', 'section');
+    if (workflow === starting) section.classList.add('here');
+    const go = el('button', sectionOf(workflow), 'section-link');
+    go.append(el('span', `  ${(workflow.steps ?? []).length}`, 'count'));
+    go.onclick = async () => {
+      const first = entries.findIndex((entry) => entry.workflow === workflow);
+      if (tourWhole && first !== -1 && tourResults.has(entries[first].key)) {
+        tourStep = first;
         renderGroups();
-        if (tourWhole) {
-          document.getElementById(`tour-section-${entry.workflow.workflowId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
-        renderStage();
-      };
-      section.append(go);
-      list.append(section);
-    }
-    const item = el('li');
-    const button = el('button', '', 'op step');
-    const run = Boolean(tourResults.get(entry.key)?.passed);
-    button.append(
-      el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
-      el('span', describe(entry.step).title, 'title')
-    );
-    if (tourStep === index) button.classList.add('here');
-    button.onclick = () => {
-      tourStep = index;
-      // On the whole page, a step is a place on it to go to.
-      if (tourWhole) {
-        renderGroups();
-        document.getElementById(`tour-step-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById(`tour-section-${workflow.workflowId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
-      renderGroups();
-      renderStage();
+      go.disabled = true;
+      await goToWorkflow(doc, workflow, (saying) => { go.textContent = saying; });
     };
-    item.append(button);
-    list.append(item);
+    // Its steps, all at once, rather than pressing through them.
+    const steps = workflow.steps ?? [];
+    const done = (workflow['x-branch'] ?? tourBranch) === tourBranch
+      && steps.every((step) => tourResults.has(`${workflow.workflowId}/${step.stepId}`));
+    // Once it has run, there's nothing left for this to do.
+    if (done) {
+      section.append(go);
+      return section;
+    }
+    const run = el('button', 'Run', 'workflow-run');
+    run.title = `Run this workflow's ${steps.length} steps at once`;
+    run.onclick = async () => {
+      run.disabled = true;
+      await runWorkflow(doc, workflow, (saying) => { run.textContent = saying.replace(/^Running… /, ''); });
+    };
+    section.append(go, run);
+    return section;
+  };
+  // The step the run comes to next, when it's partway through.
+  const next = tourLast ? entries.findIndex((entry) => entry.key === tourLast) + 1 : -1;
+  const isOpen = (workflow) => entries.some((entry, index) => entry.workflow === workflow
+    && (tourResults.has(entry.key) || index === tourStep || (next > 0 && index === next)));
+
+  const open = branchClosed ? null : tourBranch;
+  if (branched) list.append(el('li', 'Branches', 'caption'));
+  for (const branch of branched ? ['main', 'other'] : [tourBranch]) {
+    if (branched) {
+      const heading = el('li', '', 'branch');
+      const steps = workflowsOn(doc, branch).reduce((sum, workflow) => sum + (workflow.steps ?? []).length, 0);
+      const toggle = el('button', `${branch === open ? '▾' : '▸'} ${BRANCH_NAMES[branch]}`, 'branch-toggle');
+      toggle.append(el('span', `  ${steps}`, 'count'));
+      toggle.setAttribute('aria-expanded', String(branch === open));
+      toggle.onclick = () => goToBranch(doc, branch);
+      heading.append(toggle);
+      list.append(heading);
+      if (branch !== open) continue;
+    }
+    // At the top, so no number of open steps pushes it out of view.
+    const runAll = runBranchButton(doc, branch, { named: false });
+    if (runAll) {
+      const item = el('li', '', 'branch-run');
+      item.append(runAll);
+      list.append(item);
+    }
+    list.append(el('li', 'Workflows', 'caption'));
+    for (const workflow of workflowsOn(doc, branch)) {
+      list.append(workflowItem(workflow));
+      if (branch !== tourBranch || !isOpen(workflow)) continue;
+      for (const [index, entry] of entries.entries()) {
+        if (entry.workflow === workflow) list.append(stepItem(doc, entries, index, ops));
+      }
+    }
   }
   nav.append(list);
+};
 
-  const left = entries.length - upTo;
-  if (left > 0) nav.append(el('p', `${left} more, once you have run this one`, 'to-come'));
+/** The workflow a walk starts with: the first, on the branch being walked, that has steps. */
+const startingWorkflow = (doc) => workflowsOf(doc).find((workflow) => (workflow.steps ?? []).length > 0);
 
-  // Sixteen presses of Next is sometimes fifteen too many. This runs whatever
-  // is left — the same requests, in the same order — and lays the whole thing
-  // out as one page to read through.
-  const unrun = entries.filter((entry) => !tourResults.has(entry.key)).length;
-  const wholeThing = el('button', unrun > 0 ? `Run all ${entries.length} now` : 'Show the whole walk at once', 'run-all');
-  wholeThing.onclick = async () => {
-    wholeThing.disabled = true;
-    await runWholeTour(doc, (saying) => { wholeThing.textContent = saying; });
+/**
+ * The button that runs a list of workflows — a branch, or a scenario without
+ * branches — and lays it out as one page. Sixteen presses of Next is
+ * sometimes fifteen too many: this runs the same requests, in the same order.
+ * It names the branch, except in the list down the side, where the branch's
+ * name is just above it. A list of one workflow has none:
+ * the workflow's own button does the same.
+ */
+const runBranchButton = (doc, branch, { named = true } = {}) => {
+  const workflows = workflowsOn(doc, branch);
+  if (workflows.length < 2) return null;
+  const done = branch === tourBranch && workflows.every((workflow) =>
+    (workflow.steps ?? []).every((step) => tourResults.has(`${workflow.workflowId}/${step.stepId}`)));
+  const where = isBranched(doc) && named ? ` in ${BRANCH_PHRASES[branch]}` : '';
+  // Once all of it has run, there's nothing left for it to do.
+  if (done) return null;
+  const button = el('button', `Run all workflows${where}`, 'run-all');
+  button.onclick = async () => {
+    button.disabled = true;
+    await runBranch(doc, branch, (saying) => { button.textContent = saying; });
     renderGroups();
     await renderStage();
   };
-  nav.append(wholeThing);
+  return button;
+};
+
+/** One step in the list down the side: its number, title, who it's between and how it travels. */
+const stepItem = (doc, entries, index, ops) => {
+  const entry = entries[index];
+  const item = el('li');
+  const button = el('button', '', 'op step');
+  const run = Boolean(tourResults.get(entry.key)?.passed);
+  // A call to the mock's own routes registers a stub: setup, not the flow.
+  const stub = isStub(doc, entry.step);
+  const via = stub ? 'stub' : transportOf(doc, entry.step, ops);
+  const tag = el('span', stub ? 'Stub' : TRANSPORT_TAGS[via], `via via-${via}`);
+  tag.title = { http: 'An HTTP call', event: 'An event, heard on the event stream', ws: 'A message over a WebSocket', workflow: 'Several steps, run as one: another workflow', stub: 'Registers a stub: the mock answers for a part this scenario doesn\'t run' }[via];
+  if (stub) button.classList.add('stub');
+  const title = el('span', describe(entry.step).title, 'title');
+  const between = betweenLine(doc, entry.step);
+  if (between) title.append(between);
+  button.append(
+    // Its number, as the step's heading has it; green once it has run.
+    el('span', String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
+    title,
+    ...[gapTag(entry.step)].filter(Boolean),
+    tag
+  );
+  if (tourStep === index) button.classList.add('here');
+  button.onclick = () => {
+    tourStep = index;
+    // On the whole page, a step is a place on it to go to.
+    if (tourWhole) {
+      renderGroups();
+      for (const other of document.querySelectorAll('#stage > .panel.here')) other.classList.remove('here');
+      const panel = document.getElementById(`tour-step-${index}`);
+      panel?.classList.add('here');
+      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    renderGroups();
+    renderStage();
+  };
+  item.append(button);
+  return item;
+};
+
+/** A branched scenario's other situations, each a button to go straight to it, with what it's about. */
+const situationsList = (doc, heading) => {
+  const list = el('ul', '', 'situations');
+  for (const workflow of workflowsOn(doc, 'other')) {
+    const item = el('li');
+    const go = el('button', `${sectionOf(workflow)} · ${(workflow.steps ?? []).length} steps`, 'section-link');
+    go.onclick = async () => {
+      go.disabled = true;
+      await goToWorkflow(doc, workflow, (saying) => { go.textContent = saying; });
+    };
+    item.append(go);
+    const about = String(workflow.description ?? '').trim().split('\n')[0];
+    if (about && !about.startsWith('- ')) item.append(el('span', about, 'about'));
+    list.append(item);
+  }
+  return [el('p', heading, 'note'), list, runBranchButton(doc, 'other')].filter(Boolean);
 };
 
 /** A tour's opening panel. */
 const tourIntro = (doc) => {
   const panel = el('div', '', 'panel');
-  const entries = scenarioSteps(doc);
   // Counted, not written down: a contract set with more in it should say so
   // without anybody remembering to come back here.
   const total = operations().map((candidate) => ({ ...candidate, ...classify(candidate) }))
@@ -1541,21 +1989,22 @@ const tourIntro = (doc) => {
   panel.append(el('p',
     `Or press Let me explore for all ${total} operations, with nothing held back `
     + 'and everything editable.', 'note'));
-  const [first] = entries;
-  if (first) {
-    const pair = el('div', '', 'row');
-    const begin = el('button', `Start the tour — ${describe(first.step).title}`, 'primary');
-    begin.onclick = () => { tourStep = 0; renderGroups(); renderStage(); };
-    const whole = el('button', 'Or run all of it now', 'run-all');
-    whole.onclick = async () => {
-      whole.disabled = true;
-      await runWholeTour(doc, (saying) => { whole.textContent = saying; });
-      renderGroups();
-      await renderStage();
-    };
-    pair.append(begin, whole);
-    panel.append(pair);
-  }
+  const starting = startingWorkflow(doc);
+  if (!starting) return panel;
+  // What the list down the side holds, said once.
+  panel.append(el('p', isBranched(doc)
+    ? 'This scenario is in two branches: the main path, and other situations. Each branch is a set of '
+      + 'workflows (Arazzo workflows), and each workflow a set of steps. Go through the steps one at a time, '
+      + 'or run a whole workflow or branch at once.'
+    : 'This scenario is a set of workflows (Arazzo workflows), and each workflow a set of steps. Go through '
+      + 'the steps one at a time, or run a whole workflow, or all of it, at once.', 'note'));
+  // The workflow to start with, picked in the list too, or all of it at once.
+  const pair = el('div', '', 'row');
+  const begin = el('button', `Start with ${sectionOf(starting)} · ${starting.steps.length} steps`, 'primary');
+  begin.onclick = () => goToWorkflow(doc, starting);
+  pair.append(...[begin, runBranchButton(doc, tourBranch)].filter(Boolean));
+  panel.append(pair);
+  if (isBranched(doc)) panel.append(...situationsList(doc, 'Or go straight to another situation:'));
   return panel;
 };
 
@@ -1637,17 +2086,29 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   const panel = el('div', '', 'panel');
   panel.id = `tour-step-${index}`;
 
-  const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
-  const sectioned = (doc.content.workflows ?? []).length > 1;
-  if (sectioned) panel.append(el('p', sectionOf(entry.workflow), 'sectionline'));
-  // The section's introduction, on its first step when a step at a time; the
-  // whole tour shows it under the section's heading instead.
-  if (sectioned && live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
-  if (group) panel.append(el('p', group.title, 'kindline'));
-  const acting = actorLine(doc, step['x-actors']);
+  // A step that sends or receives a message (Arazzo 1.1) is an event's, not an HTTP call's.
+  const messaging = step.action !== undefined || step.channelPath !== undefined;
+  // On a connection of its own (the relay's) it's a WebSocket message; else an event.
+  const overWs = messaging && Boolean(sending?.message ?? result?.request?.message);
+  // A step that runs another workflow has no one kind: its steps each have theirs.
+  const group = step.workflowId !== undefined ? null : messaging ? GROUPS.find((candidate) => candidate.holds(overWs ? 'ws' : 'message'))
+    : op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
+  panel.append(el('p', `Workflow · ${sectionOf(entry.workflow)}`, 'sectionline'));
+  // The workflow's introduction, on its first step when a step at a time; the
+  // whole tour shows it under the workflow's heading instead.
+  if (live && entry.workflow !== entries[index - 1]?.workflow) panel.append(...sectionIntroOf(entry.workflow));
+  if (group) {
+    const kind = el('p', group.title, 'kindline');
+    const gap = gapTag(step);
+    if (gap) kind.append(gap);
+    panel.append(kind);
+  }
+  const acting = actorLine(doc, step['x-actors'], isStub(doc, step) ? { label: 'Stub for' } : {});
   if (acting) panel.append(acting);
   panel.append(el('h2', `${String(index + 1).padStart(2, '0')} · ${title}`));
-  panel.append(el('p', sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
+  panel.append(el('p', step.workflowId !== undefined ? `Runs ${workflowFor(doc, step.workflowId).workflow?.summary ?? step.workflowId}`
+    : messaging ? `${step.action === 'send' ? 'Send' : 'Receive'} ${sending?.message ?? sending?.channel ?? step.channelPath ?? step.operationId}`
+    : sending ? `${sending.method} ${asWritten(sending.url)}` : step.operationId, 'path'));
   const shown = headersWorthShowing(sending?.headers);
   if (shown.length > 0) panel.append(el('p', shown.join('   ·   '), 'cited'));
   const cited = citedLine(op);
@@ -1680,14 +2141,33 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     panel.append(field);
   }
 
-  const send = el('button', 'Execute', 'primary');
-  if (live) panel.append(send);
-  if (result) {
-    send.disabled = result.passed;
-    send.textContent = result.passed ? 'Done' : 'Try again';
+  // Once it has run, what it answered shows below; there's nothing left to press.
+  const send = el('button', result && !result.passed ? 'Try again' : 'Execute', 'primary');
+  if (live && !result?.passed) panel.append(send);
+
+  if (step.workflowId !== undefined) {
+    const { workflow, doc: home } = workflowFor(doc, step.workflowId);
+    const ops = scenarioOperations();
+    const list = el('ol', '', 'inner');
+    // Each by its title and how it travels. The step that runs them has the
+    // number and the result; its checks name an inner step that failed.
+    for (const inner of workflow?.steps ?? []) {
+      const item = el('li', describe(inner).title);
+      const via = isStub(home, inner) ? 'stub' : transportOf(home, inner, ops);
+      item.append(el('span', via === 'stub' ? 'Stub' : TRANSPORT_TAGS[via], `via via-${via} tag`));
+      list.append(item);
+    }
+    panel.append(list);
+  } else if (result && !result.response && step.action !== 'send') {
+    // A message received: the event, or the frame, as it arrived. One sent
+    // over a WebSocket is shown above, as what was sent.
+    const heard = el('pre', '', result.passed ? '' : 'bad');
+    heard.append(el('span', result.message ? 'Received' : 'Nothing received', 'label'),
+      document.createTextNode(result.message ? JSON.stringify(result.message.payload, null, 2) : ''));
+    panel.append(heard);
   }
 
-  if (result) {
+  if (result?.response) {
     const named = op ? responseShape(op, result.response.status) : null;
     if (named) panel.append(shapeLine(named.name, named.path, 'shape', named.node));
     const answer = el('pre', '', result.response.status >= 400 ? 'bad' : '');
@@ -1699,6 +2179,9 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     answer.append(el('span', `${result.response.status} ${result.response.statusText ?? ''}`.trim(), 'label'),
       document.createTextNode(headerLines + (headerLines ? '\n' : '') + JSON.stringify(result.response.body, null, 2)));
     panel.append(answer);
+  }
+
+  if (result) {
     // A step's checks are shown when one fails; a step that did what it says
     // has nothing to add to its answer.
     if (!result.passed) {
@@ -1719,7 +2202,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     // A failed step is tried again on fresh data, from the start: the run
     // cannot step back, and the steps before it are what it acts on.
     if (result && !result.passed) { await derive({ seed: true }); tourStep = index; }
-    await runOn(doc, { workflowId: entry.workflow.workflowId, stepId: step.stepId });
+    await runTo(doc, index);
     renderGroups();
     await renderStage();
   };
@@ -1737,12 +2220,30 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     // Going on needs this step to have run.
     next.hidden = !result?.passed;
     pager.append(next);
+  } else if (isBranched(doc) && tourBranch === 'main') {
+    // The end of the main path offers the other situations, rather than stopping.
+    const end = el('div', '', 'branch-end');
+    end.append(el('p', "That's the main path.", 'to-come'), ...situationsList(doc, 'Other situations:'));
+    end.hidden = !result?.passed;
+    pager.append(end);
   } else {
-    const end = el('p', 'That is the whole walk. Switch to Let me explore and poke at the rest.', 'to-come');
+    const end = el('p', isBranched(doc) ? "That's every situation. Switch to Let me explore and poke at the rest."
+      : 'That is the whole walk. Switch to Let me explore and poke at the rest.', 'to-come');
     end.hidden = !result?.passed;
     pager.append(end);
   }
   panel.append(pager);
+  // The rest at once: this workflow, or its whole branch.
+  const runs = el('div', '', 'runs');
+  const steps = entry.workflow.steps ?? [];
+  const done = steps.every((other) => tourResults.has(`${entry.workflow.workflowId}/${other.stepId}`));
+  const runThis = done ? null : el('button', `Run this workflow · ${steps.length} steps`, 'run-all');
+  if (runThis) runThis.onclick = async () => {
+    runThis.disabled = true;
+    await runWorkflow(doc, entry.workflow, (saying) => { runThis.textContent = saying; });
+  };
+  runs.append(...[runThis, runBranchButton(doc, tourBranch)].filter(Boolean));
+  if (runs.children.length > 0) panel.append(runs);
   return panel;
 };
 
@@ -1759,16 +2260,29 @@ const renderTourStage = (stage, doc) => {
     again.onclick = () => { tourWhole = false; tourStep = 0; renderGroups(); renderStage(); };
     panel.append(again);
     stage.append(panel);
-    const sectioned = (doc.content.workflows ?? []).length > 1;
     for (const [index, entry] of entries.entries()) {
       if (!tourResults.has(entry.key)) continue;
-      if (sectioned && entry.workflow !== entries[index - 1]?.workflow) {
-        const heading = el('h2', sectionOf(entry.workflow), 'section-heading');
+      if (entry.workflow !== entries[index - 1]?.workflow) {
+        const heading = el('h2', '', 'section-heading');
+        heading.append(el('span', 'Workflow', 'kicker'), sectionOf(entry.workflow));
         heading.id = `tour-section-${entry.workflow.workflowId}`;
         stage.append(heading);
         for (const part of sectionIntroOf(entry.workflow)) stage.append(part);
       }
-      stage.append(tourStepPanel(doc, entries, index, { live: false }));
+      const panel = tourStepPanel(doc, entries, index, { live: false });
+      if (tourStep === index) panel.classList.add('here');
+      // Picking a step here picks it in the list too, brought into view.
+      // Not when the click is on something of its own, or ends a selection of text.
+      panel.addEventListener('click', (event) => {
+        if (event.target.closest('a, button, input, textarea, select, summary, label')) return;
+        if (!window.getSelection()?.isCollapsed) return;
+        tourStep = index;
+        for (const other of stage.querySelectorAll('.panel.here')) other.classList.remove('here');
+        panel.classList.add('here');
+        renderGroups();
+        requestAnimationFrame(() => $('groups').querySelector('.op.step.here')?.scrollIntoView({ block: 'nearest' }));
+      });
+      stage.append(panel);
     }
     return;
   }

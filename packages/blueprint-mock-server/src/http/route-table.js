@@ -232,7 +232,7 @@ async function publicResponse(response) {
   });
 }
 
-export function createDispatcher(routes, { basePath = '' } = {}) {
+export function createDispatcher(routes, { basePath = '', unmatched = null } = {}) {
   // A prefix the route table knows nothing about, stripped before matching.
   // A page served from a subdirectory — GitHub Pages puts a project site at
   // /<repo>/ — resolves `/intake/applications` to `/<repo>/intake/applications`,
@@ -257,6 +257,7 @@ export function createDispatcher(routes, { basePath = '' } = {}) {
     const match = matchRoute(routes, request.method, routable);
 
     if (match === null) {
+      if (unmatched) return unmatched(forwarded);
       return Response.json({
         code: 'NOT_FOUND',
         message: 'The requested endpoint does not exist',

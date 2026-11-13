@@ -5,9 +5,8 @@
 
 import jsonLogic from 'json-logic-js';
 import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
-import { applySteps, applyStepsWithCalls, resolveValue, whenReady, caughtEntities } from '../state-machine-engine.js';
+import { applySteps, applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
@@ -218,12 +217,16 @@ function resolveWithArgValue(val, context) {
   if (val === null || val === undefined) return val;
   if (typeof val === 'object' && !Array.isArray(val)) {
     const result = {};
-    for (const [k, v] of Object.entries(val)) result[k] = resolveWithArgValue(v, context);
+    for (const [k, v] of Object.entries(val)) {
+      const value = resolveWithArgValue(v, context);
+      if (value !== undefined) result[k] = value;
+    }
     return result;
   }
   // A value expression, a string with value expressions embedded in braces,
-  // or a literal: all resolved the same way as any step value.
-  return resolveValue(val, context);
+  // or a literal: filled in the same way as any step value, so one that
+  // finds nothing is left out.
+  return fillValue(val, context);
 }
 
 /**
@@ -239,7 +242,8 @@ function resolveWithArgs(withArgs, context) {
         Object.assign(params, merged);
       }
     } else {
-      params[key] = resolveWithArgValue(val, context);
+      const value = resolveWithArgValue(val, context);
+      if (value !== undefined) params[key] = value;
     }
   }
   return params;
@@ -247,12 +251,14 @@ function resolveWithArgs(withArgs, context) {
 
 /**
  * Create the records a procedure's steps left to create, and make its appends.
+ * The mock running it (`instance`, from the step context) answers with a stub
+ * and sends the created events.
  */
-function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, store, perform = null) {
+function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, store, instance, perform = null) {
   for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
     if (stubUrl) {
       const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
-      const httpStub = matchAndPopHttp('POST', fullPath);
+      const httpStub = instance.stubs.matchAndPopHttp('POST', fullPath);
       if (httpStub) {
         console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
         continue;
@@ -265,7 +271,7 @@ function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, sto
       if (perform?.settleCreated && perform.settleCreated(`${domain}${stubUrl ?? ''}`, created)) continue;
       if (domain && eventObject) {
         emitEvent({
-          store,
+          instance,
           domain,
           object: eventObject,
           action: 'created',
@@ -327,7 +333,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
     const before = { ...resource };
 
     const finish = (applied, at) => {
-      applyPendingWrites(procedureId, applied, store, perform);
+      applyPendingWrites(procedureId, applied, store, context.instance, perform);
       const operations = [...applied.pendingOperations];
       const events = [...(applied.pendingEvents || [])];
       if (applied.pendingProcedures.length === 0) return { operations, events };
@@ -391,7 +397,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
       for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
         if (stubUrl) {
           const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
-          const httpStub = matchAndPopHttp('POST', fullPath);
+          const httpStub = stepContext.instance.stubs.matchAndPopHttp('POST', fullPath);
           if (httpStub) {
             console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
             continue;
@@ -401,7 +407,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
           const created = store.create(entity, createData);
           if (domain && eventObject) {
             emitEvent({
-            store,
+              instance: stepContext.instance,
               domain,
               object: eventObject,
               action: 'created',

@@ -7,6 +7,8 @@
 
 > **Pre-release:** This package is at `0.x`. Until `1.0.0`, minor versions may include breaking changes. Pin your version if stability matters.
 
+> **Reference implementation.** One way to do this, not the only one: use it as is, adapt it, or replace it. The contracts are the authority; anything that satisfies them works the same. The mock is for development and demos, not production.
+
 ## Installation
 
 ```bash
@@ -145,7 +147,7 @@ in a page. Hand `createMockServer` a contracts artifact and it returns a
 `fetch`:
 
 ```js
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 
 const contracts = await (await fetch('./contracts.json')).json();
 const mock = await createMockServer({ contracts });
@@ -154,20 +156,52 @@ const response = await mock.fetch(new Request('/intake/applications'));
 ```
 
 `mock.fetch` has `fetch`'s own signature, so it can be called directly, handed
-to a test runner, or assigned over `window.fetch`.
+to a test runner, or assigned over `window.fetch`. `/browser` is an older name
+for `/server`, and is deprecated.
 
-`/browser` is the source, for a page that has a bundler. For one that doesn't,
+### A client and a server
+
+Some APIs run in the page rather than on the server, like a transcription
+session, which follows one tab's connection. `createMockClient` runs those in
+the page and sends everything else to the server. It takes the same options
+as `createMockServer`; a routing entry for every domain (`domain: '*'`) names
+the server, and its `except` names what the page keeps. It starts with no
+seeded records, since what it keeps is the page's own.
+
+```js
+import { createMockClient } from '@codeforamerica/blueprint-mock-server/client';
+
+const client = await createMockClient({
+  contracts,
+  routing: [{
+    domain: '*',
+    to: 'https://api.example.gov',
+    except: [{ api: 'communication-transcription-sessions' }],
+    includeHeaders: ['Authorization'],
+  }],
+});
+```
+
+`to` can be a `handler` instead, such as a mock server's `fetch`, to run both
+in one page. A request for something the client's contracts don't have goes
+to the server too, so a client bundled with only its own domains
+(`blueprint-bundle-contracts --domain=…`) still reaches everything else.
+
+`/client` and `/server` are the source, for a page that has a bundler. For one that doesn't,
 use `dist/blueprint-mock-server.esm-browser.js`: one ES module with every
-dependency inside and nothing else to install. Copy it next to the page and
+dependency inside and nothing else to install, exporting both
+`createMockClient` and `createMockServer`. Copy it next to the page and
 import it from there, or import it by that path from the package
 (`@codeforamerica/blueprint-mock-server/dist/blueprint-mock-server.esm-browser.js`).
 The licenses and notices of the third-party code inside it are at the end of
 the file; keep them with it.
 
-Assigning over `window.fetch` only reaches code that calls `fetch`, which the
-generated clients do not. `generate-ts-clients` emits `@hey-api/client-axios`,
-and axios uses `XMLHttpRequest` in a browser, so that swap leaves every
-generated call going to the network. Hand the mock to axios instead:
+Assigning over `window.fetch` only reaches code that calls `fetch`. An SDK
+generated with `generate-ts-clients --http-client=fetch` takes the mock's
+`fetch` directly: `createClient({ baseUrl, fetch: mock.fetch })`. The default,
+`@hey-api/client-axios`, uses `XMLHttpRequest` in a browser, so that swap
+leaves every generated call going to the network. Hand the mock to axios
+instead:
 
 ```js
 import { createClient } from './clients/intake/client';
@@ -192,7 +226,7 @@ the default adapter in place.
 | `store` | a fresh in-memory store | Any store implementation |
 | `basePath` | `''` | A path prefix to strip before matching |
 | `baseUrl` | `''` | Base for `Location` headers |
-| `seed` | `true` | Seed from the artifact's mock-data documents |
+| `seed` | `true`; `false` for `createMockClient` | Seed from the artifact's mock-data documents |
 | `routing` | `[]` | Domains, APIs and operations a real service or a `handler` answers — see [Routing](../../docs/guides/mock-server.md#routing-to-a-real-service) |
 
 `basePath` matters when the page is not at the root of its origin. GitHub Pages
@@ -243,12 +277,18 @@ Stubs are checked against [`schemas/stubs-schema.json`](schemas/stubs-schema.jso
 ## Programmatic Use
 
 ```js
-import { startMockServer, stopServer } from '@codeforamerica/blueprint-mock-server';
+import { startMockServer, stopServer } from '@codeforamerica/blueprint-mock-server/server';
 
 await startMockServer(['./resolved'], './seed');
 // ... run tests ...
 await stopServer();
 ```
+
+In Node, `/server` has both ways to run the server: `startMockServer`, over
+HTTP from contract folders, and `createMockServer`, from an artifact through
+`fetch`. A page that imports `/server` gets only `createMockServer`; the
+package's export conditions keep the Node server out of a browser bundle.
+The package's main entry still exports `startMockServer` too.
 
 ### Writing tests against the server
 

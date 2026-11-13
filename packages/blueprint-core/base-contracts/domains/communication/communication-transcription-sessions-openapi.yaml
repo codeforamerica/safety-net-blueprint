@@ -1,0 +1,209 @@
+# A transcription session: the transcription software's connection to its
+# transcription service, kept track of in the page. The client talks only to
+# the session; its actions call the transcript's
+# operations, so everything that's kept is the transcript's. Its lifecycle is
+# communication-transcription-sessions-state-machine.yaml beside this file.
+#
+# Designed to run in the page: a deployment keeps this API there with routing
+# and sends the transcripts API to its server. See
+# docs/architecture/domains/communication-transcripts.md, "How the parts work together" and
+# Decisions 14 to 17.
+openapi: 3.1.0
+info:
+  title: Transcription sessions
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    The transcription software's connection to its transcription service,
+    for one browser tab. Designed to run in the page, beside the software,
+    while the transcript it writes to lives on the server.
+
+    Creating a session says which transcript it writes to: an existing one,
+    to carry on after a session failed, or what to start a new one with. A
+    new transcript is started the first time the software asks how to
+    stream. The session's actions are what the client tells it — how do I stream, the connection is open or dropped, a line in
+    progress or finished, pause, resume, stop, close, give up — and each
+    sends an event, which is how the client follows it.
+servers:
+  - url: https://api.example.com/communication
+    description: Production server
+  - url: http://localhost:1080/communication
+    description: Local development server
+tags:
+  - name: Transcription sessions
+    description: The transcription software's connection to its transcription service.
+paths:
+  /transcription-sessions:
+    post:
+      summary: Start a transcription session
+      description: |
+        Start keeping track of the software's connection, for a transcript.
+        Name an existing transcript with `transcriptId` to carry on after a
+        session failed; otherwise give what a new transcript is started with
+        — `profileId`, `client` and `startedAt`, and `model` unless the
+        profile's service is `none` — and it's started the first time the
+        software asks how to stream. The session begins in `created`.
+      operationId: createTranscriptionSession
+      tags:
+        - Transcription sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionSessionCreate"
+      responses:
+        "201":
+          description: Session started.
+          headers:
+            Location:
+              description: URL of the new session.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Conflict"
+          description: |
+            The session is refused: it names a transcript that doesn't exist,
+            or gives neither a transcript nor what to start one with.
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /transcription-sessions/{transcriptionSessionId}:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionSessionIdParam"
+    get:
+      summary: Get a transcription session
+      description: Retrieve a session by identifier.
+      operationId: getTranscriptionSession
+      tags:
+        - Transcription sessions
+      responses:
+        "200":
+          description: Session retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSession"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+components:
+  parameters:
+    TranscriptionSessionIdParam:
+      name: transcriptionSessionId
+      in: path
+      required: true
+      description: Unique identifier of the session.
+      schema:
+        type: string
+        format: uuid
+      example: 2b7d5e1a-4c3f-4a8e-9d6b-0e1f2a3b4c5d
+  schemas:
+    # Writable base: what creating a session takes. TranscriptionSession and
+    # TranscriptionSessionCreate extend it via allOf, so a write never carries
+    # a server-managed field.
+    TranscriptionSessionWritable:
+      type: object
+      description: |
+        Which transcript the session writes to: `transcriptId` for an existing
+        one, or what to start a new one with, which the session passes to
+        `createTranscript` the first time the software asks how to stream.
+      properties:
+        transcriptId:
+          type: string
+          format: uuid
+          description: |
+            The transcript the session writes to. Given to carry on a
+            transcript, after a session failed or in a reopened tab; otherwise
+            set when the session starts a new one. To carry on after a reload,
+            the page keeps this id, in sessionStorage for example, and reads
+            the transcript with getTranscript: one still recording or paused
+            can be carried on. A tab opened again has no id kept, and finds
+            the transcript with listTranscripts, by its subject and status:
+            `q=subjectId:{id} status:recording,paused`. A transcript with no
+            subject can't be found that way.
+          x-relationship:
+            resource: Transcript
+            style: links-only
+        profileId:
+          type: string
+          format: uuid
+          description: The profile to start a new transcript under.
+          x-relationship:
+            resource: TranscriptionProfile
+            style: links-only
+        model:
+          type: string
+          description: The transcription service's model, for a new transcript. Required unless the profile's service is `none`.
+          example: scribe_v2
+        client:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$"
+          description: The transcription software, as `name/version`, for a new transcript.
+          example: interview-assistant/0.1.0
+        startedAt:
+          type: string
+          format: date-time
+          description: When the conversation began, by the client's clock, for a new transcript.
+        # What a new transcript records: the transcript's own fields, so a
+        # contract set's subject types, overlaid there, apply here too.
+        subjectType:
+          $ref: "./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectType"
+        subjectId:
+          $ref: "./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectId"
+    TranscriptionSession:
+      description: A transcription session, including server-managed fields.
+      unevaluatedProperties: false
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionSessionWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier, given when the record was created or else generated by the server.
+            status:
+              type: string
+              readOnly: true
+              x-enum-source:
+                source: states[].id
+                machine: TranscriptionSession
+              description: Where the connection is; see the session's state machine.
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the session was started.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the session last changed.
+    TranscriptionSessionCreate:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionSessionWritable"
+        - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/NewId"
+        - type: object
+          description: |
+            Payload to start a session: `transcriptId`, or `profileId`,
+            `client` and `startedAt` for a new transcript. id, status,
+            createdAt and updatedAt are set by the server.

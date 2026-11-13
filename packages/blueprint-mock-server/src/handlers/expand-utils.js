@@ -40,6 +40,9 @@ export function propertiesOf(schema, follow = (x) => x, seen = new Set()) {
   const resolved = follow(schema);
   if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) return [];
   seen.add(resolved);
+  // A ref to a ref — a component that names a schema in another file — is
+  // followed on to the schema.
+  if (resolved !== schema && typeof resolved.$ref === 'string') return propertiesOf(resolved, follow, seen);
 
   const sources = [];
   if (resolved.properties) sources.push(resolved.properties);
@@ -58,9 +61,11 @@ export function propertiesOf(schema, follow = (x) => x, seen = new Set()) {
  * Handles flat schemas and allOf.
  *
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
+ * @param {(schema: object) => object} [follow]
+ * @param {object} [resources] - Where each resource is kept (spec-loader.js `resourceIndex`)
  * @returns {Array<{ fieldName: string, fkField: string, resource: string, collection: string }>}
  */
-export function extractExpandFields(schema, follow = (x) => x) {
+export function extractExpandFields(schema, follow = (x) => x, resources = null) {
   if (!schema) return [];
 
   const fields = [];
@@ -78,7 +83,7 @@ export function extractExpandFields(schema, follow = (x) => x) {
           fieldName,
           fkField,
           resource: rel.resource,
-          collection: resourceToCollection(rel.resource),
+          collection: resourceToCollection(rel.resource, resources),
           // The schema keeps the key too when it is writable (the Writable
           // pattern); otherwise the expanded record replaces it.
           keepFk: declared.has(fkField),
@@ -168,44 +173,16 @@ export function getItemSchema(listSchema, schemas, follow = (x) => x) {
 }
 
 /**
- * Where each resource's records are kept, by resource name, read from core's
- * model of the API documents when they are loaded (spec-loader.js) — so a
- * TranscriptionProfile served at /profiles is found in `profiles`.
- *
- * @type {Map<string, string>}
- */
-const collectionsByResource = new Map();
-
-/**
- * Where each resource is read, by resource name: its item path with the server
- * base in front, and the parameter naming the record itself — so a link to a
- * member is `/intake/applications/{applicationId}/members/{memberId}`, in the
- * API that serves members, not a path under whichever API holds the link.
- *
- * @type {Map<string, { path: string, parameter: string }>}
- */
-const itemPathsByResource = new Map();
-
-/**
- * @param {Map<string, string>} collections - Resource name → collection
- * @param {Map<string, { path: string, parameter: string }>} [itemPaths] - Resource name → where it is read
- */
-export function registerResourceCollections(collections, itemPaths = new Map()) {
-  // A server starting replaces what the last one registered: a resource only it
-  // served would otherwise still look served here.
-  collectionsByResource.clear();
-  itemPathsByResource.clear();
-  for (const [name, collection] of collections) collectionsByResource.set(name, collection);
-  for (const [name, item] of itemPaths) itemPathsByResource.set(name, item);
-}
-
-/**
  * The collection a resource's records are kept in. One the model names is
  * found there; otherwise the name is converted by convention — ApplicationMember
  * → application-members — which is how it was found before the model said.
+ *
+ * @param {string} resource
+ * @param {{ collections: Map<string, string> }} [resources] - The mock's
+ *   resource index (spec-loader.js `resourceIndex`)
  */
-export function resourceToCollection(resource) {
-  return collectionsByResource.get(resource) ?? (resource
+export function resourceToCollection(resource, resources) {
+  return resources?.collections.get(resource) ?? (resource
     .replace(/([A-Z])/g, (_, c, i) => (i === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`))
     + 's');
 }
@@ -221,9 +198,12 @@ export function resourceToCollection(resource) {
  * comes back as `{ within, fields }`, its own fields to link.
  *
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
+ * @param {(schema: object) => object} [follow]
+ * @param {object} resources - Where each resource is kept (spec-loader.js `resourceIndex`)
  * @returns {Array<{ fkField: string, linkName: string, resource: string, collection: string, typeField?: string, mapping?: object } | { within: string, fields: Array }>}
  */
-export function extractLinksFields(schema, follow = (x) => x, seen = new Set()) {
+export function extractLinksFields(schema, follow = (x) => x, resources, seen = new Set()) {
+  if (!resources) throw new TypeError('extractLinksFields needs the mock\'s resource index, to find where each resource is kept');
   if (!schema) return [];
 
   const fields = [];
@@ -235,7 +215,7 @@ export function extractLinksFields(schema, follow = (x) => x, seen = new Set()) 
         const linkName = fieldName.length > 2 ? fieldName.replace(/Id$/, '') : fieldName;
         fields.push(rel.resource === 'Polymorphic'
           ? { fkField: fieldName, linkName, typeField: rel.discriminator?.propertyName, mapping: rel.discriminator?.mapping ?? {} }
-          : { fkField: fieldName, linkName, resource: rel.resource, collection: resourceToCollection(rel.resource) });
+          : { fkField: fieldName, linkName, resource: rel.resource, collection: resourceToCollection(rel.resource, resources) });
         continue;
       }
       const held = follow(propDef)?.items ?? propDef;
@@ -243,7 +223,7 @@ export function extractLinksFields(schema, follow = (x) => x, seen = new Set()) 
       // Only the schemas above this one are skipped, so a schema that holds
       // itself ends, and two fields holding the same schema both link.
       if (!resolved || typeof resolved !== 'object' || seen.has(resolved)) continue;
-      const inner = extractLinksFields(held, follow, new Set([...seen, resolved]));
+      const inner = extractLinksFields(held, follow, resources, new Set([...seen, resolved]));
       if (inner.length > 0) fields.push({ within: fieldName, fields: inner });
     }
   }
@@ -271,10 +251,11 @@ function resourceOfType(type, mapping) {
  * @param {string} id
  * @param {string} collection
  * @param {(collection: string, id: string) => object|null} lookup
+ * @param {object} resources - Where each resource is read
  * @returns {string|null}
  */
-function linkTo(resource, id, collection, lookup) {
-  const item = itemPathsByResource.get(resource);
+function linkTo(resource, id, collection, lookup, resources) {
+  const item = resources?.itemPaths.get(resource);
   if (!item) return null;
   let related;
   let unresolved = false;
@@ -299,9 +280,11 @@ function linkTo(resource, id, collection, lookup) {
  * @param {object} record - Raw DB record (or already-expanded record)
  * @param {Array} linksFields - From extractLinksFields
  * @param {(collection: string, id: string) => object|null} [lookup] - Finds a related record, for its parent ids
+ * @param {object} resources - Where each resource is read (spec-loader.js `resourceIndex`)
  * @returns {object}
  */
-export function applyLinks(record, linksFields, lookup) {
+export function applyLinks(record, linksFields, lookup, resources) {
+  if (!resources) throw new TypeError('applyLinks needs the mock\'s resource index, to find where each resource is read');
   if (!linksFields || linksFields.length === 0 || !record || typeof record !== 'object') return record;
 
   const links = record.links ? { ...record.links } : {};
@@ -312,8 +295,8 @@ export function applyLinks(record, linksFields, lookup) {
     if (field.within) {
       const held = record[field.within];
       const linked = Array.isArray(held)
-        ? held.map((item) => applyLinks(item, field.fields, lookup))
-        : applyLinks(held, field.fields, lookup);
+        ? held.map((item) => applyLinks(item, field.fields, lookup, resources))
+        : applyLinks(held, field.fields, lookup, resources);
       if (linked !== held) out = { ...out, [field.within]: linked };
       continue;
     }
@@ -321,7 +304,7 @@ export function applyLinks(record, linksFields, lookup) {
     if (!fkValue) continue;
     const resource = field.typeField ? resourceOfType(record[field.typeField], field.mapping) : field.resource;
     if (!resource) continue;
-    const href = linkTo(resource, fkValue, field.typeField ? resourceToCollection(resource) : field.collection, lookup);
+    const href = linkTo(resource, fkValue, field.typeField ? resourceToCollection(resource, resources) : field.collection, lookup, resources);
     if (!href) continue;
     links[field.linkName] = href;
     hasLinks = true;

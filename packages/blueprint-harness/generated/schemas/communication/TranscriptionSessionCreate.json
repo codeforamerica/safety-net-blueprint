@@ -1,0 +1,82 @@
+{
+  "unevaluatedProperties": false,
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Which transcript the session writes to: `transcriptId` for an existing\none, or what to start a new one with, which the session passes to\n`createTranscript` the first time the software asks how to stream.\n",
+      "properties": {
+        "transcriptId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The transcript the session writes to. Given to carry on a\ntranscript, after a session failed or in a reopened tab; otherwise\nset when the session starts a new one. To carry on after a reload,\nthe page keeps this id, in sessionStorage for example, and reads\nthe transcript with getTranscript: one still recording or paused\ncan be carried on. A tab opened again has no id kept, and finds\nthe transcript with listTranscripts, by its subject and status:\n`q=subjectId:{id} status:recording,paused`. A transcript with no\nsubject can't be found that way.\n"
+        },
+        "profileId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The profile to start a new transcript under."
+        },
+        "model": {
+          "type": "string",
+          "description": "The transcription service's model, for a new transcript. Required unless the profile's service is `none`."
+        },
+        "client": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$",
+          "description": "The transcription software, as `name/version`, for a new transcript."
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the conversation began, by the client's clock, for a new transcript."
+        },
+        "subjectType": {
+          "type": "string",
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`.",
+          "enum": [
+            "interview",
+            "chat"
+          ]
+        },
+        "subjectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "transcript": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Transcript resource."
+            },
+            "profile": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related TranscriptionProfile resource."
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "The id a caller may choose for a record it creates, following JSON:API's client-generated ids. Every create schema references it. Without an id, the server sets one. An id another record already has is refused with 409. Choosing the id lets one request name a record another change in it creates, as a JSON Patch to a composition does.\n",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The new record's id, a UUID (RFC 9562)."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "Payload to start a session: `transcriptId`, or `profileId`,\n`client` and `startedAt` for a new transcript. id, status,\ncreatedAt and updatedAt are set by the server.\n"
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptionSessionCreate"
+}
