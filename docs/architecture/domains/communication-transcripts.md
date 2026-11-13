@@ -117,9 +117,13 @@ The contracts define every part: the transcript, the session that keeps
 track of the Client's connection, the transcript audio adapter, the relay, and
 routing, which decides where each part runs. The mock runs the Session and the
 Transcript, and stands in for the transcript audio adapter, the service and
-the relay with stubs. The harness's transcription scenario,
-`blueprint-harness/contracts/scenarios/transcription.arazzo.yaml`, plays the
-Client's part through every step, each checked against the contracts. The shape is a general one, for any live stream from the browser to a vendor:
+the relay with stubs. The harness's three transcription scenarios, in
+`blueprint-harness/contracts/scenarios/`, play the Client's part through every
+step, each checked against the contracts: a spoken conversation
+(`transcription.arazzo.yaml`), the same through a relay
+(`transcription-relay.arazzo.yaml`), and a chat
+(`transcription-chat.arazzo.yaml`). Each has a main path and its other
+situations: pausing, a dropped connection, what's rejected and the rest. The shape is a general one, for any live stream from the browser to a vendor:
 [Browser-to-Vendor Stream](../cross-cutting/browser-vendor-stream.md) says when
 it fits and why each part is there.
 
