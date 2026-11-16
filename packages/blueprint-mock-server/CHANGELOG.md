@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- Before, an action always answered with its record. Now one that declares `response: {schema, payload}` answers with its payload, read after its steps run — what a call it made bound, say. (#520)
+- Before, `runScenario` could only run steps that call HTTP operations. Now it also runs Arazzo 1.1 `send` and `receive` steps, for events on the mock's event stream and for messages on a WebSocket the mock serves for each AsyncAPI document with a localhost server, at that server's `pathname`, answered by stubs registered at `POST /mock/stubs/ws`, which can send each message and close at a time of their own (`atMs`), and reached in a page through `createMockServer`'s `WebSocket` and over the network from `blueprint-mock`; `operationIndex` includes the AsyncAPI operations such steps name. (#520)
+- Before, a state machine step with `runAs: caller` made its call with the caller's id and roles but not their credential. Now it also carries the `Authorization` header the caller sent, which routing passes on to a service where `includeHeaders` names it. (#520)
+- Before, a page imported `createMockServer` from `@codeforamerica/blueprint-mock-server/browser`, and Node imported `startMockServer` from the package itself. Now both import from `/server`, which in Node also has `startMockServer`, and `/client` exports `createMockClient`, which runs the APIs a page keeps and sends everything else to the server, starting with no seeded records; `/browser` still works and is deprecated. (#520)
+- Before, a reader of `GET /platform/events/stream` that lost its connection missed whatever happened until it reconnected, and got every event. Now each event carries its `id`, a reader that reconnects with `Last-Event-ID` is sent what it missed first (or `410` when the log no longer has that id), and the stream takes the `type`, `source` and `subject` filters listing events does. (#520)
+- **Breaking:** Before, a state machine value expression that found nothing filled in null — in a call's body, an event's data, a `set:` — and a null went out even where the schema it went into didn't accept one. Now what finds nothing is left out, so a `set:` sets nothing and a PATCH leaves the field as it was, and a null is left out where its schema doesn't accept one; to clear a field, write a literal null. (#520)
+- Before, a call to an operationId two APIs declare went to whichever the mock read first, and an Arazzo step qualified by its source could run another API's operation with the same id. Now a call can name one as `$apis.<api>.<id>`, a bare id more than one API declares is refused with 422 naming those forms, and a step runs the operation in its own source. (#520)
+- **Breaking:** Where you passed `--forwarding=<file>` or `createMockServer({ forwarding })`, pass `--routing=<file>` or `{ routing }`, whose entries name a domain (`*` for every domain, and any request the mock has no route for), an API or one operation in place of an `endpoint:`, with `to:` a URL or, in a page, a `handler` function (`schemas/routing-schema.json`). Routing also covers events, delivering those a routed domain receives to it as CloudEvents and reading those it sends that the mock's own state machines react to from its event stream, or its event log when it has none, and a WebSocket the mock serves, sent by its `api` name to a `ws` or `wss` URL or a `handler` with the WebSocket constructor's signature. (#283, #520)
+- Before, a reaction with `transition:` to an event about another resource looked for a record whose id was the event's subject and was skipped. Now the mock transitions the machine's records that name the subject through their declared relationship. (#520)
+- Before, `runScenario` refused a step that runs another workflow. Now it runs one by `workflowId`, from the same document or, as `$sourceDescriptions.<name>.<workflowId>`, from another Arazzo document passed in `documents`, and a `workflows` option picks which workflows to run, each with those it depends on. (#520)
+
+### Patch Changes
+
+- Before, two mocks in one page or process shared their event reactions, stubs and validators, so an event one sent ran the other's `on:` reactions and a stub registered on one answered the other. Now each mock keeps its own. (#520)
+- Before, an event arriving while an action on the same record waited on a call could set off a reaction that changed the record mid-action, so both changes were made and both sent their events. Now the reaction waits for the action to finish, then reads the record as the action left it, with its `from` checked then. (#520)
+- Before, a value expression reading a nested request field, such as `$request.gap.startedAt`, found nothing. Now it reads the nested field, as `$object` and `$this` paths do. (#520)
+- Before, an action's request schema with a `$ref` into another file, and the response schema a routed handler's answer is checked against, were skipped with a warning that no validator could be compiled. Now both are checked, so a request or an answer they don't allow is refused. (#520)
+- Uses @codeforamerica/blueprint-core 0.5.0, @codeforamerica/blueprint-rules-engine 0.2.1.
+
 ## 0.4.0
 
 ### Minor Changes

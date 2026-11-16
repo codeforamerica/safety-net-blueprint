@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- **Breaking:** Before, eligibility's service calls for a Medicaid decision carried `decisionId` and `applicationId` as top-level fields and asked for an `fdsh_medicare_vci` service data-exchange doesn't offer. Now they name the member as `requestingResourceId`, carry those ids in `metadata.eligibility`, and ask for `fdsh_medicare` and `fdsh_vci` separately; eligibility also gains `createDecision`, for the system only, so `eligibility.decision.created` is generated. (#520)
+- The event log's stream now sends each event's `id`, sends a reader that reconnects with `Last-Event-ID` what it missed (`410` when the log no longer has it), takes listing's `type`, `source` and `subject` filters, and describes each message as an `Event`; a server that can't stream may answer `501`, and readers then poll the list. (#520)
+
+### Patch Changes
+
+- Uses @codeforamerica/blueprint-mock-server 0.5.0.
+
 ## 0.2.0
 
 ### Minor Changes

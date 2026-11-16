@@ -1,5 +1,11 @@
 # @codeforamerica/blueprint-explorer
 
+## 0.3.1
+
+### Patch Changes
+
+- Uses @codeforamerica/blueprint-core 0.5.0, @codeforamerica/blueprint-rules-engine 0.2.1.
+
 ## 0.3.0
 
 ### Minor Changes
