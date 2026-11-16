@@ -1,0 +1,9 @@
+$schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
+version: 1.0.0
+domain: communication
+capability: transcripts
+type: transcription-services
+entries:
+  fake-transcription:
+    description: |
+      A fake service for demos and tests. It speaks the relay contract (communication-transcripts-relay-asyncapi.yaml) at a URL a browser can reach, so the mock answers for it with message stubs, as it would for a relay.

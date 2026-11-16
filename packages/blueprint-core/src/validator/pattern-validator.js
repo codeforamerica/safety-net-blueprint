@@ -770,6 +770,35 @@ export function validateSingleResourceGet(path, operation, errors) {
 }
 
 /**
+ * A streamed response (`text/event-stream`) describes one message — the
+ * `data:` of each event — not the stream as a whole: OpenAPI 3.1 tools read
+ * its `schema` that way, and generated clients check each event against it
+ * (3.2 names it `itemSchema`). A bare `type: string` tells a reader nothing,
+ * and a generated client refuses every event. docs/conventions/http.yaml,
+ * streaming_responses.
+ *
+ * @param {string} path
+ * @param {string} method
+ * @param {Object} operation
+ * @param {Array} errors
+ */
+export function validateEventStreamResponses(path, method, operation, errors) {
+  for (const [status, response] of Object.entries(operation?.responses || {})) {
+    const stream = response?.content?.['text/event-stream'];
+    if (!stream || stream.itemSchema) continue;
+    const schema = stream.schema;
+    if (!schema || (!schema.$ref && schema.type === 'string' && !schema.contentSchema)) {
+      errors.push({
+        path,
+        rule: 'event-stream-message-schema',
+        message: `${method.toUpperCase()} ${path} ${status} streams text/event-stream, but its schema doesn't describe a message. Give the schema of each event's data, such as a $ref to the event, not the stream as a string.`,
+        severity: 'error',
+      });
+    }
+  }
+}
+
+/**
  * Validates that error responses use shared response definitions
  * @param {string} path - The endpoint path
  * @param {string} method - The HTTP method
@@ -984,6 +1013,10 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
     // Validate GET endpoints for shared error responses
     if (methods.get) {
       validateSharedErrorResponses(path, 'get', methods.get, errors);
+    }
+
+    for (const method of ['get', 'post']) {
+      if (methods[method]) validateEventStreamResponses(path, method, methods[method], errors);
     }
   }
 

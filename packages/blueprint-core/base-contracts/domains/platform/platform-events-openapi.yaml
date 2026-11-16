@@ -54,31 +54,9 @@ paths:
       parameters:
         - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
         - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
-        - name: type
-          in: query
-          description: >
-            Filter by CloudEvents type. Supports prefix matching with a
-            trailing wildcard (e.g., `intake.*`). When states apply an
-            x-event-type-prefix overlay, the resolved prefix is prepended
-            to all event types (e.g., `org.example.intake.*`).
-          schema:
-            type: string
-          example: intake.application.submitted
-        - name: source
-          in: query
-          description: Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
-          schema:
-            type: string
-          example: /intake
-        - name: subject
-          in: query
-          description: >
-            Filter by CloudEvents subject — the entity ID the event pertains
-            to. Because every domain uses the same subject for the same entity,
-            this returns a complete cross-domain timeline for that entity.
-          schema:
-            type: string
-            format: uuid
+        - $ref: "#/components/parameters/TypeFilter"
+        - $ref: "#/components/parameters/SourceFilter"
+        - $ref: "#/components/parameters/SubjectFilter"
         - name: traceid
           in: query
           description: >
@@ -164,22 +142,59 @@ paths:
       description: |
         Real-time stream of domain events delivered as Server-Sent Events (SSE).
 
-        Connect with `Accept: text/event-stream`. Each event is delivered as a
-        `data:` line containing a JSON-encoded `Event` object.
+        Connect with `Accept: text/event-stream`. Each event is one SSE
+        message: an `id:` line with the event's `id`, and a `data:` line with
+        the JSON-encoded `Event`.
+
+        To pick up after a dropped connection, reconnect with the last `id`
+        received in `Last-Event-ID`, as a browser's `EventSource` does on its
+        own: the stream first sends every matching event after that one, in
+        the order they happened, then carries on live. An `id` the log no
+        longer has is answered `410 Gone`, so a reader never quietly misses
+        events; it reads what it needs afresh and connects again without one.
+
+        The filters are the ones listing events takes.
+
+        A server that can't hold a connection open — behind an API gateway
+        that ends requests early, say — may leave the stream out and answer
+        `501`. Readers then poll listing events, with the same filters and
+        `start`, which every server serves.
 
         The stream stays open until the client disconnects. A `: heartbeat` comment
         is sent every 30 seconds to prevent proxy timeouts.
       operationId: streamEvents
       tags:
         - Events
+      parameters:
+        - $ref: "#/components/parameters/TypeFilter"
+        - $ref: "#/components/parameters/SourceFilter"
+        - $ref: "#/components/parameters/SubjectFilter"
+        - name: Last-Event-ID
+          in: header
+          description: The `id` of the last event received, when reconnecting. Events after it are sent first.
+          schema:
+            type: string
       responses:
         "200":
           description: SSE stream of domain events.
           content:
             text/event-stream:
+              # Each message's data, as OpenAPI 3.1 tools read a stream's
+              # schema (3.2 names it itemSchema).
               schema:
-                type: string
-                description: Newline-delimited SSE frames, each containing a JSON Event.
+                $ref: "#/components/schemas/Event"
+        "501":
+          description: This server doesn't stream events; poll listing events instead.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
+        "410":
+          description: The log no longer has the event `Last-Event-ID` names, so the events after it can't be sent.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
 
   /events/{eventId}:
     parameters:
@@ -210,6 +225,35 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
+  parameters:
+    TypeFilter:
+      name: type
+      in: query
+      description: >
+        Filter by CloudEvents type. Supports prefix matching with a
+        trailing wildcard (e.g., `intake.*`). When states apply an
+        x-event-type-prefix overlay, the resolved prefix is prepended
+        to all event types (e.g., `org.example.intake.*`).
+      schema:
+        type: string
+      example: intake.application.submitted
+    SourceFilter:
+      name: source
+      in: query
+      description: Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+      schema:
+        type: string
+      example: /intake
+    SubjectFilter:
+      name: subject
+      in: query
+      description: >
+        Filter by CloudEvents subject — the entity ID the event pertains
+        to. Because every domain uses the same subject for the same entity,
+        this returns a complete cross-domain timeline for that entity.
+      schema:
+        type: string
+        format: uuid
   schemas:
     Event:
       $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event"

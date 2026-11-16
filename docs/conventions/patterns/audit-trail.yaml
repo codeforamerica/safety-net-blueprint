@@ -1,0 +1,53 @@
+# Pattern — Audit trail
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Audit trail
+summary: >
+  History of who changed what and when is kept once, by a cross-cutting audit
+  domain that subscribes to every domain's events, rather than by each domain
+  for its own records.
+
+use_when:
+  - >-
+    A domain's records change during processing and the change has to be
+    traceable — who made it, when, and what it was before.
+
+do_not_use_when:
+  - case: The history is part of the domain's own meaning, such as a determination's past decisions a worker reads.
+    use_instead: Records in the domain's own contract, with their own operations.
+  - case: Someone needs to know the change happened, to react to it.
+    use_instead: A domain event, which the audit domain also receives (patterns/cross-domain-communication.yaml).
+
+rules:
+  - >-
+    Don't add audit tables, history resources or changed-by fields for history
+    to a domain; emit events, and leave keeping history to the audit domain.
+  - >-
+    Make sure every change worth auditing emits an event: a state machine's
+    transition events, and the events the blueprint sends for creates, updates
+    and deletes.
+  - >-
+    Send every change to a record as an event that, with the record's earlier
+    events, is enough to rebuild it: a create carries the whole record, and an
+    update carries each changed field with its value before and after,
+    whether the change came from a request, an action's steps or a reaction
+    to an event. A delete names the record and carries nothing more; its
+    earlier events already hold what it was.
+  - >-
+    Don't require a way of storing records in a contract. Event sourcing —
+    keeping the events as the record of truth and rebuilding records from
+    them — is a choice a state's implementation may make, and the rule above
+    is what lets it.
+  - >-
+    Carry who did it and what caused it in the event envelope's extensions
+    (authid, causationid, traceparent; events.yaml), not in the payload.
+
+example: >
+  A caseworker changes a member's income. Intake emits the update event; the
+  audit domain stores it, so "every change this caseworker made this week"
+  is one query across all domains.
+
+rationale: docs/architecture/inter-domain-communication.md

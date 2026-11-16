@@ -12,6 +12,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { discover, load } from '@codeforamerica/blueprint-core';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 import { registerPlatformRoutes, contractOverrides } from '../../src/platform-routes.js';
 import { registerAllRoutes } from '../../src/route-generator.js';
 import { overrideByOperationId, createDispatcher } from '../../src/http/route-table.js';
@@ -30,6 +31,7 @@ function platformTable(store) {
   const routes = new Map();
   registerPlatformRoutes(routes, {
     store,
+    instance: createInstance({ store }),
     apiNames: ['intake'],
     readDocs: () => [],
     configs: [],
@@ -80,8 +82,10 @@ test('Platform routes', async (t) => {
     // returns the artifact's documents. Neither branches inside the handler.
     let calls = 0;
     const routes = new Map();
+    const store = createMemoryStore();
     registerPlatformRoutes(routes, {
-      store: createMemoryStore(),
+      store,
+      instance: createInstance({ store }),
       readDocs: () => { calls += 1; return []; },
       seeded: true,
     });
@@ -98,11 +102,12 @@ test('Platform routes', async (t) => {
       return;
     }
     const store = createMemoryStore();
+    const instance = createInstance({ store });
     const routes = new Map();
     const specs = await quiet(() => loadAllSpecs({ specsDir: contractsDir }));
-    await quiet(() => registerAllRoutes(routes, specs, 'http://x', [], [], [], { store }));
+    await quiet(() => registerAllRoutes(routes, specs, 'http://x', [], [], [], { store, instance }));
 
-    const overrides = contractOverrides({ store });
+    const overrides = contractOverrides({ store, instance });
     const { applied, unmatched } = overrideByOperationId(routes, overrides);
 
     assert.deepStrictEqual(unmatched, [],
@@ -116,10 +121,11 @@ test('Platform routes', async (t) => {
       return;
     }
     const store = createMemoryStore();
+    const instance = createInstance({ store });
     const routes = new Map();
     const specs = await quiet(() => loadAllSpecs({ specsDir: contractsDir }));
-    await quiet(() => registerAllRoutes(routes, specs, 'http://x', [], [], [], { store }));
-    overrideByOperationId(routes, contractOverrides({ store }));
+    await quiet(() => registerAllRoutes(routes, specs, 'http://x', [], [], [], { store, instance }));
+    overrideByOperationId(routes, contractOverrides({ store, instance }));
 
     const controller = new AbortController();
     const response = await createDispatcher(routes)(

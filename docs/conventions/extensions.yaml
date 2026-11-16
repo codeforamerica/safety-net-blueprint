@@ -103,6 +103,30 @@ x_extensions:
             - stepId: scheduleInterview
               x-actors: [caseworker, server]
 
+  x-branch:
+    description: >
+      Says whether an Arazzo workflow is part of a scenario's main path or one
+      of its other situations. Arazzo allows x- extensions but has no field for
+      this, so the name and values are ours. Use main on each workflow of the
+      main path — start, the normal use, stop — and other on each workflow for
+      another situation, such as a rejection, a pause or a dropped connection.
+      Leave it off a workflow that other workflows only run as a step. The
+      demo page lists a scenario's workflows under these two branches, walks
+      the main path first, and runs main or other on its own; the harness's
+      scenario tests run every workflow that has one.
+    location: Arazzo workflow
+    type: string
+    values: [main, other]
+    example: |
+      workflows:
+        - workflowId: startAndConnect
+          x-branch: main
+        - workflowId: connectionDrops
+          x-branch: other
+          steps:
+            - stepId: connected
+              workflowId: startAndConnect
+
   x-domain:
     description: >
       The business domain this API belongs to. Required on all API specs.

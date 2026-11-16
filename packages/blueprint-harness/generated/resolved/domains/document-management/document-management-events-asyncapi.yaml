@@ -23,15 +23,19 @@ components:
       name: document-management.document.created
       summary: A Document was created. Carries the record as created.
       payload:
-        $ref: "#/components/schemas/DocumentManagementDocumentCreatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/DocumentManagementDocumentCreatedEvent"
   schemas:
     DocumentManagementDocumentCreatedEvent:
-      allOf:
-        - $ref: ../../base/schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: document-management.document.created
-            data:
-              $ref: ./document-management-openapi.yaml#/components/schemas/Document
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../base/schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: document-management.document.created
+              data:
+                $ref: ./document-management-openapi.yaml#/components/schemas/Document

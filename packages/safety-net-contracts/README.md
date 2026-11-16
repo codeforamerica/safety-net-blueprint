@@ -1,11 +1,13 @@
 # @codeforamerica/blueprint-safety-net-contracts
 
-> OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference implementation of the Blueprint framework
+> OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference contracts for the Blueprint framework
 
 [![npm version](https://img.shields.io/npm/v/@codeforamerica/blueprint-safety-net-contracts.svg)](https://www.npmjs.com/package/@codeforamerica/blueprint-safety-net-contracts)
 [![license](https://img.shields.io/npm/l/@codeforamerica/blueprint-safety-net-contracts.svg)](https://github.com/codeforamerica/safety-net-blueprint/blob/main/LICENSE)
 
 > **Pre-release:** This package is at `0.x`. Until `1.0.0`, minor versions may include breaking changes. Pin your version if stability matters.
+
+> **Reference contracts.** An example contract set, not a standard to adopt whole: a state adapts it with overlays, and keeps what fits.
 
 ## What It Is
 

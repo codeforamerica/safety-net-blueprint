@@ -5,11 +5,20 @@ Auto-generated from state machine `emit` and subscription declarations.
 | Event | Published by | Subscribers |
 |---|---|---|
 | `communication.idle_check` | *(unknown)* | [Communication/Transcript](communication.md) |
-| `communication.transcript.closed` | [Communication/Transcript](communication.md) | *(none)* |
+| `communication.transcript.closed` | [Communication/Transcript](communication.md) | [Communication/TranscriptionSession](communication.md) |
 | `communication.transcript.created` | *(unknown)* | [Communication/Transcript](communication.md) |
-| `communication.transcript.paused` | [Communication/Transcript](communication.md) | *(none)* |
+| `communication.transcript.paused` | [Communication/Transcript](communication.md) | [Communication/TranscriptionSession](communication.md) |
 | `communication.transcript.resumed` | [Communication/Transcript](communication.md) | *(none)* |
 | `communication.transcript_entry.created` | *(unknown)* | [Communication/Transcript](communication.md) |
+| `communication.transcription_session.closed` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.connected` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.connecting` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.disconnected` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.failed` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.line_added` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.line_updated` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.paused` | [Communication/TranscriptionSession](communication.md) | *(none)* |
+| `communication.transcription_session.stopping` | [Communication/TranscriptionSession](communication.md) | *(none)* |
 | `decision-support.suggestion.accepted` | [Decision Support/Suggestion](decision-support.md) | *(none)* |
 | `decision-support.suggestion.created` | *(unknown)* | [Decision Support/Suggestion](decision-support.md) |
 | `decision-support.suggestion.dismissed` | [Decision Support/Suggestion](decision-support.md) | *(none)* |

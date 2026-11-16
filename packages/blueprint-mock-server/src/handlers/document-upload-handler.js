@@ -76,7 +76,7 @@ const missingField = (field) => Response.json({
  * @param {string} baseUrl - Base URL for Location header
  * @returns {(request: Request) => Promise<Response>}
  */
-export function createDocumentUploadHandler(baseUrl, { store } = {}) {
+export function createDocumentUploadHandler(baseUrl, { store, instance } = {}) {
   return async (request) => {
     const { file, fields } = await readUpload(assertFetchShaped(request, 'createDocumentUploadHandler'));
     if (!file) return missingField('file');
@@ -131,7 +131,7 @@ export function createDocumentUploadHandler(baseUrl, { store } = {}) {
     store.insertResource('documents', document);
 
     emitEvent({
-      store, domain: 'document-management', object: 'document', action: 'created',
+      instance, domain: 'document-management', object: 'document', action: 'created',
       resourceId: document.id, source: '/document-management',
       data: { documentId, latestVersionId: versionId },
       callerId: callerHeader(request, 'x-caller-id'), callerRoles: extractCallerRoles(request),
@@ -151,7 +151,7 @@ export function createDocumentUploadHandler(baseUrl, { store } = {}) {
  * @param {string} baseUrl - Base URL for Location header
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createDocumentVersionUploadHandler(baseUrl, { store } = {}) {
+export function createDocumentVersionUploadHandler(baseUrl, { store, instance } = {}) {
   return async (request, { params }) => {
     const { documentId } = params;
 
@@ -180,7 +180,7 @@ export function createDocumentVersionUploadHandler(baseUrl, { store } = {}) {
     store.update('documents', documentId, { latestVersionId: versionId, updatedAt: now });
 
     emitEvent({
-      store, domain: 'document-management', object: 'document-version', action: 'uploaded',
+      instance, domain: 'document-management', object: 'document-version', action: 'uploaded',
       resourceId: versionId, source: '/document-management',
       data: { documentId, versionId, versionNumber },
       callerId: callerHeader(request, 'x-caller-id'), callerRoles: extractCallerRoles(request),

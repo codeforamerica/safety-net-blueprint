@@ -34,7 +34,8 @@ One document per domain — entity model, lifecycle, events, and key design deci
 | [Document Management](domains/document-management.md) | Document upload, classification, verification status, and retention |
 | [Data Exchange](domains/data-exchange.md) | External data requests: income verification, citizenship, state data matches |
 | [Scheduling](domains/scheduling.md) | Appointment scheduling across channels |
-| [Communication](domains/communication.md) | Notices, correspondence, multi-channel delivery, and transcripts of conversations |
+| [Communication](domains/communication.md) | Messages to the people an organization serves, by email, text, mail or a portal, and records of conversations with them |
+| [Communication: Transcripts](domains/communication-transcripts.md) | The record of a conversation, and how the software in the browser streams audio to a transcription service |
 | [Decision Support](domains/decision-support.md) | Suggestions put in front of a person acting on a case, and their decision on each |
 
 ## Cross-cutting docs
@@ -61,6 +62,7 @@ How the contracts handle things no single domain owns.
 | [Contract Metadata](cross-cutting/contract-metadata.md) | Annotations, field-level metadata, and policy traceability |
 | [Resource Composition](cross-cutting/resource-composition.md) | Composite resources that aggregate data from multiple APIs within a domain |
 | [Adapters](cross-cutting/adapters.md) | The adapter pattern: how vendor systems connect without coupling |
+| [Browser-to-Vendor Stream](cross-cutting/browser-vendor-stream.md) | When a browser streams to a vendor directly, such as speech to a transcription service, while the blueprint keeps the result |
 | [Behavioral Contract DSL](cross-cutting/behavioral-contract-dsl.md) | State machine YAML format and expression language |
 | [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 

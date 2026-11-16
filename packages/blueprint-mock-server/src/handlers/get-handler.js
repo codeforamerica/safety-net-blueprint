@@ -2,9 +2,7 @@
  * Handler for GET /resources/{id}
  */
 
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
-import { parentLinkRegistry } from '../composition-assembler.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { extractPrimaryParam, capitalize } from '../collection-utils.js';
 import { assertFetchShaped } from '../http/request.js';
@@ -18,14 +16,15 @@ import { assertFetchShaped } from '../http/request.js';
  *
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
+ * @param {{ store: Object, instance: Object }} deps - The mock serving it (instance.js)
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Response}
  */
-export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
+export function createGetHandler(apiMetadata, endpoint, { store, instance } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createGetHandler').url);
 
-    const httpStub = matchAndPopHttp(request.method, pathname);
+    const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
     if (httpStub) {
       return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
     }
@@ -52,11 +51,11 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
       }, { status: 404 });
     }
 
-    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
-    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
+    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
     const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
     let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
-    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
+    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id), instance.resources);
     if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
     // Composition parentLink registrations, merged rather than returned on
@@ -64,7 +63,7 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
     // declaring `parentLink: true` on a composition silently turned off
     // expand, links-only and derived fields for that resource's GET — three
     // features disabled by an unrelated one, with nothing reported.
-    const compositionLinks = parentLinkRegistry.get(endpoint.path);
+    const compositionLinks = instance.parentLinks.get(endpoint.path);
     if (compositionLinks) {
       const _links = {};
       for (const [key, link] of Object.entries(compositionLinks)) {

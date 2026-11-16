@@ -121,3 +121,29 @@ describe('an Arazzo document naming more than one source', () => {
     assert.match(error.message, /doesn't declare; domains\/other\/other-openapi.yaml does/);
   });
 });
+
+describe('a step that runs a workflow', () => {
+  const scenario = (workflowId, type = 'arazzo') => ({
+    type: 'arazzo', path: '/s/scenarios/s.arazzo.yaml', relativePath: 'scenarios/s.arazzo.yaml',
+    content: {
+      arazzo: '1.1.0', info: { title: 'S', version: '1' },
+      sourceDescriptions: [{ name: 'shared', url: 'shared.arazzo.yaml', type }],
+      workflows: [
+        { workflowId: 'w', steps: [{ stepId: 'a', workflowId }] },
+        { workflowId: 'here', steps: [{ stepId: 'b', workflowId: 'w' }] },
+      ],
+    },
+  });
+  const shared = { type: 'arazzo', relativePath: 'scenarios/shared.arazzo.yaml', content: { workflows: [{ workflowId: 'connect' }] } };
+  const rules = (workflowId, type, docs = [shared]) => validateArazzo(scenario(workflowId, type), null, docs).map((e) => e.rule);
+
+  test('names one this document declares, or one in another Arazzo document by its source', () => {
+    assert.deepEqual(rules('here'), []);
+    assert.deepEqual(rules('nowhere'), ['unknown-workflow']);
+    assert.deepEqual(rules('$sourceDescriptions.shared.connect'), []);
+    assert.deepEqual(rules('$sourceDescriptions.shared.reconnect'), ['unknown-workflow']);
+    assert.deepEqual(rules('$sourceDescriptions.shared.connect', 'arazzo', []), ['unknown-workflow']);
+    assert.deepEqual(rules('$sourceDescriptions.shared.connect', 'openapi'), ['arazzo-shape']);
+    assert.deepEqual(rules('$sourceDescriptions.nope.connect'), ['arazzo-shape']);
+  });
+});

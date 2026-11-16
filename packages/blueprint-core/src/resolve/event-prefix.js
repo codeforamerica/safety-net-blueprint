@@ -117,7 +117,8 @@ function prefixStateMachine(content, prefix) {
  *
  *   channels          the map key, and the `address` field when present
  *   components.messages[*].name
- *   components.schemas[*].allOf[*].properties.type.const
+ *   components.schemas[*].allOf[*].properties.type.const, or under `schema`
+ *                     when the schema is labeled with its format
  *   references to a channel, by its key: a channel that is a reference to
  *                     another document's, and an operation's channel and messages
  *
@@ -166,10 +167,15 @@ function prefixAsyncApi(content, prefix) {
     }
 
     if (content.components.schemas && typeof content.components.schemas === 'object') {
+      const prefixed = (schema) => (Array.isArray(schema?.allOf)
+        ? { ...schema, allOf: schema.allOf.map((part) => prefixTypeConst(part, prefix)) }
+        : schema);
+      // A schema labeled with its format (AsyncAPI's multi-format schema)
+      // holds the schema itself under `schema`.
       next.components.schemas = mapValues(content.components.schemas, (schema) =>
-        Array.isArray(schema?.allOf)
-          ? { ...schema, allOf: schema.allOf.map((part) => prefixTypeConst(part, prefix)) }
-          : schema
+        schema?.schemaFormat !== undefined && schema.schema !== undefined
+          ? { ...schema, schema: prefixed(schema.schema) }
+          : prefixed(schema)
       );
     }
   }

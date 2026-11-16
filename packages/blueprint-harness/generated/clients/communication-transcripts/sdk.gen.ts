@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddTranscriptEntryData, AddTranscriptEntryErrors, AddTranscriptEntryResponses, CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptionProfileData, CreateTranscriptionProfileErrors, CreateTranscriptionProfileResponses, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetTranscriptData, GetTranscriptEntryData, GetTranscriptEntryErrors, GetTranscriptEntryResponses, GetTranscriptErrors, GetTranscriptionProfileData, GetTranscriptionProfileErrors, GetTranscriptionProfileResponses, GetTranscriptResponses, ListTranscriptEntriesData, ListTranscriptEntriesErrors, ListTranscriptEntriesResponses, ListTranscriptionProfilesData, ListTranscriptionProfilesErrors, ListTranscriptionProfilesResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptEntryData, UpdateTranscriptEntryErrors, UpdateTranscriptEntryResponses, UpdateTranscriptErrors, UpdateTranscriptionProfileData, UpdateTranscriptionProfileErrors, UpdateTranscriptionProfileResponses, UpdateTranscriptResponses } from './types.gen';
-import { zAddTranscriptEntryData, zAddTranscriptEntryResponse, zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptionProfileData, zCreateTranscriptionProfileResponse, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetTranscriptData, zGetTranscriptEntryData, zGetTranscriptEntryResponse, zGetTranscriptionProfileData, zGetTranscriptionProfileResponse, zGetTranscriptResponse, zListTranscriptEntriesData, zListTranscriptEntriesResponse, zListTranscriptionProfilesData, zListTranscriptionProfilesResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptEntryData, zUpdateTranscriptEntryResponse, zUpdateTranscriptionProfileData, zUpdateTranscriptionProfileResponse, zUpdateTranscriptResponse } from './zod.gen';
+import type { AddTranscriptEntryData, AddTranscriptEntryErrors, AddTranscriptEntryResponses, CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptionProfileData, CreateTranscriptionProfileErrors, CreateTranscriptionProfileResponses, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetConnectionTranscriptData, GetConnectionTranscriptErrors, GetConnectionTranscriptResponses, GetTranscriptData, GetTranscriptEntryData, GetTranscriptEntryErrors, GetTranscriptEntryResponses, GetTranscriptErrors, GetTranscriptionProfileData, GetTranscriptionProfileErrors, GetTranscriptionProfileResponses, GetTranscriptResponses, ListTranscriptEntriesData, ListTranscriptEntriesErrors, ListTranscriptEntriesResponses, ListTranscriptionProfilesData, ListTranscriptionProfilesErrors, ListTranscriptionProfilesResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptEntryData, UpdateTranscriptEntryErrors, UpdateTranscriptEntryResponses, UpdateTranscriptErrors, UpdateTranscriptionProfileData, UpdateTranscriptionProfileErrors, UpdateTranscriptionProfileResponses, UpdateTranscriptResponses } from './types.gen';
+import { zAddTranscriptEntryData, zAddTranscriptEntryResponse, zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptionProfileData, zCreateTranscriptionProfileResponse, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetConnectionTranscriptData, zGetConnectionTranscriptResponse, zGetTranscriptData, zGetTranscriptEntryData, zGetTranscriptEntryResponse, zGetTranscriptionProfileData, zGetTranscriptionProfileResponse, zGetTranscriptResponse, zListTranscriptEntriesData, zListTranscriptEntriesResponse, zListTranscriptionProfilesData, zListTranscriptionProfilesResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptEntryData, zUpdateTranscriptEntryResponse, zUpdateTranscriptionProfileData, zUpdateTranscriptionProfileResponse, zUpdateTranscriptResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -267,7 +267,7 @@ export const pauseTranscript = <ThrowOnError extends boolean = false>(options: O
 /**
  * Resume transcript
  *
- * Put the conversation back on the record, at the time the client says.
+ * Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
  *
  * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
@@ -276,6 +276,25 @@ export const resumeTranscript = <ThrowOnError extends boolean = false>(options: 
     responseType: 'json',
     responseValidator: async (data) => await zResumeTranscriptResponse.parseAsync(data),
     url: '/transcripts/{transcriptId}/resume',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get connection transcript
+ *
+ * Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
+ *
+ * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
+ */
+export const getConnectionTranscript = <ThrowOnError extends boolean = false>(options: Options<GetConnectionTranscriptData, ThrowOnError>) => (options.client ?? client).post<GetConnectionTranscriptResponses, GetConnectionTranscriptErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetConnectionTranscriptData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetConnectionTranscriptResponse.parseAsync(data),
+    url: '/transcripts/{transcriptId}/get-connection',
     ...options,
     headers: {
         'Content-Type': 'application/json',

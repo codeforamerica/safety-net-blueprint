@@ -16,10 +16,6 @@
 
 import { createSseHandler } from './handlers/sse-handler.js';
 import { emitEventEnvelope } from './emit-event.js';
-import {
-  registerStub, listStubs, removeStub, clearStubs, clearAllStubs,
-  registerHttpStub, listHttpStubs, removeHttpStub, clearHttpStubs,
-} from './mock-stub-engine.js';
 import { seedConfigs } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
 import { addRoute, routeKey, tagRoutesAddedBy } from './http/route-table.js';
@@ -73,6 +69,7 @@ export function refuseOwnRouteCollisions(routes, apiSpecs) {
  * @param {Map<string, object>} routes
  * @param {object} deps
  * @param {object} deps.store
+ * @param {object} deps.instance - The mock they belong to (instance.js): its stubs, its events
  * @param {string[]} deps.apiNames - Reported by /health
  * @param {() => import('@codeforamerica/blueprint-core').Doc[]} deps.readDocs -
  *   Supplies the documents /mock/reseed seeds from. A function, not a value, so
@@ -81,7 +78,8 @@ export function refuseOwnRouteCollisions(routes, apiSpecs) {
  * @param {object[]} deps.configs - Config catalogs restored by /mock/reset
  * @param {boolean} [deps.seeded] - Whether seed data was supplied at boot
  */
-function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [], seeded = true }) {
+function registerOwnRoutes(routes, { store, instance, apiNames = [], readDocs, configs = [], seeded = true }) {
+  const { stubs } = instance;
   // Health check endpoint
   addRoute(routes, 'GET', '/health', () =>
     Response.json({ status: 'ok', apis: apiNames }));
@@ -89,21 +87,21 @@ function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [
   // Event stub registry — pre-program event responses for integration tests.
   addRoute(routes, 'POST', '/mock/stubs/events', async (request) => {
     try {
-      return Response.json(registerStub(await jsonBody(request)), { status: 201 });
+      return Response.json(stubs.registerStub(await jsonBody(request)), { status: 201 });
     } catch (err) {
       return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
     }
   });
   addRoute(routes, 'GET', '/mock/stubs/events', () => {
-    const items = listStubs();
+    const items = stubs.listStubs();
     return Response.json({ items, total: items.length });
   });
   addRoute(routes, 'DELETE', '/mock/stubs/events', () => {
-    clearStubs();
+    stubs.clearStubs();
     return new Response(null, { status: 204 });
   });
   addRoute(routes, 'DELETE', '/mock/stubs/events/{id}', (request, { params }) =>
-    removeStub(params.id)
+    stubs.removeStub(params.id)
       ? new Response(null, { status: 204 })
       : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
   console.log('  POST   /mock/stubs/events - Register an event stub');
@@ -114,21 +112,21 @@ function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [
   // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
   addRoute(routes, 'POST', '/mock/stubs/http', async (request) => {
     try {
-      return Response.json(registerHttpStub(await jsonBody(request)), { status: 201 });
+      return Response.json(stubs.registerHttpStub(await jsonBody(request)), { status: 201 });
     } catch (err) {
       return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
     }
   });
   addRoute(routes, 'GET', '/mock/stubs/http', () => {
-    const items = listHttpStubs();
+    const items = stubs.listHttpStubs();
     return Response.json({ items, total: items.length });
   });
   addRoute(routes, 'DELETE', '/mock/stubs/http', () => {
-    clearHttpStubs();
+    stubs.clearHttpStubs();
     return new Response(null, { status: 204 });
   });
   addRoute(routes, 'DELETE', '/mock/stubs/http/{id}', (request, { params }) =>
-    removeHttpStub(params.id)
+    stubs.removeHttpStub(params.id)
       ? new Response(null, { status: 204 })
       : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
   console.log('  POST   /mock/stubs/http - Register an HTTP stub');
@@ -136,13 +134,40 @@ function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [
   console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
   console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
 
+  // WebSocket stub registry — answer a message on a WebSocket an AsyncAPI
+  // document describes, once (ws.js).
+  addRoute(routes, 'POST', '/mock/stubs/ws', async (request) => {
+    try {
+      return Response.json(instance.ws.registerStub(await jsonBody(request)), { status: 201 });
+    } catch (err) {
+      return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
+    }
+  });
+  addRoute(routes, 'GET', '/mock/stubs/ws', () => {
+    const items = instance.ws.listStubs();
+    return Response.json({ items, total: items.length });
+  });
+  addRoute(routes, 'DELETE', '/mock/stubs/ws', () => {
+    instance.ws.clearStubs();
+    return new Response(null, { status: 204 });
+  });
+  addRoute(routes, 'DELETE', '/mock/stubs/ws/{id}', (request, { params }) =>
+    instance.ws.removeStub(params.id)
+      ? new Response(null, { status: 204 })
+      : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
+  console.log('  POST   /mock/stubs/ws - Register a WebSocket stub');
+  console.log('  GET    /mock/stubs/ws - List active WebSocket stubs');
+  console.log('  DELETE /mock/stubs/ws/:id - Remove a WebSocket stub');
+  console.log('  DELETE /mock/stubs/ws - Clear all WebSocket stubs');
+
   // Reset endpoint — clears all runtime data and restores config-managed resources.
   // Config-managed items (queues, services, document types) are restored; all other
   // data is wiped. Useful for putting tests into a known-clean state without restarting.
   addRoute(routes, 'POST', '/mock/reset', () => {
     for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
-    clearAllStubs();
-    seedConfigs(configs, store);
+    stubs.clearAllStubs();
+    instance.ws.clearStubs();
+    seedConfigs(configs, instance);
     return new Response(null, { status: 204 });
   });
   console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
@@ -178,6 +203,10 @@ export const CONTROL_OPERATIONS = {
   'GET /mock/stubs/http': 'listHttpStubs',
   'DELETE /mock/stubs/http': 'clearHttpStubs',
   'DELETE /mock/stubs/http/{id}': 'removeHttpStub',
+  'POST /mock/stubs/ws': 'registerWsStub',
+  'GET /mock/stubs/ws': 'listWsStubs',
+  'DELETE /mock/stubs/ws': 'clearWsStubs',
+  'DELETE /mock/stubs/ws/{id}': 'removeWsStub',
   'POST /mock/reset': 'resetMock',
   'POST /mock/reseed': 'reseedMock',
 };
@@ -191,11 +220,11 @@ export const CONTROL_OPERATIONS = {
  * override naming an operationId the contract no longer has fails at boot
  * rather than leaving a route quietly served by the generated handler.
  *
- * @param {{ store: object, registries?: Record<string, Record<string, object>> }} deps
+ * @param {{ store: object, instance: object, registries?: Record<string, Record<string, object>> }} deps
  *   `registries` is `extract(docs, 'registries')`: each type's entries, every file combined
  * @returns {Record<string, Function>}
  */
-export function contractOverrides({ store, registries = {} }) {
+export function contractOverrides({ store, instance, registries = {} }) {
   return {
     // Registries are read from the contracts themselves, never stored: a
     // registry is part of what the contracts declare, so a reset has nothing
@@ -203,7 +232,7 @@ export function contractOverrides({ store, registries = {} }) {
     ...registryHandlers(registries),
 
     // A stream, not a collection read.
-    streamEvents: createSseHandler(),
+    streamEvents: createSseHandler({ store, instance }),
 
     // Publishing fires the event bus so event-triggered rules respond to it,
     // which is the point of injecting one — storing a row would not. Accepts a
@@ -222,7 +251,7 @@ export function contractOverrides({ store, registries = {} }) {
         }, { status: 422 });
       }
 
-      return Response.json(emitEventEnvelope(event, store), { status: 201 });
+      return Response.json(emitEventEnvelope(event, instance), { status: 201 });
     },
   };
 }

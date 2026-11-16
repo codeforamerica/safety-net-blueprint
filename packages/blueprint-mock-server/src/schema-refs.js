@@ -65,6 +65,37 @@ export function resolveRefNode(ref, doc, docs) {
   return found && Object.keys(found).length > 0 ? found : undefined;
 }
 
+/** Each object in each document of a set, mapped to its document. Built once per set. */
+const owners = new WeakMap();
+
+/**
+ * The document a node of the set is part of, or undefined for one made
+ * outside it. A ref resolves to the node itself, uncopied (resolveRefNode), so
+ * a walk that crossed into another document is still holding that document's
+ * nodes, and this finds which.
+ *
+ * @param {object} node
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {import('@codeforamerica/blueprint-core').Doc|undefined}
+ */
+function ownerOf(node, docs) {
+  let map = owners.get(docs);
+  if (!map) {
+    map = new WeakMap();
+    for (const doc of docs ?? []) {
+      const stack = [doc.content];
+      while (stack.length > 0) {
+        const value = stack.pop();
+        if (!value || typeof value !== 'object' || map.has(value)) continue;
+        map.set(value, doc);
+        stack.push(...Object.values(value));
+      }
+    }
+    owners.set(docs, map);
+  }
+  return map.get(node);
+}
+
 /**
  * A schema with its top-level `$ref` followed, if it has one.
  *
@@ -79,7 +110,9 @@ export function resolveRefNode(ref, doc, docs) {
  */
 export function followSchema(schema, doc, docs) {
   if (!schema || typeof schema !== 'object' || typeof schema.$ref !== 'string') return schema;
-  const resolved = resolveRefNode(schema.$ref, doc, docs);
+  // The ref is written against the document it sits in, which is not the
+  // caller's once a walk has crossed into another file.
+  const resolved = resolveRefNode(schema.$ref, ownerOf(schema, docs) ?? doc, docs);
   if (resolved === undefined) return schema;
 
   // A ref alongside sibling keywords: the ref supplies the base and the
@@ -106,3 +139,4 @@ export function resolverFor(doc, docs) {
     schema: (schema) => followSchema(schema, doc, docs),
   };
 }
+

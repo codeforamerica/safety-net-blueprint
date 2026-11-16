@@ -22,6 +22,18 @@ Some interactions combine both patterns: a command initiates a long-running oper
 
 If neither fits cleanly, the interaction may be a candidate for the async command variant.
 
+**Reading another domain's data** <a name="cross-domain-reads"></a>
+
+When a domain only needs another domain's data — to show it, assemble it, or evaluate rules on it — it reads what that domain publishes in its OpenAPI contract, never its storage. Domain-driven design calls the owner's side of this an *open host service*: a domain publishes a stable way in for others, in a published language they can depend on.
+
+What's published is the domain's resources, and any composition it serves for another domain's need. The split is deliberate:
+
+- **The owner controls the shape.** When a reader needs data assembled or reduced in a way the resources don't give, the owning domain serves a [composition](cross-cutting/resource-composition.md) for it. The owner knows its own records and keeps the composition right when they change; a reader assembling them itself would break with every change.
+- **The reader's need decides what's in it,** but the composition is named for what it holds, not for who reads it, so the owner doesn't depend on its readers and a second reader can use it.
+- **The reader translates into its own model.** When the reader's vocabulary differs, as a ruleset's inputs do, the reader maps what's published into its own terms in its own domain. Domain-driven design calls this an *anti-corruption layer*: when the owner changes, the mapping absorbs it, and the reader's model doesn't change.
+
+A reader that has to work when the owner is down, or reads too often or in bulk to call each time, keeps its own copy instead, built from the owner's domain events. CQRS calls that copy a *read model*.
+
 **The cross-domain seeding variant** <a name="cross-domain-seeding"></a>
 
 Some interactions require one domain to write records directly into another domain — not to trigger a reaction, but to seed the second domain's records with data only the first domain holds at that moment.

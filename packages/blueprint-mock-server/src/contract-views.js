@@ -2,7 +2,7 @@
  * Reading what the server needs out of a document set.
  *
  * Small readers, shared by the two boot paths. `setup.js` walks a
- * directory and `browser.js` takes an artifact, but once either has `docs`
+ * directory and `server.js` takes an artifact, but once either has `docs`
  * they ask the same questions — and were each answering them with their own
  * copy of these functions, one of which carried a comment saying it was "kept
  * in step with setup.js" (#448). Keeping them in step by hand is the thing

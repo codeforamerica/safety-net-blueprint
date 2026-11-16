@@ -10,9 +10,14 @@
  * The request body is the socket stream rather than a re-serialized copy, so a
  * multipart upload reaches `request.formData()` exactly as it arrived — and a
  * handler replaced by a real `fetch` can forward it unread.
+ *
+ * A WebSocket the contracts describe is the one thing that isn't a Fetch
+ * request: its upgrade is accepted here, with `ws`, and the connection handed
+ * to the mock's WebSockets (ws.js), which check and answer each message.
  */
 
 import { createServer } from 'node:http';
+import { WebSocketServer } from 'ws';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
@@ -107,13 +112,65 @@ export async function writeToNode(res, response) {
 }
 
 /**
+ * A close reason a WebSocket can carry: at most 123 bytes (RFC 6455, 5.5),
+ * cut at a character, with the whole of it logged.
+ *
+ * @param {string} reason
+ */
+function closeReason(reason = '') {
+  const bytes = new TextEncoder().encode(reason);
+  if (bytes.length <= 123) return reason;
+  console.warn(`WebSocket closed: ${reason}`);
+  let cut = new TextDecoder().decode(bytes.slice(0, 120));
+  if (cut.endsWith('\uFFFD')) cut = cut.slice(0, -1);
+  return `${cut}...`;
+}
+
+/**
+ * Accept the WebSockets the mock serves on `server`, handing each connection
+ * to `sockets.accept`. An upgrade to any other path is refused with 404.
+ *
+ * Answers with the first subprotocol the client offered: a relay's name, with
+ * a token after it that is never sent back
+ * (communication-transcripts-relay-asyncapi.yaml).
+ *
+ * @param {import('node:http').Server} server
+ * @param {{ serves: (path: string) => boolean, accept: Function }} sockets - The mock's (ws.js)
+ */
+function acceptSockets(server, sockets) {
+  const wss = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => [...protocols][0] ?? false });
+  server.on('upgrade', (req, socket, head) => {
+    const url = new URL(req.url, `ws://${req.headers.host ?? 'localhost'}`);
+    if (!sockets.serves(url.pathname)) {
+      socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+      return;
+    }
+    const offered = String(req.headers['sec-websocket-protocol'] ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+    wss.handleUpgrade(req, socket, head, (client) => {
+      const peer = {
+        send: (data) => client.send(data),
+        close: (code, reason) => client.close(code, closeReason(reason)),
+      };
+      const connection = sockets.accept(url.href, peer, offered);
+      client.on('message', (data, isBinary) => connection.message(isBinary
+        ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+        : data.toString()));
+      client.on('close', (code, reason) => connection.close(code, reason.toString()));
+    });
+  });
+}
+
+/**
  * Create an HTTP server that serves a Fetch handler.
  *
  * @param {(request: Request) => Promise<Response>} handler - Usually `createDispatcher(routes)`
+ * @param {object} [options]
+ * @param {{ serves: Function, accept: Function }} [options.sockets] - The
+ *   mock's WebSockets (ws.js), to accept connections to
  * @returns {import('node:http').Server}
  */
-export function createNodeServer(handler) {
-  return createServer(async (req, res) => {
+export function createNodeServer(handler, { sockets = null } = {}) {
+  const server = createServer(async (req, res) => {
     // Preflight never reaches a route; the allowed methods and headers are a
     // property of the transport, not of any endpoint.
     if (req.method === 'OPTIONS') {
@@ -138,4 +195,6 @@ export function createNodeServer(handler) {
       }));
     }
   });
+  if (sockets) acceptSockets(server, sockets);
+  return server;
 }

@@ -23,29 +23,26 @@ import { filterItems, paginateItems, sortItems } from './search-engine.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Registry populated at startup by registerCompositionRoutes when a composition
- * declares parentLink: true.  Maps the parent resource's OpenAPI item path
- * (e.g. /applications/{applicationId}) to a map of compositionName → { href }.
- *
- * The get-handler consults this at request time to inject _links into the parent
- * resource response.  Because JavaScript closures capture references, the handler
- * sees the populated registry even though it was created before the composition
- * routes were registered.
- */
-export const parentLinkRegistry = new Map();
-
-/**
  * Register a composition as a link on its parent resource's GET by ID response.
  *
+ * Kept in the mock's `parentLinks` (instance.js), filled at startup by
+ * registerCompositionRoutes when a composition declares parentLink: true: the
+ * parent resource's OpenAPI item path (e.g. /applications/{applicationId}) to
+ * a map of compositionName → { href }. The get-handler consults it at request
+ * time to inject _links into the parent resource response, so it sees links
+ * registered after it was created.
+ *
+ * @param {object} instance - The mock (instance.js)
  * @param {string} parentPath - OpenAPI path of parent GET by ID (e.g. /applications/{applicationId})
  * @param {string} compositionName - Composition key (e.g. "reviewContext")
  * @param {string} compositionEndpointPath - OpenAPI path of the composition endpoint
  */
-export function registerParentLink(parentPath, compositionName, compositionEndpointPath) {
-  if (!parentLinkRegistry.has(parentPath)) {
-    parentLinkRegistry.set(parentPath, {});
+export function registerParentLink(instance, parentPath, compositionName, compositionEndpointPath) {
+  const { parentLinks } = instance;
+  if (!parentLinks.has(parentPath)) {
+    parentLinks.set(parentPath, {});
   }
-  parentLinkRegistry.get(parentPath)[compositionName] = { href: compositionEndpointPath };
+  parentLinks.get(parentPath)[compositionName] = { href: compositionEndpointPath };
 }
 
 // ---------------------------------------------------------------------------

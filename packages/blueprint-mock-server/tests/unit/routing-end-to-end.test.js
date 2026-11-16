@@ -19,7 +19,7 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discover, load, generate } from '@codeforamerica/blueprint-core';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 import { createNodeServer } from '../../src/http/node-server.js';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -50,7 +50,9 @@ describe('routing a domain to a real service', () => {
 
   before(async () => {
     standIn = createServer((req, res) => {
-      received.push({ method: req.method, url: req.url, headers: req.headers });
+      // The mock also reads the service's events, for reactions it keeps;
+      // those aren't the requests these tests count.
+      if (!req.url.includes('/platform/events')) received.push({ method: req.method, url: req.url, headers: req.headers });
       res.setHeader('content-type', 'application/json');
       res.setHeader('set-cookie', 'session=the-real-service');
       res.end(JSON.stringify({ from: 'stand-in', path: req.url }));
@@ -189,6 +191,51 @@ describe('routing the events a machine receives', () => {
     assert.equal(received[0].body.type, 'intake.application.submitted');
     assert.equal(received[0].body.subject, DRAFT);
     assert.equal(await determinations(mock), before);
+  });
+});
+
+describe('routing every domain', () => {
+  // Answers in plain text, which a routed handler's answer is passed on as.
+  // What stays in the mock reads the server's events, for the reactions it
+  // keeps; that isn't one of the requests these tests count.
+  const answering = (who, seen) => (request) => {
+    const { pathname } = new URL(request.url);
+    if (!pathname.startsWith('/platform/events')) seen.push(pathname);
+    return new Response(who, { headers: { 'content-type': 'text/plain' } });
+  };
+
+  test('everything goes there but what its except keeps, and a request the mock has no route for goes too', async () => {
+    const seen = [];
+    const mock = await boot({ routing: [{ domain: '*', handler: answering('server', seen), except: [{ api: 'eligibility' }] }] });
+
+    const routed = await mock.fetch(new Request('http://mock.test/intake/applications'));
+    assert.equal(await routed.text(), 'server');
+
+    const kept = await mock.fetch(new Request('http://mock.test/eligibility/determinations'));
+    assert.ok(Array.isArray((await kept.json()).items), 'eligibility stays in the mock');
+
+    const unknown = await mock.fetch(new Request('http://mock.test/somewhere/else'));
+    assert.equal(await unknown.text(), 'server');
+    assert.deepEqual(seen, ['/intake/applications', '/somewhere/else']);
+    mock.stopFollowing();
+  });
+
+  test('an entry naming a domain wins over it', async () => {
+    const seen = [];
+    const mock = await boot({ routing: [
+      { domain: '*', handler: answering('server', seen) },
+      { domain: 'intake', handler: answering('intake service', seen) },
+    ] });
+    assert.equal(await (await mock.fetch(new Request('http://mock.test/intake/applications'))).text(), 'intake service');
+    assert.equal(await (await mock.fetch(new Request('http://mock.test/eligibility/determinations'))).text(), 'server');
+    mock.stopFollowing();
+  });
+
+  test('its except names an API or operation the contracts declare', async () => {
+    await assert.rejects(
+      boot({ routing: [{ domain: '*', to: 'https://server.test', except: [{ api: 'no-such-api' }] }] }),
+      /The routing entry for every domain excepts API "no-such-api", which the contracts don't declare/,
+    );
   });
 });
 

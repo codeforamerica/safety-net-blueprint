@@ -9,6 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 import {
   createDocumentUploadHandler,
   createDocumentVersionUploadHandler,
@@ -17,7 +18,7 @@ import { createDocumentContentHandler } from '../../src/handlers/document-conten
 import { readResponse } from '../helpers/fetch.js';
 
 const store = createMemoryStore();
-const deps = { store };
+const deps = { store, instance: createInstance({ store }) };
 const BASE = 'http://localhost:1080';
 const DOC_TYPE = 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5';
 const CONTENT = 'hello, world!';

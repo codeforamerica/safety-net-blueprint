@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs';
 import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import { createMockServer } from '../../src/browser.js';
+import { createMockServer } from '../../src/server.js';
 
 // What an informing suggestion is about has to exist: Rosa, seeded in the harness.
 const ROSA = '11111111-1111-4111-8111-100000000001';

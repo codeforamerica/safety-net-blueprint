@@ -1,0 +1,33 @@
+overlay: '1.0.0'
+info:
+  title: Harness transcription profiles
+  version: 1.0.0
+
+# The profiles the harness's spoken transcription scenarios start their
+# sessions under, seeded as a state seeds its own: entries in the framework's
+# profile catalog. Two use the fake service the harness adds to the
+# transcription-services registry, for demos and tests; one names Google Cloud
+# Speech-to-Text, for the scenario through a relay. The chat scenario uses the
+# framework's own `typed` profile.
+
+actions:
+  - target: "$.profiles.entries"
+    files: base/domains/communication/communication-transcripts-config.yaml
+    description: The profiles the spoken transcription scenarios start under
+    append:
+      - id: 7a1e0c2d-0000-4000-8000-0000000000f1
+        name: english-interviews
+        description: An interview in English, transcribed by the harness's fake service. No idle timeout, so a transcript under it never closes for being idle.
+        provider: fake-transcription
+        languages: [en-US]
+      - id: 7a1e0c2d-0000-4000-8000-0000000000f2
+        name: english-interviews-30-minutes
+        description: The same as english-interviews, but a transcript under it closes after 30 minutes with nothing added.
+        provider: fake-transcription
+        languages: [en-US]
+        idleTimeout: PT30M
+      - id: 7a1e0c2d-0000-4000-8000-0000000000f3
+        name: english-google
+        description: An interview in English, transcribed by Google Cloud Speech-to-Text through the state's relay.
+        provider: google-cloud-speech
+        languages: [en-US]

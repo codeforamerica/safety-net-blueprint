@@ -196,8 +196,11 @@ export function generateOverlay(stateMachine, endpointInfo) {
         operation.requestBody = requestBody;
       }
 
-      const responseSchema = transition.schema?.response
-        ? JSON.parse(JSON.stringify(transition.schema.response))
+      // What the action answers with: its response's schema, or the
+      // deprecated schema.response, or else the record.
+      const declared = transition.response?.schema ?? transition.schema?.response;
+      const responseSchema = declared
+        ? JSON.parse(JSON.stringify(declared))
         : (schemaRef ? { $ref: schemaRef } : { type: 'object' });
 
       operation.responses = {

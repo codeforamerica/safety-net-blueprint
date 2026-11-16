@@ -1,0 +1,162 @@
+# Pattern — Cross-domain communication
+# Part of the blueprint conventions. See conventions/ for the full set; each
+# file in patterns/ is one pattern, in the same shape.
+
+version: "1.0"
+
+pattern: Cross-domain communication
+summary: >
+  How one domain reaches another: a command when it needs an answer to go on,
+  a domain event when it's announcing its own change, an async command when
+  the answer takes longer than a request, and a read of what the other domain
+  publishes when it needs that domain's data.
+
+use_when:
+  - >-
+    One domain needs another to do something, to know something happened, or
+    to read its data.
+
+do_not_use_when:
+  - case: The work stays inside one domain.
+    use_instead: The domain's own state machine steps, and a call by path to its own records.
+  - case: The other side is a system outside the blueprint, such as a state's rules engine.
+    use_instead: The adapter pattern (patterns/adapter.yaml).
+  - case: The browser and a vendor exchange a live stream.
+    use_instead: The browser-to-vendor stream pattern (patterns/browser-vendor-stream.yaml).
+
+choose:
+  question: >
+    Does the calling domain need a result from the other domain to finish what
+    it's doing? Use a command. Is it announcing that its own state changed? Use
+    a domain event. Does it need a result that takes longer than one request?
+    Use an async command. Does it only need the other domain's data? Read
+    what that domain publishes.
+
+options:
+  command:
+    summary: A synchronous call from one domain to another's operation.
+    use_when:
+      - >-
+        The caller can't finish its operation without the other domain's
+        answer — uploading a document and needing its id to attach to a
+        verification, say.
+    do_not_use_when:
+      - case: The caller is only announcing something happened.
+        use_instead: A domain event.
+      - case: The answer takes longer than one request, such as an outside agency's.
+        use_instead: An async command.
+    rules:
+      - >-
+        Call the other domain's operation by its operationId, not by method and
+        path, so routing follows the call when that domain runs elsewhere. A
+        call by path is for a machine's own domain's records; validate warns
+        about one into another domain.
+      - >-
+        Depend on the other domain's OpenAPI contract, which is the versioned,
+        explicit dependency.
+
+  domain_event:
+    summary: An asynchronous signal a domain sends when its own state changes.
+    use_when:
+      - >-
+        The domain's operation is already complete, and other domains may react
+        or not — an application submitted, a task claimed.
+    do_not_use_when:
+      - case: The sender needs an answer back.
+        use_instead: A command, or an async command.
+      - case: The event would tell another domain what to do.
+        use_instead: A command, to that domain's operation.
+    rules:
+      - >-
+        Declare it in the sending machine's emits:; resolve generates the
+        domain's events AsyncAPI document from it, and the payload schema is
+        the contract.
+      - >-
+        Name it for the resource that sends it (naming.yaml, event_types). The
+        sender knows nothing of its subscribers; adding one changes nothing in
+        the sender.
+      - >-
+        React to it in the receiving machine's on:.
+
+  async_command:
+    summary: A command that starts something long-running, with a domain event bringing the result.
+    use_when:
+      - >-
+        The work crosses a system boundary or takes time, such as an outside
+        agency's check.
+    do_not_use_when:
+      - case: The answer comes back within the request.
+        use_instead: A command.
+    rules:
+      - >-
+        Start it with a command, and react to the result event in on:.
+      - >-
+        Carry what the caller needs to find its own record in the call's
+        metadata (patterns/context-passthrough.yaml), so the result event can be
+        matched without a lookup.
+
+  seeding:
+    summary: >-
+      One domain creating records in another, filled with data only it holds
+      at that moment.
+    use_when:
+      - >-
+        The writing domain owns the data it writes at the time of the write,
+        rather than passing on data it got from a third domain.
+      - >-
+        The write is fire-and-forget; the writer needs no result.
+    do_not_use_when:
+      - case: The writer needs a result, or reacts to what the other domain does with the records.
+        use_instead: A command, or an async command.
+      - case: The data came from a third domain.
+        use_instead: A domain event the receiving domain reacts to.
+    rules:
+      - >-
+        Create the records through the other domain's operations, by
+        operationId; never write its storage.
+    example: >-
+      At submission, intake creates the determination and decisions in
+      eligibility, filled with the application's data.
+
+  read:
+    summary: >-
+      Reading another domain's data through what it publishes: its resources,
+      or a composition it serves for that need.
+    use_when:
+      - >-
+        A domain needs another domain's data to show it, assemble it or
+        evaluate rules on it, and changes nothing there.
+    do_not_use_when:
+      - case: The reader has to work when the other domain is down, or reads it too often or in bulk to call each time.
+        use_instead: >-
+          A copy the reader keeps, built from the other domain's domain events
+          (what CQRS calls a read model).
+      - case: The reader needs the other domain to change something.
+        use_instead: A command.
+    rules:
+      - >-
+        Read only what the other domain publishes in its OpenAPI contract: its
+        resources, or its compositions. Never read its storage.
+      - >-
+        When the reader needs the data assembled or reduced in a way the
+        resources don't give, the owning domain serves a composition for it
+        (docs/architecture/cross-cutting/resource-composition.md). The owner
+        controls the shape; the reader's need decides what's in it.
+      - >-
+        Name that composition for what it holds, not for who reads it, such as
+        householdIncome, not eligibilityView, so the owner doesn't depend on
+        its readers and a second reader can use it.
+      - >-
+        When the reader's own model differs from what the owner publishes, map
+        it in the reader's domain (an anti-corruption layer), as a ruleset
+        whose inputs have their own vocabulary needs. The owner doesn't
+        reshape its data into the reader's vocabulary.
+      - >-
+        Call it by operationId, like a command, so routing follows the call.
+
+example: >
+  Intake creates a data exchange service call (a command); the outside service
+  answers later, and data-exchange.call.completed (a domain event) brings the
+  result, which intake matches to its verification by the metadata it set.
+
+rationale: docs/architecture/inter-domain-communication.md

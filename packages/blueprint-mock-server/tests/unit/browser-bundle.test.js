@@ -4,7 +4,7 @@
  * This is the acceptance criterion of #448 expressed as a test. Everything
  * else in the suite runs in Node, where a `node:fs` import is invisible — and
  * a bundler resolves a whole module graph before it tree-shakes, so one such
- * import anywhere behind `src/browser.js` fails a page build even if nothing
+ * import anywhere behind `src/server.js` fails a page build even if nothing
  * in a page would call it.
  *
  * The failure mode this guards against is specific and has already happened
@@ -21,6 +21,7 @@ import { mkdtempSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
 import { buildBrowser } from '../../scripts/build-browser.js';
 import { noticeProblems } from '../../../../scripts/third-party-notices.js';
 
@@ -73,18 +74,35 @@ const postableContracts = {
 
 describe('the browser entry', () => {
 
-  test('resolves by the name the README tells people to import', async () => {
-    // `src/browser.js` existed for some time without being listed in
+  test('resolves by the names the README tells people to import', async () => {
+    // The browser entry existed for some time without being listed in
     // `exports`, so the documented import failed for everyone outside this
     // repo. Nothing caught it: the page's build bundles the file by path, and
     // every test here reached it by path too. This asks Node the question a
-    // consumer asks.
-    const specifier = '@codeforamerica/blueprint-mock-server/browser';
-    const resolved = await import.meta.resolve(specifier);
-    assert.ok(resolved.endsWith('/src/browser.js'), `${specifier} resolved to ${resolved}`);
+    // consumer asks. /browser is the older name for /server.
+    for (const [specifier, file, name] of [
+      // In Node, /server also has the HTTP server; a bundler for a page gets server.js.
+      ['@codeforamerica/blueprint-mock-server/server', '/src/server.node.js', 'startMockServer'],
+      ['@codeforamerica/blueprint-mock-server/browser', '/src/server.js', 'createMockServer'],
+      ['@codeforamerica/blueprint-mock-server/client', '/src/client.js', 'createMockClient'],
+    ]) {
+      const resolved = await import.meta.resolve(specifier);
+      assert.ok(resolved.endsWith(file), `${specifier} resolved to ${resolved}`);
+      const entry = await import(specifier);
+      assert.strictEqual(typeof entry[name], 'function', `${specifier} exports ${name}`);
+    }
+  });
 
-    const { createMockServer } = await import(specifier);
-    assert.strictEqual(typeof createMockServer, 'function');
+  test('a page that imports /server by name bundles without the Node server', async () => {
+    // The export conditions: Node gets server.node.js, with the HTTP server;
+    // a bundler for the browser falls through to server.js.
+    const { metafile } = await build({
+      stdin: { contents: "export { createMockServer } from '@codeforamerica/blueprint-mock-server/server';", resolveDir: packageRoot },
+      bundle: true, platform: 'browser', format: 'esm', write: false, metafile: true, logLevel: 'silent',
+    });
+    const inputs = Object.keys(metafile.inputs);
+    assert.ok(inputs.some((file) => file.endsWith('src/server.js')), inputs.join('\n'));
+    assert.ok(!inputs.some((file) => file.endsWith('server.node.js') || file.endsWith('cli/server.js')), 'the Node server stayed out');
   });
 
   test('bundles for the browser platform with no Node builtins', async () => {
@@ -264,7 +282,7 @@ describe('a page served from a subdirectory', () => {
   const at = (path) => new URL(basePath + path, 'https://org.github.io');
 
   const serverAt = async () => {
-    const { createMockServer } = await import('../../src/browser.js');
+    const { createMockServer } = await import('../../src/server.js');
     return createMockServer({ contracts, basePath, seed: false });
   };
 

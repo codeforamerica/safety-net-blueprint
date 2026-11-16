@@ -15,7 +15,6 @@
  */
 
 import { extract } from '@codeforamerica/blueprint-core/browser';
-import { validate } from './validator.js';
 
 const OPERATION_CALL = /(^|\/)schemas\/operations\.yaml#\/\$defs\/OperationCall$/;
 const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
@@ -135,9 +134,10 @@ export function callsIn(body, schema, follow = (x) => x, at = '') {
  *
  * @param {{ field: string, call: object }} found - From callsIn
  * @param {ReturnType<typeof operationsOf>} operations
+ * @param {{ validate: Function }} schemas - The mock's validator (validator.js `createSchemaRegistry`)
  * @returns {Array<{ field: string, message: string }>}
  */
-export function callProblems({ field, call }, operations) {
+export function callProblems({ field, call }, operations, schemas) {
   const at = (name) => (field ? `${field}.${name}` : name);
   const operation = operations.get(call.operationId);
   if (!operation) return [{ field: at('operationId'), message: operations.whyNot(call.operationId) }];
@@ -151,7 +151,7 @@ export function callProblems({ field, call }, operations) {
       return;
     }
     if (!declared.schema) return;
-    const { valid, errors } = validate(parameter.value, declared.schema, `${call.operationId}-${parameter.in}-${parameter.name}`);
+    const { valid, errors } = schemas.validate(parameter.value, declared.schema, `${call.operationId}-${parameter.in}-${parameter.name}`);
     if (!valid) {
       for (const error of errors) problems.push({ field: at(`parameters[${i}].value`), message: error.message });
     }
@@ -175,7 +175,7 @@ export function callProblems({ field, call }, operations) {
   } else if (!body) {
     problems.push({ field: at('requestBody.contentType'), message: `${call.operationId} takes ${Object.keys(operation.bodies).join(' or ')}, not ${contentType}.` });
   } else if (body.schema) {
-    const { valid, errors } = validate(payload, body.schema, `${call.operationId}-body-${contentType}`,
+    const { valid, errors } = schemas.validate(payload, body.schema, `${call.operationId}-body-${contentType}`,
       { relativePath: operation.relativePath, ref: body.ref });
     if (!valid) {
       for (const error of errors) {

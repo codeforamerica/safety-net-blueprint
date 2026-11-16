@@ -54,7 +54,25 @@ platform-state-machine.yaml          domain-state-machine.yaml
 
 **Events** — the machine's subscriptions to named domain events. When an event arrives with a matching `name:`, the machine runs the associated steps. Object creation, field changes, and timer callbacks all arrive as events — see [Decision 4](#decision-4-fully-event-driven-model). Event subscriptions can load additional context (e.g., look up the application referenced in the event payload) before running their steps.
 
-**Actions** — actor- or system-triggered state changes. Each action is an operation a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{actionId}` endpoint. An action declares a human-readable `description:` for the generated endpoint, optional `schema:` with `request:` and `response:` sub-schemas for the POST body and 200 response, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Actions without a `to:` are in-place operations that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
+**Actions** — actor- or system-triggered state changes. Each action is an operation a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{actionId}` endpoint. An action declares a human-readable `description:` for the generated endpoint, an optional `schema:` with a `request:` schema for the POST body, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Actions without a `to:` are in-place operations that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
+
+An action answers with the record as its steps leave it. One that answers with something else says what, in `response:`: the `schema` the endpoint's 200 response declares, and the `payload` that fills it — value expressions, as a call's `requestBody.payload` takes, read after the steps run. A transcript's `get-connection` answers with what its call to the server adapter bound, leaving out the adapter's `metadata`:
+
+```yaml
+- id: get-connection
+  transition: { from: recording }
+  steps:
+    - call: { operationId: issueTranscriptConnection, requestBody: { payload: { audio: $request.audio } } }
+      bind: $connection
+  response:
+    schema: { $ref: "#/$defs/StreamConnection" }
+    payload:
+      url: $connection.url
+      accessToken: $connection.accessToken
+      expiresIn: $connection.expiresIn
+```
+
+The two go together, so a schema can't promise what nothing gives: `schema.response`, which declared a response no action produced, is deprecated, and validation warns where it remains.
 
 **Procedures** — named step sequences that can be called from events, transitions, or other procedures via `call:`. Procedures keep complex logic from being duplicated across multiple call sites. A procedure inherits all context already in scope at the call site; parameterized procedures accept additional arguments via `with:`, referenced as `$params.name` inside the procedure.
 

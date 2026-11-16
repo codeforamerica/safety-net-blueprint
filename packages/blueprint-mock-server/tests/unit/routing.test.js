@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   forwardTo, planRouting, applyRouting, routingFromDocument, deliverEvent,
 } from '../../src/routing.js';
-import { registerHttpStub, clearAllStubs } from '../../src/mock-stub-engine.js';
+import { createStubs } from '../../src/mock-stub-engine.js';
+import { createSchemaRegistry } from '../../src/validator.js';
 
 /**
  * The contracts this reads, reduced to their operations: two APIs in intake,
@@ -33,7 +34,9 @@ const operations = {
   },
 };
 const domainOfApi = new Map(Object.entries(DOMAINS));
-const context = { operations, domainOfApi, responseSchema: () => null };
+// What routing reads from the mock it routes: its stubs and its validator.
+const instance = { stubs: createStubs(), schemas: createSchemaRegistry() };
+const context = { operations, domainOfApi, responseSchema: () => null, instance };
 
 /**
  * The route table as `assembleServer` leaves it, reduced to what this reads:
@@ -54,7 +57,7 @@ let seen;
 const realFetch = globalThis.fetch;
 
 beforeEach(() => {
-  clearAllStubs();
+  instance.stubs.clearAllStubs();
   seen = [];
   globalThis.fetch = async (url, init) => {
     // A Request, as an event is delivered, carries its own method and headers.
@@ -229,8 +232,8 @@ test('forwardTo — passes a 304 back, which is not a redirect', async () => {
 });
 
 test('forwardTo — a stub outranks the real service', async () => {
-  registerHttpStub({ match: { method: 'GET', url: '/intake/applications' }, response: { status: 418, body: { stubbed: true } } });
-  const handler = forwardTo('https://x.test');
+  instance.stubs.registerHttpStub({ match: { method: 'GET', url: '/intake/applications' }, response: { status: 418, body: { stubbed: true } } });
+  const handler = forwardTo('https://x.test', { stubs: instance.stubs });
 
   const stubbed = await handler(new Request('http://localhost:1080/intake/applications'));
   assert.equal(stubbed.status, 418);
@@ -241,9 +244,9 @@ test('forwardTo — a stub outranks the real service', async () => {
 });
 
 test('forwardTo — a stub on a DELETE answers 204, as the mock\'s own DELETE does', async () => {
-  registerHttpStub({ match: { method: 'DELETE', url: '/intake/applications/a-1' } });
+  instance.stubs.registerHttpStub({ match: { method: 'DELETE', url: '/intake/applications/a-1' } });
 
-  const response = await forwardTo('https://x.test')(new Request('http://localhost:1080/intake/applications/a-1', { method: 'DELETE' }));
+  const response = await forwardTo('https://x.test', { stubs: instance.stubs })(new Request('http://localhost:1080/intake/applications/a-1', { method: 'DELETE' }));
 
   assert.equal(response.status, 204);
   assert.equal(seen.length, 0);

@@ -3,7 +3,6 @@
  */
 
 import { executeTransition } from '../state-machine-runner.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf, causationOf } from '../auth-context.js';
 import { assertFetchShaped, jsonBody } from '../http/request.js';
 
@@ -14,13 +13,16 @@ import { assertFetchShaped, jsonBody } from '../http/request.js';
  * @param {string} trigger - Transition trigger name (e.g., "claim")
  * @param {string} paramName - URL parameter name for the resource ID
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
+ * @param {Object|null} [machine] - The machine entry
+ * @param {Object} [deps] - The store, and stepCalls for calls the steps make
+ * @param {{ schema: Object, follow: Function }|null} [responseSchema] - The 200 response schema the endpoint declares
  * @returns {(request: Request, ctx: { params: Record<string,string> }) => Promise<Response>}
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store, stepCalls = null } = {}) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store, instance, stepCalls = null } = {}, responseSchema = null) {
   return async (request, { params }) => {
     const { pathname } = new URL(assertFetchShaped(request, 'createTransitionHandler').url);
 
-    const httpStub = matchAndPopHttp(request.method, pathname);
+    const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
     if (httpStub) {
       return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
     }
@@ -42,6 +44,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
 
     const { success, result, status, code, error, details } = await executeTransition({
       store,
+      instance,
       stepCalls,
       resourceName,
       resourceId,
@@ -55,6 +58,8 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       requestBody: await jsonBody(request),
       traceparent,
       causationid: causationOf(request),
+      authorization: callerHeader(request, 'authorization'),
+      responseSchema,
     });
 
     if (!success) {

@@ -15,6 +15,8 @@ tags:
     description: Answer a domain event with another event, once.
   - name: HTTP stubs
     description: Intercept a request, once, before the mock or a forwarded service answers it.
+  - name: WebSocket stubs
+    description: Answer a message, once, on a WebSocket an AsyncAPI document describes.
   - name: State
 paths:
   /health:
@@ -142,6 +144,65 @@ paths:
         '404':
           $ref: '#/components/responses/StubNotFound'
 
+  /mock/stubs/ws:
+    post:
+      operationId: registerWsStub
+      tags: [WebSocket stubs]
+      summary: Register a WebSocket stub
+      description: >
+        On a message the mock receives on the channel, send these back. The
+        channel must be one the mock serves a WebSocket for, `on` a message
+        it receives there, and each message to send one the contract lets it
+        send; otherwise 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/stubs-schema.json#/definitions/WsStub'
+      responses:
+        '201':
+          description: Registered, with the id it was given.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredWsStub'
+        '422':
+          $ref: '#/components/responses/InvalidStub'
+    get:
+      operationId: listWsStubs
+      tags: [WebSocket stubs]
+      summary: List WebSocket stubs not yet consumed
+      responses:
+        '200':
+          description: The stubs, in the order they will be matched.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/RegisteredWsStub' } }
+                  total: { type: integer }
+    delete:
+      operationId: clearWsStubs
+      tags: [WebSocket stubs]
+      summary: Remove every WebSocket stub
+      responses:
+        '204': { description: Cleared. }
+
+  /mock/stubs/ws/{id}:
+    delete:
+      operationId: removeWsStub
+      tags: [WebSocket stubs]
+      summary: Remove one WebSocket stub
+      parameters:
+        - $ref: '#/components/parameters/StubId'
+      responses:
+        '204': { description: Removed. }
+        '404':
+          $ref: '#/components/responses/StubNotFound'
+
   /mock/reset:
     post:
       operationId: resetMock
@@ -189,6 +250,15 @@ components:
           properties:
             id: { type: string }
             type: { type: string, const: http }
+    RegisteredWsStub:
+      description: A WebSocket stub as registered, with the id it was given.
+      allOf:
+        - $ref: '../schemas/stubs-schema.json#/definitions/WsStub'
+        - type: object
+          required: [id, type]
+          properties:
+            id: { type: string }
+            type: { type: string, const: ws }
     Error:
       type: object
       required: [code, message]

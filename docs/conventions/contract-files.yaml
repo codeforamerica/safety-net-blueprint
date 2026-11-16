@@ -72,8 +72,10 @@ contract_files:
     rule: When you add or change a capability that takes several calls to see working, write an Arazzo scenario of it in the harness's contract set (packages/blueprint-harness/contracts/scenarios/).
     writing:
       - Show the capability, not the setup. Seed the records it starts from in the set's mock data, and refer to them by their seeded ids.
-      - Include only the steps that show the capability. Leave each refusal and each repeat to unit tests, unless the scenario is about it.
+      - Include only the steps that show the capability. Write a refusal as a step whose successCriteria expect its status, titled "Try to …: rejected (409)", in the workflow where it would happen.
       - Open with info.description, one paragraph on who does what. Split the story into workflows, one per stage, each with a summary (its heading in the page) and a description (bullets on what happens in it).
+      - When the capability has situations beside its main path, such as rejections, a pause or a dropped connection, mark each of those workflows with x-branch. Use x-branch main for the main path: start, the normal use, stop, each workflow reading the one before through dependsOn and $workflows outputs. Use x-branch other for every other situation, and have each start from scratch, with its first step running the main path's opening by workflowId, so it runs on its own. Give no x-branch to a workflow only other workflows run as a step; the page shows it inside the step that runs it.
+      - List who acts in info.x-actors, with the same ids and names in every scenario of a capability, and on each step in x-actors, the one who starts it first. A step that registers a stub lists only the part it stands in for.
       - Give each step a description whose first line is its title and whose bullets are what to notice. Say who does what (the caseworker, the AI assistant, a state machine, an API) in plain, literal words.
       - Name, in backticks, the contract elements that do the work, such as an action, a procedure, a ruleset, a fact, the event a reaction listens for, a composition or a field. The harness page shows each from the contracts.
       - Take a value from a response with a JSON Pointer when it's at a fixed place, and with a JSONPath selector when you find it by what it holds (standards.yaml, Arazzo).

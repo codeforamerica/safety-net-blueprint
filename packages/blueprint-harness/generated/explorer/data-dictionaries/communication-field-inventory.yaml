@@ -1,5 +1,17 @@
-# communication field inventory
-# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=communication
+# ── TranscriptionSession ────────────────────────────────────────────────────────
+
+transcriptionSession.transcriptId: { type: uuid, relationship: Transcript }
+transcriptionSession.profileId: { type: uuid, relationship: TranscriptionProfile }
+transcriptionSession.subjectId: { type: uuid, relationship: Polymorphic }
+transcriptionSession.id: { type: uuid }
+transcriptionSession.model: { type: string }
+transcriptionSession.client: { type: string }
+transcriptionSession.startedAt: { type: datetime }
+transcriptionSession.subjectType: { type: enum, values: [interview, chat] }
+transcriptionSession.links: { type: object }
+transcriptionSession.links.transcript: { type: string }
+transcriptionSession.links.profile: { type: string }
+transcriptionSession.status: { type: enum, values: [created, connecting, connected, disconnected, paused, stopping, closed, failed] }
 
 # ── Transcript ──────────────────────────────────────────────────────────────────
 
@@ -36,7 +48,7 @@ transcript.entries[].links.transcript: { type: string }
 profile.id: { type: uuid }
 profile.name: { type: string }
 profile.description: { type: string }
-profile.provider: { type: enum, values: [aws-transcribe, elevenlabs-scribe, none] }
+profile.provider: { type: enum, values: [assemblyai, aws-transcribe, azure-speech, deepgram, elevenlabs-scribe, fake-transcription, gladia, google-cloud-speech, google-gemini-live, none, openai-realtime, soniox, speechmatics] }
 profile.languages[]: { type: string }
 profile.idleTimeout: { type: string }
 profile.source: { type: enum, values: [system, user] }

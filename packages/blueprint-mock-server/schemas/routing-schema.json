@@ -1,7 +1,7 @@
 {
   "$id": "https://blueprint.codeforamerica.org/schemas/routing-schema.json",
   "title": "Routing",
-  "description": "Domains, APIs and operations that something other than the mock answers: a service at a URL, or a function passed in code. Per-environment configuration, read at boot; never part of a contract set.",
+  "description": "Domains, APIs, sockets and operations that something other than the mock answers: a service at a URL, or a function passed in code. Per-environment configuration, read at boot; never part of a contract set.",
   "type": "object",
   "required": [
     "routing"
@@ -51,21 +51,23 @@
       "additionalProperties": false,
       "properties": {
         "domain": {
-          "description": "A domain the contracts declare, by the name of its directory. Every route its APIs declare, and every event their state machines receive, is routed.",
+          "description": "A domain the contracts declare, by the name of its directory, or * for every domain. Every route its APIs declare, and every event their state machines receive, is routed. With *, so is a request for a route the mock doesn't have, and any entry naming a domain, API or operation overrides it.",
           "type": "string",
-          "pattern": "^[a-z0-9-]+$",
+          "pattern": "^([a-z0-9-]+|\\*)$",
           "examples": [
             "intake",
-            "document-management"
+            "document-management",
+            "*"
           ]
         },
         "api": {
-          "description": "An API the contracts declare, by name: its OpenAPI file's name without -openapi.yaml, which its events AsyncAPI shares. Every route it declares, and every event its state machines receive, is routed. Overrides a domain entry for that API.",
+          "description": "An API the contracts declare, by name: its OpenAPI file's name without -openapi.yaml, which its events AsyncAPI shares. Every route it declares, and every event its state machines receive, is routed. Overrides a domain entry for that API. Or a socket: an AsyncAPI document reached over its own connection, which the mock serves at its localhost server, by its file name without -asyncapi.yaml. Only an entry naming a socket routes it; it takes no except or includeHeaders, and no operation entry names one of its operations, since its messages all travel on one connection.",
           "type": "string",
           "pattern": "^[a-z0-9-]+$",
           "examples": [
             "intake",
-            "communication-transcripts"
+            "communication-transcripts",
+            "communication-transcripts-relay"
           ]
         },
         "operation": {
@@ -78,7 +80,7 @@
           ]
         },
         "except": {
-          "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on an API, an operation in it. Not on an operation entry.",
+          "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on *, any API or operation; on an API, an operation in it. Not on an operation entry.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -113,15 +115,15 @@
           }
         },
         "to": {
-          "description": "Absolute base URL of the service that answers. For a request, its path is a prefix: the request's own path is appended to it. A received event is POSTed to it as written, in the CloudEvents HTTP binding's structured mode. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
+          "description": "Absolute base URL of the service that answers. For a request, its path is a prefix: the request's own path is appended to it. A received event is POSTed to it as written, in the CloudEvents HTTP binding's structured mode. A socket's connections are opened to it as written, passing on the subprotocols the client offered; it may be ws or wss, and http or https is taken as ws or wss, as the WebSocket constructor takes it. Only a socket is routed to a ws or wss URL. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
           "type": "string",
-          "pattern": "^https?://[^/@?#]+([/?#].*)?$"
+          "pattern": "^(https?|wss?)://[^/@?#]+([/?#].*)?$"
         },
         "handler": {
-          "description": "A function that answers instead, with fetch's signature: (Request) => Response. Passed in code only, so never in a file. A received event reaches it as the request to would have been sent. What it answers is checked against the operation's response schema."
+          "description": "A function that answers instead, passed in code only, so never in a file. For a domain, API or operation, it has fetch's signature, (Request) => Response; a received event reaches it as the request to would have been sent, and what it answers is checked against the operation's response schema. For a socket, it has the WebSocket constructor's signature, used as new handler(url, protocols), and every message it sends is checked against the messages the contract lets the socket send."
         },
         "includeHeaders": {
-          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included.",
+          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included. Not on a socket: a browser's WebSocket sends no headers of its own, and its subprotocols, a token among them, are passed on as offered.",
           "type": "array",
           "uniqueItems": true,
           "items": {
@@ -130,7 +132,7 @@
           }
         },
         "timeoutMs": {
-          "description": "How long to wait for the service before answering 504. Defaults to 10000.",
+          "description": "How long to wait for the service before answering 504, or, for a socket, for its connection to open before closing the client's with 1014. Defaults to 10000.",
           "type": "integer",
           "minimum": 1
         }

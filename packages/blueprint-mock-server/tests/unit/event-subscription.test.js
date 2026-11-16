@@ -12,10 +12,11 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
 import { registerEventSubscriptions } from '../../src/event-subscription.js';
-import { eventBus } from '../../src/event-bus.js';
+import { createInstance } from '../../src/instance.js';
 
-// Each test registers subscriptions; remove all listeners between tests to prevent accumulation
-beforeEach(() => eventBus.removeAllListeners('domain-event'));
+// Each test registers subscriptions on a mock of its own, so none accumulate.
+let instance;
+beforeEach(() => { instance = createInstance({ store }); });
 
 // The resource core's model gives a machine whose object is Application: what
 // the mock reads to find the collection the machine's records are stored in.
@@ -65,8 +66,8 @@ test('machine onEvent — runs when guards pass', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
-  eventBus.emit('domain-event', makeEvent(
+  registerEventSubscriptions(smEntries, [], [], instance);
+  instance.bus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
@@ -103,8 +104,8 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
-  eventBus.emit('domain-event', makeEvent(
+  registerEventSubscriptions(smEntries, [], [], instance);
+  instance.bus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
@@ -142,8 +143,8 @@ test('machine onEvent — applies transition and persists resource mutations', (
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
-  eventBus.emit('domain-event', makeEvent(
+  registerEventSubscriptions(smEntries, [], [], instance);
+  instance.bus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
@@ -175,10 +176,10 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
+  registerEventSubscriptions(smEntries, [], [], instance);
 
   // No crash when subject doesn't exist
-  eventBus.emit('domain-event', makeEvent(
+  instance.bus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     'nonexistent-id'
   ));
@@ -207,8 +208,8 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
-  eventBus.emit('domain-event', makeEvent(
+  registerEventSubscriptions(smEntries, [], [], instance);
+  instance.bus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
@@ -252,8 +253,8 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] },
   }];
 
-  registerEventSubscriptions(smEntries, [], [], store);
-  eventBus.emit('domain-event', makeEvent('intake.review_reminder', APP_ID));
+  registerEventSubscriptions(smEntries, [], [], instance);
+  instance.bus.emit('domain-event', makeEvent('intake.review_reminder', APP_ID));
 
   setImmediate(() => {
     const { items } = store.findAll('events', { type: 'intake.application.review-reminder' }, { limit: null });
@@ -269,11 +270,12 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
 
 test('reactions with one partitionkey run one at a time, in order; other keys do not wait', async () => {
   const { inOrder } = await import('../../src/event-subscription.js');
+  const running = new Map();
   const seen = [];
   let finishFirst;
-  inOrder('app-1', () => { seen.push('first starts'); return new Promise((resolve) => { finishFirst = () => { seen.push('first ends'); resolve(); }; }); });
-  inOrder('app-1', () => { seen.push('second starts'); });
-  inOrder('app-2', () => { seen.push('other key starts'); });
+  inOrder(running, 'app-1', () => { seen.push('first starts'); return new Promise((resolve) => { finishFirst = () => { seen.push('first ends'); resolve(); }; }); });
+  inOrder(running, 'app-1', () => { seen.push('second starts'); });
+  inOrder(running, 'app-2', () => { seen.push('other key starts'); });
 
   assert.deepStrictEqual(seen, ['first starts', 'other key starts'], 'the second waits for the first; another key does not');
   finishFirst();

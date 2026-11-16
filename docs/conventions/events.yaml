@@ -201,10 +201,9 @@ event_catalog:
       the next.
     rationale: |
       It keeps a subscriber from acting on stale data: two reactions to the
-      same application can't overlap or finish out of order. It doesn't hold
-      back a person's request that changes a record while a reaction is
-      running; a write based on an earlier read sends If-Match for that
-      (http.yaml, etags).
+      same application can't overlap or finish out of order. Changes to one
+      record from different sources, such as an action and a reaction, take
+      turns too (http.yaml, etags, one_change_at_a_time).
     details: docs/architecture/inter-domain-communication.md (Event ordering)
 
   type_naming:

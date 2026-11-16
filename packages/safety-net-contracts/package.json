@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-safety-net-contracts",
   "version": "0.2.0",
-  "description": "OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference implementation of the Blueprint framework",
+  "description": "OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference contracts for the Blueprint framework",
   "type": "module",
   "files": [
     "src/"

@@ -15,9 +15,11 @@ import { normalizeRefPath } from '../ref-lookup.js';
  * @param {import('../types.js').Doc} doc - An Arazzo document
  * @param {ReturnType<import('../operations.js').readOperations>} operations - The
  *   set's, from extract(docs, 'operations'); null skips checking that steps' operations exist
+ * @param {import('../types.js').Doc[]} [docs] - The set's documents, to find
+ *   the Arazzo document a step runs a workflow from; omitted skips checking that it declares it
  * @returns {object[]} Errors
  */
-export function validateArazzo(doc, operations) {
+export function validateArazzo(doc, operations, docs = null) {
   const errors = [];
   const c = doc.content ?? {};
   const at = (where) => `${doc.path}#${where}`;
@@ -47,6 +49,30 @@ export function validateArazzo(doc, operations) {
   }
 
   const workflowsById = new Map((c.workflows ?? []).map((w) => [w.workflowId, w]));
+
+  // A step runs a workflow of this document by its workflowId, or of another
+  // Arazzo document by `$sourceDescriptions.<name>.<workflowId>`, where the
+  // source is of type arazzo.
+  const workflowExists = (step, where) => {
+    const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(String(step.workflowId));
+    if (!qualified) {
+      if (!workflowsById.has(step.workflowId)) err('unknown-workflow', `Step "${step.stepId}" runs workflow "${step.workflowId}", which this document does not declare.`, where);
+      return;
+    }
+    const source = sources.get(qualified[1]);
+    if (!source) {
+      err('arazzo-shape', `Step "${step.stepId}" names source "${qualified[1]}", which sourceDescriptions does not declare.`, where);
+    } else if (source.type !== 'arazzo') {
+      err('arazzo-shape', `Step "${step.stepId}" runs a workflow from "${qualified[1]}", a source of type ${source.type ?? 'unknown'}; a workflow's source is of type arazzo.`, where);
+    } else if (docs && !outside(source)) {
+      const file = normalizeRefPath(source.url ?? '', doc.relativePath);
+      const other = docs.find((d) => d.type === 'arazzo' && d.relativePath === file);
+      if (!other) err('unknown-workflow', `Step "${step.stepId}" runs a workflow from ${source.url}, which isn't an Arazzo document in the set.`, where);
+      else if (!(other.content?.workflows ?? []).some((w) => w.workflowId === qualified[2])) {
+        err('unknown-workflow', `Step "${step.stepId}" runs workflow "${qualified[2]}", which ${source.url} does not declare.`, where);
+      }
+    }
+  };
   for (const workflow of c.workflows ?? []) {
     const where = `workflows[${workflow.workflowId ?? '?'}]`;
     if (!workflow.workflowId) err('arazzo-shape', 'Each workflow has a workflowId.', where);
@@ -93,6 +119,8 @@ export function validateArazzo(doc, operations) {
           }
         }
       }
+
+      if (targets.length === 1 && step.workflowId !== undefined) workflowExists(step, stepWhere);
 
       if (step['x-actors'] !== undefined) {
         if (!Array.isArray(step['x-actors'])) {

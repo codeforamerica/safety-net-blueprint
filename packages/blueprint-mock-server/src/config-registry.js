@@ -9,44 +9,65 @@
 
 import { deriveCollectionName } from './collection-utils.js';
 
-/** @type {Map<string, Set<string>>} collectionName -> Set of config-managed IDs */
-const configManagedIds = new Map();
-
-/** @type {Set<string>} Collection names that have at least one config-managed entry */
-const configManagedCollections = new Set();
-
 /**
- * Register a resource ID as config-managed for a given collection.
- * @param {string} collectionName - e.g. 'queues'
- * @param {string} id - Resource UUID
+ * One mock's config-managed records (instance.js).
  */
-export function registerConfigManaged(collectionName, id) {
-  if (!configManagedIds.has(collectionName)) {
-    configManagedIds.set(collectionName, new Set());
-  }
-  configManagedIds.get(collectionName).add(id);
-  configManagedCollections.add(collectionName);
-}
+export function createConfigRegistry() {
+  /** @type {Map<string, Set<string>>} collectionName -> Set of config-managed IDs */
+  const configManagedIds = new Map();
 
-/**
- * Check whether a collection has any config-managed entries.
- * Used by the create handler to set source: 'user' on runtime-created resources.
- * @param {string} collectionName
- * @returns {boolean}
- */
-export function hasConfigManagedResources(collectionName) {
-  return configManagedCollections.has(collectionName);
-}
+  /** @type {Set<string>} Collection names that have at least one config-managed entry */
+  const configManagedCollections = new Set();
 
-/**
- * Check whether a resource is config-managed.
- * @param {string} collectionName - e.g. 'queues'
- * @param {string} id - Resource UUID
- * @returns {boolean}
- */
-export function isConfigManaged(collectionName, id) {
-  return configManagedIds.has(collectionName) &&
-    configManagedIds.get(collectionName).has(id);
+  return {
+    /**
+     * Register a resource ID as config-managed for a given collection.
+     * @param {string} collectionName - e.g. 'queues'
+     * @param {string} id - Resource UUID
+     */
+    register(collectionName, id) {
+      if (!configManagedIds.has(collectionName)) {
+        configManagedIds.set(collectionName, new Set());
+      }
+      configManagedIds.get(collectionName).add(id);
+      configManagedCollections.add(collectionName);
+    },
+
+    /**
+     * Mark a collection as one config seeds, even when it seeds no entries.
+     * @param {string} collectionName
+     */
+    registerCollection(collectionName) {
+      configManagedCollections.add(collectionName);
+    },
+
+    /**
+     * Check whether a collection has any config-managed entries.
+     * Used by the create handler to set source: 'user' on runtime-created resources.
+     * @param {string} collectionName
+     * @returns {boolean}
+     */
+    hasResources(collectionName) {
+      return configManagedCollections.has(collectionName);
+    },
+
+    /**
+     * Check whether a resource is config-managed.
+     * @param {string} collectionName - e.g. 'queues'
+     * @param {string} id - Resource UUID
+     * @returns {boolean}
+     */
+    isManaged(collectionName, id) {
+      return configManagedIds.has(collectionName) &&
+        configManagedIds.get(collectionName).has(id);
+    },
+
+    /** Clear the registry (used between test runs). */
+    clear() {
+      configManagedIds.clear();
+      configManagedCollections.clear();
+    },
+  };
 }
 
 /**
@@ -59,11 +80,12 @@ export function isConfigManaged(collectionName, id) {
  * marked `source: system`, which the resource's schema declares.
  *
  * @param {Array} configs - From `extract(docs, 'config')`
- * @param {Object} store
+ * @param {Object} instance - The mock (instance.js): its store gets the
+ *   records, and its registry remembers they're config-managed
  * @param {Object} [options]
  * @param {boolean} [options.verbose]
  */
-export function seedConfigs(configs, store, { verbose = false } = {}) {
+export function seedConfigs(configs, { store, configManaged }, { verbose = false } = {}) {
   for (const config of configs ?? []) {
     for (const [key, catalog] of Object.entries(config.catalogs)) {
       if (!catalog.resource) {
@@ -73,21 +95,13 @@ export function seedConfigs(configs, store, { verbose = false } = {}) {
       const collection = deriveCollectionName(catalog.resource.path('collection'), '');
       // Records added through the API are marked `user`, even when the file
       // seeds none.
-      configManagedCollections.add(collection);
+      configManaged.registerCollection(collection);
       for (const entry of catalog.entries) {
         const data = Object.fromEntries(Object.entries(entry).filter(([field]) => !field.startsWith('x-')));
         if (!store.findById(collection, data.id)) store.insertResource(collection, { ...data, source: 'system' });
-        registerConfigManaged(collection, data.id);
+        configManaged.register(collection, data.id);
       }
       if (verbose) console.log(`✓ Seeded ${catalog.entries.length} config-managed ${catalog.resourceName} (${config.domain})`);
     }
   }
-}
-
-/**
- * Clear the registry (used between test runs).
- */
-export function clearConfigRegistry() {
-  configManagedIds.clear();
-  configManagedCollections.clear();
 }

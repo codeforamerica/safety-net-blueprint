@@ -929,6 +929,44 @@ describe('validateCrossArtifact — set: field exists on object schema', () => {
   });
 });
 
+describe('validateCrossArtifact — transition on another resource\'s event', () => {
+  // An application that follows its household: when the household is closed,
+  // the applications naming it are withdrawn.
+  const following = makeDoc({
+    on: [{ type: 'intake.household.closed', transition: { from: 'draft', to: 'closed' }, steps: [{ emit: 'closed' }] }],
+  });
+  const application = (properties) => ({
+    type: 'object',
+    properties: { id: { type: 'string' }, status: { type: 'string', enum: ['draft', 'submitted', 'closed'] }, ...properties },
+  });
+  const household = { type: 'object', properties: { id: { type: 'string' } } };
+  const related = { type: 'string', 'x-relationship': { resource: 'Household' } };
+
+  test('passes when one field relates the record to the event\'s resource', () => {
+    const schemaIndex = makeSchemaIndex({ Household: household, Application: application({ householdId: related }) });
+    const errors = validateCrossArtifact('/fake.yaml', following, schemaIndex, makeEndpointIndex());
+    assert.equal(errors.filter((e) => e.rule === 'transition-on-unrelated-event').length, 0);
+  });
+
+  test('errors when no field relates them, so there is no record to transition', () => {
+    const schemaIndex = makeSchemaIndex({ Household: household, Application: application({}) });
+    const errors = validateCrossArtifact('/fake.yaml', following, schemaIndex, makeEndpointIndex());
+    assert.ok(hasRule(errors, 'transition-on-unrelated-event'));
+  });
+
+  test('errors when two fields relate them, so which records is ambiguous', () => {
+    const schemaIndex = makeSchemaIndex({ Household: household, Application: application({ householdId: related, formerHouseholdId: related }) });
+    const errors = validateCrossArtifact('/fake.yaml', following, schemaIndex, makeEndpointIndex());
+    assert.ok(errors.some((e) => e.rule === 'transition-on-unrelated-event' && e.message.includes('ambiguous')));
+  });
+
+  test('a transition on the machine\'s own event needs no relationship', () => {
+    const own = makeDoc({ on: [{ type: 'intake.application.submitted', transition: { from: 'draft', to: 'submitted' }, steps: [{ emit: 'submitted' }] }] });
+    const errors = validateCrossArtifact('/fake.yaml', own, makeSchemaIndex(), makeEndpointIndex());
+    assert.equal(errors.filter((e) => e.rule === 'transition-on-unrelated-event').length, 0);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Smoke tests — real files must pass both validators
 // ---------------------------------------------------------------------------

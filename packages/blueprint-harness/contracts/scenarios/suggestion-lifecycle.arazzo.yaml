@@ -8,6 +8,7 @@ info:
   title: A suggestion, from proposal to decision
   version: 1.0.0
   x-domain: intake
+  x-capability: suggestions
   description: |
     A suggestion is a record that proposes something to a person: something to look into, or a change to make. It waits as `proposed` until the person accepts or dismisses it, and expires if nobody does. Here a caseworker interviews Rosa about her household's income. During the interview, the server proposes suggestions about things to ask, and the assistant proposes changes to her application. The caseworker accepts or dismisses each one.
   # Who acts in the scenario. A step where someone acts lists them in

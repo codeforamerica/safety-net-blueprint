@@ -394,6 +394,7 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 | 7 | [Runtime filtering via standard search params](#decision-7-runtime-filtering-via-standard-search-params) | Composition endpoints support the state's configured search, pagination, and sort params — consistent with other list endpoints. |
 | 8 | [parentLink for composition discovery](#decision-8-parentlink-for-composition-discovery) | `_links.<compositionId>` injected into parent resource responses — clients navigate via links rather than hardcoding paths. |
 | 9 | [Static per-section panel paths](#decision-9-static-per-section-panel-paths) | Each section gets its own path entry; enables per-section sort configuration via `x-sortable`. |
+| 10 | [Compositions for other domains](#decision-10-compositions-for-other-domains) | The owning domain serves a composition another domain needs, named for what it holds; the reader maps it into its own model if its vocabulary differs. |
 
 ---
 
@@ -581,6 +582,27 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 - **(B) ✓** One static path per section — per-section operation definitions; enables `x-sortable` per section; section-specific client functions
 
 **Decision:** Static (B). Per-section sort configuration requires distinct path entries. Static paths are also consistent with the rest of the blueprint's resource endpoint conventions.
+
+---
+
+### Decision 10: Compositions for other domains
+
+**Status:** Decided: B
+
+**What's being decided:** When one domain needs another domain's data assembled or reduced in a way its resources don't give, which domain declares that composition.
+
+**Considerations:**
+- The owning domain knows its own records. A composition it declares stays right when those records change; one the reader declares over the owner's resources breaks with each change, and the owner can't see it break.
+- Domain-driven design has the owner publish a stable way in for others (an *open host service*), and has the reader translate what's published into its own model in its own domain (an *anti-corruption layer*). The two are used together: the owner controls the shape it publishes, and the reader controls its own vocabulary.
+- An owner that serves a composition for a reader can come to depend on that reader. Naming the composition for what it holds, such as `householdIncome`, rather than for who reads it, such as `eligibilityView`, keeps the owner from knowing its readers and lets a second reader use it.
+- A reader that has to work when the owner is down, or reads in bulk, needs its own copy built from the owner's events instead (a read model, in CQRS terms).
+
+**Options:**
+- **(A)** The reader declares the composition over the owner's resources — the reader gets exactly its shape; it depends on the owner's records, not a published contract
+- **(B) ✓** The owner declares it, for the reader's need, named for what it holds — the owner controls the shape; the reader maps it into its own model if its vocabulary differs
+- **(C)** The reader keeps a copy built from the owner's events — works without the owner; a second copy to keep in step; used only where a call each time won't do
+
+**Decision:** The owner declares it (B). A domain reads another only through what that domain publishes — its resources and its compositions. See [Inter-domain communication](../inter-domain-communication.md#cross-domain-reads).
 
 ---
 

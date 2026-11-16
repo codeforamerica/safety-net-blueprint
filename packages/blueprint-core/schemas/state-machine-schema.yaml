@@ -169,12 +169,20 @@ $defs:
         $ref: "#/$defs/ContextProperty"
       actions:
         type: array
-        description: Actor- or system-triggered operations. Each becomes a POST /{resource}/{id}/{actionId} endpoint.
+        description: >
+          Actor- or system-triggered operations. Each becomes a POST
+          /{resource}/{id}/{actionId} endpoint. An action or reaction on a
+          record runs to completion, saved, before the next one on that record
+          starts; the next reads the record as it was left, and its `from` and
+          guards are checked then.
         items:
           $ref: "#/$defs/Transition"
       on:
         type: array
-        description: Event subscriptions — automatic reactions to domain events arriving on a subscription.
+        description: >
+          Event subscriptions — automatic reactions to domain events arriving
+          on a subscription. A reaction that arrives while an action on its
+          record is running waits for it (see actions).
         items:
           $ref: "#/$defs/OnEvent"
       emits:
@@ -282,7 +290,11 @@ $defs:
         transition  — if present, the handler acts on the machine's record whose id is
                       the event's subject, which must exist; from limits source states.
                       An event whose subject names no such record, or a record in
-                      another state, is skipped.
+                      another state, is skipped. For an event about another
+                      resource, it acts on each of the machine's records that name
+                      the event's subject through the one field declaring
+                      x-relationship to that resource — a session following its
+                      transcript; validation refuses none or more than one.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
@@ -367,7 +379,12 @@ $defs:
             additionalProperties: true
           response:
             type: object
-            description: JSON Schema for the 200 response body. Defaults to the resource schema when absent.
+            deprecated: true
+            description: >
+              Deprecated: write the action's `response:`, which gives the
+              schema and the value that fills it together. This described a
+              response nothing produced: an action answered with the record
+              whatever it said.
             additionalProperties: true
       transition:
         $ref: "#/$defs/TransitionBlock"
@@ -380,6 +397,28 @@ $defs:
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
+      response:
+        type: object
+        description: >
+          What the action answers with, when it isn't the record: `schema`, a
+          JSON Schema the generated endpoint's 200 response declares, and
+          `payload`, the value that fills it — value expressions, as a call's
+          `requestBody.payload` takes, read after the steps run, such as a
+          field a step's call bound (`$connection.url`). Absent, the action
+          answers with the record as its steps leave it.
+        required: [schema, payload]
+        additionalProperties: false
+        properties:
+          schema:
+            type: object
+            description: JSON Schema for the 200 response body, or a `$ref` to one in `$defs`.
+            additionalProperties: true
+          payload:
+            description: >
+              The response body, as value expressions — an object of them, or
+              one naming the whole value. What an expression finds nothing for
+              is left out, and a null too where `schema` doesn't accept one
+              (docs/conventions/resources.yaml, null_and_absent).
 
   GovernedResource:
     type: object
@@ -507,6 +546,21 @@ $defs:
   # only ever looked up — so there is no operator syntax, and a missing value
   # contributes nothing.
   #   timerId: "workflow.{$params.timerType}.{$object.id}"
+  #
+  # NULL AND ABSENT (docs/conventions/resources.yaml, null_and_absent)
+  # A lone expression finds a value, finds a null, or finds nothing. Wherever
+  # one fills something in — a call's request body, by method and path or by
+  # operationId; emit data; an action's response.payload; set:; a ruleset's
+  # inputs; a procedure's with: —
+  #   what finds nothing is left out, and a set: sets nothing;
+  #   a null, found or written, is sent, unless the schema the value goes
+  #   into doesn't accept null there — the operation's request schema, the
+  #   event's data schema, the action's response.schema, the field on the
+  #   machine's resource — and then it's left out too.
+  # So a PATCH leaves a property it leaves out as it was; to clear one, write
+  # a literal null. A required property left out fails the schema, which
+  # names it. A where: or a guard looks a value up rather than filling one in,
+  # and isn't covered.
   #
   # Value expressions are not CEL. Conditions (a guard's condition, if:,
   # match:, a where: string) are CEL, with unprefixed names.
@@ -785,7 +839,10 @@ $defs:
           - $ref: "https://blueprint.codeforamerica.org/base/schemas/operations.yaml#/$defs/OperationCall"
             description: >
               A call to an operation by its operationId, as an Arazzo step
-              names one. Parameter values and the payload are value expressions.
+              names one. Parameter values and the payload are value
+              expressions. What an expression finds nothing for is left out,
+              and a null too where the operation's request schema doesn't
+              accept one (docs/conventions/resources.yaml, null_and_absent).
           - type: object
             description: >
               HTTP call — one key is the method (POST, PATCH, GET, DELETE) and
@@ -831,7 +888,8 @@ $defs:
           machine's own call: it skips only role checks, and its events name
           the system. `caller` is made as the person or service that triggered
           this step, under the operation's own permissions — as making it by
-          hand would be.
+          hand would be — and carries their credential, such as the
+          Authorization header they sent.
       catch:
         type: object
         additionalProperties: false

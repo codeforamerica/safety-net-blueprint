@@ -146,159 +146,203 @@ components:
       name: communication.transcript.created
       summary: A Transcript was created. Carries the record as created.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptCreatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptCreatedEvent"
     CommunicationTranscriptUpdated:
       name: communication.transcript.updated
       summary: A Transcript was changed. Carries each changed field, before and after.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptUpdatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptUpdatedEvent"
     CommunicationTranscriptDeleted:
       name: communication.transcript.deleted
       summary: A Transcript was deleted. The subject is the record's id.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptDeletedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptDeletedEvent"
     CommunicationTranscriptEntryCreated:
       name: communication.transcript_entry.created
       summary: A TranscriptEntry was created. Carries the record as created.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptEntryCreatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptEntryCreatedEvent"
     CommunicationTranscriptEntryUpdated:
       name: communication.transcript_entry.updated
       summary: A TranscriptEntry was changed. Carries each changed field, before and after.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptEntryUpdatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptEntryUpdatedEvent"
     CommunicationTranscriptionProfileCreated:
       name: communication.transcription_profile.created
       summary: A TranscriptionProfile was created. Carries the record as created.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptionProfileCreatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionProfileCreatedEvent"
     CommunicationTranscriptionProfileUpdated:
       name: communication.transcription_profile.updated
       summary: A TranscriptionProfile was changed. Carries each changed field, before and after.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptionProfileUpdatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionProfileUpdatedEvent"
     CommunicationTranscriptPaused:
       name: communication.transcript.paused
       summary: The conversation went off the record. Anything said until it resumes is not stored.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptPausedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptPausedEvent"
     CommunicationTranscriptResumed:
       name: communication.transcript.resumed
       summary: The conversation is back on the record.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptResumedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptResumedEvent"
     CommunicationTranscriptClosed:
       name: communication.transcript.closed
       summary: The transcript has ended.
       payload:
-        $ref: "#/components/schemas/CommunicationTranscriptClosedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptClosedEvent"
     CommunicationIdleCheck:
       name: communication.idle_check
       summary: Whether a recording transcript has gone quiet for its profile's idleTimeout. Sent by the timer service when the timer fires; the subject is the record the timer is for.
       payload:
-        $ref: "#/components/schemas/CommunicationIdleCheckEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationIdleCheckEvent"
   schemas:
     CommunicationTranscriptCreatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.created
-            data:
-              $ref: ./communication-transcripts-openapi.yaml#/components/schemas/Transcript
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.created
+              data:
+                $ref: ./communication-transcripts-openapi.yaml#/components/schemas/Transcript
     CommunicationTranscriptUpdatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.updated
-            data:
-              $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.updated
+              data:
+                $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
     CommunicationTranscriptDeletedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.deleted
-            data:
-              $ref: ../../schemas/events.yaml#/ResourceDeletedEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.deleted
+              data:
+                $ref: ../../schemas/events.yaml#/ResourceDeletedEvent
     CommunicationTranscriptEntryCreatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript_entry.created
-            data:
-              $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptEntry
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript_entry.created
+              data:
+                $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptEntry
     CommunicationTranscriptEntryUpdatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript_entry.updated
-            data:
-              $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript_entry.updated
+              data:
+                $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
     CommunicationTranscriptionProfileCreatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcription_profile.created
-            data:
-              $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptionProfile
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_profile.created
+              data:
+                $ref: ./communication-transcripts-openapi.yaml#/components/schemas/TranscriptionProfile
     CommunicationTranscriptionProfileUpdatedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcription_profile.updated
-            data:
-              $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_profile.updated
+              data:
+                $ref: ../../schemas/events.yaml#/ResourceUpdatedEvent
     CommunicationTranscriptPausedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.paused
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.paused
     CommunicationTranscriptResumedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.resumed
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.resumed
     CommunicationTranscriptClosedEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.transcript.closed
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcript.closed
     CommunicationIdleCheckEvent:
-      allOf:
-        - $ref: ../../schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: communication.idle_check
-            data:
-              $ref: ../../schemas/events.yaml#/TimerCallbackEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.idle_check
+              data:
+                $ref: ../../schemas/events.yaml#/TimerCallbackEvent

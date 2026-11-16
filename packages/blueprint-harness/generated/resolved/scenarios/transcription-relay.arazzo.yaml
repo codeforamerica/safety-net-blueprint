@@ -1,0 +1,894 @@
+arazzo: 1.1.0
+info:
+  title: Transcribing a spoken conversation through a relay
+  version: 1.0.0
+  x-domain: communication
+  x-capability: transcripts
+  description: |
+    A staff member transcribes a conversation as it's spoken, using a service the browser can't reach, such as Google Cloud Speech-to-Text. The client in their browser sends the audio to the state's relay instead, which passes it on to the service; the session keeps the transcript on the server; the state's transcript audio adapter gives the client a token for the relay.
+
+    The main path starts, transcribes one line and stops. The other situations are the ones where the relay does something of its own. The rest run the same as without a relay, with the relay where the service is.
+  x-actors:
+    - id: staff
+      name: Staff member
+      description: Starts, pauses, resumes and stops transcribing, from their browser.
+    - id: client
+      name: Client
+      description: The app in the staff member's browser. It sends the audio to the relay and tells the session what happens. This scenario plays its part.
+    - id: session
+      name: Session
+      description: Keeps track of the client's connection. It runs in the browser; in this demo, the mock runs it.
+    - id: transcript
+      name: Transcript
+      description: Keeps the transcript and its rules, on the server. In this demo, the mock runs it.
+    - id: relay
+      name: Relay
+      description: The state's server in front of a service the browser can't reach. It speaks the blueprint's relay contract to the client and the service's own API to the service. In this demo, the mock stands in for it with stubs.
+    - id: adapter
+      name: Adapter
+      description: The state's transcript audio adapter, which signs a short-lived token for the relay. In this demo, the mock stands in for it with stubs.
+sourceDescriptions:
+  - name: sessions
+    url: ../base/domains/communication/communication-transcription-sessions-openapi.yaml
+    type: openapi
+  - name: sessionEvents
+    url: ../base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml
+    type: asyncapi
+  - name: transcripts
+    url: ../base/domains/communication/communication-transcripts-openapi.yaml
+    type: openapi
+  - name: transcriptEvents
+    url: ../base/domains/communication/communication-transcripts-events-asyncapi.yaml
+    type: asyncapi
+  - name: audio
+    url: ../base/domains/communication/communication-transcripts-relay-asyncapi.yaml
+    type: asyncapi
+  - name: mock
+    url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+workflows:
+  - workflowId: startAndConnect
+    summary: Starting and connecting
+    description: The staff member starts transcribing. The client asks how to connect, gets the relay's address and a token for it, connects to the relay, and tells the session the connection is open.
+    x-branch: main
+    steps:
+      - stepId: start
+        x-actors:
+          - staff
+          - session
+        description: |
+          Start a session, under the Google Cloud Speech-to-Text profile
+
+          - Google's service takes only gRPC, which a browser can't speak, so the state runs a relay in front of it. The profile names the service; where the relay is, is the adapter's setting.
+          - The profile, `english-google`, is one the harness seeds, as a state seeds its own.
+        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000f3
+            model: latest_long
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T10:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'created'
+        outputs:
+          id: $response.body#/id
+      - stepId: adapterStub
+        x-actors:
+          - adapter
+        description: |
+          Gives a token for the relay
+
+          - For a service behind a relay, the adapter answers with the relay's address, the relay contract's `subprotocol`, and a token it signed itself for the relay, lasting a minute. It calls nothing to make it.
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /issue-connection
+            response:
+              status: 200
+              body:
+                provider: google-cloud-speech
+                protocol: websocket
+                url: wss://relay.example/transcribe
+                subprotocol: blueprint.transcripts.relay.v1
+                accessToken: eyJhbGciOiJFUzI1NiIsImtpZCI6InJlbGF5LTIwMjYtMTEiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJ3c3M6Ly9yZWxheS5leGFtcGxlL3RyYW5zY3JpYmUiLCJpYXQiOjE3OTA2NzI0MDAsImV4cCI6MTc5MDY3MjQ2MH0.c2lnbmF0dXJl
+                tokenType: Bearer
+                expiresIn: 60
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: getConnection
+        x-actors:
+          - client
+          - session
+        description: |
+          Ask how to connect
+
+          - The same request as without a relay, with the same shape of answer. `subprotocol` tells the client the connection uses the relay contract.
+        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload:
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+            protocols:
+              - websocket
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/provider == 'google-cloud-speech'
+          - condition: $response.body#/subprotocol == 'blueprint.transcripts.relay.v1'
+          - condition: $response.body#/expiresIn == 60
+        outputs:
+          subprotocol: $response.body#/subprotocol
+          accessToken: $response.body#/accessToken
+      - stepId: connecting
+        x-actors:
+          - session
+          - client
+        description: "Status: connecting"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.start.outputs.id
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: Answers a new connection with ready
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": start
+            send:
+              - type: started
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendStart
+        x-actors:
+          - client
+          - relay
+        description: |
+          Open the connection, with the audio format
+
+          - These messages are the blueprint's relay contract, the same for every relay. Without a relay, the client would use the service's own messages instead.
+          - The token goes in the `Sec-WebSocket-Protocol` header rather than the URL, since URLs get logged. The relay checks it before taking the connection, then opens its own connection to Google, through Google's API.
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        parameters:
+          - name: Sec-WebSocket-Protocol
+            in: header
+            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+        requestBody:
+          payload:
+            type: start
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+            languages:
+              - en-US
+            model: latest_long
+      - stepId: started
+        x-actors:
+          - relay
+          - client
+        description: Ready
+        operationId: $sourceDescriptions.audio.sendStarted
+        action: receive
+      - stepId: connect
+        x-actors:
+          - client
+          - session
+        description: Connection open
+        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload: {}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
+        outputs:
+          transcriptId: $response.body#/transcriptId
+      - stepId: connected
+        x-actors:
+          - session
+          - client
+        description: "Status: connected"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.start.outputs.id
+    outputs:
+      sessionId: $steps.start.outputs.id
+      transcriptId: $steps.connect.outputs.transcriptId
+  - workflowId: eachLine
+    summary: Each line spoken
+    description: One line is spoken. The relay sends Google's text while it's in progress and once it's final, in the relay contract's shape, and the client passes each on to the session.
+    x-branch: main
+    dependsOn:
+      - startAndConnect
+    steps:
+      - stepId: keepalive
+        x-actors:
+          - client
+          - relay
+        description: |
+          Keep-alive, while nobody is speaking
+
+          - Sent when no audio has gone for a while, since code in a browser can't send a WebSocket ping. Nothing answers it.
+        operationId: $sourceDescriptions.audio.receiveKeepalive
+        action: send
+        requestBody:
+          payload:
+            type: keepalive
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: Answers the audio with text in progress, then the final text
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": audio
+            send:
+              - type: result
+                id: r1
+                isFinal: false
+                startOffsetMs: 5000
+                endOffsetMs: 5600
+                speaker: spk_0
+                alternatives:
+                  - transcript: Can you tell me who
+              - type: result
+                id: r1
+                isFinal: true
+                startOffsetMs: 5000
+                endOffsetMs: 6000
+                speaker: spk_0
+                alternatives:
+                  - transcript: Can you tell me who lives with you?
+                    confidence: 0.94
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendAudio
+        x-actors:
+          - client
+          - relay
+        description: Audio
+        operationId: $sourceDescriptions.audio.receiveAudio
+        action: send
+        requestBody:
+          payload: (16-bit PCM audio)
+      - stepId: textInProgress
+        x-actors:
+          - relay
+          - client
+        description: |
+          Text in progress
+
+          - The relay sends Google's results in the relay contract's shape, so the client handles them as it would any relay's.
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == false
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+      - stepId: updateLine
+        x-actors:
+          - client
+          - session
+        description: Update the line in progress
+        operationId: $sourceDescriptions.sessions.updateLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $workflows.startAndConnect.outputs.sessionId
+        requestBody:
+          payload:
+            key: $steps.textInProgress.outputs.key
+            text: $steps.textInProgress.outputs.text
+            speaker: staff
+            startedAt: "2026-10-12T10:00:05Z"
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: lineUpdated
+        x-actors:
+          - session
+          - client
+        description: Line in progress, to show
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineUpdated
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.sessionId && $message.payload#/data/key == 'r1'
+      - stepId: finalText
+        x-actors:
+          - relay
+          - client
+        description: Final text
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == true
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+      - stepId: addLine
+        x-actors:
+          - client
+          - session
+        description: Add the finished line
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $workflows.startAndConnect.outputs.sessionId
+        requestBody:
+          payload:
+            key: $steps.finalText.outputs.key
+            text: $steps.finalText.outputs.text
+            speaker: staff
+            startedAt: "2026-10-12T10:00:05Z"
+            endedAt: "2026-10-12T10:00:06Z"
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: lineAdded
+        x-actors:
+          - session
+          - client
+        description: Finished line, to show
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineAdded
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.sessionId && $message.payload#/data/key == 'r1'
+  - workflowId: stopping
+    summary: Stopping
+    description: The staff member stops. The client sends the end of the audio to the relay, adds the last line, and closes the session, which closes the transcript.
+    x-branch: main
+    dependsOn:
+      - startAndConnect
+      - eachLine
+    steps:
+      - stepId: stop
+        x-actors:
+          - staff
+          - session
+        description: Stop
+        operationId: $sourceDescriptions.sessions.stopTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $workflows.startAndConnect.outputs.sessionId
+        requestBody:
+          payload:
+            at: "2026-10-12T10:00:10Z"
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'stopping'
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: Answers the end of the audio with the last text and done, then closes the connection
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": end
+            send:
+              - type: result
+                id: r2
+                isFinal: true
+                startOffsetMs: 8500
+                endOffsetMs: 10200
+                speaker: spk_0
+                alternatives:
+                  - transcript: Thank you, that's everything.
+              - type: ended
+            close:
+              code: 1000
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendEnd
+        x-actors:
+          - client
+          - relay
+        description: End of the audio
+        operationId: $sourceDescriptions.audio.receiveEnd
+        action: send
+        requestBody:
+          payload:
+            type: end
+      - stepId: lastText
+        x-actors:
+          - relay
+          - client
+        description: Last text
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/id == 'r2'
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+      - stepId: lastLine
+        x-actors:
+          - client
+          - session
+        description: Add the last line
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $workflows.startAndConnect.outputs.sessionId
+        requestBody:
+          payload:
+            key: $steps.lastText.outputs.key
+            text: $steps.lastText.outputs.text
+            speaker: staff
+            startedAt: "2026-10-12T10:00:08Z"
+            endedAt: "2026-10-12T10:00:10Z"
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: ended
+        x-actors:
+          - relay
+          - client
+        description: Done
+        operationId: $sourceDescriptions.audio.sendEnded
+        action: receive
+      - stepId: close
+        x-actors:
+          - client
+          - session
+        description: Close
+        operationId: $sourceDescriptions.sessions.closeTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $workflows.startAndConnect.outputs.sessionId
+        requestBody:
+          payload:
+            at: "2026-10-12T10:00:11Z"
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+      - stepId: transcriptClosed
+        x-actors:
+          - transcript
+          - client
+        description: "Status: closed"
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptClosed
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $workflows.startAndConnect.outputs.transcriptId
+      - stepId: timeline
+        x-actors:
+          - client
+          - transcript
+        description: Get the timeline
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.startAndConnect.outputs.transcriptId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 2
+  - workflowId: tokenExpired
+    summary: When the token has expired
+    description: The client connects with a token kept from an earlier connection, which has run out. The relay rejects it, and the client asks how to connect again for a new one.
+    x-branch: other
+    steps:
+      - stepId: start
+        x-actors:
+          - staff
+          - session
+        description: Start a session, under the Google Cloud Speech-to-Text profile
+        operationId: $sourceDescriptions.sessions.createTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000f3
+            model: latest_long
+            client: interview-assistant/0.1.0
+            startedAt: "2026-10-12T11:00:00Z"
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+      - stepId: adapterStub
+        x-actors:
+          - adapter
+        description: Gives a token for the relay
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /issue-connection
+            response:
+              status: 200
+              body:
+                provider: google-cloud-speech
+                protocol: websocket
+                url: wss://relay.example/transcribe
+                subprotocol: blueprint.transcripts.relay.v1
+                accessToken: a-new-token
+                tokenType: Bearer
+                expiresIn: 60
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: getConnection
+        x-actors:
+          - client
+          - session
+        description: Ask how to connect
+        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.start.outputs.id
+        requestBody:
+          payload:
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+            protocols:
+              - websocket
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          subprotocol: $response.body#/subprotocol
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: |
+          Rejects a token that has expired
+
+          - A WebSocket stub with `protocols` answers only a connection that offered each of them, so this one answers only a connection with the expired token.
+          - A relay checks the token before it accepts the connection. A stub answers a message, so this one answers `start`; the client sees the same refusal.
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": start
+            protocols:
+              - an-expired-token
+            send:
+              - type: error
+                code: not-allowed
+                message: The token has expired.
+            close:
+              code: 1008
+              reason: not-allowed
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendStartWithAnExpiredToken
+        x-actors:
+          - client
+          - relay
+        description: |
+          Open the connection, with a token that has expired
+
+          - The relay checks the adapter's token with the adapter's public keys.
+          - A token lasts a minute, so one kept from an earlier connection has run out.
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        parameters:
+          - name: Sec-WebSocket-Protocol
+            in: header
+            value: "{$steps.getConnection.outputs.subprotocol}, an-expired-token"
+        requestBody:
+          payload:
+            type: start
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+      - stepId: refused
+        x-actors:
+          - relay
+          - client
+        description: |
+          Error: not allowed
+
+          - Then the relay closes the connection. The client asks how to connect again for a new token.
+        operationId: $sourceDescriptions.audio.sendError
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/code == 'not-allowed'
+      - stepId: retried
+        x-actors:
+          - client
+          - session
+        description: |
+          Connect again, with a new token
+
+          - After a refusal, the client asks for a new connection once, since a new token fixes one that expired. Refused again, it reports the failure.
+        workflowId: reconnect
+        parameters:
+          - name: sessionId
+            value: $steps.start.outputs.id
+  - workflowId: connectionDrops
+    summary: When the connection drops
+    description: The connection to the relay drops partway through. The client asks how to connect again for a new token, and the relay checks it as it did the first.
+    x-branch: other
+    steps:
+      - stepId: connected
+        x-actors:
+          - staff
+          - client
+          - session
+        description: |
+          Start and connect, as in the main path
+
+          - Runs the main path's first workflow, on a new session.
+        workflowId: startAndConnect
+        outputs:
+          sessionId: $outputs.sessionId
+          transcriptId: $outputs.transcriptId
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: Answers the audio with the final text, then drops the connection
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": audio
+            send:
+              - type: result
+                id: r1
+                isFinal: true
+                startOffsetMs: 2000
+                endOffsetMs: 3500
+                speaker: spk_0
+                alternatives:
+                  - transcript: I work at the grocery store.
+            close:
+              code: 1006
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendAudio
+        x-actors:
+          - client
+          - relay
+        description: Audio
+        operationId: $sourceDescriptions.audio.receiveAudio
+        action: send
+        requestBody:
+          payload: (16-bit PCM audio)
+      - stepId: finalText
+        x-actors:
+          - relay
+          - client
+        description: Final text
+        operationId: $sourceDescriptions.audio.sendResult
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/isFinal == true
+        outputs:
+          key: $message.payload#/id
+          text: $message.payload#/alternatives/0/transcript
+      - stepId: addLine
+        x-actors:
+          - client
+          - session
+        description: Add the finished line
+        operationId: $sourceDescriptions.sessions.addLineTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.connected.outputs.sessionId
+        requestBody:
+          payload:
+            key: $steps.finalText.outputs.key
+            text: $steps.finalText.outputs.text
+            speaker: client
+            startedAt: "2026-10-12T10:00:02Z"
+            endedAt: "2026-10-12T10:00:03Z"
+        successCriteria:
+          - condition: $statusCode == 200
+      - stepId: dropped
+        x-actors:
+          - client
+          - session
+        description: Connection dropped
+        operationId: $sourceDescriptions.sessions.disconnectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $steps.connected.outputs.sessionId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'disconnected'
+      - stepId: disconnected
+        x-actors:
+          - session
+          - client
+        description: "Status: disconnected"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
+      - stepId: reconnected
+        x-actors:
+          - client
+          - session
+        description: |
+          Connect again, with a new token and how long nothing was recorded
+
+          - A token lasts a minute, so the client always asks for a new one rather than keeping the last.
+        workflowId: reconnect
+        parameters:
+          - name: sessionId
+            value: $steps.connected.outputs.sessionId
+          - name: gap
+            value:
+              startedAt: "2026-10-12T10:00:04Z"
+              endedAt: "2026-10-12T10:00:08Z"
+  - workflowId: reconnect
+    summary: Connect again, with a new token
+    description: Get a new token and connect to the relay again, saving a gap when one is given.
+    inputs:
+      type: object
+      required:
+        - sessionId
+      properties:
+        sessionId:
+          type: string
+        gap:
+          type: object
+    steps:
+      - stepId: adapterStub
+        x-actors:
+          - adapter
+        description: Gives a new token for the relay
+        operationId: $sourceDescriptions.mock.registerHttpStub
+        requestBody:
+          payload:
+            match:
+              method: POST
+              url: /issue-connection
+            response:
+              status: 200
+              body:
+                provider: google-cloud-speech
+                protocol: websocket
+                url: wss://relay.example/transcribe
+                subprotocol: blueprint.transcripts.relay.v1
+                accessToken: a-new-token
+                tokenType: Bearer
+                expiresIn: 60
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: getConnection
+        x-actors:
+          - client
+          - session
+        description: Ask how to connect
+        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $inputs.sessionId
+        requestBody:
+          payload:
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+            protocols:
+              - websocket
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          subprotocol: $response.body#/subprotocol
+          accessToken: $response.body#/accessToken
+      - stepId: connecting
+        x-actors:
+          - session
+          - client
+        description: "Status: connecting"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnecting
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $inputs.sessionId
+      - stepId: relayStub
+        x-actors:
+          - relay
+        description: Answers a new connection with ready
+        operationId: $sourceDescriptions.mock.registerWsStub
+        requestBody:
+          payload:
+            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
+            "on": start
+            send:
+              - type: started
+        successCriteria:
+          - condition: $statusCode == 201
+      - stepId: sendStart
+        x-actors:
+          - client
+          - relay
+        description: Open the connection, with the audio format
+        operationId: $sourceDescriptions.audio.receiveStart
+        action: send
+        parameters:
+          - name: Sec-WebSocket-Protocol
+            in: header
+            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+        requestBody:
+          payload:
+            type: start
+            audio:
+              encoding: linear16
+              sampleRateHertz: 16000
+              channelCount: 1
+            languages:
+              - en-US
+            model: latest_long
+      - stepId: started
+        x-actors:
+          - relay
+          - client
+        description: Ready
+        operationId: $sourceDescriptions.audio.sendStarted
+        action: receive
+      - stepId: connect
+        x-actors:
+          - client
+          - session
+        description: Connection open
+        operationId: $sourceDescriptions.sessions.connectTranscriptionSession
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptionSessionId
+            in: path
+            value: $inputs.sessionId
+        requestBody:
+          payload:
+            gap: $inputs.gap
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'connected'
+      - stepId: connected
+        x-actors:
+          - session
+          - client
+        description: "Status: connected"
+        operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $inputs.sessionId

@@ -53,43 +53,55 @@ components:
       name: eligibility.determination.created
       summary: A Determination was created. Carries the record as created.
       payload:
-        $ref: "#/components/schemas/EligibilityDeterminationCreatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/EligibilityDeterminationCreatedEvent"
     EligibilityDeterminationUpdated:
       name: eligibility.determination.updated
       summary: A Determination was changed. Carries each changed field, before and after.
       payload:
-        $ref: "#/components/schemas/EligibilityDeterminationUpdatedEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/EligibilityDeterminationUpdatedEvent"
     EligibilityDeterminationComplete:
       name: eligibility.determination.complete
       summary: TODO — describe when this event is emitted and who consumes it.
       payload:
-        $ref: "#/components/schemas/EligibilityDeterminationCompleteEvent"
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/EligibilityDeterminationCompleteEvent"
   schemas:
     EligibilityDeterminationCreatedEvent:
-      allOf:
-        - $ref: ../../base/schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: eligibility.determination.created
-            data:
-              $ref: ./eligibility-openapi.yaml#/components/schemas/Determination
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../base/schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: eligibility.determination.created
+              data:
+                $ref: ./eligibility-openapi.yaml#/components/schemas/Determination
     EligibilityDeterminationUpdatedEvent:
-      allOf:
-        - $ref: ../../base/schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: eligibility.determination.updated
-            data:
-              $ref: ../../base/schemas/events.yaml#/ResourceUpdatedEvent
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../base/schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: eligibility.determination.updated
+              data:
+                $ref: ../../base/schemas/events.yaml#/ResourceUpdatedEvent
     EligibilityDeterminationCompleteEvent:
-      allOf:
-        - $ref: ../../base/schemas/events.yaml#/$defs/Event
-        - type: object
-          properties:
-            type:
-              type: string
-              const: eligibility.determination.complete
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../base/schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: eligibility.determination.complete

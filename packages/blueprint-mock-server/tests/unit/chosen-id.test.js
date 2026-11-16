@@ -6,10 +6,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
 import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 const store = createMemoryStore();
+const instance = createInstance({ store });
 const schema = {
   type: 'object',
   properties: { id: { type: 'string', format: 'uuid' }, name: { type: 'string' } },
@@ -17,7 +19,7 @@ const schema = {
 
 function makeHandler() {
   const endpoint = { collectionName: `chosen-id-${Date.now()}-${Math.random()}`, requestSchema: schema };
-  return createCreateHandler({ serverBasePath: '/test', name: 'test' }, endpoint, 'http://localhost:1080', null, [], null, { store });
+  return createCreateHandler({ serverBasePath: '/test', name: 'test' }, endpoint, 'http://localhost:1080', null, [], null, { store, instance });
 }
 
 async function post(handler, body) {

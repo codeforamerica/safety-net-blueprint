@@ -124,6 +124,35 @@ naming:
     resource: snake_case
     event: snake_case
 
+  # A state machine's action, the state it leads to, and the event it sends.
+  state_machine_names:
+    use_when: >-
+      Naming a machine's states, actions and emitted events, in any machine.
+    rules:
+      - >-
+        Name an action for what happens, as an imperative verb, in kebab-case
+        (action_ids): pause, get-connection, add-line.
+      - >-
+        An action that changes the state leads to the state of the same word,
+        and sends the event named for the state it enters: pause leads to
+        paused and sends paused; connect leads to connected and sends
+        connected. A developer who knows one knows the others, and the event
+        and the state can't disagree.
+      - >-
+        An action that doesn't change the state sends an event named for what
+        happened: add-line sends line_added.
+      - >-
+        Take a state's name from a standard where one names the same thing,
+        such as WebRTC's for a connection's states, and keep it where it agrees
+        with the action; where it doesn't, use the word that agrees.
+      - >-
+        A resource's created event is generated and always named created, so
+        name a machine's initial state created when nothing else fits better.
+    example: >-
+      The transcription session: get-connection → connecting, connect →
+      connected, pause → paused, stop → stopping, close → closed; update-line
+      sends line_updated.
+
 # =============================================================================
 # Spec Authoring Style
 # =============================================================================

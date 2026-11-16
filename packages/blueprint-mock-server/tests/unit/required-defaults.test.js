@@ -20,6 +20,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { createInstance } from '../../src/instance.js';
 
 // A store of this file's own, rather than one shared through a module-level
 // singleton. In memory because these cases do not need a database — and
@@ -28,7 +29,7 @@ const store = createMemoryStore();
 
 // Handlers take their store as a parameter. These cases seed and assert through
 // the shim's module-level exports, so they pass that same store.
-const DEPS = { store: store };
+const DEPS = { store, instance: createInstance({ store }) };
 import { extractRequiredDefaults } from '../../src/route-generator.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
 import { makeRequest, readResponse } from '../helpers/fetch.js';

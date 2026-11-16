@@ -8,7 +8,6 @@
  *   {domain}.{object}.{action}
  */
 
-import { eventBus } from './event-bus.js';
 import { withoutEngineFields } from './sla-engine.js';
 
 /**
@@ -21,9 +20,12 @@ import { withoutEngineFields } from './sla-engine.js';
  * so injected events can be correlated with external systems.
  *
  * @param {Object} envelope - CloudEvents 1.0 object with at minimum `type` and `specversion`
+ * @param {object} instance - The mock sending it (instance.js): its store keeps
+ *   the event and its bus broadcasts it
  * @returns {Object} The stored event record
  */
-export function emitEventEnvelope(envelope, store) {
+export function emitEventEnvelope(envelope, instance) {
+  const { store } = instance;
   const record = withoutAbsent({
     specversion: '1.0',
     datacontenttype: 'application/json',
@@ -32,7 +34,7 @@ export function emitEventEnvelope(envelope, store) {
     ...(envelope.data !== undefined ? { data: withoutEngineFields(envelope.data) } : {}),
     id: envelope.id || crypto.randomUUID(),
     time: envelope.time || new Date().toISOString(),
-    partitionkey: envelope.partitionkey ?? partitionKeyOf(envelope.type, envelope.subject, envelope.data, store),
+    partitionkey: envelope.partitionkey ?? partitionKeyOf(envelope.type, envelope.subject, envelope.data, instance),
   });
   // Infrastructure events (scheduling, etc.) are broadcast for stub interception
   // but not persisted — they are not domain events observable via /platform/events.
@@ -40,7 +42,7 @@ export function emitEventEnvelope(envelope, store) {
   if (!isInfrastructureEvent) {
     saveEvent(store, record);
   }
-  eventBus.emit('domain-event', record);
+  instance.bus.emit('domain-event', record);
   return record;
 }
 
@@ -60,26 +62,12 @@ function saveEvent(store, record) {
 const OPTIONAL_ATTRIBUTES = ['traceparent', 'causationid', 'partitionkey', 'authid', 'authtype', 'data'];
 
 /**
- * Which record each resource's records sit under, by the name its events carry
- * (`intake.application_income`): where its records are kept, and the field
- * naming the one above. Registered when the API documents load (spec-loader.js).
- *
- * @type {Map<string, { collection: string, parent: string|null, parentField: string|null }>}
- */
-const owners = new Map();
-
-export function registerEventOwners(map) {
-  owners.clear();
-  for (const [name, owner] of map) owners.set(name, owner);
-}
-
-/**
  * The CloudEvents partitionkey the mock gives an event: the id of the record at
  * the top of the one it's about — an income's events, its application's id; an
  * application's, its own. CloudEvents leaves the key to the producer; this is
  * the mock's choice. None for an event about no resource the APIs serve.
  */
-function partitionKeyOf(type, subject, data, store) {
+function partitionKeyOf(type, subject, data, { store, eventOwners: owners }) {
   const parts = String(type ?? '').split('.');
   if (parts.length < 3 || !subject) return null;
   let owner = owners.get(parts.slice(-3, -1).join('.'));
@@ -138,9 +126,10 @@ export function authContext(callerId, callerRoles = []) {
  * @param {string|null} [options.traceparent]  - W3C traceparent header, if present
  * @param {string|null} [options.causationid]  - CloudEvents causation extension: id of the triggering event
  * @param {string|null} [options.now]    - ISO timestamp. Defaults to current time.
+ * @param {object} options.instance      - The mock sending it (instance.js)
  * @returns {Object} The stored event record
  */
-export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null, store }) {
+export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null, instance }) {
   const timestamp = now || new Date().toISOString();
   // The domain as declared, hyphens and all; the resource already in snake_case.
   const normalizedDomain = domain;
@@ -161,13 +150,13 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     datacontenttype: 'application/json',
     traceparent,
     causationid,
-    partitionkey: partitionKeyOf(type, subject ?? resourceId, data, store),
+    partitionkey: partitionKeyOf(type, subject ?? resourceId, data, instance),
     ...authContext(callerId, callerRoles),
     // The record an event carries, as a client would read it.
     data: withoutEngineFields(data),
   });
 
-  saveEvent(store, envelope);
-  eventBus.emit('domain-event', envelope);
+  saveEvent(instance.store, envelope);
+  instance.bus.emit('domain-event', envelope);
   return envelope;
 }

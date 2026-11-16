@@ -196,6 +196,23 @@ export type EventList = {
     }>;
 };
 
+/**
+ * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+ *
+ */
+export type TypeFilter = string;
+
+/**
+ * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+ */
+export type SourceFilter = string;
+
+/**
+ * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+ *
+ */
+export type SubjectFilter = string;
+
 export type ListEventsData = {
     body?: never;
     path?: never;
@@ -759,16 +776,163 @@ export type PublishEventResponse = PublishEventResponses[keyof PublishEventRespo
 
 export type StreamEventsData = {
     body?: never;
+    headers?: {
+        /**
+         * The `id` of the last event received, when reconnecting. Events after it are sent first.
+         */
+        'Last-Event-ID'?: string;
+    };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Filter by CloudEvents type. Supports prefix matching with a trailing wildcard (e.g., `intake.*`). When states apply an x-event-type-prefix overlay, the resolved prefix is prepended to all event types (e.g., `org.example.intake.*`).
+         *
+         */
+        type?: string;
+        /**
+         * Filter by CloudEvents source (the domain that produced the event, e.g., `/intake`, `/workflow`).
+         */
+        source?: string;
+        /**
+         * Filter by CloudEvents subject — the entity ID the event pertains to. Because every domain uses the same subject for the same entity, this returns a complete cross-domain timeline for that entity.
+         *
+         */
+        subject?: string;
+    };
     url: '/events/stream';
 };
 
+export type StreamEventsErrors = {
+    /**
+     * The log no longer has the event `Last-Event-ID` names, so the events after it can't be sent.
+     */
+    410: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * This server doesn't stream events; poll listing events instead.
+     */
+    501: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type StreamEventsError = StreamEventsErrors[keyof StreamEventsErrors];
+
 export type StreamEventsResponses = {
     /**
-     * Newline-delimited SSE frames, each containing a JSON Event.
+     * SSE stream of domain events.
      */
-    200: string;
+    200: {
+        /**
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
+         *
+         */
+        type: string;
+        /**
+         * Human-readable annotation for state machine authors. Not a CloudEvents field.
+         */
+        description?: string;
+    } & {
+        /**
+         * CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.
+         *
+         */
+        subject?: string;
+        /**
+         * CloudEvents Correlation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).
+         *
+         */
+        causationid?: string;
+        /**
+         * Event-specific payload. Field values are value expressions resolved at emit time.
+         */
+        data?: {
+            [key: string]: unknown;
+        };
+    } & {
+        /**
+         * CloudEvents specification version.
+         */
+        specversion: '1.0';
+        /**
+         * Unique event identifier.
+         */
+        id: string;
+        /**
+         * Domain base path that produced the event (e.g., /intake, /workflow).
+         */
+        source: string;
+        /**
+         * Entity ID the event pertains to.
+         */
+        subject: string;
+        /**
+         * When the event occurred.
+         */
+        time: string;
+        /**
+         * Media type of the event payload.
+         */
+        datacontenttype: 'application/json';
+        /**
+         * W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.
+         *
+         */
+        traceparent?: string | null;
+        /**
+         * CloudEvents Correlation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.
+         *
+         */
+        causationid?: string | null;
+        /**
+         * CloudEvents Partitioning extension (optional). Groups events that must be handled in order: a subscriber handles events with the same partitionkey one at a time, in the order they occurred. The producer chooses the key — typically the id of the record that owns the others, so everything about one application stays in order.
+         *
+         */
+        partitionkey?: string | null;
+        /**
+         * CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.
+         *
+         */
+        authid?: string | null;
+        /**
+         * CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.
+         *
+         */
+        authtype?: 'user' | 'service_account' | 'api_key' | 'system' | 'unauthenticated' | 'unknown' | null;
+        /**
+         * Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file.
+         */
+        data?: {
+            [key: string]: unknown;
+        };
+    };
 };
 
 export type StreamEventsResponse = StreamEventsResponses[keyof StreamEventsResponses];

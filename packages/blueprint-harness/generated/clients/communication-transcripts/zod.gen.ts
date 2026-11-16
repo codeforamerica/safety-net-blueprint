@@ -36,9 +36,19 @@ export const zTranscript = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -91,9 +101,19 @@ export const zTranscriptList = z.object({
             name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
             description: z.optional(z.string()),
             provider: z.enum([
+                'assemblyai',
                 'aws-transcribe',
+                'azure-speech',
+                'deepgram',
                 'elevenlabs-scribe',
-                'none'
+                'fake-transcription',
+                'gladia',
+                'google-cloud-speech',
+                'google-gemini-live',
+                'none',
+                'openai-realtime',
+                'soniox',
+                'speechmatics'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -305,9 +325,19 @@ export const zTranscriptionProfileWritable = z.object({
     name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
     description: z.optional(z.string()),
     provider: z.optional(z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -320,9 +350,19 @@ export const zTranscriptionProfile = z.object({
     name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
     description: z.optional(z.string()),
     provider: z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -337,9 +377,19 @@ export const zTranscriptionProfileCreate = z.object({
     name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
     description: z.optional(z.string()),
     provider: z.optional(z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -351,9 +401,19 @@ export const zTranscriptionProfileUpdate = z.object({
     name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
     description: z.optional(z.string()),
     provider: z.optional(z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -364,9 +424,19 @@ export const zTranscriptionProfileList = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -387,6 +457,59 @@ export const zAtRequest = z.object({
 });
 
 /**
+ * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ *
+ */
+export const zGetConnectionRequest = z.object({
+    audio: z.object({
+        encoding: z.enum([
+            'linear16',
+            'flac',
+            'mulaw',
+            'alaw',
+            'amr',
+            'amr_wb',
+            'ogg_opus',
+            'webm_opus',
+            'speex_with_header_byte',
+            'mp3'
+        ]),
+        sampleRateHertz: z.int().gte(8000),
+        channelCount: z.int().gte(1)
+    }),
+    protocols: z.array(z.enum(['websocket', 'webrtc'])).min(1)
+});
+
+/**
+ * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+ *
+ */
+export const zStreamConnection = z.object({
+    provider: z.enum([
+        'assemblyai',
+        'aws-transcribe',
+        'azure-speech',
+        'deepgram',
+        'elevenlabs-scribe',
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
+    ]),
+    protocol: z.enum(['websocket', 'webrtc']),
+    subprotocol: z.optional(z.string()),
+    url: z.url(),
+    accessToken: z.optional(z.string()),
+    tokenType: z.optional(z.string()),
+    expiresIn: z.int().gte(1),
+    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
+});
+
+/**
  * A transcript, including server-managed fields.
  */
 export const zTranscriptWritable2 = z.object({
@@ -400,9 +523,19 @@ export const zTranscriptWritable2 = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -421,9 +554,19 @@ export const zTranscriptListWritable = z.object({
             name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
             description: z.optional(z.string()),
             provider: z.enum([
+                'assemblyai',
                 'aws-transcribe',
+                'azure-speech',
+                'deepgram',
                 'elevenlabs-scribe',
-                'none'
+                'fake-transcription',
+                'gladia',
+                'google-cloud-speech',
+                'google-gemini-live',
+                'none',
+                'openai-realtime',
+                'soniox',
+                'speechmatics'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -507,9 +650,19 @@ export const zTranscriptionProfileWritable2 = z.object({
     name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
     description: z.optional(z.string()),
     provider: z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -520,9 +673,19 @@ export const zTranscriptionProfileListWritable = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -584,9 +747,19 @@ export const zListTranscriptsResponse = z.object({
             name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
             description: z.optional(z.string()),
             provider: z.enum([
+                'assemblyai',
                 'aws-transcribe',
+                'azure-speech',
+                'deepgram',
                 'elevenlabs-scribe',
-                'none'
+                'fake-transcription',
+                'gladia',
+                'google-cloud-speech',
+                'google-gemini-live',
+                'none',
+                'openai-realtime',
+                'soniox',
+                'speechmatics'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -643,9 +816,19 @@ export const zCreateTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -702,9 +885,19 @@ export const zGetTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -753,9 +946,19 @@ export const zUpdateTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1023,9 +1226,19 @@ export const zListTranscriptionProfilesResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1046,9 +1259,19 @@ export const zCreateTranscriptionProfileData = z.object({
         name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
         description: z.optional(z.string()),
         provider: z.optional(z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1066,9 +1289,19 @@ export const zCreateTranscriptionProfileResponse = z.object({
     name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
     description: z.optional(z.string()),
     provider: z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1094,9 +1327,19 @@ export const zGetTranscriptionProfileResponse = z.object({
     name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
     description: z.optional(z.string()),
     provider: z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1112,9 +1355,19 @@ export const zUpdateTranscriptionProfileData = z.object({
         name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
         description: z.optional(z.string()),
         provider: z.optional(z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1132,9 +1385,19 @@ export const zUpdateTranscriptionProfileResponse = z.object({
     name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
     description: z.optional(z.string()),
     provider: z.enum([
+        'assemblyai',
         'aws-transcribe',
+        'azure-speech',
+        'deepgram',
         'elevenlabs-scribe',
-        'none'
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1179,9 +1442,19 @@ export const zPauseTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1227,9 +1500,19 @@ export const zResumeTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1240,6 +1523,61 @@ export const zResumeTranscriptResponse = z.object({
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     })))
 }));
+
+export const zGetConnectionTranscriptData = z.object({
+    body: z.object({
+        audio: z.object({
+            encoding: z.enum([
+                'linear16',
+                'flac',
+                'mulaw',
+                'alaw',
+                'amr',
+                'amr_wb',
+                'ogg_opus',
+                'webm_opus',
+                'speex_with_header_byte',
+                'mp3'
+            ]),
+            sampleRateHertz: z.int().gte(8000),
+            channelCount: z.int().gte(1)
+        }),
+        protocols: z.array(z.enum(['websocket', 'webrtc'])).min(1)
+    }),
+    path: z.object({
+        transcriptId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+ *
+ */
+export const zGetConnectionTranscriptResponse = z.object({
+    provider: z.enum([
+        'assemblyai',
+        'aws-transcribe',
+        'azure-speech',
+        'deepgram',
+        'elevenlabs-scribe',
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics'
+    ]),
+    protocol: z.enum(['websocket', 'webrtc']),
+    subprotocol: z.optional(z.string()),
+    url: z.url(),
+    accessToken: z.optional(z.string()),
+    tokenType: z.optional(z.string()),
+    expiresIn: z.int().gte(1),
+    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
+});
 
 export const zCloseTranscriptData = z.object({
     body: z.object({
@@ -1275,9 +1613,19 @@ export const zCloseTranscriptResponse = z.object({
         name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
         description: z.optional(z.string()),
         provider: z.enum([
+            'assemblyai',
             'aws-transcribe',
+            'azure-speech',
+            'deepgram',
             'elevenlabs-scribe',
-            'none'
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())

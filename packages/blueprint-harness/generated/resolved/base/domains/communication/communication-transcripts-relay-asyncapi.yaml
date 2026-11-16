@@ -1,0 +1,335 @@
+asyncapi: 3.0.0
+info:
+  title: Transcription relay
+  version: 0.1.0
+  x-domain: communication
+  x-capability: transcripts
+  x-status: alpha
+  description: |
+    One WebSocket connection per stream, speaking the subprotocol
+    `blueprint.transcripts.relay.v1`. The software gets the relay's URL and a
+    token from the transcript's get-connection action, and opens the connection
+    asking for the subprotocol and presenting the token beside it, in the
+    `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
+    6750). The relay answers with the subprotocol's name only, never the token.
+
+    The relay checks the token before it accepts the connection. When the
+    token is missing, expired, or for another relay, the relay either refuses
+    the upgrade with HTTP 401, or accepts, sends `error` with `not-allowed`,
+    and closes with code 1008. It sends nothing else either way. Either way,
+    the software asks for a new connection once, since a new token fixes one
+    that expired, and reports the failure if that one is refused too.
+
+    The software sends `start`, then the audio as binary frames, and `end`
+    when it's done; the relay answers `started`, sends results as the service
+    hears, and after `end` its last results and `ended`, then closes the
+    connection. Every other message is JSON with a `type`.
+
+    Times are whole milliseconds from the start of the connection.
+servers:
+  relay:
+    host: "{relayHost}"
+    protocol: wss
+    description: The relay a state runs. Its URL comes from the transcript's get-connection action.
+    variables:
+      relayHost:
+        description: The relay's host, as get-connection answers with it.
+    security:
+      - $ref: "#/components/securitySchemes/relayToken"
+  local:
+    host: localhost:1080
+    pathname: /communication/transcripts-relay
+    protocol: ws
+    description: The mock, as the OpenAPI contracts' localhost server is.
+    security:
+      - $ref: "#/components/securitySchemes/relayToken"
+channels:
+  audio:
+    address: null
+    description: |
+      The connection, at the URL get-connection answers with. Everything for one stream travels on it, both ways.
+    messages:
+      start:
+        $ref: "#/components/messages/start"
+      audio:
+        $ref: "#/components/messages/audio"
+      keepalive:
+        $ref: "#/components/messages/keepalive"
+      finalize:
+        $ref: "#/components/messages/finalize"
+      end:
+        $ref: "#/components/messages/end"
+      started:
+        $ref: "#/components/messages/started"
+      result:
+        $ref: "#/components/messages/result"
+      ended:
+        $ref: "#/components/messages/ended"
+      error:
+        $ref: "#/components/messages/error"
+operations:
+  receiveStart:
+    action: receive
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/start"
+    reply:
+      channel:
+        $ref: "#/channels/audio"
+      messages:
+        - $ref: "#/channels/audio/messages/started"
+        - $ref: "#/channels/audio/messages/error"
+  receiveAudio:
+    action: receive
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/audio"
+  receiveKeepalive:
+    action: receive
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/keepalive"
+  receiveFinalize:
+    action: receive
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/finalize"
+  receiveEnd:
+    action: receive
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/end"
+    reply:
+      channel:
+        $ref: "#/channels/audio"
+      messages:
+        - $ref: "#/channels/audio/messages/ended"
+        - $ref: "#/channels/audio/messages/error"
+  sendStarted:
+    action: send
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/started"
+  sendResult:
+    action: send
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/result"
+  sendEnded:
+    action: send
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/ended"
+  sendError:
+    action: send
+    channel:
+      $ref: "#/channels/audio"
+    messages:
+      - $ref: "#/channels/audio/messages/error"
+components:
+  securitySchemes:
+    relayToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        A short-lived JWT (RFC 7519, following RFC 8725) the transcript audio adapter signs, naming the relay as its audience and expiring within a minute. The relay checks the signature, audience and expiry against the public keys the adapter publishes (its getTranscriptConnectionKeys, `GET /.well-known/jwks.json`), so it can check tokens but never make them. A browser can't set the Authorization header on a WebSocket, so the software presents it in `Sec-WebSocket-Protocol`, after the subprotocol's name.
+  messages:
+    start:
+      summary: The software is about to send audio, in this format.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+          - audio
+        properties:
+          type:
+            const: start
+          audio:
+            $ref: ./communication-transcripts-schema.yaml#/$defs/AudioFormat
+          languages:
+            type: array
+            minItems: 1
+            items:
+              $ref: ../../schemas/enums.yaml#/$defs/Language
+            description: The languages the conversation may be in, as get-connection's connectionParameters gave them. Absent, the service detects the language, if it can.
+          model:
+            type: string
+            description: The service's model, as get-connection's connectionParameters gave it.
+          interimResults:
+            type: boolean
+            default: true
+            description: Whether to send results the service may still revise, for the staff member's screen. Only final results reach the transcript.
+    started:
+      summary: The relay is ready for audio.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            const: started
+    audio:
+      summary: The audio, as binary frames in the format start gave.
+      description: Sent as binary WebSocket frames, not JSON — base64 would make it a third larger. Frames of 50 to 100 milliseconds are typical.
+      contentType: application/octet-stream
+      payload:
+        type: string
+        format: binary
+    keepalive:
+      summary: The software is still here, though it has sent no audio for a while.
+      description: Browser code can't send WebSocket pings, so a quiet connection is kept open with this.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            const: keepalive
+    finalize:
+      summary: Finish what's been said so far, and send it as final.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            const: finalize
+    end:
+      summary: The software has sent its last audio.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            const: end
+    result:
+      summary: What the service heard of one stretch of speech.
+      description: |
+        A result the service may still revise has isFinal false; a later result with the same id replaces it, and the one with isFinal true is what the transcript keeps.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+          - id
+          - isFinal
+          - startOffsetMs
+          - endOffsetMs
+          - alternatives
+        properties:
+          type:
+            const: result
+          id:
+            type: string
+            description: The stretch of speech it's about, unique within the connection; another connection may use it again. The relay assigns it; Google's results have none.
+          isFinal:
+            type: boolean
+            description: Whether the service will revise it again, as the Web Speech API names it.
+          startOffsetMs:
+            type: integer
+            minimum: 0
+            description: When the stretch began, in milliseconds from the start of the connection.
+          endOffsetMs:
+            type: integer
+            minimum: 0
+            description: When it ended, likewise.
+          channel:
+            type: integer
+            minimum: 0
+            description: The audio channel it was heard on, when the audio has more than one.
+          speaker:
+            type: string
+            description: The service's label for who spoke, e.g. `spk_0` — a string, as Google's and Gladia's are.
+          language:
+            $ref: ../../schemas/enums.yaml#/$defs/Language
+          alternatives:
+            type: array
+            minItems: 1
+            description: What the service thinks was said, most likely first, as the Web Speech API and Google list them.
+            items:
+              type: object
+              additionalProperties: false
+              required:
+                - transcript
+              properties:
+                transcript:
+                  type: string
+                confidence:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                words:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - word
+                      - startOffsetMs
+                      - endOffsetMs
+                    properties:
+                      word:
+                        type: string
+                      startOffsetMs:
+                        type: integer
+                        minimum: 0
+                      endOffsetMs:
+                        type: integer
+                        minimum: 0
+                      confidence:
+                        type: number
+                        minimum: 0
+                        maximum: 1
+                      speaker:
+                        type: string
+    ended:
+      summary: The relay has sent its last result; it closes the connection next.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            const: ended
+    error:
+      summary: Something went wrong; the relay closes the connection after it.
+      payload:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+          - code
+          - message
+        properties:
+          type:
+            const: error
+          code:
+            type: string
+            description: |
+              What went wrong, as the Web Speech API names errors where it has a name for one; bad-message is the blueprint's own.
+            enum:
+              - not-allowed
+              - language-not-supported
+              - network
+              - no-speech
+              - aborted
+              - bad-message
+          message:
+            type: string
+            description: What happened, for a person.

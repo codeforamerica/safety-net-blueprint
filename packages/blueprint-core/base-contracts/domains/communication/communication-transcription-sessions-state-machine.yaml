@@ -1,0 +1,414 @@
+# The lifecycle of a transcription session: the software's connection to its
+# transcription service, kept track of in the page. See
+# docs/architecture/domains/communication-transcripts.md, Decisions 14 to 17.
+#
+# The client talks only to the session, and every action sends an event,
+# which is how it follows it. The software must follow it:
+# the session can pause or close without the software asking, when its
+# transcript does, and the software then stops sending audio. An action that changes the
+# state leads to the state of the same name and sends the event of that name;
+# one that doesn't sends an event named for what happened.
+#
+# The session keeps nothing itself: its actions call the transcript's
+# operations on the server, by operationId, so routing carries the calls
+# there when the session runs in the page. It calls them as the caller, so
+# the server sees who is transcribing and checks their permissions. A new
+# transcript is started the first time the software asks how to stream, since
+# a create can only be guarded, and a reaction to the session's created event
+# would answer before the transcript existed. Steps are written in the actions, not as procedures,
+# because a procedure runs after an action's steps, not where it's called.
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: communication
+capability: transcripts
+machines:
+  - object: TranscriptionSession
+    states:
+      - id: created
+        slaClock: stopped
+        description: Started, not yet connecting.
+      - id: connecting
+        slaClock: stopped
+        description: The software has, or is getting, where to connect and a credential, and is opening the connection.
+      - id: connected
+        slaClock: stopped
+        description: Audio is going to the service and text is coming back.
+      - id: disconnected
+        slaClock: stopped
+        description: The connection dropped, and the software is trying again.
+      - id: paused
+        slaClock: stopped
+        description: Off the record. The connection is closed, so no audio leaves the page.
+      - id: stopping
+        slaClock: stopped
+        description: Stop was asked for; the last audio is sent and the last text is still coming.
+      - id: closed
+        slaClock: stopped
+        description: Done, and the transcript is closed. Terminal.
+      - id: failed
+        slaClock: stopped
+        description: The software gave up connecting or reconnecting. The transcript stays open; a new session can carry on under it. Terminal.
+    initialState: created
+    guards:
+      - id: transcriptOrStart
+        description: it names a transcript, or gives what to start one with — a profile, the client and when it started
+        condition: >-
+          has(request.transcriptId) ||
+          (has(request.profileId) && has(request.client) && has(request.startedAt))
+      - id: transcriptExists
+        description: the transcript it names exists
+        condition: '!has(request.transcriptId) || transcript != null'
+      - id: hasTranscript
+        description: the session has a transcript to carry on
+        condition: has(object.transcriptId)
+    emits:
+      - id: connecting
+        description: The software is getting where to connect and opening the connection.
+      - id: connected
+        description: The connection to the service is open.
+      - id: disconnected
+        description: The connection dropped; the software is trying again.
+      - id: paused
+        description: Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.
+      - id: stopping
+        description: Stop was asked for. The software sends the end of the audio and waits for the last text.
+      - id: closed
+        description: The session is done and the transcript closed. The software closes any connection still open, whoever closed it.
+      - id: failed
+        description: The software gave up connecting or reconnecting. The transcript is still open.
+      - id: line_updated
+        description: A line in progress, to show. Not kept.
+        schema:
+          type: object
+          required: [key, text, startedAt]
+          properties:
+            key: {type: string, description: The line's key, the same on every update and on the finished line.}
+            text: {type: string}
+            speaker: {type: string, description: Who's speaking, as the transcript's Speaker names it.}
+            startedAt: {type: string, format: date-time, description: When it began, by the client's clock.}
+      - id: line_added
+        description: A finished line was added to the transcript.
+        schema:
+          type: object
+          required: [key, entryId]
+          properties:
+            key: {type: string, description: The line's key, as the client gave it.}
+            entryId:
+              type: string
+              format: uuid
+              description: The transcript entry the line became.
+              x-relationship:
+                resource: TranscriptEntry
+    actions:
+      # How do I stream? The first time, with no transcript yet, it starts one.
+      - id: get-connection
+        description: Get where to connect and a short-lived credential, starting the transcript the first time.
+        transition:
+          from: [created, disconnected, connecting]
+          to: connecting
+        schema:
+          request:
+            $ref: "#/$defs/GetConnectionRequest"
+        steps:
+          # Steps run in order, so the transcript exists before the next call.
+          - if: '!has(object.transcriptId)'
+            then:
+              - call:
+                  operationId: createTranscript
+                  requestBody:
+                    payload:
+                      profileId: $object.profileId
+                      model: $object.model
+                      client: $object.client
+                      startedAt: $object.startedAt
+                      subjectType: $object.subjectType
+                      subjectId: $object.subjectId
+                runAs: caller
+                bind: $transcript
+              - set:
+                  field: transcriptId
+                  value: $transcript.id
+          - call:
+              operationId: getConnectionTranscript
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+              requestBody:
+                payload: {audio: $request.audio, protocols: $request.protocols}
+            runAs: caller
+            bind: $connection
+          - emit: connecting
+        response:
+          schema:
+            $ref: "#/$defs/StreamConnection"
+          payload: $connection
+      # Renewing doesn't drop the connection, so it's its own action, with no
+      # change to the session.
+      - id: renew-connection
+        description: Get a fresh credential while connected, with no change to the session.
+        transition:
+          from: connected
+        schema:
+          request:
+            $ref: "#/$defs/GetConnectionRequest"
+        steps:
+          - call:
+              operationId: getConnectionTranscript
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+              requestBody:
+                payload: {audio: $request.audio, protocols: $request.protocols}
+            runAs: caller
+            bind: $connection
+        response:
+          schema:
+            $ref: "#/$defs/StreamConnection"
+          payload: $connection
+      - id: connect
+        description: The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
+        transition:
+          from: connecting
+          to: connected
+        schema:
+          request:
+            $ref: "#/$defs/ConnectRequest"
+        steps:
+          - if: has(request.gap)
+            then:
+              - call:
+                  operationId: addTranscriptEntry
+                  parameters:
+                    - {name: transcriptId, in: path, value: $object.transcriptId}
+                    - {name: Idempotency-Key, in: header, value: "{$object.id}.gap.{$request.gap.startedAt}"}
+                  requestBody:
+                    payload:
+                      kind: gap
+                      startedAt: $request.gap.startedAt
+                      endedAt: $request.gap.endedAt
+                      cause: connection
+                runAs: caller
+          - emit: connected
+      - id: disconnect
+        description: The connection to the service dropped; the software will try again.
+        transition:
+          from: connected
+          to: disconnected
+        steps:
+          - emit: disconnected
+      - id: update-line
+        description: A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.
+        transition:
+          from: [connected, stopping]
+        schema:
+          request:
+            $ref: "#/$defs/LineInProgress"
+        steps:
+          - emit:
+              event: line_updated
+              data:
+                key: $request.key
+                text: $request.text
+                speaker: $request.speaker
+                startedAt: $request.startedAt
+      - id: add-line
+        description: A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.
+        transition:
+          from: [connected, paused, stopping]
+        schema:
+          request:
+            $ref: "#/$defs/FinishedLine"
+        steps:
+          - call:
+              operationId: addTranscriptEntry
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+                - {name: Idempotency-Key, in: header, value: "{$object.id}.line.{$request.key}"}
+              requestBody:
+                payload:
+                  kind: line
+                  startedAt: $request.startedAt
+                  endedAt: $request.endedAt
+                  text: $request.text
+                  speaker: $request.speaker
+                  speakerLabel: $request.speakerLabel
+                  confidence: $request.confidence
+                  language: $request.language
+            runAs: caller
+            bind: $entry
+          - emit:
+              event: line_added
+              data:
+                key: $request.key
+                entryId: $entry.id
+      - id: pause
+        description: Take the conversation off the record. The transcript keeps the pause; the software closes the connection.
+        transition:
+          from: connected
+          to: paused
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        steps:
+          - call:
+              operationId: pauseTranscript
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+              requestBody:
+                payload: {at: $request.at}
+            runAs: caller
+          - emit: paused
+      - id: resume
+        description: Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.
+        transition:
+          from: [created, paused]
+          to: connecting
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        guards:
+          - conditions: [hasTranscript]
+        steps:
+          - call:
+              operationId: resumeTranscript
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+              requestBody:
+                payload: {at: $request.at}
+            runAs: caller
+          - emit: connecting
+      # From any state with a session to finish. With a connection open, the
+      # software sends the end of the audio and waits for the last text; with
+      # none, it calls close straight away.
+      - id: stop
+        description: Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.
+        transition:
+          from: [connected, paused, disconnected]
+          to: stopping
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        steps:
+          - emit: stopping
+      - id: close
+        description: The last text is in and the connection is closed; the transcript closes.
+        transition:
+          from: stopping
+          to: closed
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        steps:
+          - call:
+              operationId: closeTranscript
+              parameters:
+                - {name: transcriptId, in: path, value: $object.transcriptId}
+              requestBody:
+                payload: {at: $request.at}
+            runAs: caller
+          - emit: closed
+      # From connecting too, as WebRTC goes from connecting to failed: a
+      # connection that won't open lands there.
+      - id: fail
+        description: The software gave up connecting or reconnecting. The transcript stays open.
+        transition:
+          from: [connecting, disconnected]
+          to: failed
+        steps:
+          - emit: failed
+    # The transcript can be paused or closed by someone else, or close itself
+    # when idle. The session follows — found through its transcriptId — so the
+    # software stops sending audio. Resuming isn't followed: only the software
+    # that's capturing the audio starts sending it again.
+    on:
+      - type: communication.transcript.paused
+        description: Follow the transcript off the record.
+        transition:
+          from: [connecting, connected, disconnected]
+          to: paused
+        steps:
+          - emit: paused
+      - type: communication.transcript.closed
+        description: Follow the transcript closed.
+        transition:
+          from: [connecting, connected, disconnected, paused, stopping]
+          to: closed
+        steps:
+          - emit: closed
+    resources:
+      TranscriptionSession:
+        create:
+          context:
+            - transcript:
+                from: communication/transcripts
+                where: has(request.transcriptId) && item.id == request.transcriptId
+          guards:
+            - conditions: [transcriptOrStart, transcriptExists]
+
+$defs:
+  GetConnectionRequest:
+    $ref: "./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest"
+  StreamConnection:
+    $ref: "./communication-transcripts-schema.yaml#/$defs/StreamConnection"
+  AtRequest:
+    type: object
+    additionalProperties: false
+    required: [at]
+    properties:
+      at:
+        type: string
+        format: date-time
+        description: When it happened, by the client's clock.
+  ConnectRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      gap:
+        type: object
+        additionalProperties: false
+        required: [startedAt, endedAt]
+        description: >-
+          The stretch nothing was captured in, by the client's clock, recorded
+          on the transcript as a gap. Send it after a reconnect, from when the
+          connection dropped. Send it too when a new session carries on a
+          transcript that's still recording, from the transcript's
+          lastActivityAt to now.
+        properties:
+          startedAt: {type: string, format: date-time}
+          endedAt: {type: string, format: date-time}
+  LineInProgress:
+    type: object
+    additionalProperties: false
+    required: [key, text, startedAt]
+    properties:
+      key:
+        type: string
+        maxLength: 255
+        description: >-
+          The line's key, the same on every update and on the finished line,
+          and unique within the session. A service's own result id is unique
+          only within one connection, so the client makes it unique across
+          reconnects, for example by putting the connection's number in front.
+      text: {type: string}
+      speaker:
+        $ref: "./communication-transcripts-openapi.yaml#/components/schemas/Speaker"
+      startedAt: {type: string, format: date-time, description: When it began, by the client's clock.}
+  FinishedLine:
+    type: object
+    additionalProperties: false
+    required: [key, startedAt, endedAt, text, speaker]
+    properties:
+      key:
+        type: string
+        maxLength: 255
+        description: >-
+          The line's key, as on its updates. The entry's Idempotency-Key is
+          made from the session's id and this key, so a retry adds the line
+          once and no other line is refused for it.
+      startedAt: {type: string, format: date-time, description: When it began, by the client's clock.}
+      endedAt: {type: string, format: date-time, description: When it ended.}
+      text: {type: string, minLength: 1}
+      speaker:
+        $ref: "./communication-transcripts-openapi.yaml#/components/schemas/Speaker"
+      speakerLabel: {type: string}
+      confidence: {type: number, minimum: 0, maximum: 1}
+      language:
+        $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"

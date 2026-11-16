@@ -45,10 +45,11 @@ const refuse = (status, message, details) => ({
  *
  * @param {object} suggestion - As proposed
  * @param {Map} operations - From operationsOf
+ * @param {object} instance - The mock it's proposed to (instance.js)
  * @returns {Promise<{ refused?: { status: number, body: object }, created: Set<string> }>}
  *   `created`: the ids of records the patch creates, for its fingerprint
  */
-export async function checkProposedPatch(suggestion, operations = operationsOf([])) {
+export async function checkProposedPatch(suggestion, operations = operationsOf([]), instance) {
   const created = new Set();
   const call = suggestion?.kind === 'operation' ? suggestion.call : null;
   const cited = (suggestion?.evidence ?? []).map((entry, i) => ({ entry, i })).filter(({ entry }) => entry.path !== undefined);
@@ -64,7 +65,7 @@ export async function checkProposedPatch(suggestion, operations = operationsOf([
   const patch = call.requestBody.payload;
   const field = (i, rest = '') => `call.requestBody.payload[${i}]${rest}`;
   const params = Object.fromEntries((call.parameters ?? []).filter((p) => p.in === 'path').map((p) => [p.name, p.value]));
-  const preview = await previewPatch(call.operationId, params, patch);
+  const preview = await previewPatch(instance, call.operationId, params, patch);
   if (!preview) return { created };
   if (preview.refused) {
     const { status, body } = preview.refused;
@@ -87,7 +88,7 @@ export async function checkProposedPatch(suggestion, operations = operationsOf([
   // Each change, as the ordinary call it becomes, fits its operation, checked
   // the way any suggestion's call is. The operation itself isn't run.
   const changeAt = (step) => Math.max(patch.findIndex((change) => change.path === step.path || change.path.startsWith(`${step.path}/`)), 0);
-  const unfit = preview.steps.flatMap((step) => callProblems({ field: '', call: step.call }, operations)
+  const unfit = preview.steps.flatMap((step) => callProblems({ field: '', call: step.call }, operations, instance.schemas)
     .map((problem) => ({ field: field(changeAt(step)), message: `${step.call.operationId}: ${problem.field} ${problem.message}` })));
   if (unfit.length > 0) {
     return { ...refuse(422, "A change doesn't fit what its record's operation accepts.", unfit), created };
@@ -106,7 +107,7 @@ export async function checkProposedPatch(suggestion, operations = operationsOf([
   for (const step of preview.steps.filter((s) => s.kind !== 'remove')) {
     const schema = step.operation.requestSchema;
     if (!schema) continue;
-    for (const problem of missingReferences(step.body, schema, step.operation.follow, store)) {
+    for (const problem of missingReferences(step.body, schema, step.operation.follow, store, { instance })) {
       missing.push({ field: field(changeAt(step)), message: problem.message });
     }
   }

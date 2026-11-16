@@ -12,6 +12,11 @@ const __dirname = dirname(__filename);
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
+    it('takes the HTTP client, axios unless given', () => {
+      assert.strictEqual(parseArgs([]).httpClient, 'axios');
+      assert.strictEqual(parseArgs(['--http-client=fetch']).httpClient, 'fetch');
+    });
+
     it('should parse spec parameter', () => {
       const result = parseArgs(['--spec=./resolved']);
 
@@ -122,6 +127,13 @@ describe('Client Generation', () => {
       const config = createOpenApiTsConfig('./input.yaml', './output');
 
       assert(config.includes("name: '@hey-api/client-axios'"));
+    });
+
+    it('should use the fetch client plugin when asked', () => {
+      const config = createOpenApiTsConfig('./input.yaml', './output', 'fetch');
+
+      assert(config.includes("name: '@hey-api/client-fetch'"));
+      assert(!config.includes('client-axios'));
     });
 
     it('should configure date handling', () => {

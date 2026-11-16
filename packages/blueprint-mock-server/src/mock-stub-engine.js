@@ -13,36 +13,25 @@
  *   is not needed; the callback type and data come from the event itself.
  *
  * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs/events.
+ * Each mock has its own (instance.js), so a stub registered on one never
+ * answers another in the same page or process.
  *
  * See docs/guides/mock-server.md for usage patterns.
  */
 
 import { emitEventEnvelope } from './emit-event.js';
-import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
 import { resolveDotPath, toCamelCase } from './collection-utils.js';
 import { assertValid, dotted } from './mock-schemas.js';
 import schema from '../schemas/stubs-schema.json' with { type: 'json' };
 
-/** Ordered list of registered event stubs. */
-const stubs = [];
-
-/** Ordered list of registered HTTP stubs. */
-const httpStubs = [];
-
-/** Per-event-suffix counters for generating human-readable IDs. */
-const idCounters = new Map();
-
 const TIMER_REQUESTED = 'platform.timer.requested';
-
-/** Per-URL-segment counters for generating human-readable HTTP stub IDs. */
-const httpIdCounters = new Map();
 
 /**
  * Derive a human-readable HTTP stub ID from the match URL.
  * "/evaluate/expedited-screening" → "http.expedited-screening-1"
  */
-function nextHttpId(url) {
+function nextHttpId(httpIdCounters, url) {
   const parts = url.replace(/^\/+|\/+$/g, '').split('/');
   const suffix = parts[parts.length - 1] || 'request';
   const key = `http.${suffix}`;
@@ -55,7 +44,7 @@ function nextHttpId(url) {
  * Derive a human-readable stub ID from the `on` event type.
  * "data-exchange.external_service_call.created" → "external_service_call.created-1"
  */
-function nextId(on) {
+function nextId(idCounters, on) {
   const parts = (on || '').split('.');
   const prefix = parts.slice(-2).join('.');
   const n = (idCounters.get(prefix) ?? 0) + 1;
@@ -87,152 +76,175 @@ function matchCriteria(stub, envelope) {
 }
 
 /**
- * Register a stub. Returns the stored stub with its assigned ID.
- *
- * @param {Object} stub
- * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data-exchange.external_service_call.created")
- * @param {Object} [stub.match]  - Dot-path field matchers against the event envelope
- * @param {Object} [stub.response] - Event to fire when matched: { type, subject?, source?, data? }.
- *   Omit for platform.timer.requested stubs — the callback is read from the event.
- * @returns {Object} The registered stub with id assigned
+ * One mock's stubs, event and HTTP, each in the order they were registered.
  */
-export function registerStub(stub) {
-  // Checked against the schema rather than spread in as it comes. An
-  // unrecognised key used to be kept and silently do nothing, which is how a
-  // stub could register, list, and then never fire.
-  assertValid(schema.definitions.EventStub, stub, (pointer) => ['Event stub', dotted(pointer)]);
-  const registered = { ...stub, id: nextId(stub.on) };
-  stubs.push(registered);
-  return registered;
-}
+export function createStubs() {
+  /** Ordered list of registered event stubs. */
+  const stubs = [];
 
-/**
- * Scan stubs in registration order, find and remove the first one that
- * matches the given event type and envelope fields.
- *
- * @param {string} eventType  - Full CloudEvents type of the triggering event
- * @param {Object} envelope   - The full event envelope (for match field resolution)
- * @returns {Object|null} The matched stub, or null if none matched
- */
-export function matchAndPop(eventType, envelope) {
-  const idx = stubs.findIndex(s => onMatches(eventType, s.on) && matchCriteria(s, envelope));
-  if (idx === -1) return null;
-  return stubs.splice(idx, 1)[0];
-}
+  /** Ordered list of registered HTTP stubs. */
+  const httpStubs = [];
 
-/**
- * Resolve a stub's effective match URL.
- * If `domain` is set, the effective URL is `/<domain><url>` (e.g., `/eligibility-adapter/evaluate/expedited-screening`).
- * Otherwise `url` is matched as-is against the full request path.
- */
-function resolveStubUrl(stub) {
-  const { url, domain } = stub.match;
-  return domain ? `/${domain}${url}` : url;
-}
+  /** Per-event-suffix counters for generating human-readable IDs. */
+  const idCounters = new Map();
 
-/**
- * Register an HTTP stub. Returns the stored stub with its assigned ID.
- *
- * @param {Object} stub
- * @param {Object} stub.match            - { method?, url, domain? }
- * @param {string} stub.match.url        - Path to match. With `domain`, this is relative to the domain
- *   (e.g., "/evaluate/expedited-screening"). Without `domain`, it is the full request path
- *   (e.g., "/eligibility-adapter/evaluate/expedited-screening").
- * @param {string} [stub.match.domain]   - Domain prefix (e.g., "eligibility-adapter"). When set, the
- *   effective match path is `/<domain><url>`, scoping the stub to a specific API domain.
- * @param {string} [stub.match.method]   - HTTP method (e.g., "POST"); omit to match any method
- * @param {Object} [stub.response]       - { status?, body? } — status defaults to 200. Optional:
- *   a stub intercepting a procedure's create only needs to match, and its response is never read.
- * @returns {Object} The registered stub with id and type assigned
- */
-export function registerHttpStub(stub) {
-  assertValid(schema.definitions.HttpStub, stub, (pointer) => ['HTTP stub', dotted(pointer)]);
-  const registered = { ...stub, type: 'http', id: nextHttpId(stub.match.url) };
-  httpStubs.push(registered);
-  return registered;
-}
+  /** Per-URL-segment counters for generating human-readable HTTP stub IDs. */
+  const httpIdCounters = new Map();
 
-/**
- * Scan HTTP stubs in registration order, find and remove the first one that
- * matches the given method and full request path.
- *
- * A stub matches when:
- *   - method matches (or stub has no method restriction)
- *   - effective stub URL matches `requestPath`:
- *       - if stub has `domain`: `/<domain><url>` must equal `requestPath`
- *       - otherwise: `url` must equal `requestPath`
- *
- * @param {string} method       - HTTP method (e.g., "POST")
- * @param {string} requestPath  - Full request path (e.g., "/eligibility-adapter/evaluate/expedited-screening")
- * @returns {Object|null} The matched stub, or null if none matched
- */
-export function matchAndPopHttp(method, requestPath) {
-  const idx = httpStubs.findIndex(s => {
-    const methodMatch = !s.match.method || s.match.method.toUpperCase() === method.toUpperCase();
-    return methodMatch && resolveStubUrl(s) === requestPath;
-  });
-  if (idx === -1) return null;
-  return httpStubs.splice(idx, 1)[0];
-}
+  /**
+   * Register a stub. Returns the stored stub with its assigned ID.
+   *
+   * @param {Object} stub
+   * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data-exchange.external_service_call.created")
+   * @param {Object} [stub.match]  - Dot-path field matchers against the event envelope
+   * @param {Object} [stub.response] - Event to fire when matched: { type, subject?, source?, data? }.
+   *   Omit for platform.timer.requested stubs — the callback is read from the event.
+   * @returns {Object} The registered stub with id assigned
+   */
+  function registerStub(stub) {
+    // Checked against the schema rather than spread in as it comes. An
+    // unrecognised key used to be kept and silently do nothing, which is how a
+    // stub could register, list, and then never fire.
+    assertValid(schema.definitions.EventStub, stub, (pointer) => ['Event stub', dotted(pointer)]);
+    const registered = { ...stub, id: nextId(idCounters, stub.on) };
+    stubs.push(registered);
+    return registered;
+  }
 
-/**
- * Return a snapshot of registered event stubs.
- */
-export function listStubs() {
-  return [...stubs];
-}
+  /**
+   * Scan stubs in registration order, find and remove the first one that
+   * matches the given event type and envelope fields.
+   *
+   * @param {string} eventType  - Full CloudEvents type of the triggering event
+   * @param {Object} envelope   - The full event envelope (for match field resolution)
+   * @returns {Object|null} The matched stub, or null if none matched
+   */
+  function matchAndPop(eventType, envelope) {
+    const idx = stubs.findIndex(s => onMatches(eventType, s.on) && matchCriteria(s, envelope));
+    if (idx === -1) return null;
+    return stubs.splice(idx, 1)[0];
+  }
 
-/**
- * Return a snapshot of registered HTTP stubs.
- */
-export function listHttpStubs() {
-  return [...httpStubs];
-}
+  /**
+   * Resolve a stub's effective match URL.
+   * If `domain` is set, the effective URL is `/<domain><url>` (e.g., `/eligibility-adapter/evaluate/expedited-screening`).
+   * Otherwise `url` is matched as-is against the full request path.
+   */
+  function resolveStubUrl(stub) {
+    const { url, domain } = stub.match;
+    return domain ? `/${domain}${url}` : url;
+  }
 
-/**
- * Remove a specific stub by ID (searches event registry only).
- * @returns {boolean} true if found and removed, false if not found
- */
-export function removeStub(id) {
-  const idx = stubs.findIndex(s => s.id === id);
-  if (idx !== -1) { stubs.splice(idx, 1); return true; }
-  return false;
-}
+  /**
+   * Register an HTTP stub. Returns the stored stub with its assigned ID.
+   *
+   * @param {Object} stub
+   * @param {Object} stub.match            - { method?, url, domain? }
+   * @param {string} stub.match.url        - Path to match. With `domain`, this is relative to the domain
+   *   (e.g., "/evaluate/expedited-screening"). Without `domain`, it is the full request path
+   *   (e.g., "/eligibility-adapter/evaluate/expedited-screening").
+   * @param {string} [stub.match.domain]   - Domain prefix (e.g., "eligibility-adapter"). When set, the
+   *   effective match path is `/<domain><url>`, scoping the stub to a specific API domain.
+   * @param {string} [stub.match.method]   - HTTP method (e.g., "POST"); omit to match any method
+   * @param {Object} [stub.response]       - { status?, body? } — status defaults to 200. Optional:
+   *   a stub intercepting a procedure's create only needs to match, and its response is never read.
+   * @returns {Object} The registered stub with id and type assigned
+   */
+  function registerHttpStub(stub) {
+    assertValid(schema.definitions.HttpStub, stub, (pointer) => ['HTTP stub', dotted(pointer)]);
+    const registered = { ...stub, type: 'http', id: nextHttpId(httpIdCounters, stub.match.url) };
+    httpStubs.push(registered);
+    return registered;
+  }
 
-/**
- * Remove a specific HTTP stub by ID.
- * @returns {boolean} true if found and removed, false if not found
- */
-export function removeHttpStub(id) {
-  const idx = httpStubs.findIndex(s => s.id === id);
-  if (idx !== -1) { httpStubs.splice(idx, 1); return true; }
-  return false;
-}
+  /**
+   * Scan HTTP stubs in registration order, find and remove the first one that
+   * matches the given method and full request path.
+   *
+   * A stub matches when:
+   *   - method matches (or stub has no method restriction)
+   *   - effective stub URL matches `requestPath`:
+   *       - if stub has `domain`: `/<domain><url>` must equal `requestPath`
+   *       - otherwise: `url` must equal `requestPath`
+   *
+   * @param {string} method       - HTTP method (e.g., "POST")
+   * @param {string} requestPath  - Full request path (e.g., "/eligibility-adapter/evaluate/expedited-screening")
+   * @returns {Object|null} The matched stub, or null if none matched
+   */
+  function matchAndPopHttp(method, requestPath) {
+    const idx = httpStubs.findIndex(s => {
+      const methodMatch = !s.match.method || s.match.method.toUpperCase() === method.toUpperCase();
+      return methodMatch && resolveStubUrl(s) === requestPath;
+    });
+    if (idx === -1) return null;
+    return httpStubs.splice(idx, 1)[0];
+  }
 
-/**
- * Remove all registered event stubs and reset event ID counters.
- */
-export function clearStubs() {
-  stubs.length = 0;
-  idCounters.clear();
-}
+  /**
+   * Return a snapshot of registered event stubs.
+   */
+  function listStubs() {
+    return [...stubs];
+  }
 
-/**
- * Remove all registered HTTP stubs and reset HTTP ID counters.
- */
-export function clearHttpStubs() {
-  httpStubs.length = 0;
-  httpIdCounters.clear();
-}
+  /**
+   * Return a snapshot of registered HTTP stubs.
+   */
+  function listHttpStubs() {
+    return [...httpStubs];
+  }
 
-/**
- * Remove all registered stubs (both event and HTTP). Used by mock/reset.
- */
-export function clearAllStubs() {
-  stubs.length = 0;
-  httpStubs.length = 0;
-  idCounters.clear();
-  httpIdCounters.clear();
+  /**
+   * Remove a specific stub by ID (searches event registry only).
+   * @returns {boolean} true if found and removed, false if not found
+   */
+  function removeStub(id) {
+    const idx = stubs.findIndex(s => s.id === id);
+    if (idx !== -1) { stubs.splice(idx, 1); return true; }
+    return false;
+  }
+
+  /**
+   * Remove a specific HTTP stub by ID.
+   * @returns {boolean} true if found and removed, false if not found
+   */
+  function removeHttpStub(id) {
+    const idx = httpStubs.findIndex(s => s.id === id);
+    if (idx !== -1) { httpStubs.splice(idx, 1); return true; }
+    return false;
+  }
+
+  /**
+   * Remove all registered event stubs and reset event ID counters.
+   */
+  function clearStubs() {
+    stubs.length = 0;
+    idCounters.clear();
+  }
+
+  /**
+   * Remove all registered HTTP stubs and reset HTTP ID counters.
+   */
+  function clearHttpStubs() {
+    httpStubs.length = 0;
+    httpIdCounters.clear();
+  }
+
+  /**
+   * Remove all registered stubs (both event and HTTP). Used by mock/reset.
+   */
+  function clearAllStubs() {
+    stubs.length = 0;
+    httpStubs.length = 0;
+    idCounters.clear();
+    httpIdCounters.clear();
+  }
+
+  return {
+    registerStub, matchAndPop, registerHttpStub, matchAndPopHttp,
+    listStubs, listHttpStubs, removeStub, removeHttpStub,
+    clearStubs, clearHttpStubs, clearAllStubs,
+  };
 }
 
 /**
@@ -244,7 +256,7 @@ export function clearAllStubs() {
  * For all other events: fires the stub's response event, merging trigger
  * data with stub-specified overrides.
  */
-function dispatchStubResponse(stub, envelope, store) {
+function dispatchStubResponse(stub, envelope, instance) {
   const eventType = envelope.type || '';
 
   if (eventType === TIMER_REQUESTED) {
@@ -266,7 +278,7 @@ function dispatchStubResponse(stub, envelope, store) {
       traceparent: envelope.traceparent,
       causationid: envelope.id,
       data: firedData,
-    }, store);
+    }, instance);
     console.log(`[stub] matched ${stub.id} → fired ${callbackEvent} (timer callback)`);
     return;
   }
@@ -300,41 +312,25 @@ function dispatchStubResponse(stub, envelope, store) {
     traceparent: envelope.traceparent,
     causationid: envelope.id,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
-  }, store);
+  }, instance);
   console.log(`[stub] matched ${stub.id} → fired ${fullType}`);
 }
 
 /**
- * Start dispatching stub responses for domain events.
+ * Start dispatching a mock's stub responses for its domain events.
  *
  * Called at startup rather than subscribed on import, because dispatching a
  * stub emits an event and emitting writes through a store — so the listener
- * needs one, and a module-load side effect has nothing to be given. Making it
- * explicit also means importing this module no longer attaches a listener as a
- * side effect of being imported, which is what let a stray `import` change
- * behaviour.
+ * needs one, and a module-load side effect has nothing to be given.
  *
- * @param {import('./stores/contract.js').Store} store
+ * @param {object} instance - The mock (instance.js): its stubs answer events on its bus
  * @returns {() => void} Unsubscribe, for tests that need a clean bus.
  */
-let stubDispatchListener = null;
-
-export function subscribeStubDispatch(store) {
-  // Idempotent, because startMockServer can run more than once in a process —
-  // the test runner does it per suite. Subscribing again would leave two
-  // listeners on the bus, and a single event would then pop two stubs, which
-  // is how the FIFO integration test caught this. The previous module-load
-  // subscription was immune by accident; an explicit one has to say so.
-  if (stubDispatchListener) eventBus.off('domain-event', stubDispatchListener);
-
-  stubDispatchListener = (envelope) => {
-    const stub = matchAndPop(envelope.type, envelope);
-    if (stub) dispatchStubResponse(stub, envelope, store);
+export function subscribeStubDispatch(instance) {
+  const listener = (envelope) => {
+    const stub = instance.stubs.matchAndPop(envelope.type, envelope);
+    if (stub) dispatchStubResponse(stub, envelope, instance);
   };
-  eventBus.on('domain-event', stubDispatchListener);
-
-  return () => {
-    eventBus.off('domain-event', stubDispatchListener);
-    stubDispatchListener = null;
-  };
+  instance.bus.on('domain-event', listener);
+  return () => instance.bus.off('domain-event', listener);
 }

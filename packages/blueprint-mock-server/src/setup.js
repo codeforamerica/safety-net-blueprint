@@ -8,7 +8,7 @@ import { discoverApiSpecs } from './spec-discovery.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
-import { initSchemaRegistry } from './validator.js';
+import { createInstance, loadContracts } from './instance.js';
 import { seedConfigs } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
@@ -18,9 +18,11 @@ import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
  * @param {string} options.specsDir - Path to specs directory (required)
  * @param {boolean} options.verbose - Show detailed output
  * @param {boolean} options.skipValidation - Skip validation step
- * @returns {Promise<Object>} Setup result with apiSpecs and summary
+ * @param {Object} [options.instance] - The mock being set up (instance.js);
+ *   one is made for `store` when it isn't given
+ * @returns {Promise<Object>} Setup result with apiSpecs, summary and the instance
  */
-export async function performSetup({ specsDir, seedDir, docs: providedDocs = null, verbose = true, skipValidation = false, store } = {}) {
+export async function performSetup({ specsDir, seedDir, docs: providedDocs = null, verbose = true, skipValidation = false, store, instance = createInstance({ store }) } = {}) {
   // Documents can arrive already loaded — from a contracts artifact, which is
   // a contract set someone else already walked and parsed (#448). Everything
   // after this point reads `docs` and cannot tell the difference.
@@ -54,12 +56,12 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     ...(seedDir && seedDir !== specsDir ? discover(seedDir) : []),
   ].map(load);
 
-  // Hand the request validator the set before any route is registered, so a
-  // schema that still carries $refs can be resolved against it.
-  initSchemaRegistry(docs);
-
   // From the documents already loaded, not a second walk of the same tree.
   const apiSpecs = apiSpecsFromDocs(docs);
+
+  // Hand the request validator the set before any route is registered, so a
+  // schema that still carries $refs can be resolved against it.
+  loadContracts(instance, { docs, apiSpecs });
 
   if (apiSpecs.length === 0) {
     throw new Error('No OpenAPI specifications found in specs directory');
@@ -158,7 +160,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
-  seedConfigs(configs, store, { verbose });
+  seedConfigs(configs, instance, { verbose });
 
   // Registries are served from the contracts, not stored: every type, every
   // file of it combined. Read here so a duplicate entry id fails at boot.
@@ -180,7 +182,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     }
   }
 
-  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries, summary };
+  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries, summary, instance };
 }
 
 

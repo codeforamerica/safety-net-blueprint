@@ -1,34 +1,51 @@
 {
   "$id": "https://blueprint.codeforamerica.org/schemas/stubs-schema.json",
   "title": "Mock stubs",
-  "description": "Per-test overrides registered at runtime. An event stub answers a domain event with another event; an HTTP stub intercepts a request. Each is consumed by the first thing it matches.",
+  "description": "Per-test overrides registered at runtime. An event stub answers a domain event with another event; an HTTP stub intercepts a request; a WebSocket stub answers a message on a WebSocket an AsyncAPI document describes. Each is consumed by the first thing it matches.",
   "definitions": {
     "EventStub": {
       "description": "Registered at POST /mock/stubs/events.",
       "type": "object",
-      "required": ["on"],
+      "required": [
+        "on"
+      ],
       "additionalProperties": false,
       "properties": {
         "on": {
           "description": "The CloudEvents type of the event to answer.",
           "type": "string",
           "minLength": 1,
-          "examples": ["data-exchange.external_service_call.created"]
+          "examples": [
+            "data-exchange.external_service_call.created"
+          ]
         },
         "match": {
           "description": "Dot paths into the triggering event's envelope, each with the value it must equal. Omitted or empty matches any event of that type.",
           "type": "object",
-          "examples": [{ "data.serviceType": "fdsh_ssa" }]
+          "examples": [
+            {
+              "data.serviceType": "fdsh_ssa"
+            }
+          ]
         },
         "response": {
           "description": "The event to emit when this stub matches. Omit for platform.timer.requested, which emits the callback the timer request carries.",
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "type": "string", "minLength": 1 },
-            "subject": { "type": "string" },
-            "source": { "type": "string" },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
             "data": {
               "description": "Merged over the triggering event's data. Time tokens are resolved."
             }
@@ -39,12 +56,16 @@
     "HttpStub": {
       "description": "Registered at POST /mock/stubs/http.",
       "type": "object",
-      "required": ["match"],
+      "required": [
+        "match"
+      ],
       "additionalProperties": false,
       "properties": {
         "match": {
           "type": "object",
-          "required": ["url"],
+          "required": [
+            "url"
+          ],
           "additionalProperties": false,
           "properties": {
             "url": {
@@ -69,9 +90,114 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+            "status": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599
+            },
             "body": {}
           }
+        }
+      }
+    },
+    "WsStub": {
+      "description": "Registered at POST /mock/stubs/ws.",
+      "type": "object",
+      "required": [
+        "channel",
+        "on"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "description": "The AsyncAPI document and its channel, by the document's file name and a JSON Pointer to the channel.",
+          "type": "string",
+          "pattern": "^[^#]+#/channels/.+$",
+          "examples": [
+            "communication-transcripts-relay-asyncapi.yaml#/channels/audio"
+          ]
+        },
+        "on": {
+          "description": "The message to answer, by its name in the channel: one the mock receives there.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "start"
+          ]
+        },
+        "match": {
+          "description": "Dot paths into the message's JSON payload, each with the value it must equal. Omitted or empty matches any such message.",
+          "type": "object"
+        },
+        "send": {
+          "description": "The messages to send back, in order, each one the contract lets the mock send on the channel. Omitted or empty sends nothing.",
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "examples": [
+            [
+              {
+                "type": "started"
+              }
+            ]
+          ]
+        },
+        "atMs": {
+          "description": "When to send each message in send, in milliseconds from when the stub matched, one per message and none earlier than the one before it. Omitted sends them all at once. Each stub keeps its own time, so two stubs sending on one connection at once interleave their messages.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "examples": [
+            [
+              0,
+              2000,
+              3500
+            ]
+          ]
+        },
+        "protocols": {
+          "description": "Subprotocols the connection must have offered for this stub to match, such as a token sent beside the subprotocol's name. Omitted matches any connection.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            [
+              "blueprint.transcripts.relay.v1",
+              "expired-token"
+            ]
+          ]
+        },
+        "close": {
+          "description": "Close the connection after sending, with this code: 1006 for a connection that drops, 1008 for one refused. Omitted leaves it open.",
+          "type": "object",
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 4999
+            },
+            "reason": {
+              "type": "string"
+            },
+            "atMs": {
+              "description": "When to close, in milliseconds from when the stub matched, no earlier than the last message. Omitted closes right after the last message.",
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "examples": [
+            {
+              "code": 1006
+            }
+          ]
         }
       }
     }

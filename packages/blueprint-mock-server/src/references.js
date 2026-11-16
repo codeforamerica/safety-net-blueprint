@@ -19,37 +19,27 @@
  */
 
 import { propertiesOf, resourceToCollection, extractExpandFields } from './handlers/expand-utils.js';
+import { resourceIndex } from './spec-loader.js';
 
 const NOTHING_TO_FIND = new Set(['External', 'Polymorphic']);
 
 /**
- * The route each collection's records are read from, so a check can tell
- * whether that route still answers here or has been routed elsewhere. Module-level
- * like `collectionsByResource`, and cleared by each server as it starts.
+ * Note where a collection's records are read, as its GET route is registered,
+ * so a check can tell whether that route still answers in this mock or has
+ * been routed elsewhere (`instance.readRoutes`).
  *
- * @type {Map<string, { routes: { get(key: string): object|undefined }, key: string }>}
- */
-const readRoutes = new Map();
-
-/** Forget every collection, as a server starts registering its own. */
-export function clearReadRoutes() {
-  readRoutes.clear();
-}
-
-/**
- * Note where a collection's records are read, as its GET route is registered.
- *
+ * @param {object} instance - The mock (instance.js)
  * @param {string} collection
  * @param {{ get(key: string): object|undefined }} routes
  * @param {string} key - Route key, e.g. `GET /applications/{applicationId}/members/{memberId}`
  */
-export function registerReadRoute(collection, routes, key) {
-  readRoutes.set(collection, { routes, key });
+export function registerReadRoute(instance, collection, routes, key) {
+  instance.readRoutes.set(collection, { routes, key });
 }
 
 /** Whether this mock holds a collection's records, rather than a real service. */
-export function heldHere(collection) {
-  const read = readRoutes.get(collection);
+export function heldHere(instance, collection) {
+  const read = instance.readRoutes.get(collection);
   if (!read) return false;
   return !read.routes.get(read.key)?.routed;
 }
@@ -130,6 +120,7 @@ export function parentsOf(resource, params) {
  * @param {object[]} [context.resources] - The API model's resources, to find what a record is nested under
  * @param {Object<string, object>} [context.schemas] - The API's schemas, by name
  * @param {string} [context.at] - Where in the body this is, for the field it names
+ * @param {object} context.instance - The mock the write is to (instance.js): which records it holds
  * @returns {Array<{ field: string, message: string }>} Details for a 422, empty when every id is found
  */
 export function missingReferences(body, schema, follow = (x) => x, store, context = {}) {
@@ -152,8 +143,8 @@ export function missingReferences(body, schema, follow = (x) => x, store, contex
         missing.push(...missingReferences(value, definition, follow, store, { ...context, at: field }));
         continue;
       }
-      const collection = resourceToCollection(resource);
-      if (!heldHere(collection)) continue;
+      const collection = resourceToCollection(resource, context.instance.resources);
+      if (!heldHere(context.instance, collection)) continue;
       const record = store.findById(collection, value);
       if (!record) {
         missing.push({ field, message: `No ${resource} has the id "${value}".` });
@@ -220,9 +211,10 @@ function otherParent(record, resource, follow, { parents = {}, resources = [], s
  * it's indexed once for each, matched on that value too.
  *
  * @param {object[]} apiSpecs
+ * @param {object} [resources] - Where each resource is kept (spec-loader.js `resourceIndex`)
  * @returns {Map<string, Array<{ resource: object, api: object, collection: string, path: string[], typeField: string|null, typeValue: *, onDelete: string|null }>>}
  */
-export function referencesByTarget(apiSpecs) {
+export function referencesByTarget(apiSpecs, resources = resourceIndex(apiSpecs)) {
   const byTarget = new Map();
   const seen = new Set();
   const add = (named, entry) => {
@@ -237,7 +229,7 @@ export function referencesByTarget(apiSpecs) {
       for (const resource of [top, ...top.singletons]) {
         const schema = resource.name ? api.doc.content?.components?.schemas?.[resource.name] : null;
         if (!schema) continue;
-        const collection = resourceToCollection(resource.name);
+        const collection = resourceToCollection(resource.name, resources);
         // An expanded relationship is read under another name; its id is kept under the original.
         const stored = new Map(extractExpandFields(schema, follow).map((f) => [f.fieldName, f.fkField]));
         for (const { path, definition, siblings } of referenceFields(schema, follow)) {

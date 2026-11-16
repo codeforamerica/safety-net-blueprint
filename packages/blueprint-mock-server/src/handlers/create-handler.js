@@ -2,12 +2,10 @@
  * Handler for POST /resources (store.create)
  */
 
-import { validate, createErrorResponse } from '../validator.js';
-import { hasConfigManagedResources } from '../config-registry.js';
+import { createErrorResponse } from '../validator.js';
 import { eventDomainOf } from '../collection-utils.js';
 import { startSlaClocks, earliestDeadline } from '../sla-engine.js';
 import { emitEvent } from '../emit-event.js';
-import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf, causationOf, areSystemRoles } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields, changedReadOnlyFields, writableFieldsOf, propertiesOf } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
@@ -27,7 +25,7 @@ import { checkProposedPatch } from '../suggestion-patches.js';
  * @param {Object} [options.defaults] - The values the server sets on create: required defaults and a machine's initial state
  * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, operations } = {}, options = {}) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store, instance, operations } = {}, options = {}) {
   // The resource created, in the API's model, for the records it's made under.
   const model = apiMetadata.doc?.model?.();
   const written = model?.resources.find((r) => r.name && r.name === endpoint.resource?.name);
@@ -37,7 +35,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
     try {
       // HTTP stub intercept — if a stub is registered for this method + path, return it
       // before normal processing. Used in tests to simulate adapter responses.
-      const httpStub = matchAndPopHttp(request.method, pathname);
+      const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
       if (httpStub) {
         return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
@@ -66,7 +64,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Validate request body (422 for validation errors)
       if (endpoint.requestSchema) {
-        const { valid, errors } = validate(
+        const { valid, errors } = instance.schemas.validate(
           requestBody,
           endpoint.requestSchema,
           `${endpoint.collectionName}-create`,
@@ -109,7 +107,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // An id that names no record is refused, like any other invalid value.
       const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store, {
-        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas,
+        parents: parentsOf(written, params), resources: model?.resources, schemas: apiMetadata.schemas, instance,
       });
       if (missing.length > 0) {
         return Response.json(createErrorResponse(missing, 422), { status: 422 });
@@ -118,7 +116,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // A call it carries — a suggestion's proposed change — must be one the
       // operation it names would accept.
       const wrongCalls = callsIn(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema)
-        .flatMap((found) => callProblems(found, operations ?? new Map()));
+        .flatMap((found) => callProblems(found, operations ?? new Map(), instance.schemas));
       if (wrongCalls.length > 0) {
         return Response.json(createErrorResponse(wrongCalls, 422), { status: 422 });
       }
@@ -127,7 +125,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       let fingerprint;
       if (makesSuggestions(apiMetadata, endpoint)) {
         // A patch it carries is tried against the composition as it is now.
-        const { refused, created } = await checkProposedPatch(requestBody, operations ?? new Map());
+        const { refused, created } = await checkProposedPatch(requestBody, operations ?? new Map(), instance);
         if (refused) return Response.json(refused.body, { status: refused.status });
         fingerprint = await fingerprintOf(requestBody, { created });
         const existing = repeated(store, endpoint.collectionName, fingerprint);
@@ -157,7 +155,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Mark runtime-created resources as user-sourced when the collection
       // also has config-managed (system) entries, so consumers can distinguish them
-      if (hasConfigManagedResources(endpoint.collectionName)) {
+      if (instance.configManaged.hasResources(endpoint.collectionName)) {
         resource.source = 'user';
         store.update(endpoint.collectionName, resource.id, { source: 'user' });
       }
@@ -197,7 +195,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const callerRoles = extractCallerRoles(request);
       if (object) try {
         emitEvent({
-        store,
+          instance,
           domain,
           object,
           action: 'created',
@@ -224,11 +222,11 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const fresh = store.findById(endpoint.collectionName, resource.id) || resource;
 
       // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
-      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
-      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
+      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id), instance.resources);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
       return Response.json(responseBody, { status: 201, headers: { Location: location } });

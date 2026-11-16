@@ -17,7 +17,8 @@ import {
   isActionPath,
   validateForeignKeys,
   validateOperationRelationships,
-  validateSpec
+  validateSpec,
+  validateEventStreamResponses,
 } from '../../../src/validator/pattern-validator.js';
 
 test('Pattern Validator Tests', async (t) => {
@@ -1024,6 +1025,21 @@ test('Pattern Validator Tests', async (t) => {
     console.log('  ✓ Handles specs without paths');
   });
 
+});
+
+test('a streamed response describes one event, not the stream as a string', () => {
+  const stream = (schema) => ({ responses: { 200: { content: { 'text/event-stream': schema === undefined ? {} : { schema } } } } });
+  const check = (operation) => { const errors = []; validateEventStreamResponses('/events/stream', 'get', operation, errors); return errors; };
+
+  assert.strictEqual(check(stream({ $ref: '#/components/schemas/Event' })).length, 0);
+  assert.strictEqual(check(stream({ type: 'object', properties: { id: { type: 'string' } } })).length, 0);
+  assert.strictEqual(check({ responses: { 200: { content: { 'text/event-stream': { itemSchema: { $ref: '#/components/schemas/Event' } } } } } }).length, 0);
+  assert.strictEqual(check({ responses: { 200: { content: { 'application/json': { schema: { type: 'string' } } } } } }).length, 0);
+
+  const asString = check(stream({ type: 'string', description: 'The stream.' }));
+  assert.strictEqual(asString.length, 1);
+  assert.strictEqual(asString[0].rule, 'event-stream-message-schema');
+  assert.strictEqual(check(stream(undefined))[0]?.rule, 'event-stream-message-schema');
 });
 
 console.log('\n✓ All pattern validator tests passed\n');

@@ -147,6 +147,18 @@ describe('prefixEventTypes — AsyncAPI', () => {
     });
   });
 
+  test('prefixes the type const in a schema labeled with its format', () => {
+    const result = prefixEventTypes([asyncApi({
+      components: { schemas: { WidgetSubmittedEvent: {
+        schemaFormat: 'application/vnd.oai.openapi;version=3.1.0',
+        schema: { allOf: [{ $ref: 'events.yaml#/$defs/Event' }, { type: 'object', properties: { type: { type: 'string', const: 'test.widget.submitted' } } }] },
+      } } },
+    })], PREFIX);
+    const schema = only(result).components.schemas.WidgetSubmittedEvent;
+    assert.equal(schema.schemaFormat, 'application/vnd.oai.openapi;version=3.1.0');
+    assert.equal(schema.schema.allOf[1].properties.type.const, 'org.example.test.widget.submitted');
+  });
+
   test('prefixes the discriminating type const in an event envelope', () => {
     // A subscriber matches on this; leaving it would have the payload claim an
     // unprefixed type while its channel says otherwise.

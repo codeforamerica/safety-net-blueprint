@@ -1,0 +1,500 @@
+arazzo: 1.1.0
+info:
+  title: Transcribing a typed conversation (a chat)
+  version: 1.0.0
+  x-domain: communication
+  x-capability: transcripts
+  description: |
+    A staff member and the person they're helping type messages to each other. There's no audio, no session and no transcription service: the client adds each message to the transcript itself.
+
+    The main path starts a transcript, adds messages and closes it. The other situations each start their own transcript. The transcript's rules shown here apply to a spoken conversation's transcript too.
+  # Who acts in the scenario. A step lists them in x-actors in the order they
+  # act, starting with the one who starts the step; the page shows them as
+  # A → B. A stub step lists the one part it stands in for.
+  x-actors:
+    - id: staff
+      name: Staff member
+      description: Pauses, resumes and closes the transcript, from their browser.
+    - id: client
+      name: Client
+      description: The chat app in the staff member's browser. It adds each message to the transcript. This scenario plays its part.
+    - id: transcript
+      name: Transcript
+      description: Keeps the transcript and its rules, on the server. In this demo, the mock runs it.
+    - id: scheduler
+      name: Scheduler
+      description: The platform's scheduler, which sends an event when a timer is due. In this demo, the mock stands in for it with a stub.
+sourceDescriptions:
+  # Relative to the resolved contract set, where the framework's documents sit
+  # under base/.
+  - name: transcripts
+    url: ../base/domains/communication/communication-transcripts-openapi.yaml
+    type: openapi
+  - name: transcriptEvents
+    url: ../base/domains/communication/communication-transcripts-events-asyncapi.yaml
+    type: asyncapi
+  # The mock's own routes, to stand in for the scheduler. This makes the
+  # scenario one to run against the mock.
+  - name: mock
+    url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+workflows:
+  # ── The main path ─────────────────────────────────────────────────────────
+  - workflowId: starting
+    summary: Starting
+    description: The client starts a transcript for the chat.
+    x-branch: main
+    steps:
+      - stepId: start
+        x-actors: [client, transcript]
+        description: |
+          Start, under the typed profile
+
+          - `typed` is one of the framework's own profiles, for a conversation with no service, so no model is needed. A transcript under it closes after 30 minutes with nothing added.
+          - `status` is `recording`. `startedAt` is by the client's clock, and every time on the transcript's entries is compared on that same clock.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            # typed, one of the framework's own profiles
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b3
+            client: chat-app/0.1.0
+            startedAt: '2026-10-12T16:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'recording'
+        outputs:
+          id: $response.body#/id
+
+      - stepId: created
+        x-actors: [transcript, client]
+        description: |
+          Created
+
+          - Anyone following the transcript gets its events.
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptCreated
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.start.outputs.id
+    outputs:
+      transcriptId: $steps.start.outputs.id
+
+  - workflowId: eachMessage
+    summary: Each message
+    description: Each message is added to the transcript as it's sent. Sending one again saves it once.
+    x-branch: main
+    dependsOn: [starting]
+    steps:
+      - stepId: addMessage
+        x-actors: [client, transcript]
+        description: |
+          Add a message
+
+          - The client gives each message a key in `Idempotency-Key`. The transcript remembers the key with its answer.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.starting.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-1
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:05Z', endedAt: '2026-10-12T16:00:05Z', text: Can you tell me who lives with you?, speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: sendAgain
+        x-actors: [client, transcript]
+        description: |
+          The same message again: saved once
+
+          - Same key, same message, as when the network fails and the client tries again. The transcript answers with the message it already saved, with the same `id` and `Idempotent-Replayed: true`. Nothing new is saved.
+          - The same key with a different message would be rejected with `422`.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.starting.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-1
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:05Z', endedAt: '2026-10-12T16:00:05Z', text: Can you tell me who lives with you?, speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/id == $steps.addMessage.outputs.id
+          - condition: $response.header.Idempotent-Replayed == 'true'
+
+  - workflowId: closing
+    summary: Closing
+    description: The chat ends, and the staff member closes the transcript.
+    x-branch: main
+    dependsOn: [starting, eachMessage]
+    steps:
+      - stepId: close
+        x-actors: [staff, transcript]
+        description: |
+          Close
+
+          - `closedAt` is the time sent. `lastActivityAt` is when the last message was sent.
+        operationId: $sourceDescriptions.transcripts.closeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.starting.outputs.transcriptId
+        requestBody:
+          payload: {at: '2026-10-12T16:00:30Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+          - condition: $response.body#/lastActivityAt == '2026-10-12T16:00:05Z'
+
+      - stepId: closed
+        x-actors: [transcript, client]
+        description: 'Status: closed'
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptClosed
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $workflows.starting.outputs.transcriptId
+
+      - stepId: timeline
+        x-actors: [client, transcript]
+        description: |
+          Get the timeline
+
+          - One message: sending it again saved nothing new.
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $workflows.starting.outputs.transcriptId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 1
+
+  # ── Other situations ──────────────────────────────────────────────────────
+  # Each starts its own transcript, so each can be run on its own.
+  - workflowId: pausing
+    summary: Pausing
+    description: The staff member takes the chat off the record and back. A message sent before the pause is saved even if it arrives late; one sent during the pause isn't, even after the pause is over.
+    x-branch: other
+    steps:
+      - stepId: started
+        x-actors: [client, transcript]
+        description: |
+          Start, as in the main path
+
+          - Runs the main path's first workflow, on a new transcript.
+        workflowId: starting
+        outputs:
+          transcriptId: $outputs.transcriptId
+
+      - stepId: pause
+        x-actors: [staff, transcript]
+        description: |
+          Pause
+
+          - The transcript is `paused`, and saves a pause with no end yet.
+        operationId: $sourceDescriptions.transcripts.pauseTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+        requestBody:
+          payload: {at: '2026-10-12T16:00:10Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'paused'
+
+      - stepId: messageBeforeThePause
+        x-actors: [client, transcript]
+        description: |
+          Add a message sent just before the pause: saved
+
+          - It arrived after the pause, but was sent before it. The transcript judges a message by when it was sent.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-2
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:08Z', endedAt: '2026-10-12T16:00:08Z', text: My two kids and my mother., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: messageDuringThePause
+        x-actors: [client, transcript]
+        description: |
+          Try to add a message sent during the pause: rejected (409)
+
+          - The transcript rejects it, not the client: nothing said off the record is saved, even if a client keeps sending.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-3
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:12Z', endedAt: '2026-10-12T16:00:12Z', text: Off the record., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: resume
+        x-actors: [staff, transcript]
+        description: |
+          Resume
+
+          - The pause gets its end, and the transcript is `recording` again.
+        operationId: $sourceDescriptions.transcripts.resumeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+        requestBody:
+          payload: {at: '2026-10-12T16:00:20Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'recording'
+
+      - stepId: lateMessageFromThePause
+        x-actors: [client, transcript]
+        description: |
+          Try to add a message sent during the pause, arriving late: rejected (409)
+
+          - The pause is over, but the message was sent during it.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-4
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:15Z', endedAt: '2026-10-12T16:00:15Z', text: Still off the record., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: timeline
+        x-actors: [client, transcript]
+        description: |
+          Get the timeline
+
+          - Messages and pauses together, in the order they happened. The message from before the pause, and the pause with its end. The rejected messages left nothing behind.
+        operationId: $sourceDescriptions.transcripts.listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 2
+          - condition: $response.body#/items/1/kind == 'pause'
+          - condition: $response.body#/items/1/endedAt == '2026-10-12T16:00:20Z'
+
+  - workflowId: rejected
+    summary: What a transcript rejects
+    description: A transcript needs a profile that exists, never changes a saved message, and saves nothing sent after it closes.
+    x-branch: other
+    steps:
+      - stepId: startUnderAMissingProfile
+        x-actors: [client, transcript]
+        description: |
+          Try to start, under a profile that doesn't exist: rejected (409)
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 00000000-0000-4000-8000-000000000000
+            client: chat-app/0.1.0
+            startedAt: '2026-10-12T17:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: started
+        x-actors: [client, transcript]
+        description: |
+          Start, as in the main path
+
+          - Runs the main path's first workflow, on a new transcript.
+        workflowId: starting
+        outputs:
+          transcriptId: $outputs.transcriptId
+
+      - stepId: addMessage
+        x-actors: [client, transcript]
+        description: Add a message
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-5
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:05Z', endedAt: '2026-10-12T16:00:05Z', text: Can you tell me who lives with you?, speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: changeAMessage
+        x-actors: [client, transcript]
+        description: |
+          Try to change a saved message: rejected (403)
+
+          - Only the system can change a saved entry. Messages never change once saved.
+        operationId: $sourceDescriptions.transcripts.updateTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: entryId
+            in: path
+            value: $steps.addMessage.outputs.id
+        requestBody:
+          payload: {endedAt: '2026-10-12T16:00:59Z'}
+        successCriteria:
+          - condition: $statusCode == 403
+
+      - stepId: close
+        x-actors: [staff, transcript]
+        description: Close
+        operationId: $sourceDescriptions.transcripts.closeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+        requestBody:
+          payload: {at: '2026-10-12T16:00:30Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+
+      - stepId: messageAfterClosing
+        x-actors: [client, transcript]
+        description: |
+          Try to add a message after closing: rejected (409)
+
+          - It was sent after the transcript closed.
+        operationId: $sourceDescriptions.transcripts.addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.started.outputs.transcriptId
+          - name: Idempotency-Key
+            in: header
+            value: message-6
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T16:00:31Z', endedAt: '2026-10-12T16:00:31Z', text: Too late., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409
+
+  - workflowId: nothingAdded
+    summary: When nothing is added for 30 minutes
+    description: A transcript nobody adds anything to closes itself once its profile's time limit passes, so one left open by mistake doesn't stay open forever. The transcript asks the platform's scheduler to check back, and closes if nothing was added when the check comes.
+    x-branch: other
+    steps:
+      - stepId: schedulerStub
+        x-actors: [scheduler]
+        description: |
+          Sends each check back at once, instead of when it's due
+
+          - Nobody waits 30 minutes in a demo. This stub answers the next request for an idle check at once, as if the time had passed.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            'on': platform.timer.requested
+            match:
+              data.callback.event: communication.idle_check
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: start
+        x-actors: [client, transcript]
+        description: |
+          Start, then add nothing
+
+          - Under the same `typed` profile, which closes a transcript after 30 minutes with nothing added.
+        operationId: $sourceDescriptions.transcripts.createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b3
+            client: chat-app/0.1.0
+            startedAt: '2026-10-12T18:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: idleCheck
+        x-actors: [scheduler, transcript]
+        description: |
+          Check: has anything been added?
+
+          - When it started, the transcript asked the scheduler for this reminder, due after its profile's time limit. The stub sent it back at once.
+          - The reminder says when it was asked for. Nothing was added since, so the transcript closes.
+        operationId: $sourceDescriptions.transcriptEvents.receiveCommunicationIdleCheck
+        action: receive
+
+      - stepId: closed
+        x-actors: [transcript, client]
+        description: |
+          Status: closed
+
+          - Nobody asked for it to close, so the event is from the system.
+        operationId: $sourceDescriptions.transcriptEvents.sendCommunicationTranscriptClosed
+        action: receive
+        successCriteria:
+          - condition: $message.payload#/subject == $steps.start.outputs.id
+          - condition: $message.payload#/authtype == 'system'
+
+      - stepId: whenItClosed
+        x-actors: [client, transcript]
+        description: |
+          Get the transcript: closed as of when it started
+
+          - It closed as of the last time anything happened, here when it started, not when the check came.
+        operationId: $sourceDescriptions.transcripts.getTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - name: transcriptId
+            in: path
+            value: $steps.start.outputs.id
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+          - condition: $response.body#/closedAt == '2026-10-12T18:00:00Z'

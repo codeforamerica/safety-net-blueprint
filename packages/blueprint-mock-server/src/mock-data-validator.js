@@ -6,6 +6,7 @@ import { extract } from '@codeforamerica/blueprint-core';
 import { errorsFrom } from './example-validator.js';
 import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
 import { createAjv, registerDocuments, validatorFor } from './schema-registry.js';
+import { resourceIndex } from './spec-loader.js';
 
 /**
  * The mock-data documents in a set, with the API each is named after.
@@ -86,13 +87,14 @@ export function validateMockData(docs, apiSpecs, { lookup } = {}) {
   const declaredIn = new Map();
   const derivedIn = new Map();
   const expandIn = new Map();
+  const resources = resourceIndex(apiSpecs);
   for (const api of apiSpecs) {
     if (!api.relativePath) continue;
     for (const [name, schema] of Object.entries(api.schemas ?? {})) {
       if (declaredIn.has(name)) continue;
       declaredIn.set(name, api.relativePath);
       derivedIn.set(name, derivedProperties(schema));
-      expandIn.set(name, extractExpandFields(schema, api.resolve?.schema));
+      expandIn.set(name, extractExpandFields(schema, api.resolve?.schema, resources));
     }
   }
 

@@ -1,0 +1,43 @@
+{
+  "description": "A JSON Web Key Set (RFC 7517), public keys only.",
+  "type": "object",
+  "required": [
+    "keys"
+  ],
+  "properties": {
+    "keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kty",
+          "kid"
+        ],
+        "properties": {
+          "kty": {
+            "type": "string",
+            "description": "The key type",
+            "such as EC or RSA.": null
+          },
+          "kid": {
+            "type": "string",
+            "description": "The key's id",
+            "which a token names in its header.": null
+          },
+          "use": {
+            "type": "string",
+            "const": "sig"
+          },
+          "alg": {
+            "type": "string",
+            "description": "The algorithm the key signs with",
+            "such as ES256.": null
+          }
+        },
+        "description": "A public key, with the parameters its key type takes (RFC 7518)."
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/JsonWebKeySet"
+}

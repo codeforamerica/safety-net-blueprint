@@ -15,7 +15,7 @@ import { assertFetchShaped } from '../http/request.js';
  * @param {Object} endpoint - Endpoint metadata
  * @returns {(request: Request) => Response}
  */
-export function createCurrentUserHandler(apiMetadata, endpoint, { store } = {}) {
+export function createCurrentUserHandler(apiMetadata, endpoint, { store, instance } = {}) {
   return (request) => {
     const auth = extractAuthContext(assertFetchShaped(request, 'createCurrentUserHandler'));
     if (!auth) {
@@ -33,11 +33,11 @@ export function createCurrentUserHandler(apiMetadata, endpoint, { store } = {}) 
       }, { status: 404 });
     }
 
-    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
-    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
+    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema, instance.resources);
     const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
     let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
-    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
+    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id), instance.resources);
     if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
     return Response.json(responseBody);
   };

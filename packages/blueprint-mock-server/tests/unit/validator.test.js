@@ -5,7 +5,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { validate, createErrorResponse, validateJSON } from '../../src/validator.js';
+import { createSchemaRegistry, createErrorResponse, validateJSON } from '../../src/validator.js';
+
+// A mock's validator with no contract set: plain schemas, compiled alone.
+const { validate } = createSchemaRegistry();
 
 test('Validator Tests', async (t) => {
 
