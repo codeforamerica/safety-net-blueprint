@@ -1,0 +1,4 @@
+{
+  "include": ["docs/conventions/", "docs/architecture/", "docs/guides/", "docs/getting-started/new-domain-builders.md"],
+  "exclude": []
+}
