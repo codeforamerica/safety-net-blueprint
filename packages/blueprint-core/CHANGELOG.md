@@ -1,5 +1,26 @@
 # @codeforamerica/blueprint-core
 
+## 0.5.0
+
+### Minor Changes
+
+- Before, an action's endpoint always answered with its record, and `schema.response` could only describe a different answer that nothing gave. Now an action can say what it answers with, as `response: {schema, payload}`, which the generated endpoint declares; `schema.response` is deprecated, with a warning. (#520)
+- The event log's stream now sends each event's `id`, sends a reader that reconnects with `Last-Event-ID` what it missed (`410` when the log no longer has it), takes listing's `type`, `source` and `subject` filters, and describes each message as an `Event`; a server that can't stream may answer `501`, and readers then poll the list. (#520)
+- **Breaking:** `validate` now reports a `text/event-stream` response whose schema is a bare `type: string` (`event-stream-message-schema`). Describe one event's data instead, usually a `$ref` to it, so readers and generated clients know what each message holds. (#520)
+- Before, a generated `<name>-events-asyncapi.yaml` listed the events its API sends as channels and messages only. Now it also has a `send` operation for each of those events and a `receive` operation, such as `receiveIntakeApplicationSubmitted`, for each event its state machines react to, and labels each event's schema as the OpenAPI 3.1 it's written in, so AsyncAPI's own tools read it. (#520)
+- Before, when two APIs declared the same operationId, a state machine call or an Arazzo step naming it was checked against whichever was read first. Now `extract(docs, 'operations')` finds an operation by a bare id or by `$apis.<api>.<id>`; validation reports a bare id more than one API declares, naming the qualified forms, and an id repeated within one document; and an Arazzo step qualified by its source is checked against that source's document. (#520)
+- Before, resuming a transcript that was already recording was refused with 409. Now it succeeds and changes nothing, so the software can go back on the record after someone else resumed the transcript first. (#520)
+- Before, the `transcripts` capability defined the transcript but not how transcription software keeps track of its connection to a service. Now it includes a transcription session (`communication-transcription-sessions-openapi.yaml` and its state machine), designed to run in the page: the page and the software tell it what happens, its actions call the transcript's operations, each sends an event, and it pauses or closes when its transcript does. (#520)
+- Before, the `transcripts` capability recorded what transcription software heard but said nothing about how the software reached a transcription service. Now a transcript's `get-connection` action answers with where to stream and a short-lived credential, in one shape for every service, through a transcript audio adapter a state implements (`communication-transcripts-audio-adapter-openapi.yaml`); a relay a state runs in front of a service a browser can't reach speaks `communication-transcripts-relay-asyncapi.yaml`, checking the adapter's tokens against the keys it publishes; and the transcription services registry lists the services the design was checked against. (#520)
+- Before, an `on:` reaction with `transition:` could only change the record its event was about. Now, for an event about another resource, it changes each of the machine's records that name the event's subject through the one field declaring `x-relationship` to that resource, and validation reports a machine with no such field, or more than one. (#520)
+
+### Patch Changes
+
+- Before, `validate` didn't check a scenario step that runs another workflow, so a misspelled `workflowId` only showed when the scenario ran. Now it reports `unknown-workflow` for a workflow the document doesn't declare and, for `$sourceDescriptions.<name>.<workflowId>`, for one the named Arazzo document in the set doesn't declare; a source named this way that isn't of type `arazzo` is reported as `arazzo-shape`. (#520)
+- Before, a state machine could write another domain's records with a call by path, which skips that domain's API and routing. Now `validate` warns about one as `call-by-path-across-domains`, saying to call the operation by its operationId. (#520)
+- Before, two OpenAPI documents declaring the same route — two adapters both at `POST /evaluate/determination`, say — passed `validate` and only stopped the mock from starting. Now `validate` reports it as `route-collision`, naming both documents. (#520)
+- Before, a state machine step with `runAs: caller` made its call with the caller's id and roles but not their credential. Now it also carries the `Authorization` header the caller sent, which routing passes on to a service where `includeHeaders` names it. (#520)
+
 ## 0.4.0
 
 ### Minor Changes
