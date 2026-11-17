@@ -2,7 +2,7 @@
 
 Bugs in the blueprint packages at the versions in [versions.json](versions.json), and docs that don't match them. Most fail silently or with a misleading error, so check this list before writing each kind of file, and again when something fails for no reason you can see. When you work around one, add a comment in the file naming the trap, and list it in the README's Workarounds section, so it can be undone once the blueprint is fixed.
 
-When the skill moves to newer packages, check each trap again and remove the ones that are fixed.
+Each trap was checked against those versions. When the skill moves to newer packages, check each one again and remove the ones that are fixed.
 
 ## Records and APIs
 

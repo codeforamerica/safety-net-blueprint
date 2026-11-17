@@ -18,12 +18,28 @@ Instructions to follow. Read before writing the part each one covers.
 | [http.yaml](docs/conventions/http.yaml) | Errors, status codes, headers |
 | [rpc.yaml](docs/conventions/rpc.yaml) | RPC endpoints and state machines |
 | [events.yaml](docs/conventions/events.yaml) | Domain events and their envelope |
-| [cross-domain.yaml](docs/conventions/cross-domain.yaml) | Talking to other domains; system vs. user resources |
 | [security.yaml](docs/conventions/security.yaml) | Authentication, roles, scopes, field permissions |
 | [extensions.yaml](docs/conventions/extensions.yaml) | The `x-` extensions, such as data classification |
 | [api-classification.yaml](docs/conventions/api-classification.yaml) | Classifying APIs by domain, type and status |
 | [validation.yaml](docs/conventions/validation.yaml) | What validation checks |
 | [diagrams.yaml](docs/conventions/diagrams.yaml) | Diagram colors, for any diagram in the spec |
+
+## Patterns: which one to use, and how
+
+One file per pattern, each in the same shape: what it is, when to use it, when not to and what to use instead, and its rules. Read the one that fits before recommending or writing that part.
+
+| File | Covers |
+|---|---|
+| [adapter.yaml](docs/conventions/patterns/adapter.yaml) | Connecting to an outside system |
+| [analysis.yaml](docs/conventions/patterns/analysis.yaml) | Analyzing documents and transcripts with a model |
+| [audit-trail.yaml](docs/conventions/patterns/audit-trail.yaml) | Recording who did what, and when |
+| [browser-vendor-stream.yaml](docs/conventions/patterns/browser-vendor-stream.yaml) | A live stream between the browser and a vendor, such as audio |
+| [composition.yaml](docs/conventions/patterns/composition.yaml) | One view of several records |
+| [context-passthrough.yaml](docs/conventions/patterns/context-passthrough.yaml) | Matching a result that comes back later to what asked for it |
+| [cross-domain-communication.yaml](docs/conventions/patterns/cross-domain-communication.yaml) | Talking to other domains: commands and events |
+| [overlay-customization.yaml](docs/conventions/patterns/overlay-customization.yaml) | Letting others adapt the contracts |
+| [routing.yaml](docs/conventions/patterns/routing.yaml) | Sending a domain's calls to a real service instead of the mock |
+| [timers.yaml](docs/conventions/patterns/timers.yaml) | Deadlines and reminders |
 
 ## Architecture: why the contracts work the way they do
 
@@ -47,6 +63,8 @@ Instructions to follow. Read before writing the part each one covers.
 | [cross-cutting/search.md](docs/architecture/cross-cutting/search.md) | Search across resources |
 | [cross-cutting/platform.md](docs/architecture/cross-cutting/platform.md) | Platform-level resources |
 | [cross-cutting/ai-services.md](docs/architecture/cross-cutting/ai-services.md) | Services that use a model |
+| [cross-cutting/browser-vendor-stream.md](docs/architecture/cross-cutting/browser-vendor-stream.md) | A live stream between the browser and a vendor |
+| [domains/communication-transcripts.md](docs/architecture/domains/communication-transcripts.md) | The framework's transcripts domain: recording and transcribing a conversation |
 
 ## Guides: how to do it
 
