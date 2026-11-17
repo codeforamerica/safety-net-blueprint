@@ -11,7 +11,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/server.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 // What an informing suggestion is about has to exist: Rosa, seeded in the harness.
 const ROSA = '11111111-1111-4111-8111-100000000001';
 

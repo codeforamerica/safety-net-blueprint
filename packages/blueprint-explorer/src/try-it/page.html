@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not your average Mock Server</title>
+<title>Try it out</title>
 <!--
   A playground over the browser mock, rather than a tour of it.
 
@@ -400,7 +400,7 @@
 <body>
 <header id="masthead">
   <div class="intro">
-    <h1>Not your average Mock Server</h1>
+    <h1>Try it out</h1>
     <p class="lede">
       An entire server, generated from a set of contracts, running in this tab.
       <b>No custom code.</b> Everything is derived on the fly when the server
@@ -422,10 +422,10 @@
   <main id="stage"></main>
 </div>
 
-<script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts","firstTour":"scenarios/framework-features.arazzo.yaml"}</script>
 <script type="module">
+// Classic scripts beside the page define both, so it works opened from disk.
 const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations } =
-  globalThis.BlueprintMock ?? await import('./mock.js');
+  globalThis.BlueprintMock;
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, text = '', className = '') => {
@@ -475,16 +475,10 @@ let openDomains = null;
 // records under what was picked.
 const chosen = new Map();
 
-/**
- * The contract set, inlined by the single-file build or fetched beside the
- * page when it is served.
- */
+/** The contract set, which contracts.js beside the page defines. */
 const loadContracts = async () => {
-  const inlined = document.getElementById('contracts-data');
-  if (inlined) return JSON.parse(inlined.textContent);
-  const response = await fetch('./contracts.json');
-  if (!response.ok) throw new Error(`contracts.json: ${response.status}`);
-  return response.json();
+  if (!globalThis.BlueprintContracts) throw new Error('contracts.js did not load');
+  return globalThis.BlueprintContracts;
 };
 
 // Who the reference calls as, chosen above each request. The walk always

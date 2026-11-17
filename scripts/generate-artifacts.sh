@@ -49,6 +49,9 @@ npm run clients:typescript --prefix "$ROOT" -- \
 echo "Rebuilding rules-engine browser bundle..."
 node "$ROOT/packages/blueprint-rules-engine/scripts/build-browser.js" 2>&1
 
+echo "Rebuilding the Try it out page's mock bundle..."
+node "$ROOT/packages/blueprint-explorer/scripts/build-browser.js" 2>&1
+
 echo "Rebuilding safety-net-explorer outputs..."
 node "$ROOT/packages/blueprint-explorer/build.js" \
   --content="$ROOT/packages/safety-net-explorer" \

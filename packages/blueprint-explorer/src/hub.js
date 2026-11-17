@@ -486,6 +486,22 @@ const html = `<!DOCTYPE html>
     <div class="card-grid">
 
       <div class="card">
+        <div class="card-accent accent-blue"></div>
+        <div class="card-body">
+          <div class="card-icon icon-blue">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="10" cy="10" r="8" fill="#5650BE"/>
+              <path d="M8 6.5 L14 10 L8 13.5 Z" fill="white"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            ${sectionTitle(contentDir, "Try it out", "try-it/index.html")}
+          </div>
+          <p>The mock server running in your browser, built from the contracts. Play the scenarios a step at a time, or send any operation a request.</p>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-accent accent-green"></div>
         <div class="card-body">
           <div class="card-icon icon-green">

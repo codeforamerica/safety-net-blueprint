@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/server.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 const WITH_TIMEOUT = '7a1e0c2d-0000-4000-8000-0000000000b1';
 
 let mock;

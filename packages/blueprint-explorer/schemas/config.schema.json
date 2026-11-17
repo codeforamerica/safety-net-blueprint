@@ -40,6 +40,10 @@
         }
       }
     },
+    "first_tour": {
+      "description": "The scenario Try it out's Show me around opens with, by its path in the contract set (e.g. scenarios/framework-features.arazzo.yaml). Defaults to the first.",
+      "type": "string"
+    },
     "featured_links": {
       "description": "Optional hero links shown in the explorer hub (e.g. for leadership audiences).",
       "type": "array",

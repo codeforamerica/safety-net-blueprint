@@ -245,9 +245,8 @@ createMockServer({ contracts, basePath: location.pathname.replace(/\/[^/]*$/, ''
 The prefix is stripped once, before matching, so handlers and HTTP stubs never
 see it.
 
-`blueprint-harness` builds a worked example of both — a served version and a
-single self-contained file — in `packages/blueprint-harness/generated/mock/`.
-The page it is built from is `packages/blueprint-harness/mock/index.html`.
+The explorer's Try it out page, which `blueprint-build-explorer` builds, is a
+worked example. Its source is `packages/blueprint-explorer/src/try-it/page.html`.
 
 ## References are not dereferenced
 

@@ -17,7 +17,7 @@ import { createWs } from '../../src/ws.js';
 import { createNodeServer } from '../../src/http/node-server.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
-const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));
+const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url)), 'utf8'));
 const docs = extract(contracts, 'docs');
 const API = 'communication-transcripts-relay';
 const CHANNEL = 'communication-transcripts-relay-asyncapi.yaml#/channels/audio';

@@ -20,7 +20,8 @@
  *               blueprint-explorer package's built-in authored/ directory.
  *   --clients   Path to generated TypeScript clients (output of blueprint-generate-ts-clients).
  *   --only      Build one tool only: context-map, data-dictionaries,
- *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
+ *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference,
+ *               try-it
  */
 
 import { cpSync, existsSync, mkdirSync } from 'fs';
@@ -34,6 +35,7 @@ import {
   buildEventCatalog,
   buildApiReference,
   buildClientReference,
+  buildTryIt,
   buildHub,
 } from '@codeforamerica/blueprint-explorer';
 
@@ -78,6 +80,7 @@ if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
 if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
 if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
 if (doBuild('client-reference'))  buildClientReference({ contentDir, resolvedDir, clientsDir });
+if (doBuild('try-it'))            buildTryIt({ contentDir, resolvedDir });
 
 // Hub is always rebuilt last so it can scan all tool output directories
 buildHub({ contentDir, authoredDir });

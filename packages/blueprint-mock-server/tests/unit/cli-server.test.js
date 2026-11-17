@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
-const contracts = fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url));
+const contracts = fileURLToPath(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url));
 const APPLICATION = '11111111-1111-4111-8111-111111111111';
 const INCOME = '11111111-1111-4111-8111-200000000003';
 
