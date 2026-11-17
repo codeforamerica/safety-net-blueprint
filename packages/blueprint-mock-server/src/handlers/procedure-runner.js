@@ -3,9 +3,8 @@
  * Used by transition handler, create handler, update handler, and event subscriptions.
  */
 
-import jsonLogic from 'json-logic-js';
 import { collectionNamed, resolveDotPath } from '../collection-utils.js';
-import { applySteps, applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
+import { applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
@@ -344,77 +343,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
     });
   }
 
-  const allPendingOperations = [];
-  // conditions array format (JSON Logic) — for procedures defined with conditions:
-  const data = { '$object': { ...resource } };
-  for (const [alias, entity] of Object.entries(entities)) {
-    data[`$${alias}`] = entity;
-  }
-
-  const conditions = [...(proc.conditions || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const allPendingEvents = [];
-
-  for (const cond of conditions) {
-    let matches = false;
-    try {
-      matches = cond.condition === true || jsonLogic.apply(cond.condition, data);
-    } catch (e) {
-      console.warn(`Procedure "${procedureId}" condition "${cond.id}" evaluation error: ${e.message}`);
-      continue;
-    }
-
-    if (matches) {
-      const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-        applySteps(cond.then || [], resource, stepContext, store);
-
-      for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
-        if (stubUrl) {
-          const fullPath = domain ? `/${domain}${stubUrl}` : stubUrl;
-          const httpStub = stepContext.instance.stubs.matchAndPopHttp('POST', fullPath);
-          if (httpStub) {
-            console.log(`[stub] matched ${httpStub.id} → intercepted POST ${fullPath}`);
-            continue;
-          }
-        }
-        try {
-          const created = store.create(entity, createData);
-          if (domain && eventObject) {
-            emitEvent({
-              instance: stepContext.instance,
-              domain,
-              object: eventObject,
-              action: 'created',
-              resourceId: created.id,
-              source: `/${domain}`,
-              data: { ...created },
-              callerId: 'system',
-            });
-          }
-        } catch (e) {
-          console.error(`executeProcedure: create "${entity}" failed: ${e.message}`);
-        }
-      }
-
-      for (const append of pendingAppends) {
-        applyPendingAppend(append, store, stepContext.instance);
-      }
-
-      allPendingOperations.push(...pendingOperations);
-      allPendingEvents.push(...(pendingEvents || []));
-
-      if (pendingProcedures.length > 0) {
-        const { pendingOperations: nestedOps, pendingEvents: nestedEvents } = executeProcedures(
-          pendingProcedures, resource, inlineProcedures, stepContext, store
-        );
-        allPendingOperations.push(...(nestedOps || []));
-        allPendingEvents.push(...(nestedEvents || []));
-      }
-
-      if (proc.evaluation !== 'all-match') break;
-    }
-  }
-
-  return { operations: allPendingOperations, events: allPendingEvents };
+  return { operations: [], events: [] };
 }
 
 /**

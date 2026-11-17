@@ -108,3 +108,22 @@ test('equality pairs and CEL strings in a where: are not refused', () => {
   assert.deepEqual(refusals(machine({ applicationId: '$object.id', in: 'person' }, [])), []);
   assert.deepEqual(refusals(machine('item.applicationId == object.id', [])), []);
 });
+
+test('a procedure conditions: list is refused, naming the if: steps to write', () => {
+  const content = {
+    domain: 'workflow',
+    machines: [{
+      object: 'Task',
+      states: { open: {} },
+      initialState: 'open',
+      procedures: [{
+        id: 'route',
+        conditions: [{ id: 'snap', condition: { in: ['snap', { var: '$object.programs' }] }, then: [{ set: { field: 'queueId', value: 'q-snap' } }] }],
+      }],
+    }],
+  };
+  const errors = validate([doc('state-machine', 'workflow-state-machine.yaml', content)]).results
+    .flatMap((r) => r.errors).filter((e) => e.rule === 'procedure-conditions');
+  assert.equal(errors.length, 1);
+  assert.match(errors[0].message, /^\/machines\/0\/procedures\/0\/conditions is not run.*`if:` step/);
+});

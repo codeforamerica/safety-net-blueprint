@@ -4,7 +4,6 @@
  * based on a state machine contract.
  */
 
-import jsonLogic from 'json-logic-js';
 import { evaluateCEL as evaluateExpression } from '@codeforamerica/blueprint-core/cel';
 import { collectionNamed, resolveDotPath } from './collection-utils.js';
 import { resolveTimeToken } from './time-tokens.js';
@@ -960,48 +959,4 @@ export function applyCreateEffect(effect, context) {
  */
 export function applyEventEffect(effect, context) {
   return { action: effect.action, data: fillFields(effect.data, context) };
-}
-
-/**
- * Apply all effects of supported types. Skips unimplemented types silently.
- * Evaluates any `when` clause (JSON Logic) before executing each effect —
- * effects whose condition is false are skipped.
- * @param {Array} effects - Array of effect definitions
- * @param {Object} resource - The resource to modify (mutated in place)
- * @param {Object} context - Context with caller, object, request, and now info
- * @returns {{ pendingCreates: Array, pendingProcedures: Array, pendingEvents: Array }}
- */
-export function applyEffects(effects, resource, context) {
-  const pendingCreates = [];
-  const pendingProcedures = [];
-  const pendingEvents = [];
-
-  if (!effects) return { pendingCreates, pendingProcedures, pendingEvents };
-
-  for (const effect of effects) {
-    // Evaluate `when` clause before executing the effect
-    if (effect.when !== undefined) {
-      const logicData = { request: context.request || {}, object: context.object || {} };
-      if (!jsonLogic.apply(effect.when, logicData)) {
-        continue;
-      }
-    }
-
-    switch (effect.type) {
-      case 'set':
-        applySetEffect(effect, resource, context);
-        break;
-      case 'create':
-        pendingCreates.push(applyCreateEffect(effect, context));
-        break;
-      case 'event':
-        pendingEvents.push(applyEventEffect(effect, context));
-        break;
-      default:
-        // Silently skip unimplemented effect types (forward-compatible)
-        break;
-    }
-  }
-
-  return { pendingCreates, pendingProcedures, pendingEvents };
 }
