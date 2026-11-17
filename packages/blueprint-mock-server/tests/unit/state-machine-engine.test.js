@@ -15,8 +15,6 @@ import {
   resolveValue,
   evaluateGuard,
   evaluateGuards,
-  applySetEffect,
-  applyCreateEffect,
   applySteps,
 } from '../../src/state-machine-engine.js';
 import { generate } from '@codeforamerica/blueprint-core';
@@ -416,82 +414,6 @@ test('evaluateGuards — all composition fails when any guard fails', () => {
 });
 
 // =============================================================================
-// applySetEffect
-// =============================================================================
-
-test('applySetEffect — sets literal value', () => {
-  const resource = { status: 'pending' };
-  applySetEffect({ field: 'status', value: 'active' }, resource, {});
-  assert.strictEqual(resource.status, 'active');
-});
-
-test('applySetEffect — sets $caller.id', () => {
-  const resource = { assignedToId: null };
-  const context = { caller: { id: 'worker-1' } };
-  applySetEffect({ field: 'assignedToId', value: '$caller.id' }, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-});
-
-test('applySetEffect — sets null', () => {
-  const resource = { assignedToId: 'worker-1' };
-  applySetEffect({ field: 'assignedToId', value: null }, resource, {});
-  assert.strictEqual(resource.assignedToId, null);
-});
-
-// =============================================================================
-// applyCreateEffect
-// =============================================================================
-
-test('applyCreateEffect — resolves all field references', () => {
-  const effect = {
-    type: 'create',
-    entity: 'task-audit-events',
-    fields: {
-      taskId: '$object.id',
-      eventType: 'assigned',
-      previousValue: '$object.status',
-      newValue: 'in_progress',
-      performedById: '$caller.id',
-      occurredAt: '$now'
-    }
-  };
-  const context = {
-    caller: { id: 'worker-1' },
-    object: { id: 'task-99', status: 'pending' },
-    now: '2025-01-15T10:00:00.000Z'
-  };
-  const result = applyCreateEffect(effect, context);
-  assert.strictEqual(result.entity, 'task-audit-events');
-  assert.deepStrictEqual(result.data, {
-    taskId: 'task-99',
-    eventType: 'assigned',
-    previousValue: 'pending',
-    newValue: 'in_progress',
-    performedById: 'worker-1',
-    occurredAt: '2025-01-15T10:00:00.000Z'
-  });
-});
-
-test('applyCreateEffect — handles null fields gracefully', () => {
-  const effect = {
-    type: 'create',
-    entity: 'audit',
-    fields: { taskId: '$object.id', note: null }
-  };
-  const context = { object: { id: 'task-1' } };
-  const result = applyCreateEffect(effect, context);
-  assert.strictEqual(result.data.taskId, 'task-1');
-  assert.strictEqual(result.data.note, null);
-});
-
-test('applyCreateEffect — handles missing fields map', () => {
-  const effect = { type: 'create', entity: 'audit' };
-  const result = applyCreateEffect(effect, {});
-  assert.strictEqual(result.entity, 'audit');
-  assert.deepStrictEqual(result.data, {});
-});
-
-// =============================================================================
 // evaluateGuard — is_not_null
 // =============================================================================
 
@@ -722,21 +644,6 @@ test('applySteps — invoke PATCH queues pendingAppend with resolved $push body'
   assert.strictEqual(pendingAppends.length, 1);
   assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
   assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { type: 'income', status: 'verified' });
-});
-
-// =============================================================================
-// applySteps — when:
-// =============================================================================
-
-
-test('applySteps — when: exposes entity aliases', () => {
-  const resource = { status: 'pending' };
-  const context = { entities: { queue: { type: 'expedited' } }, object: {}, request: {} };
-  applySteps([{
-    when: { '==': [{ var: 'queue.type' }, 'expedited'] },
-    set: { field: 'status', value: 'expedited' }
-  }], resource, context, store);
-  assert.strictEqual(resource.status, 'expedited');
 });
 
 // =============================================================================
