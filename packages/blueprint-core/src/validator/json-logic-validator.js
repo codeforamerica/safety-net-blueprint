@@ -69,7 +69,7 @@ export function jsonLogicExpressions(doc) {
     walk(content, '');
   }
 
-  return found.map(({ at, expression, name }) => {
+  const errors = found.map(({ at, expression, name }) => {
     const translation = { substring: false };
     const cel = toCel(expression, name, translation);
     const where = at.endsWith('/where') ? ' In a where:, `item` is the candidate record.' : '';
@@ -81,6 +81,31 @@ export function jsonLogicExpressions(doc) {
       path: `${doc.path}#${at}`,
     };
   });
+
+  // A procedure's `conditions:` list of JSON Logic conditions, each with
+  // `then:` steps, is no longer run; `if:` steps take its place.
+  if (doc.type === 'state-machine') {
+    const walk = (node, at) => {
+      if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node.procedures)) {
+        node.procedures.forEach((procedure, i) => {
+          if (Array.isArray(procedure?.conditions)) {
+            errors.push({
+              rule: 'procedure-conditions',
+              message: `${at}/procedures/${i}/conditions is not run; a procedure's steps are. ` +
+                'Write each condition as an `if:` step with a CEL condition and its steps under `then:`.',
+              path: `${doc.path}#${at}/procedures/${i}/conditions`,
+            });
+          }
+        });
+      }
+      for (const [key, value] of Object.entries(node)) walk(value, `${at}/${key}`);
+    };
+    walk(content, '');
+  }
+
+  return errors;
 }
 
 /** Whether a metric filter or SLA condition is JSON Logic: anything but the CEL string it takes. */

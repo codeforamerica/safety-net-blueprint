@@ -17,7 +17,6 @@ import {
   evaluateGuards,
   applySetEffect,
   applyCreateEffect,
-  applyEffects,
   applySteps,
 } from '../../src/state-machine-engine.js';
 import { generate } from '@codeforamerica/blueprint-core';
@@ -490,93 +489,6 @@ test('applyCreateEffect — handles missing fields map', () => {
   const result = applyCreateEffect(effect, {});
   assert.strictEqual(result.entity, 'audit');
   assert.deepStrictEqual(result.data, {});
-});
-
-// =============================================================================
-// applyEffects
-// =============================================================================
-
-test('applyEffects — applies multiple set effects', () => {
-  const resource = { assignedToId: null, priority: 'low' };
-  const context = { caller: { id: 'worker-1' } };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    { type: 'set', field: 'priority', value: 'high' }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(resource.priority, 'high');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — returns pendingCreates for create effects', () => {
-  const resource = { id: 'task-1', status: 'pending' };
-  const context = {
-    caller: { id: 'worker-1' },
-    object: { id: 'task-1', status: 'pending' },
-    now: '2025-01-15T10:00:00.000Z'
-  };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    {
-      type: 'create',
-      entity: 'task-audit-events',
-      fields: { taskId: '$object.id', eventType: 'assigned' }
-    }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(pendingCreates.length, 1);
-  assert.strictEqual(pendingCreates[0].entity, 'task-audit-events');
-  assert.strictEqual(pendingCreates[0].data.taskId, 'task-1');
-  assert.strictEqual(pendingCreates[0].data.eventType, 'assigned');
-});
-
-test('applyEffects — skips unknown effect types', () => {
-  const resource = { status: 'pending' };
-  const effects = [
-    { type: 'unknown_type', field: 'status', value: 'active' }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — handles null effects gracefully', () => {
-  const resource = { status: 'pending' };
-  const { pendingCreates } = applyEffects(null, resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — handles empty effects array', () => {
-  const resource = { status: 'pending' };
-  const { pendingCreates, pendingProcedures } = applyEffects([], resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-  assert.deepStrictEqual(pendingProcedures, []);
-});
-
-test('applyEffects — mixes set and create effects', () => {
-  const resource = { assignedToId: null };
-  const context = { caller: { id: 'worker-1' }, object: { id: 'task-1' }, now: '2025-01-15T10:00:00.000Z' };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    { type: 'create', entity: 'audit', fields: { taskId: '$object.id' } },
-  ];
-  const { pendingCreates, pendingProcedures } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(pendingCreates.length, 1);
-  assert.deepStrictEqual(pendingProcedures, []);
-});
-
-test('applyEffects — returns empty pendingProcedures when no procedure effects', () => {
-  const resource = { status: 'pending' };
-  const effects = [
-    { type: 'set', field: 'status', value: 'active' }
-  ];
-  const { pendingProcedures } = applyEffects(effects, resource, {});
-  assert.deepStrictEqual(pendingProcedures, []);
 });
 
 // =============================================================================
