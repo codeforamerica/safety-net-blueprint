@@ -25,6 +25,7 @@ Generates a set of static HTML reference tools from resolved Blueprint contract 
 | **Event Catalog** | Cross-domain event index — every emitted event with its publisher, payload schema, and known subscribers |
 | **Data Dictionaries** | Field-level reference derived from writable schemas — field names, types, policy citations, and data classifications |
 | **Context Map** | Domain relationship diagram showing cross-domain data dependencies |
+| **Try it out** | The mock server running in the browser, built from the contracts. Show me around plays the Arazzo scenarios a step at a time; Let me explore sends any operation a request. Works served or opened from disk. Set `first_tour` in `config.yaml` to choose the scenario it opens with |
 
 ## Usage
 

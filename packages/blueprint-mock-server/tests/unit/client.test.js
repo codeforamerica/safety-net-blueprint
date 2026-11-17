@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { createMockClient } from '../../src/client.js';
 import { createMockServer } from '../../src/server.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 
 let server;
 let client;

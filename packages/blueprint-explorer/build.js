@@ -37,6 +37,7 @@ import { build as buildRulesDocs }        from './src/rules-docs/build.js';
 import { build as buildEventCatalog }     from './src/event-catalog.js';
 import { build as buildApiReference }     from './src/api-reference.js';
 import { build as buildClientReference }  from './src/client-reference.js';
+import { build as buildTryIt }            from './src/try-it/build.js';
 import { build as buildHub }              from './src/hub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -108,6 +109,12 @@ if (doBuild('api-reference')) {
 
 if (doBuild('client-reference') && clientsDir) {
   buildClientReference({ contentDir, resolvedDir, clientsDir });
+}
+
+// ── Try it out ────────────────────────────────────────────────────────────────
+
+if (doBuild('try-it')) {
+  buildTryIt({ contentDir, resolvedDir });
 }
 
 // Hub is always rebuilt last so it can scan all tool output directories

@@ -555,8 +555,8 @@ in the client.
 ## Hosting in a single page
 
 The aim, as a goal rather than a requirement, is an application delivered as
-one HTML file — the shape both the mock's `standalone.html` and the
-transcription tools' `live-transcription.html` already take — that uses the
+one HTML file — the shape the transcription tools'
+`live-transcription.html` already takes — that uses the
 mock and AI services together, with no server of our own.
 
 | Part | In a page? | Basis |

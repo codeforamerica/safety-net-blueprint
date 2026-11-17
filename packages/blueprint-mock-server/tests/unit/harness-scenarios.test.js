@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { createMockServer, runScenario, operationIndex, controlOperations } from '../../src/server.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
-const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));
+const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url)), 'utf8'));
 const docs = extract(contracts, 'docs');
 const arazzo = docs.filter((doc) => doc.type === 'arazzo');
 const fileName = (path) => String(path).split('/').pop();

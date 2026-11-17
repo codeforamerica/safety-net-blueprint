@@ -11,13 +11,13 @@ A complete sample blueprint project, used as the shared test fixture across all 
 | Directory | Contents |
 |-----------|----------|
 | `contracts/` | Source contract files — the inputs that tooling packages process |
-| `mock/` | The demo page source, built into `generated/mock/` |
 | `explorer/` | Explorer configuration and authored content (not generated) |
 | `generated/resolved/` | Resolved output produced by `blueprint-cli resolve` |
 | `generated/bundled/` | Dereferenced specs |
 | `generated/clients/` | TypeScript clients produced by `blueprint-cli generate-ts-clients` |
 | `generated/explorer/` | Rendered Explorer site |
-| `generated/mock/` | The browser mock page, served and single-file |
+| `generated/explorer/try-it/` | The explorer's Try it out page: the mock server running in the browser |
+| `generated/contracts.json` | The contract set as one artifact, which the mock server's tests boot from |
 | `generated/overlays/`, `generated/postman/`, `generated/schemas/` | Generated overlays, a Postman collection, exported JSON Schemas |
 
 ## What it is for
@@ -26,7 +26,7 @@ Two jobs, and the second matters more than it looks.
 
 It is the shared fixture the tooling packages test against. It is also the only place the contract types are used *together*, by something that doesn't know which parts are load-bearing — which is a different test, and a harder one to pass.
 
-Unit tests exercise one seam at a time and keep passing. Building something real against the whole set finds what they cannot. Writing the browser demo page in `mock/` surfaced, among other things:
+Unit tests exercise one seam at a time and keep passing. Building something real against the whole set finds what they cannot. Writing the explorer's Try it out page surfaced, among other things:
 
 - a cross-domain subscription this contract set declares, which had never once run: the step was written in a shape the engine does not accept, and the schema permits that shape
 - an event emitted with an empty payload, so even a correctly written subscriber had nothing to act on
@@ -104,8 +104,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### Scenarios
 
 **[`contracts/scenarios/framework-features.arazzo.yaml`](contracts/scenarios/framework-features.arazzo.yaml)**
-- The demo page's walkthrough of the framework's core features, one workflow per feature — resources, composite views, an editable composition, state machines, rules, events and the mock's own controls — with one SNAP application as the example throughout
-- The tour Show me around opens with (`--first-tour` in `scripts/regenerate.js`). Each step's first line is its title in the page, and its bullets are what to notice
+- The Try it out page's walkthrough of the framework's core features, one workflow per feature — resources, composite views, an editable composition, state machines, rules, events and the mock's own controls — with one SNAP application as the example throughout
+- The tour Show me around opens with (`first_tour` in `explorer/config.yaml`). Each step's first line is its title in the page, and its bullets are what to notice
 - Written down, not worked out from the contracts, so it reads the same however the set changes
 
 **[`contracts/scenarios/transcription.arazzo.yaml`](contracts/scenarios/transcription.arazzo.yaml)**, **[`transcription-relay.arazzo.yaml`](contracts/scenarios/transcription-relay.arazzo.yaml)** and **[`transcription-chat.arazzo.yaml`](contracts/scenarios/transcription-chat.arazzo.yaml)**
@@ -114,11 +114,11 @@ So when you add a feature to a tooling package, adding a contract here that exer
 - Use the same actors, by the same names, in all three, so their steps can be compared
 - Calls the sessions and transcripts APIs, and receives the events they send as Arazzo 1.1 AsyncAPI steps (`action: receive`), so a step shows the event the client hears
 - Found by their contract type, not their folder — `scenarios/` is for organizing. Their domain comes from `info.x-domain`, and their capability from `info.x-capability: transcripts`, which groups them in Show me around's list
-- Each runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
+- Each runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the Try it out page's Show me around
 
 **[`contracts/scenarios/suggestion-lifecycle.arazzo.yaml`](contracts/scenarios/suggestion-lifecycle.arazzo.yaml)**
 - Rosa's interview, recorded as a transcript, with suggestions from the server's rules and from an AI assistant, including one that changes her household through the `applicationDetails` editable composition
-- Declares its actors in `info.x-actors` and names them on each step's `x-actors` (see `docs/conventions/extensions.yaml`); the demo page shows them as badges above each step's title
+- Declares its actors in `info.x-actors` and names them on each step's `x-actors` (see `docs/conventions/extensions.yaml`); the Try it out page shows them as badges above each step's title
 
 ### Overlays
 
@@ -128,7 +128,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**
 - Extends the base `MetricCollection` enum to add `applications` and `determinations`
-- Replaces the base `RoleType` with the harness's roles, which guard actors are validated against and the demo page offers a caller
+- Replaces the base `RoleType` with the harness's roles, which guard actors are validated against and the Try it out page offers a caller
 - Uses `files:` (array/string form) rather than `file:` to target the base enums schema
 
 **[`contracts/overlays/state-overlay.yaml`](contracts/overlays/state-overlay.yaml)**

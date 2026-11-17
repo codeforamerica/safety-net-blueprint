@@ -262,7 +262,7 @@ describe('PATCH', () => {
 
   // The framework's own TranscriptionProfileUpdate is closed.
   test('the framework\'s PATCH /communication/profiles/{profileId} succeeds', async () => {
-    const send = await boot(JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8')));
+    const send = await boot(JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8')));
     const { body: list } = await send('GET', '/communication/profiles?limit=1');
     const [profile] = list.items;
     const { status, body } = await send('PATCH', `/communication/profiles/${profile.id}`, { description: 'Changed.' });
