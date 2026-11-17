@@ -41,7 +41,7 @@ The scope says what to build. This step decides how, following the blueprint's c
    6. Outside systems: [adapters.md](reference/docs/architecture/cross-cutting/adapters.md).
    7. Settings, measures, then sample data: [mock-server.md](reference/docs/guides/mock-server.md).
 
-   Before each file, check [known-traps.md](known-traps.md). Where the docs and the packages disagree, the packages win: do what `regenerate` and the mock accept, and note it in the README.
+   When a part follows one of the blueprint's patterns (adapter, timers, cross-domain communication, composition and others, listed in [the index](reference/INDEX.md#patterns-which-one-to-use-and-how)), read its pattern file and follow its rules. Before each file, check [known-traps.md](known-traps.md). Where the docs and the packages disagree, the packages win: do what `regenerate` and the mock accept, and note it in the README.
 
 6. **Check the main story by hand.** Start the mock (`npx blueprint-mock --spec=./generated/resolved`) and make the main story's calls in order. After each, read `GET /platform/events`: a reaction that didn't run often shows up only as a missing event, not as an error.
 
