@@ -85,7 +85,7 @@ test('updateSlaInfo — completedWhen override takes precedence over slaClock', 
     {
       id: 'test_sla',
       duration: { amount: 9, unit: 'days' },
-      completedWhen: { '===': [{ var: 'status' }, 'in_progress'] }
+      completedWhen: 'status == "in_progress"'
     }
   ];
   // in_progress has slaClock: running, but completedWhen says done
@@ -116,7 +116,7 @@ test('initializeSlaInfo — autoAssignWhen can reference resolved entity field',
     {
       id: 'snap_expedited',
       duration: { amount: 7, unit: 'days' },
-      autoAssignWhen: { '==': [{ var: 'application.isExpedited' }, true] }
+      autoAssignWhen: 'application.isExpedited == true'
     }
   ];
   const resource = { id: 'task-1', subjectId: 'app-1', slaInfo: [] };
@@ -132,7 +132,7 @@ test('initializeSlaInfo — autoAssignWhen does not fire when resolved entity fi
     {
       id: 'snap_expedited',
       duration: { amount: 7, unit: 'days' },
-      autoAssignWhen: { '==': [{ var: 'application.isExpedited' }, true] }
+      autoAssignWhen: 'application.isExpedited == true'
     }
   ];
   const resource = { id: 'task-1', subjectId: 'app-1', slaInfo: [] };
@@ -146,7 +146,7 @@ test('updateSlaInfo — pauseWhen can reference resolved entity field', () => {
     {
       id: 'test_sla',
       duration: { amount: 9, unit: 'days' },
-      pauseWhen: { '==': [{ var: 'application.pendingDocuments' }, true] }
+      pauseWhen: 'application.pendingDocuments == true'
     }
   ];
   const resource = makeResource('in_progress');
@@ -160,13 +160,52 @@ test('updateSlaInfo — pauseWhen does not fire when resolved entity field is fa
     {
       id: 'test_sla',
       duration: { amount: 9, unit: 'days' },
-      pauseWhen: { '==': [{ var: 'application.pendingDocuments' }, true] }
+      pauseWhen: 'application.pendingDocuments == true'
     }
   ];
   const resource = makeResource('in_progress');
   const resolvedEntities = { application: { id: 'app-1', pendingDocuments: false } };
   updateSlaInfo(resource, slaTypesWithPause, NOW, STATES, resolvedEntities);
   assert.strictEqual(resource.slaInfo[0].status, 'active');
+});
+
+// =============================================================================
+// Conditions are CEL over the resource's fields
+// =============================================================================
+
+test('updateSlaInfo — a CEL pauseWhen pauses the clock while it holds, and only then', () => {
+  const slaTypes = [{ id: 'test_sla', duration: { amount: 9, unit: 'days' }, pauseWhen: 'status in ["awaiting_client", "awaiting_verification"]' }];
+  const waiting = makeResource('awaiting_verification');
+  updateSlaInfo(waiting, slaTypes, NOW, STATES);
+  assert.strictEqual(waiting.slaInfo[0].status, 'paused');
+
+  const working = makeResource('in_progress');
+  updateSlaInfo(working, slaTypes, NOW, STATES);
+  assert.strictEqual(working.slaInfo[0].status, 'active');
+});
+
+test('initializeSlaInfo — a CEL autoAssignWhen reads a list field of the resource', () => {
+  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in programsAppliedFor' }];
+  const snap = { id: 'app-1', programsAppliedFor: ['snap', 'medicaid'], slaInfo: [] };
+  const medicaid = { id: 'app-2', programsAppliedFor: ['medicaid'], slaInfo: [] };
+  initializeSlaInfo(snap, slaTypes, NOW);
+  initializeSlaInfo(medicaid, slaTypes, NOW);
+  assert.deepStrictEqual(snap.slaInfo.map((e) => e.slaTypeCode), ['snap_standard']);
+  assert.deepStrictEqual(medicaid.slaInfo, []);
+});
+
+test('initializeSlaInfo — a condition reading a field the resource lacks does not hold', () => {
+  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: '"snap" in programsAppliedFor' }];
+  const resource = { id: 'app-1', slaInfo: [] };
+  initializeSlaInfo(resource, slaTypes, NOW);
+  assert.deepStrictEqual(resource.slaInfo, []);
+});
+
+test('initializeSlaInfo — a JSON Logic condition is not evaluated, so it never holds', () => {
+  const slaTypes = [{ id: 'snap_standard', duration: { amount: 30, unit: 'days' }, autoAssignWhen: { in: ['snap', { var: 'programsAppliedFor' }] } }];
+  const resource = { id: 'app-1', programsAppliedFor: ['snap'], slaInfo: [] };
+  initializeSlaInfo(resource, slaTypes, NOW);
+  assert.deepStrictEqual(resource.slaInfo, []);
 });
 
 test('slaDeadline is the earliest deadline still running, and null while none is', () => {

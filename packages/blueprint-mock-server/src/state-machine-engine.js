@@ -608,27 +608,22 @@ function* walkSteps(steps, resource, context, store, pending) {
       }
 
       const collection = collectionNamed(collectionPath, context.instance?.resources);
-      const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
-      const isJsonLogic = Boolean(where) && typeof where === 'object' && Object.keys(where).some(k => logicOperators.has(k));
 
       let items;
       if (!where) {
         // With no where:, every record in the collection, as a binding with
         // none finds the first (state-machine-schema.yaml, ContextBinding).
         ({ items } = store.findAll(collection, {}, { limit: null }));
-      } else if (isJsonLogic) {
-        const { items: allItems } = store.findAll(collection, {});
-        const logicData = {
-          this: context.this ?? {},
-          object: context.object ?? {},
-          ...Object.fromEntries(Object.entries(context.entities ?? {}))
-        };
+      } else if (typeof where === 'string') {
+        // A CEL where:, as a binding's: `item` is the candidate record, and
+        // every other name is what a condition here reads.
+        const { items: allItems } = store.findAll(collection, {}, { limit: null });
+        const scope = expressionContext(context);
         items = allItems.filter(item => {
           try {
-            return jsonLogic.apply(where, { ...logicData, ...item });
-          } catch (e) {
-            console.warn(`forEach: JSON Logic where filter error — ${e.message}`);
-            return false;
+            return evaluateExpression(where, { ...scope, item }) === true;
+          } catch {
+            return false; // A field the candidate does not have: not this record.
           }
         });
       } else {

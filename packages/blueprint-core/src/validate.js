@@ -24,6 +24,7 @@ import {
 } from './compositions.js';
 import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
+import { jsonLogicExpressions } from './validator/json-logic-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
 import { stemOf, isDeprecated, isReservedResource, requiresDomain, definedDomains, CONTRACT_TYPES } from './contract-types.js';
@@ -854,6 +855,7 @@ function validateDoc(doc, context) {
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));
   errors.push(...undeclaredRelationships(doc));
   errors.push(...removedNullable(doc));
+  errors.push(...jsonLogicExpressions(doc));
   const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
   if (conformance) {
     errors.push(...conformance.errors);

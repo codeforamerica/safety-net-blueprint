@@ -116,6 +116,8 @@ rpc_endpoints:
 #     do: [<steps>]
 #     Runs do: once per matching record, or once per record with no where:;
 #     forEach: {in: <value expression>, as: <alias>} runs it once per item of a list.
+#     Use a CEL where: string, as a context binding takes, for more than
+#     equality: where: 'item.applicationId == object.id && item.status != "closed"'
 #
 # Expressions (paths, body values, and set: value: all use the same syntax):
 #   $alias.field    — value from a context binding alias (e.g. $application.id, usable in paths and bodies)
@@ -133,12 +135,20 @@ rpc_endpoints:
 # is evaluated, so there are no operators; a missing value contributes nothing.
 #
 # Conditions are CEL, with no dialect: a guard's condition, if:, match:, a
-# context binding's where: string, a composition's filter:, and x-derived.
-# They are evaluated by a spec-compliant implementation (@bufbuild/cel), so an
-# expression that is not CEL is refused, not run some other way.
+# where: string in a context binding or forEach, a composition's filter:,
+# x-derived, a metric's filter: and an SLA type's conditions (autoAssignWhen,
+# pauseWhen and the rest). They are evaluated by a spec-compliant
+# implementation (@bufbuild/cel), so an expression that is not CEL is refused,
+# not run some other way. JSON Logic is refused by validation, which shows the
+# CEL to write instead.
 #   - Names are unprefixed: caller, object, request, params, this (the event),
 #     now, and each context binding by its alias. `$` is value-expression
 #     syntax, above, and not CEL.
+#   - In a where: string, item is the candidate record:
+#     item.status == "pending" && item.taskId == object.id
+#   - A metric's filter:, an SLA type's conditions and a composition's filter:
+#     read the record's own fields by name: type == "workflow.task.created",
+#     status in ["awaiting_client", "awaiting_verification"].
 #   - A field a record does not have is an error, not null: ask with has(),
 #     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
 #   - A binding that found no record is null; test the binding, not a field

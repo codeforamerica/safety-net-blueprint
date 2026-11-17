@@ -205,7 +205,7 @@ machines:
         description: Call the Medicaid ex parte adapter when all data exchange results for a Decision are in; adapter triggers approve, deny, or mark-ineligible (42 CFR § 435.911)
         context:
           - decision: {from: eligibility/determinations/decisions, where: {id: $this.data.decisionId}}
-          - pendingCall: {from: data-exchange/service-calls, where: {and: [{'==': [{var: metadata.eligibility.decisionId}, {var: this.data.decisionId}]}, {'==': [{var: status}, pending]}]}}
+          - pendingCall: {from: data-exchange/service-calls, where: 'item.metadata.eligibility.decisionId == this.data.decisionId && item.status == "pending"'}
         if: 'decision != null && decision.program == "medicaid" && pendingCall == null'
         then:
           - call: {operationId: evaluateMedicaidExParte, requestBody: {payload: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}}
