@@ -110,7 +110,7 @@ export function assembleServer(
   if (routes.has('POST /data-exchange/service-calls')) {
     wrapRoute(routes, 'POST /data-exchange/service-calls', (next) => async (request, ctx) => {
       const body = await jsonBody(request);
-      const service = body?.serviceId ? store.findById('services', body.serviceId) : null;
+      const service = body?.serviceId ? store.findById('data-exchange/services', body.serviceId) : null;
       // The body is already read, so it is handed on through ctx — a Request
       // body cannot be read twice.
       return next(request, {

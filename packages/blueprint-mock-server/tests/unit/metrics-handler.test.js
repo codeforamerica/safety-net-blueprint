@@ -29,21 +29,21 @@ const submitted = (n, time) => ({ id: `e${n}`, type: 'intake.application.submitt
 
 test('counts the events in the store it was given', async () => {
   const store = createMemoryStore();
-  store.append('events', submitted(1, '2024-01-01T00:00:00Z'));
-  store.append('events', { id: 'other', type: 'intake.application.closed', time: '2024-01-01T00:00:00Z' });
+  store.append('platform/events', submitted(1, '2024-01-01T00:00:00Z'));
+  store.append('platform/events', { id: 'other', type: 'intake.application.closed', time: '2024-01-01T00:00:00Z' });
   assert.strictEqual(await valueOf(store), 1);
 });
 
 test('counts every record, not one page of them', async () => {
   const store = createMemoryStore();
-  for (let n = 0; n < 30; n++) store.append('events', submitted(n, '2024-01-01T00:00:00Z'));
+  for (let n = 0; n < 30; n++) store.append('platform/events', submitted(n, '2024-01-01T00:00:00Z'));
   assert.strictEqual(await valueOf(store), 30);
 });
 
 test('windows events by when they happened', async () => {
   const store = createMemoryStore();
-  store.append('events', submitted(1, '2024-01-01T00:00:00Z'));
-  store.append('events', submitted(2, '2024-03-01T00:00:00Z'));
+  store.append('platform/events', submitted(1, '2024-01-01T00:00:00Z'));
+  store.append('platform/events', submitted(2, '2024-03-01T00:00:00Z'));
   assert.strictEqual(await valueOf(store, '?from=2024-02-01T00:00:00Z'), 1);
 });
 
@@ -56,7 +56,7 @@ const compute = async (definition, store) => {
 
 test('a duration pairs events by the record they are about', async () => {
   const store = createMemoryStore();
-  const event = (id, type, subject, time) => store.append('events', { id, type, subject, time });
+  const event = (id, type, subject, time) => store.append('platform/events', { id, type, subject, time });
   event('s1', 'intake.application.submitted', 'app-1', '2024-01-01T00:00:00Z');
   event('c1', 'intake.application.closed', 'app-1', '2024-01-03T00:00:00Z');
   event('s2', 'intake.application.submitted', 'app-2', '2024-01-01T00:00:00Z');
@@ -76,8 +76,8 @@ test('a duration pairs events by the record they are about', async () => {
 
 test('a filter can ask whether any entry of a list matches', async () => {
   const store = createMemoryStore();
-  store.insertResource('applications', { id: 'a', slaInfo: [{ status: 'running' }, { status: 'breached' }] });
-  store.insertResource('applications', { id: 'b', slaInfo: [{ status: 'running' }] });
+  store.insertResource('intake/applications', { id: 'a', slaInfo: [{ status: 'running' }, { status: 'breached' }] });
+  store.insertResource('intake/applications', { id: 'b', slaInfo: [{ status: 'running' }] });
 
   const result = await compute({
     id: 'breach_rate',
@@ -92,9 +92,9 @@ test('a filter can ask whether any entry of a list matches', async () => {
 
 test('a breakdown groups any collection the metric names', async () => {
   const store = createMemoryStore();
-  store.insertResource('applications', { id: 'a', county: 'north', status: 'withdrawn' });
-  store.insertResource('applications', { id: 'b', county: 'north', status: 'submitted' });
-  store.insertResource('applications', { id: 'c', county: 'south', status: 'submitted' });
+  store.insertResource('intake/applications', { id: 'a', county: 'north', status: 'withdrawn' });
+  store.insertResource('intake/applications', { id: 'b', county: 'north', status: 'submitted' });
+  store.insertResource('intake/applications', { id: 'c', county: 'south', status: 'submitted' });
 
   const handler = createMetricsGetHandler([{ domain: 'intake', metrics: [{
     id: 'withdrawal_rate',

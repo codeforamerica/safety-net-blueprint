@@ -15,7 +15,7 @@ curl http://localhost:1080/health
 
 ## What gets served
 
-**REST endpoints** — generated from each OpenAPI spec (`*-openapi.yaml`): list, get, create, update, delete. Requests are validated against schemas; errors return the shared error shape. An id in a create or update whose field declares `x-relationship` must name a record the mock holds, in any domain, or the write is refused with a `422` naming the field. Ids marked `External` or `Polymorphic`, and ids into a collection forwarded to a real service, aren't checked.
+**REST endpoints** — generated from each OpenAPI spec (`*-openapi.yaml`): list, get, create, update, delete. Requests are validated against schemas — an update's body against its update schema, and the record it leaves against the resource's schema — and errors return the shared error shape. An id in a create or update whose field declares `x-relationship` must name a record the mock holds, in any domain, or the write is refused with a `422` naming the field. Ids marked `External` or `Polymorphic`, and ids into a collection forwarded to a real service, aren't checked.
 
 **RPC endpoints** — generated from state machine files (`*-state-machine.yaml`): one `POST /{domain}/{resource}/:id/{operation}` per transition. The server enforces valid state transitions (409 on invalid), evaluates guards, executes steps, tracks SLA clocks, and fires domain events.
 
@@ -35,7 +35,7 @@ Adding a new operation or resource requires only a contract change.
 
 At startup, the server populates its databases from two sources:
 
-- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Each declares its domain with a top-level `domain`; every other key is a record, routed to a collection by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
+- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Each declares its domain with a top-level `domain`; every other key is a record, routed to a collection by key-prefix matching (e.g. `TaskExample1` → workflow's `/tasks`). A record is an object with an `id`, and may hold an `items` list of its own; an example shaped as a list response — `items` with `total`, `limit` and `offset` — or with no `id` is left out, with a warning naming it. Without `--seed`, all collections start empty.
 - **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records. These are always loaded from the spec directory regardless of `--seed`.
 
 The safety-net-contracts package ships hand-authored `*-mock-data.yaml` files alongside each domain's specs (e.g. `domains/workflow/workflow-mock-data.yaml`). To use them:

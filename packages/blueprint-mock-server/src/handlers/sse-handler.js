@@ -10,6 +10,7 @@
  * listing events' (platform-events-openapi.yaml).
  */
 
+import { EVENTS_COLLECTION } from '../emit-event.js';
 
 const HEARTBEAT_MS = 30000;
 
@@ -37,7 +38,7 @@ export function eventFilter(query) {
  * the log doesn't have it. The log is in the order events were recorded.
  */
 function eventsAfter(store, id) {
-  const all = store.findAll('events', {}, { limit: null }).items
+  const all = store.findAll(EVENTS_COLLECTION, {}, { limit: null }).items
     .map((event, order) => ({ event, order }))
     .sort((a, b) => (a.event.time < b.event.time ? -1 : a.event.time > b.event.time ? 1 : a.order - b.order))
     .map(({ event }) => event);

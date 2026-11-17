@@ -23,6 +23,13 @@ import { assertFetchShaped } from '../http/request.js';
 import { callerHeader, extractCallerRoles, traceparentOf } from '../auth-context.js';
 
 /**
+ * Where document-management's routes keep documents and their versions
+ * (collection-utils.js storageName), which these operations belong to.
+ */
+export const DOCUMENTS = 'document-management/documents';
+export const DOCUMENT_VERSIONS = 'document-management/document-versions';
+
+/**
  * Pull the uploaded file out of a multipart body.
  *
  * @param {Request} request
@@ -111,7 +118,7 @@ export function createDocumentUploadHandler(baseUrl, { store, instance } = {}) {
       uploadedById: callerHeader(request, 'x-caller-id') ?? 'anonymous',
       createdAt: now,
     };
-    store.insertResource('document-versions', version);
+    store.insertResource(DOCUMENT_VERSIONS, version);
 
     const document = {
       id: documentId,
@@ -128,7 +135,7 @@ export function createDocumentUploadHandler(baseUrl, { store, instance } = {}) {
       createdAt: now,
       updatedAt: now,
     };
-    store.insertResource('documents', document);
+    store.insertResource(DOCUMENTS, document);
 
     emitEvent({
       instance, domain: 'document-management', object: 'document', action: 'created',
@@ -155,7 +162,7 @@ export function createDocumentVersionUploadHandler(baseUrl, { store, instance } 
   return async (request, { params }) => {
     const { documentId } = params;
 
-    const document = store.findById('documents', documentId);
+    const document = store.findById(DOCUMENTS, documentId);
     if (!document) {
       return Response.json({ code: 'NOT_FOUND', message: 'Document not found' }, { status: 404 });
     }
@@ -163,7 +170,7 @@ export function createDocumentVersionUploadHandler(baseUrl, { store, instance } 
     const { file } = await readUpload(assertFetchShaped(request, 'createDocumentVersionUploadHandler'));
     if (!file) return missingField('file');
 
-    const { items: existingVersions } = store.findAll('document-versions', { documentId }, { limit: 1000 });
+    const { items: existingVersions } = store.findAll(DOCUMENT_VERSIONS, { documentId }, { limit: 1000 });
     const versionNumber = existingVersions.length + 1;
     const versionId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -176,8 +183,8 @@ export function createDocumentVersionUploadHandler(baseUrl, { store, instance } 
       uploadedById: callerHeader(request, 'x-caller-id') ?? 'anonymous',
       createdAt: now,
     };
-    store.insertResource('document-versions', version);
-    store.update('documents', documentId, { latestVersionId: versionId, updatedAt: now });
+    store.insertResource(DOCUMENT_VERSIONS, version);
+    store.update(DOCUMENTS, documentId, { latestVersionId: versionId, updatedAt: now });
 
     emitEvent({
       instance, domain: 'document-management', object: 'document-version', action: 'uploaded',

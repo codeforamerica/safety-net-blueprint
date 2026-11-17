@@ -292,7 +292,7 @@ describe('a step call', () => {
   test('emits the created and updated events a client\'s write would', async () => {
     await send('POST', `/demo/boards/${board.id}/hold`, { at: '2026-01-01T00:00:10Z' });
     await send('POST', `/demo/boards/${board.id}/release`, { at: '2026-01-01T00:00:20Z' });
-    const types = mock.store.findAll('events', {}, { limit: null }).items.map((e) => e.type);
+    const types = mock.store.findAll('platform/events', {}, { limit: null }).items.map((e) => e.type);
     assert.ok(types.includes('demo.card.created'), types.join(', '));
     assert.ok(types.includes('demo.card.updated'), types.join(', '));
   });

@@ -7,7 +7,7 @@
  * so API responses stay clean.
  */
 
-import { deriveCollectionName } from './collection-utils.js';
+import { storageName } from './collection-utils.js';
 
 /**
  * One mock's config-managed records (instance.js).
@@ -92,7 +92,7 @@ export function seedConfigs(configs, { store, configManaged }, { verbose = false
         console.warn(`Warning: config catalog "${key}" (${config.domain}) seeds ${catalog.resourceName}, which no API in the domain serves; not seeded`);
         continue;
       }
-      const collection = deriveCollectionName(catalog.resource.path('collection'), '');
+      const collection = storageName(config.domain, catalog.resource.path('collection'));
       // Records added through the API are marked `user`, even when the file
       // seeds none.
       configManaged.registerCollection(collection);

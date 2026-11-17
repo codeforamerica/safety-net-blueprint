@@ -17,7 +17,7 @@ import { ROLES } from '../roles.js';
 
 beforeEach(() => {
   store.clearAll('testresources');
-  store.clearAll('events');
+  store.clearAll('platform/events');
 });
 
 function makeStateMachine() {
@@ -410,7 +410,7 @@ test('executeTransition — emit: step stores event in database', async () => {
   });
 
   assert.strictEqual(result.success, true);
-  const { items: events } = store.findAll('events', {});
+  const { items: events } = store.findAll('platform/events', {});
   const emitted = events.find(e => e.type === 'test.testresource.submitted');
   assert.ok(emitted, 'submitted event should be stored in events collection');
   assert.strictEqual(emitted.subject, 'res-steps-2');
@@ -440,7 +440,7 @@ test('executeTransition — an emitted event records who acted and carries the t
   });
 
   assert.strictEqual(result.success, true);
-  const emitted = store.findAll('events', {}).items.find(e => e.type === 'test.testresource.submitted');
+  const emitted = store.findAll('platform/events', {}).items.find(e => e.type === 'test.testresource.submitted');
   assert.strictEqual(emitted.authid, 'user-1');
   assert.strictEqual(emitted.authtype, 'user');
   assert.strictEqual(emitted.traceparent, traceparent);
@@ -473,7 +473,7 @@ test('executeTransition — emit: subject override uses value expression instead
   });
 
   assert.strictEqual(result.success, true);
-  const { items: events } = store.findAll('events', {});
+  const { items: events } = store.findAll('platform/events', {});
   const emitted = events.find(e => e.type === 'eligibility.determination.completed');
   assert.ok(emitted, 'the completed event should be stored');
   assert.strictEqual(emitted.subject, 'parent-app-99', 'subject should be the overridden value, not the resource id');

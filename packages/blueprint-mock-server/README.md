@@ -81,9 +81,10 @@ npm run mock:start -- --spec=<dir> --store=memory    # in memory
 MOCK_STORE=memory npm test                           # for a test run
 ```
 
-**`sqlite`** keeps one `.db` file per collection under `generated/mock-data/`, so
-data survives a restart and can be inspected with the `sqlite3` CLI. It is the
-default, so nothing about running the server by hand has changed.
+**`sqlite`** keeps one `.db` file per collection under `generated/mock-data/`,
+in a folder for its domain (`intake/applications.db`), so data survives a
+restart and can be inspected with the `sqlite3` CLI. It is the default, so
+nothing about running the server by hand has changed.
 
 **`memory`** holds everything in Maps. Faster — measurably so on writes — leaves
 nothing on disk, and loads no native module, which is also a way past a
@@ -99,9 +100,13 @@ actually relied upon.
 import { createMemoryStore } from '@codeforamerica/blueprint-mock-server/store';
 
 const store = createMemoryStore();
-store.insertResource('applications', { id: 'app-001', status: 'draft' });
-store.findAll('applications', { status: 'draft' });
+store.insertResource('intake/applications', { id: 'app-001', status: 'draft' });
+store.findAll('intake/applications', { status: 'draft' });
 ```
+
+The server keeps each collection under its domain and its path, parameters
+left out: `/applications` in intake is `intake/applications`, and
+`/applications/{applicationId}/members` is `intake/applications/members`.
 
 `./store` exports the in-memory store on its own, without a native module, so
 it can be used in a browser or in a test that has no need of a server. `createSqliteStore` comes from the package root, since that is Node

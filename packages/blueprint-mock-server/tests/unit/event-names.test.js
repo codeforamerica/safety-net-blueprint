@@ -76,7 +76,7 @@ const send = async (method, path, payload) => {
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
 };
-const types = () => mock.store.findAll('events', {}, { limit: null }).items.map((e) => e.type);
+const types = () => mock.store.findAll('platform/events', {}, { limit: null }).items.map((e) => e.type);
 
 test('a create and an update are named for the resource, with the domain as declared', async () => {
   const created = await send('POST', '/cases', { title: 'A' });

@@ -770,10 +770,10 @@ test('applySteps — evaluate: missing ruleset warns and skips without throwing'
 test('applySteps — invoke POST to collection queues pendingCreate', () => {
   const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingCreates } = applySteps([{
-    invoke: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
+    invoke: { POST: 'intake/applications/documents', body: { applicationId: '$object.id', category: 'income' } }
   }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
-  assert.strictEqual(pendingCreates[0].entity, 'application-documents');
+  assert.strictEqual(pendingCreates[0].entity, 'intake/applications/documents');
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
   assert.strictEqual(pendingCreates[0].data.category, 'income');
 });
@@ -832,15 +832,15 @@ test('applySteps — when: exposes entity aliases', () => {
 // =============================================================================
 
 test('applySteps — forEach runs do: once per matching record (field-value where)', () => {
-  store.clearAll('application-members');
-  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
-  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
-  store.insertResource('application-members', { id: 'mem-3', applicationId: 'app-2' });
+  store.clearAll('intake/applications/members');
+  store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1' });
+  store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-1' });
+  store.insertResource('intake/applications/members', { id: 'mem-3', applicationId: 'app-2' });
 
   const created = [];
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
-    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    forEach: { from: 'intake/applications/members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
   }], {}, context, store);
 
@@ -849,13 +849,27 @@ test('applySteps — forEach runs do: once per matching record (field-value wher
   assert.deepStrictEqual(memberIds, ['mem-1', 'mem-2']);
 });
 
-test('applySteps — forEach skips non-matching records', () => {
-  store.clearAll('application-members');
-  store.insertResource('application-members', { id: 'mem-x', applicationId: 'app-99' });
+test('applySteps — forEach with no where: runs do: once per record in the collection', () => {
+  store.clearAll('intake/applications/members');
+  store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1' });
+  store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-2' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
-    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    forEach: { from: 'intake/applications/members', as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context, store);
+
+  assert.deepStrictEqual(pendingCreates.map(c => c.data.memberId).sort(), ['mem-1', 'mem-2']);
+});
+
+test('applySteps — forEach skips non-matching records', () => {
+  store.clearAll('intake/applications/members');
+  store.insertResource('intake/applications/members', { id: 'mem-x', applicationId: 'app-99' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/applications/members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
   }], {}, context, store);
 
@@ -867,13 +881,13 @@ test('applySteps — forEach skips non-matching records', () => {
 // =============================================================================
 
 test('applySteps — forEach with JSON Logic where filters records', () => {
-  store.clearAll('application-members');
-  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
-  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+  store.clearAll('intake/applications/members');
+  store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
+  store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
-    forEach: { from: 'intake/application-members', where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] }, as: 'member' },
+    forEach: { from: 'intake/applications/members', where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
   }], {}, context, store);
 
@@ -886,16 +900,16 @@ test('applySteps — forEach with JSON Logic where filters records', () => {
 // =============================================================================
 
 test('applySteps — nested forEach iterates inner collection for each outer item', () => {
-  store.clearAll('application-members');
-  store.clearAll('service-types');
-  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
-  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
-  store.insertResource('service-types', { id: 'svc-snap', name: 'snap' });
-  store.insertResource('service-types', { id: 'svc-mcd', name: 'medicaid' });
+  store.clearAll('intake/applications/members');
+  store.clearAll('data-exchange/service-types');
+  store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1' });
+  store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-1' });
+  store.insertResource('data-exchange/service-types', { id: 'svc-snap', name: 'snap' });
+  store.insertResource('data-exchange/service-types', { id: 'svc-mcd', name: 'medicaid' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
-    forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
+    forEach: { from: 'intake/applications/members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{
       forEach: { from: 'data-exchange/service-types', where: { '!=': [{ var: 'id' }, 'none'] }, as: 'svcType' },
       do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id', serviceTypeId: '$svcType.id' } } }]
@@ -934,10 +948,10 @@ test('applySteps — call: string with with: passes parameters', () => {
 test('applySteps — call: object POST to collection queues pendingCreate', () => {
   const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingCreates } = applySteps([{
-    call: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
+    call: { POST: 'intake/applications/documents', body: { applicationId: '$object.id', category: 'income' } }
   }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
-  assert.strictEqual(pendingCreates[0].entity, 'application-documents');
+  assert.strictEqual(pendingCreates[0].entity, 'intake/applications/documents');
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
   assert.strictEqual(pendingCreates[0].data.category, 'income');
 });

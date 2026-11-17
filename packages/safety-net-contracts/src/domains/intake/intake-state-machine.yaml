@@ -217,12 +217,17 @@ machines:
           - call: recordDetermination
       - type: eligibility.determination.completed
         description: Close the application or route to supervisor approval when all program and member combinations have received a determination
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
         steps:
-          - if: "false"
+          - if: application != null && application.status == "under_review"
+            description: Only an application under review is closed or routed to approval; both actions are from under_review
             then:
-              - call: {POST: intake/applications/$this.subject/submit-for-approval, description: Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay}
-            else:
-              - call: {POST: intake/applications/$this.subject/close, description: Close the application when all determinations are in and no supervisor approval is required}
+              - if: "false"
+                then:
+                  - call: {POST: intake/applications/$this.subject/submit-for-approval, description: Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay}
+                else:
+                  - call: {POST: intake/applications/$this.subject/close, description: Close the application when all determinations are in and no supervisor approval is required}
       - type: eligibility.determination.expedited
         description: Flag the application as expedited when eligibility screening confirms the applicant meets expedited processing criteria
         steps:

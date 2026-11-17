@@ -15,11 +15,11 @@ import { deliverEvent } from './routing.js';
 import { arrivedThrough } from './routed-events.js';
 import { theSystem } from './auth-context.js';
 import { busyWith, takeTurn } from './record-turns.js';
-import { executeTransition, performerFor } from './state-machine-runner.js';
+import { executeTransition, performerFor, makePathCalls, putBack } from './state-machine-runner.js';
 import { applyStepsWithCalls, evaluateGuards, whenReady, caughtEntities } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
-import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
+import { storageName, collectionNamed, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { referencesByTarget } from './references.js';
 
 /**
@@ -32,24 +32,24 @@ function eventTypeMatches(eventType, onValue) {
 
 /**
  * The collection a machine's records are stored in, from the contracts' model:
- * its resource's collection path, named the way the mock names it when it
- * registers that resource's routes — a nested resource under its parent
- * (`determination-decisions`). Null when the model has no resource for the
- * machine; then there is no record to find, and none is guessed.
+ * its domain and its resource's collection path, named the way the mock names
+ * it when it registers that resource's routes (`eligibility/determinations/decisions`).
+ * Null when the model has no resource for the machine; then there is no
+ * record to find, and none is guessed.
  *
- * @param {{ resource?: { path(part: string): string|null } | null }} smEntry
+ * @param {{ domain?: string, resource?: { path(part: string): string|null } | null }} smEntry
  * @returns {string|null}
  */
 function collectionOf(smEntry) {
   const path = smEntry.resource?.path?.('collection');
-  return path ? deriveCollectionName(path, '') : null;
+  return path ? storageName(smEntry.domain, path) : null;
 }
 
 /**
  * Find the smEntry (domain + object + stateMachine + machine) for a domain/collection pair.
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @param {string} domain - e.g. "intake"
- * @param {string} collection - kebab-plural e.g. "applications"
+ * @param {string} collection - Where its records are kept, e.g. "intake/applications"
  */
 function findSmEntryForCollection(allStateMachines, domain, collection) {
   return allStateMachines.find(sm => {
@@ -59,35 +59,29 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
 }
 
 /**
- * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
- * The path is fully interpolated: domain/collection/uuid/operation.
+ * Run a pending action call (call: { POST: domain/collection/{id}/action }) on
+ * a mock with no stepCalls, reading the path by convention. The path is fully
+ * interpolated: domain/collection/uuid/action.
+ *
+ * @returns {Promise<{ status: number, code?: string, message: string }|null>} The failure, or null
  */
-function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, { store, instance, stepCalls }) {
-  if (stepCalls) {
-    applyThroughRoutes({ method: 'POST', path, body }, { now, caller, traceparent, causationid, store, instance, stepCalls });
-    return;
-  }
+async function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, { store, instance }) {
   const parts = path.split('/');
   if (parts.length < 4) {
-    console.error(`executePendingOperation: path "${path}" must have at least 4 segments`);
-    return;
+    return { status: 500, message: `path "${path}" must have at least 4 segments` };
   }
   const operation = parts.pop();    // "open"
   const resourceId = parts.pop();   // UUID
-  const collectionPath = parts.join('/');
   const domain = parts[0];
-  const collection = deriveCollectionName(collectionPath, domain);
+  const collection = collectionNamed(parts.join('/'), instance.resources);
 
   const smEntry = findSmEntryForCollection(allStateMachines, domain, collection);
   if (!smEntry) {
-    console.error(`executePendingOperation: no state machine for ${domain}/${collection}`);
-    return;
+    return { status: 500, message: `no state machine for ${collection}` };
   }
 
   try {
-    // Runs at once, as before, unless a step calls an operation; a failure
-    // after that is reported here rather than left unhandled.
-    executeTransition({
+    const result = await executeTransition({
       store,
       instance,
       resourceName: collection,
@@ -102,30 +96,27 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
       traceparent,
       causationid,
       now,
-    }).catch((e) => console.error(`executePendingOperation: "${operation}" on ${collection}/${resourceId} failed: ${e.message}`));
+    });
+    return result.success ? null : { status: result.status, code: result.code, message: result.error, details: result.details };
   } catch (e) {
-    console.error(`executePendingOperation: "${operation}" on ${collection}/${resourceId} failed: ${e.message}`);
+    return { status: 500, message: `"${operation}" on ${collection}/${resourceId} failed: ${e.message}` };
   }
 }
 
 /**
- * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
+ * Apply a pending array-append (call: { PATCH: domain/collection/{id}, body: { field: { $push: value } } })
+ * on a mock with no stepCalls.
+ *
+ * @returns {{ status: number, message: string }|null} The failure, or null
  */
-function executePendingAppend({ path, body }, { store, instance, stepCalls }) {
-  if (stepCalls) {
-    applyThroughRoutes({ method: 'PATCH', path, body }, { caller: { id: 'system', roles: ['system'] }, store, instance, stepCalls });
-    return;
-  }
+function executePendingAppend({ path, body }, { store, instance }) {
   const parts = path.split('/');
   const id = parts.pop();
-  const collectionPath = parts.join('/');
-  const domain = parts[0];
-  const collection = deriveCollectionName(collectionPath, domain);
+  const collection = collectionNamed(parts.join('/'), instance.resources);
 
   const existing = store.findById(collection, id);
   if (!existing) {
-    console.error(`executePendingAppend: ${collection}/${id} not found`);
-    return;
+    return { status: 404, message: `${collection}/${id} not found` };
   }
 
   const patch = {};
@@ -139,6 +130,7 @@ function executePendingAppend({ path, body }, { store, instance, stepCalls }) {
   }
 
   store.update(collection, id, patch);
+  return null;
 }
 
 /**
@@ -159,46 +151,6 @@ export function inOrder(running, key, run) {
   const settled = result.then(() => {}, () => {});
   running.set(key, settled);
   settled.then(() => { if (running.get(key) === settled) running.delete(key); });
-}
-
-/**
- * Do a reaction's call the way the API's route at that method and path means
- * (step-calls.js): a nested create, an update, or an action, which runs as the
- * system.
- */
-function applyThroughRoutes(call, { now, caller, traceparent = null, causationid = null, store, instance, stepCalls }) {
-  const actor = { id: caller?.id || 'system', roles: caller?.roles || ['system'] };
-  try {
-    const done = stepCalls.apply(call, {
-      caller: actor,
-      traceparent,
-      causationid,
-      now,
-      runAction: ({ entry, collection, id, action, body }) => executeTransition({
-        store,
-        instance,
-        resourceName: collection,
-        resourceId: id,
-        trigger: action,
-        callerId: actor.id,
-        callerRoles: actor.roles,
-        stateMachine: entry.stateMachine,
-        machine: entry.machine,
-        slaTypes: stepCalls.slaTypesFor(entry.domain),
-        requestBody: body || {},
-        traceparent,
-        causationid,
-        now,
-        stepCalls,
-      }),
-    });
-    // An action it runs returns a promise; report its failure here.
-    if (done && typeof done.then === 'function') {
-      done.catch((e) => console.error(`onEvent call ${call.method} ${call.path} failed: ${e.message}`));
-    }
-  } catch (e) {
-    console.error(`onEvent call ${call.method} ${call.path} failed: ${e.message}`);
-  }
 }
 
 /**
@@ -379,6 +331,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         request: {},
         this: event,
         now,
+        instance,
       };
 
       const entities = resolveContextLayers(
@@ -446,62 +399,22 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         if (entry.transition) reaction.finally(takeTurn(instance, targetCollection, resource.id)).catch(() => {});
         reaction.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
       }
-      return reaction;
-      // What a reaction's steps left to do, once they have run.
+      // Its calls by path run once the record is saved and let go, so an
+      // action they call on it reads it as the reaction left it.
+      const done = whenReady(reaction, (saved) => (typeof saved === 'function' ? saved() : undefined));
+      if (done && typeof done.then === 'function') {
+        done.catch((e) => console.error(`Machine onEvent "${entry.type}" failed:`, e.message));
+      }
+      return done;
+      // What a reaction's steps left to do, once they have run. Saves the
+      // record, and returns what's left after: its calls by path, then its
+      // creates and events.
       function finish(applied, at, target) {
         const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } = applied;
 
         // Apply state transition if present (mutations are persisted after procedures run)
         if (target) {
           resource.status = target;
-        }
-
-        // Handle collection creates
-        for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
-          try {
-            const stored = store.create(entity, data);
-            const created = stepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
-            // Named for the resource the API serves at that path, where the
-            // route can be found; otherwise for the path's last segment.
-            let object = eventObject || entity.replace(/s$/, '');
-            try {
-              const resolved = stepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
-              if (resolved?.resource?.eventName) object = resolved.resource.eventName;
-            } catch { /* not a declared route: keep the path's name */ }
-            emitEvent({
-              instance,
-              domain: entDomain || smEntry.domain,
-              object,
-              action: 'created',
-              resourceId: created.id,
-              source: `/${entDomain || smEntry.domain}`,
-              data: { ...created },
-              callerId: 'system',
-              traceparent: event.traceparent,
-              causationid: event.id,
-              now,
-            });
-          } catch (e) {
-            console.error(`onEvent create failed for ${entity}:`, e.message);
-          }
-        }
-
-        // Handle array appends
-        for (const append of pendingAppends) {
-          try {
-            executePendingAppend(append, deps);
-          } catch (e) {
-            console.error(`onEvent append failed for "${append.path}":`, e.message);
-          }
-        }
-
-        // Handle operation triggers
-        for (const op of pendingOperations) {
-          try {
-            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
-          } catch (e) {
-            console.error(`onEvent operation failed for "${op.path}":`, e.message);
-          }
         }
 
         // Handle events emitted directly by onEvent steps
@@ -520,16 +433,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
 
         return whenReady(procedures, ({ pendingOperations: procOps, pendingEvents: procEvts, failed }) => {
           if (failed) return unhandled(failed);
-          for (const op of procOps) {
-            try {
-              executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
-            } catch (e) {
-              console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
-            }
-          }
           allPendingEvents.push(...(procEvts || []));
 
           // Persist all resource mutations (from direct steps and procedures) after everything runs
+          let saved = null;
           if (entry.transition && targetCollection && originalSnapshot) {
             const diff = {};
             for (const [key, value] of Object.entries(resource)) {
@@ -538,27 +445,89 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               }
             }
             if (Object.keys(diff).length > 0) {
-              store.update(targetCollection, recordId, diff);
+              saved = store.update(targetCollection, recordId, diff);
             }
           }
 
-          for (const evt of allPendingEvents) {
-            try {
-              emitEventEnvelope({
-                type: evt.type,
-                source: `/${domain}`,
-                subject: evt.subject ?? subjectId,
-                data: evt.data || null,
-                traceparent: event.traceparent,
-                causationid: event.id,
-                time: now,
-                ...authContext('system'),
-              }, instance);
-            } catch (e) {
-              console.error(`onEvent emit "${evt.type}" failed:`, e.message);
+          return async () => {
+            // Calls that name a record — a nested create, an update, another
+            // action — made as the system. One that fails fails the reaction:
+            // the record is put back, and nothing else it would do is done.
+            const calls = [
+              ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
+              ...[...pendingOperations, ...procOps].map(({ path, body }) => ({ method: 'POST', path, body })),
+            ];
+            const failure = stepCalls
+              ? await makePathCalls(calls, { stepCalls, store, instance, now, traceparent: event.traceparent ?? null, causationid: event.id ?? null })
+              : await withoutStepCalls(calls);
+            if (failure) {
+              if (saved) putBack(store, targetCollection, originalSnapshot, saved);
+              const why = (failure.details ?? []).map((d) => `${d.field}: ${d.message}`).join('; ');
+              console.error(`Machine onEvent "${entry.type}": call ${failure.call.method} ${failure.call.path} failed with ${failure.status}: ${failure.message ?? ''}${why ? ` (${why})` : ''} — nothing saved`);
+              return;
             }
-          }
+
+            // Handle collection creates
+            for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
+              try {
+                const stored = store.create(entity, data);
+                const created = stepCalls?.startClocksAt(`${entDomain}${stubUrl ?? ''}`, stored, now) ?? stored;
+                // Named for the resource the API serves at that path, where the
+                // route can be found; otherwise for the path's last segment.
+                let object = eventObject;
+                try {
+                  const resolved = stepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+                  if (resolved?.resource?.eventName) object = resolved.resource.eventName;
+                } catch { /* not a declared route: keep the path's name */ }
+                emitEvent({
+                  instance,
+                  domain: entDomain || smEntry.domain,
+                  object,
+                  action: 'created',
+                  resourceId: created.id,
+                  source: `/${entDomain || smEntry.domain}`,
+                  data: { ...created },
+                  callerId: 'system',
+                  traceparent: event.traceparent,
+                  causationid: event.id,
+                  now,
+                });
+              } catch (e) {
+                console.error(`onEvent create failed for ${entity}:`, e.message);
+              }
+            }
+
+            for (const evt of allPendingEvents) {
+              try {
+                emitEventEnvelope({
+                  type: evt.type,
+                  source: `/${domain}`,
+                  subject: evt.subject ?? subjectId,
+                  data: evt.data || null,
+                  traceparent: event.traceparent,
+                  causationid: event.id,
+                  time: now,
+                  ...authContext('system'),
+                }, instance);
+              } catch (e) {
+                console.error(`onEvent emit "${evt.type}" failed:`, e.message);
+              }
+            }
+          };
         });
+      }
+
+      // A mock with no stepCalls reads a call's path by convention: an
+      // action on a record, or an array append. The first that fails is the
+      // reaction's failure, as through makePathCalls.
+      async function withoutStepCalls(calls) {
+        for (const call of calls) {
+          const failure = call.method === 'PATCH'
+            ? executePendingAppend(call, deps)
+            : await executePendingOperation(call, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, deps);
+          if (failure) return { call, ...failure };
+        }
+        return null;
       }
     } catch (e) {
       console.error(`Machine onEvent "${entry.type}" failed:`, e.message);

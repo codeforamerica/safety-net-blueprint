@@ -3,7 +3,7 @@
  */
 
 import { extract } from '@codeforamerica/blueprint-core/browser';
-import { deriveCollectionName } from './collection-utils.js';
+import { storageName } from './collection-utils.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
 /**
@@ -31,7 +31,7 @@ function itemSchemaName(listSchema) {
  *
  * A collection endpoint's list response names the schema its records are, so
  * this is read rather than inferred. `/workflow/queues` is collection
- * `queues` and holds `Queue` only because its list response says so — no
+ * `workflow/queues` and holds `Queue` only because its list response says so — no
  * naming convention connects the two, and guessing one is how records went
  * unvalidated.
  *
@@ -54,7 +54,8 @@ function collectionSchemas(docs) {
       // sub-collection carries its parent's parameter in the middle.
       if (path.endsWith('}') || !item?.get) continue;
 
-      const collection = deriveCollectionName(`${basePath}${path}`, basePath);
+      // Kept under the API's domain, as its routes keep it (storageName).
+      const collection = storageName(doc.domain ?? basePath.replace(/^\//, ''), path);
       if (!collection || byCollection.get(collection)) continue;
 
       const listRef = item.get.responses?.['200']?.content?.['application/json']?.schema?.$ref;

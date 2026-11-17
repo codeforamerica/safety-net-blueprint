@@ -10,7 +10,7 @@ import { updateSlaInfo, earliestDeadline } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
-import { playsAnyOf } from './auth-context.js';
+import { playsAnyOf, theSystem } from './auth-context.js';
 import { whenFree } from './record-turns.js';
 
 /**
@@ -118,7 +118,9 @@ export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 
  * one fails, its `catch:` runs instead of the action's steps and names the
  * state the action ends in, and the action answers with the call's failure
  * and the record in `details`. With no `catch:`, the action fails and
- * nothing is saved.
+ * nothing is saved. A call by method and path is made once the record is
+ * saved, as the system; one that fails puts the record back and fails the
+ * action, with the call's status (makePathCalls).
  *
  * It waits for any action or reaction already changing the record, and holds
  * the record until it's saved (record-turns.js); what it does after — its
@@ -177,7 +179,8 @@ async function transitionRecord({
     caller: { id: callerId, roles: callerRoles },
     object: { ...resource },
     request: requestBody,
-    now: timestamp
+    now: timestamp,
+    instance,
   };
 
   const operationContext = (machine.actions || []).find(op => op.id === trigger)?.context;
@@ -274,6 +277,23 @@ async function transitionRecord({
   const result = store.update(resourceName, resourceId, diff);
   letGo();
 
+  // Calls that name a record — a nested create, an update, another action —
+  // mean what the API's route at that method and path means (step-calls.js).
+  // Made once the record is saved, so an action called on it reads it as this
+  // one left it; one that fails puts the record back, and the action fails
+  // with it: nothing it did is kept, and none of its events are sent.
+  if (stepCalls) {
+    const failed = await makePathCalls([
+      ...pendingOperations.map(({ path, body }) => ({ method: 'POST', path, body })),
+      ...(procedures.pendingOperations ?? []).map(({ path, body }) => ({ method: 'POST', path, body })),
+      ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
+    ], { stepCalls, store, instance, now: timestamp, traceparent, causationid });
+    if (failed) {
+      putBack(store, resourceName, resource, result);
+      return { success: false, status: failed.status, code: failed.code, error: failed.message, details: failed.details };
+    }
+  }
+
   // A record a step creates directly has its SLA clocks started and is
   // announced as a create through the API would be, caused by the action.
   for (const { entity, domain, stubUrl, data } of pendingCreates) {
@@ -283,45 +303,6 @@ async function transitionRecord({
         caller: { id: callerId, roles: callerRoles }, traceparent, causationid: actionEventId, now: timestamp,
       });
     } catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
-  }
-
-  // Calls that name a record — a nested create, an update, another action —
-  // mean what the API's route at that method and path means (step-calls.js).
-  if (stepCalls) {
-    const calls = [
-      ...pendingOperations.map(({ path, body }) => ({ method: 'POST', path, body })),
-      ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
-    ];
-    for (const call of calls) {
-      try {
-        await stepCalls.apply(call, {
-          caller: { id: callerId, roles: callerRoles },
-          traceparent,
-          causationid,
-          now: timestamp,
-          runAction: ({ entry, collection, id, action, body }) => executeTransition({
-            resourceName: collection,
-            resourceId: id,
-            trigger: action,
-            callerId,
-            callerRoles,
-            now: timestamp,
-            stateMachine: entry.stateMachine,
-            machine: entry.machine,
-            slaTypes: stepCalls.slaTypesFor(entry.domain),
-            requestBody: body,
-            traceparent,
-            causationid,
-            authorization,
-            store,
-            instance,
-            stepCalls,
-          }),
-        });
-      } catch (e) {
-        console.error(`Action "${trigger}": ${e.message}`);
-      }
-    }
   }
 
   const domain = stateMachine.domain;
@@ -366,6 +347,86 @@ async function transitionRecord({
     return { success: true, result: fitToSchema(payload, responseSchema?.schema, responseSchema?.follow) };
   }
   return { success: true, result };
+}
+
+/**
+ * Make an action's or a reaction's calls by method and path, in order, each
+ * meaning what the API's route at that method and path means (step-calls.js):
+ * a nested create, an update, or another record's action. Made as the system
+ * (behavioral-contract-dsl.md, Function model): an action called this way
+ * skips only role matching — its `from`, its conditions and its request
+ * schema still apply. Stops at the first that fails.
+ *
+ * @param {Array<{ method: string, path: string, body?: Object }>} calls - Paths interpolated
+ * @param {Object} options
+ * @param {Object} options.stepCalls
+ * @param {Object} options.store
+ * @param {Object} options.instance
+ * @param {string} options.now
+ * @param {string|null} [options.traceparent]
+ * @param {string|null} [options.causationid]
+ * @returns {Promise<{ call: Object, status: number, code?: string, message: string, details?: Object[] }|null>}
+ *   The failure — an action's refusal, or a call that means nothing or writes
+ *   what the schema refuses — or null when every call succeeded
+ */
+export async function makePathCalls(calls, { stepCalls, store, instance, now, traceparent = null, causationid = null }) {
+  const system = theSystem();
+  for (const call of calls) {
+    let outcome;
+    try {
+      outcome = await stepCalls.apply(call, {
+        caller: system,
+        traceparent,
+        causationid,
+        now,
+        runAction: ({ entry, collection, id, action, body }) => executeTransition({
+          resourceName: collection,
+          resourceId: id,
+          trigger: action,
+          callerId: system.id,
+          callerRoles: system.roles,
+          now,
+          stateMachine: entry.stateMachine,
+          machine: entry.machine,
+          slaTypes: stepCalls.slaTypesFor(entry.domain),
+          requestBody: body ?? {},
+          traceparent,
+          causationid,
+          store,
+          instance,
+          stepCalls,
+        }),
+      });
+    } catch (e) {
+      return { call, status: 500, code: 'INTERNAL_ERROR', message: e.message };
+    }
+    if (outcome?.success === false) {
+      return { call, status: outcome.status, code: outcome.code, message: outcome.error, details: outcome.details };
+    }
+  }
+  return null;
+}
+
+/**
+ * Put a record back as it was before an action or reaction changed it, for one
+ * whose call failed after it was saved: each field it changed, unless
+ * something has changed that field since.
+ *
+ * @param {Object} store
+ * @param {string} collection
+ * @param {Object} before - The record as it was found
+ * @param {Object|null} saved - The record as the action or reaction saved it
+ */
+export function putBack(store, collection, before, saved) {
+  const current = saved ? store.findById(collection, before.id) : null;
+  if (!current) return;
+  const restored = { ...current };
+  for (const key of new Set([...Object.keys(before), ...Object.keys(saved)])) {
+    if (JSON.stringify(current[key]) !== JSON.stringify(saved[key])) continue;
+    if (key in before) restored[key] = before[key];
+    else delete restored[key];
+  }
+  store.insertResource(collection, restored);
 }
 
 /** An action refused because a call it made failed with nothing to handle it. */
