@@ -455,13 +455,13 @@ function renderMetrics(doc) {
       m.description || '',
       m.aggregate || '',
       m.source?.collection || '',
-      m.source?.filter ? JSON.stringify(m.source.filter) : '',
+      m.source?.filter ?? '',
       m.total?.collection || '',
-      m.total?.filter ? JSON.stringify(m.total.filter) : '',
+      m.total?.filter ?? '',
       m.from?.collection || '',
-      m.from?.filter ? JSON.stringify(m.from.filter) : '',
+      m.from?.filter ?? '',
       m.to?.collection || '',
-      m.to?.filter ? JSON.stringify(m.to.filter) : '',
+      m.to?.filter ?? '',
       m.pairBy || '',
       targets
     ]);
@@ -483,12 +483,12 @@ function renderSlaTypes(doc) {
       t.duration?.amount != null ? String(t.duration.amount) : '',
       t.duration?.unit || '',
       t.warningThresholdPercent != null ? String(t.warningThresholdPercent) : '',
-      t.autoAssignWhen ? JSON.stringify(t.autoAssignWhen) : '',
-      t.startWhen ? JSON.stringify(t.startWhen) : '',
-      t.pauseWhen ? JSON.stringify(t.pauseWhen) : '',
-      t.resumeWhen ? JSON.stringify(t.resumeWhen) : '',
-      t.completedWhen ? JSON.stringify(t.completedWhen) : '',
-      t.resetWhen ? JSON.stringify(t.resetWhen) : ''
+      t.autoAssignWhen ?? '',
+      t.startWhen ?? '',
+      t.pauseWhen ?? '',
+      t.resumeWhen ?? '',
+      t.completedWhen ?? '',
+      t.resetWhen ?? ''
     ]);
   }
   return csvTable(headers, rows);
@@ -1009,14 +1009,14 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
     lines.push('SLA types define the deadlines and clock behavior for each class of work. The SLA clock tracks progress toward resolution; `pauseWhen` conditions temporarily stop the clock while the task is blocked on external input.');
     lines.push('');
-    lines.push('JSON Logic conditions are serialized as JSON. See [#108](https://github.com/codeforamerica/safety-net-blueprint/issues/108) for planned improvements to the editing experience.');
+    lines.push('Conditions are CEL expressions over the resource\'s fields, named as they are.');
     lines.push('');
     lines.push('| ID | Name | Duration | Warning at | Pause when |');
     lines.push('|----|------|----------|------------|------------|');
     for (const t of slaTypesDoc.slaTypes) {
       const duration = t.duration ? `${t.duration.amount} ${t.duration.unit}` : '';
       const warning = t.warningThresholdPercent != null ? `${t.warningThresholdPercent}%` : '—';
-      const pause = t.pauseWhen ? `\`${JSON.stringify(t.pauseWhen)}\`` : '—';
+      const pause = t.pauseWhen ? `\`${mdCell(t.pauseWhen)}\`` : '—';
       lines.push(`| \`${mdCell(t.id)}\` | ${mdCell(t.name)} | ${mdCell(duration)} | ${mdCell(warning)} | ${pause} |`);
     }
     lines.push('');
@@ -1028,7 +1028,7 @@ function renderOverview(smDoc, rulesDoc, slaTypesDoc = null, metricsDoc = null) 
     lines.push('');
     lines.push('## Metrics');
     lines.push('');
-    lines.push('Metrics are computed on demand from the tasks and events collections. Values are available at `GET /workflow/metrics`.');
+    lines.push(`Metrics are computed on demand from the collections each one names. Values are available at \`GET /${metricsDoc.domain}/metrics\`.`);
     lines.push('');
     lines.push('| ID | Name | Aggregate | Target |');
     lines.push('|----|------|-----------|--------|');

@@ -3,7 +3,7 @@
  * No Express or database dependencies.
  */
 
-import jsonLogic from 'json-logic-js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Add a duration to a base ISO datetime string.
@@ -34,16 +34,18 @@ function durationToMs({ amount, unit }) {
 }
 
 /**
- * Evaluate a JSON Logic condition against a data object.
- * Returns false if condition is absent or evaluation fails.
- * @param {*} condition - JSON Logic condition
+ * Evaluate a CEL condition against a data object, whose fields it names as
+ * they are (`status in ["awaiting_client"]`).
+ * Returns false if condition is absent or evaluation fails — a field the
+ * resource does not have, say.
+ * @param {string} condition - CEL condition
  * @param {Object} data - Data to evaluate against
  * @returns {boolean}
  */
 function evaluateCondition(condition, data) {
   if (condition === undefined || condition === null) return false;
   try {
-    return Boolean(jsonLogic.apply(condition, data));
+    return evaluateCEL(condition, data) === true;
   } catch {
     return false;
   }

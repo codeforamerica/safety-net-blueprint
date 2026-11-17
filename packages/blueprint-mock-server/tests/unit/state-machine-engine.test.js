@@ -15,9 +15,6 @@ import {
   resolveValue,
   evaluateGuard,
   evaluateGuards,
-  applySetEffect,
-  applyCreateEffect,
-  applyEffects,
   applySteps,
 } from '../../src/state-machine-engine.js';
 import { generate } from '@codeforamerica/blueprint-core';
@@ -417,169 +414,6 @@ test('evaluateGuards — all composition fails when any guard fails', () => {
 });
 
 // =============================================================================
-// applySetEffect
-// =============================================================================
-
-test('applySetEffect — sets literal value', () => {
-  const resource = { status: 'pending' };
-  applySetEffect({ field: 'status', value: 'active' }, resource, {});
-  assert.strictEqual(resource.status, 'active');
-});
-
-test('applySetEffect — sets $caller.id', () => {
-  const resource = { assignedToId: null };
-  const context = { caller: { id: 'worker-1' } };
-  applySetEffect({ field: 'assignedToId', value: '$caller.id' }, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-});
-
-test('applySetEffect — sets null', () => {
-  const resource = { assignedToId: 'worker-1' };
-  applySetEffect({ field: 'assignedToId', value: null }, resource, {});
-  assert.strictEqual(resource.assignedToId, null);
-});
-
-// =============================================================================
-// applyCreateEffect
-// =============================================================================
-
-test('applyCreateEffect — resolves all field references', () => {
-  const effect = {
-    type: 'create',
-    entity: 'task-audit-events',
-    fields: {
-      taskId: '$object.id',
-      eventType: 'assigned',
-      previousValue: '$object.status',
-      newValue: 'in_progress',
-      performedById: '$caller.id',
-      occurredAt: '$now'
-    }
-  };
-  const context = {
-    caller: { id: 'worker-1' },
-    object: { id: 'task-99', status: 'pending' },
-    now: '2025-01-15T10:00:00.000Z'
-  };
-  const result = applyCreateEffect(effect, context);
-  assert.strictEqual(result.entity, 'task-audit-events');
-  assert.deepStrictEqual(result.data, {
-    taskId: 'task-99',
-    eventType: 'assigned',
-    previousValue: 'pending',
-    newValue: 'in_progress',
-    performedById: 'worker-1',
-    occurredAt: '2025-01-15T10:00:00.000Z'
-  });
-});
-
-test('applyCreateEffect — handles null fields gracefully', () => {
-  const effect = {
-    type: 'create',
-    entity: 'audit',
-    fields: { taskId: '$object.id', note: null }
-  };
-  const context = { object: { id: 'task-1' } };
-  const result = applyCreateEffect(effect, context);
-  assert.strictEqual(result.data.taskId, 'task-1');
-  assert.strictEqual(result.data.note, null);
-});
-
-test('applyCreateEffect — handles missing fields map', () => {
-  const effect = { type: 'create', entity: 'audit' };
-  const result = applyCreateEffect(effect, {});
-  assert.strictEqual(result.entity, 'audit');
-  assert.deepStrictEqual(result.data, {});
-});
-
-// =============================================================================
-// applyEffects
-// =============================================================================
-
-test('applyEffects — applies multiple set effects', () => {
-  const resource = { assignedToId: null, priority: 'low' };
-  const context = { caller: { id: 'worker-1' } };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    { type: 'set', field: 'priority', value: 'high' }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(resource.priority, 'high');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — returns pendingCreates for create effects', () => {
-  const resource = { id: 'task-1', status: 'pending' };
-  const context = {
-    caller: { id: 'worker-1' },
-    object: { id: 'task-1', status: 'pending' },
-    now: '2025-01-15T10:00:00.000Z'
-  };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    {
-      type: 'create',
-      entity: 'task-audit-events',
-      fields: { taskId: '$object.id', eventType: 'assigned' }
-    }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(pendingCreates.length, 1);
-  assert.strictEqual(pendingCreates[0].entity, 'task-audit-events');
-  assert.strictEqual(pendingCreates[0].data.taskId, 'task-1');
-  assert.strictEqual(pendingCreates[0].data.eventType, 'assigned');
-});
-
-test('applyEffects — skips unknown effect types', () => {
-  const resource = { status: 'pending' };
-  const effects = [
-    { type: 'unknown_type', field: 'status', value: 'active' }
-  ];
-  const { pendingCreates } = applyEffects(effects, resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — handles null effects gracefully', () => {
-  const resource = { status: 'pending' };
-  const { pendingCreates } = applyEffects(null, resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-});
-
-test('applyEffects — handles empty effects array', () => {
-  const resource = { status: 'pending' };
-  const { pendingCreates, pendingProcedures } = applyEffects([], resource, {});
-  assert.strictEqual(resource.status, 'pending');
-  assert.deepStrictEqual(pendingCreates, []);
-  assert.deepStrictEqual(pendingProcedures, []);
-});
-
-test('applyEffects — mixes set and create effects', () => {
-  const resource = { assignedToId: null };
-  const context = { caller: { id: 'worker-1' }, object: { id: 'task-1' }, now: '2025-01-15T10:00:00.000Z' };
-  const effects = [
-    { type: 'set', field: 'assignedToId', value: '$caller.id' },
-    { type: 'create', entity: 'audit', fields: { taskId: '$object.id' } },
-  ];
-  const { pendingCreates, pendingProcedures } = applyEffects(effects, resource, context);
-  assert.strictEqual(resource.assignedToId, 'worker-1');
-  assert.strictEqual(pendingCreates.length, 1);
-  assert.deepStrictEqual(pendingProcedures, []);
-});
-
-test('applyEffects — returns empty pendingProcedures when no procedure effects', () => {
-  const resource = { status: 'pending' };
-  const effects = [
-    { type: 'set', field: 'status', value: 'active' }
-  ];
-  const { pendingProcedures } = applyEffects(effects, resource, {});
-  assert.deepStrictEqual(pendingProcedures, []);
-});
-
-// =============================================================================
 // evaluateGuard — is_not_null
 // =============================================================================
 
@@ -813,21 +647,6 @@ test('applySteps — invoke PATCH queues pendingAppend with resolved $push body'
 });
 
 // =============================================================================
-// applySteps — when:
-// =============================================================================
-
-
-test('applySteps — when: exposes entity aliases', () => {
-  const resource = { status: 'pending' };
-  const context = { entities: { queue: { type: 'expedited' } }, object: {}, request: {} };
-  applySteps([{
-    when: { '==': [{ var: 'queue.type' }, 'expedited'] },
-    set: { field: 'status', value: 'expedited' }
-  }], resource, context, store);
-  assert.strictEqual(resource.status, 'expedited');
-});
-
-// =============================================================================
 // applySteps — forEach (field-value where)
 // =============================================================================
 
@@ -877,22 +696,52 @@ test('applySteps — forEach skips non-matching records', () => {
 });
 
 // =============================================================================
-// applySteps — forEach (JSON Logic where)
+// applySteps — forEach (CEL where)
 // =============================================================================
 
-test('applySteps — forEach with JSON Logic where filters records', () => {
+test('applySteps — forEach with a CEL where runs do: for each record it holds for', () => {
   store.clearAll('intake/applications/members');
   store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
   store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+  store.insertResource('intake/applications/members', { id: 'mem-3', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+  store.insertResource('intake/applications/members', { id: 'mem-4', applicationId: 'app-2', citizenshipStatus: 'non-citizen' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
-    forEach: { from: 'intake/applications/members', where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] }, as: 'member' },
+    forEach: { from: 'intake/applications/members', where: 'item.applicationId == object.id && item.citizenshipStatus != "citizen"', as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
   }], {}, context, store);
 
-  assert.strictEqual(pendingCreates.length, 1);
-  assert.strictEqual(pendingCreates[0].data.memberId, 'mem-2');
+  assert.deepStrictEqual(pendingCreates.map(c => c.data.memberId).sort(), ['mem-2', 'mem-3']);
+});
+
+test('applySteps — a CEL forEach where reads a binding by its alias and the event as this', () => {
+  store.clearAll('intake/applications/members');
+  store.insertResource('intake/applications/members', { id: 'mem-1', applicationId: 'app-1', county: 'north' });
+  store.insertResource('intake/applications/members', { id: 'mem-2', applicationId: 'app-1', county: 'south' });
+  store.insertResource('intake/applications/members', { id: 'mem-3', applicationId: 'app-1' });
+
+  const context = { object: {}, entities: { application: { id: 'app-1' } }, this: { data: { county: 'south' } }, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/applications/members', where: 'item.applicationId == application.id && item.county == this.data.county', as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context, store);
+
+  // mem-3 has no county, so the condition does not evaluate for it: not a match.
+  assert.deepStrictEqual(pendingCreates.map(c => c.data.memberId), ['mem-2']);
+});
+
+test('applySteps — a CEL forEach where reads every record, not one page of them', () => {
+  store.clearAll('intake/applications/members');
+  for (let n = 0; n < 40; n++) store.insertResource('intake/applications/members', { id: `mem-${n}`, applicationId: 'app-1' });
+
+  const context = { object: { id: 'app-1' }, entities: {}, request: {} };
+  const { pendingCreates } = applySteps([{
+    forEach: { from: 'intake/applications/members', where: 'item.applicationId == object.id', as: 'member' },
+    do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
+  }], {}, context, store);
+
+  assert.strictEqual(pendingCreates.length, 40);
 });
 
 // =============================================================================
@@ -911,7 +760,7 @@ test('applySteps — nested forEach iterates inner collection for each outer ite
   const { pendingCreates } = applySteps([{
     forEach: { from: 'intake/applications/members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{
-      forEach: { from: 'data-exchange/service-types', where: { '!=': [{ var: 'id' }, 'none'] }, as: 'svcType' },
+      forEach: { from: 'data-exchange/service-types', where: 'item.id != "none"', as: 'svcType' },
       do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id', serviceTypeId: '$svcType.id' } } }]
     }]
   }], {}, context, store);
