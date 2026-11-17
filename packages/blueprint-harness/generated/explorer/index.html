@@ -114,47 +114,6 @@
       padding: 3rem 2rem 4rem;
     }
 
-    /* ── Section headers ─────────────────────────────────────────── */
-
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .pill {
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      padding: 0.3rem 0.75rem;
-      border-radius: 100px;
-    }
-
-    .pill-diagrams {
-      background: var(--pale-blue);
-      color: var(--dark-blue);
-      border: 1px solid var(--light-blue);
-    }
-
-    .pill-tools {
-      background: var(--light-green);
-      color: var(--deep-green);
-      border: 1px solid #b2e8e2;
-    }
-
-    .section-header h3 {
-      font-size: 1.125rem;
-      font-weight: 700;
-    }
-
-    .section-divider {
-      border: none;
-      border-top: 1px solid var(--sand-dark);
-      margin: 2.5rem 0;
-    }
-
     /* ── Card grid ───────────────────────────────────────────────── */
 
     .card-grid {
@@ -252,24 +211,6 @@
       flex: 1;
     }
 
-    /* ── Status badges ───────────────────────────────────────────── */
-
-    .status-badge {
-      font-size: 9.5px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 0.15rem 0.5rem;
-      border-radius: 100px;
-      flex-shrink: 0;
-      margin-left: 0.5rem;
-      margin-top: 1px;
-    }
-
-    .badge-complete { background: var(--light-green);  color: var(--deep-green); border: 1px solid #b2e8e2; }
-    .badge-progress { background: var(--pale-blue);    color: var(--mid-blue);   border: 1px solid var(--light-blue); }
-    .badge-planned  { background: var(--sand-mid);     color: #7a6050;           border: 1px solid var(--sand-dark); }
-
     /* ── Output tags ─────────────────────────────────────────────── */
 
     .card-outputs {
@@ -356,13 +297,6 @@
 
   <main>
 
-    <!-- ── Tools ─────────────────────────────────────────────────── -->
-
-    <div class="section-header">
-      <span class="pill pill-tools">Tools</span>
-      <h3>Data &amp; reference tools</h3>
-    </div>
-
     <div class="card-grid">
 
       <div class="card">
@@ -378,6 +312,26 @@
             <h4><a href="try-it/index.html" class="card-link">Try it out</a></h4>
           </div>
           <p>The mock server running in your browser, built from the contracts. Play the scenarios a step at a time, or send any operation a request.</p>
+          <div class="card-outputs">
+            <a href="try-it/index.html#tour=scenarios%2Fframework-features.arazzo.yaml" class="output-tag">
+              <span class="dot dot-blue"></span>The framework's core features
+            </a>
+            <a href="try-it/index.html#tour=scenarios%2Fsuggestion-lifecycle.arazzo.yaml" class="output-tag">
+              <span class="dot dot-blue"></span>A suggestion, from proposal to decision
+            </a>
+            <a href="try-it/index.html#tour=scenarios%2Ftranscription-chat.arazzo.yaml" class="output-tag">
+              <span class="dot dot-blue"></span>Transcribing a typed conversation (a chat)
+            </a>
+            <a href="try-it/index.html#tour=scenarios%2Ftranscription-relay.arazzo.yaml" class="output-tag">
+              <span class="dot dot-blue"></span>Transcribing a spoken conversation through a relay
+            </a>
+            <a href="try-it/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 5 scenarios
+            </a>
+            <a href="try-it/index.html#explore" class="output-tag">
+              <span class="dot dot-grey"></span>Let me explore
+            </a>
+          </div>
         </div>
       </div>
 
@@ -394,7 +348,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="api-reference/index.html" class="card-link">API Reference</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>
           <div class="card-outputs">
@@ -410,26 +363,8 @@
             <a href="api-reference/decision-support-suggestions.html" class="output-tag">
               <span class="dot dot-green"></span>Decision Support Suggestions
             </a>
-            <a href="api-reference/document-management.html" class="output-tag">
-              <span class="dot dot-green"></span>Document Management
-            </a>
-            <a href="api-reference/eligibility.html" class="output-tag">
-              <span class="dot dot-green"></span>Eligibility
-            </a>
-            <a href="api-reference/eligibility-rules.html" class="output-tag">
-              <span class="dot dot-green"></span>Eligibility Rules
-            </a>
-            <a href="api-reference/intake.html" class="output-tag">
-              <span class="dot dot-green"></span>Intake
-            </a>
-            <a href="api-reference/intake-rules.html" class="output-tag">
-              <span class="dot dot-green"></span>Intake Rules
-            </a>
-            <a href="api-reference/platform-events.html" class="output-tag">
-              <span class="dot dot-green"></span>Platform Events
-            </a>
-            <a href="api-reference/platform-registries.html" class="output-tag">
-              <span class="dot dot-green"></span>Platform Registries
+            <a href="api-reference/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 11 APIs
             </a>
           </div>
         </div>
@@ -448,7 +383,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="data-dictionaries/index.html" class="card-link">Data Dictionary</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>
           <div class="card-outputs">
@@ -464,11 +398,8 @@
             <a href="data-dictionaries/eligibility.html" class="output-tag">
               <span class="dot dot-green"></span>Eligibility
             </a>
-            <a href="data-dictionaries/intake.html" class="output-tag">
-              <span class="dot dot-green"></span>Intake
-            </a>
-            <a href="data-dictionaries/platform.html" class="output-tag">
-              <span class="dot dot-green"></span>Platform
+            <a href="data-dictionaries/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 6 data dictionaries
             </a>
           </div>
         </div>
@@ -489,7 +420,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="client-reference/index.html" class="card-link">Client Reference</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Generated TypeScript client reference — SDK functions, types, and Zod schemas for each domain, with search helper documentation.</p>
           <div class="card-outputs">
@@ -505,29 +435,8 @@
             <a href="client-reference/decision-support-suggestions.html" class="output-tag">
               <span class="dot dot-grey"></span>Decision Support Suggestions
             </a>
-            <a href="client-reference/document-management.html" class="output-tag">
-              <span class="dot dot-grey"></span>Document Management
-            </a>
-            <a href="client-reference/eligibility.html" class="output-tag">
-              <span class="dot dot-grey"></span>Eligibility
-            </a>
-            <a href="client-reference/eligibility-rules.html" class="output-tag">
-              <span class="dot dot-grey"></span>Eligibility Rules
-            </a>
-            <a href="client-reference/intake.html" class="output-tag">
-              <span class="dot dot-grey"></span>Intake
-            </a>
-            <a href="client-reference/intake-rules.html" class="output-tag">
-              <span class="dot dot-grey"></span>Intake Rules
-            </a>
-            <a href="client-reference/platform-events.html" class="output-tag">
-              <span class="dot dot-grey"></span>Platform Events
-            </a>
-            <a href="client-reference/platform-registries.html" class="output-tag">
-              <span class="dot dot-grey"></span>Platform Registries
-            </a>
-            <a href="client-reference/search-helpers.html" class="output-tag">
-              <span class="dot dot-grey"></span>Search Helpers
+            <a href="client-reference/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 12 clients
             </a>
           </div>
         </div>
@@ -547,7 +456,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="state-machine-docs/index.html" class="card-link">State Machine Docs</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>
           <div class="card-outputs">
@@ -563,8 +471,8 @@
             <a href="state-machine-docs/events.html" class="output-tag">
               <span class="dot dot-blue"></span>Events
             </a>
-            <a href="state-machine-docs/intake.html" class="output-tag">
-              <span class="dot dot-blue"></span>Intake
+            <a href="state-machine-docs/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 5 state machines
             </a>
           </div>
         </div>
@@ -588,7 +496,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="rules-docs/index.html" class="card-link">Rules Docs</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>
           <div class="card-outputs">
@@ -621,7 +528,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="event-catalog/index.html" class="card-link">Event Catalog</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
         </div>
@@ -643,24 +549,11 @@
           </div>
           <div class="card-header-row">
             <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
         </div>
       </div>
 
-    </div>
-
-    <hr class="section-divider">
-
-    <!-- ── Diagrams ──────────────────────────────────────────────── -->
-
-    <div class="section-header">
-      <span class="pill pill-diagrams">Diagrams</span>
-      <h3>Architecture &amp; process diagrams</h3>
-    </div>
-
-    <div class="card-grid">
 
       <div class="card">
         <div class="card-accent accent-blue"></div>
@@ -680,7 +573,6 @@
           </div>
           <div class="card-header-row">
             <h4><a href="context-map/domains.html" class="card-link">Context Map</a></h4>
-            <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>
           <div class="card-outputs">
@@ -696,11 +588,8 @@
             <a href="context-map/domain_eligibility.html" class="output-tag">
               <span class="dot dot-blue"></span>Eligibility
             </a>
-            <a href="context-map/domain_intake.html" class="output-tag">
-              <span class="dot dot-blue"></span>Intake
-            </a>
-            <a href="context-map/domain_platform.html" class="output-tag">
-              <span class="dot dot-blue"></span>Platform
+            <a href="context-map/domains.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 6 domains
             </a>
           </div>
         </div>
