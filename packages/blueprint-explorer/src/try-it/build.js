@@ -15,6 +15,9 @@
  *                 defining `BlueprintMock` (built by scripts/build-browser.js)
  *   contracts.js  the contract set as one artifact, defining
  *                 `BlueprintContracts`
+ *
+ * And tours.json, the scenarios Show me around offers, for the hub's card to
+ * link to each with `index.html#tour=<path>`.
  */
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
@@ -45,6 +48,7 @@ export function build({ contentDir, resolvedDir }) {
   const artifact = generate(docs, 'artifact');
   writeFileSync(join(outputDir, 'contracts.js'), `globalThis.BlueprintContracts = ${JSON.stringify(artifact)};\n`);
   copyFileSync(BUNDLE, join(outputDir, 'mock.js'));
+  writeFileSync(join(outputDir, 'tours.json'), JSON.stringify(toursIn(docs)));
 
   // Where each step's contract file is browsable, from config.yaml's repo,
   // and the scenario Show me around opens with.
@@ -59,4 +63,22 @@ export function build({ contentDir, resolvedDir }) {
   writeFileSync(join(outputDir, 'index.html'), page);
 
   console.log(`Try it out: ${artifact.docs.length} documents → ${outputDir}`);
+}
+
+/**
+ * The scenarios Show me around offers, as the page finds them: every Arazzo
+ * document but one that others name as a source of type arazzo, which holds
+ * workflows they run inside their own steps.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {{ path: string, title: string }[]}
+ */
+function toursIn(docs) {
+  const fileName = (path) => String(path ?? '').split(/[?#]/)[0].split('/').pop();
+  const arazzo = docs.filter((doc) => doc.type === 'arazzo');
+  const runIn = new Set(arazzo.flatMap((doc) => (doc.content.sourceDescriptions ?? [])
+    .filter((source) => source.type === 'arazzo').map((source) => fileName(source.url))));
+  return arazzo
+    .filter((doc) => !runIn.has(fileName(doc.relativePath)))
+    .map((doc) => ({ path: doc.relativePath, title: doc.content.info?.title ?? fileName(doc.relativePath) }));
 }

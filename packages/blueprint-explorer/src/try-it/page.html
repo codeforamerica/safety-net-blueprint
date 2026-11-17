@@ -3177,6 +3177,12 @@ const boot = async () => {
   $('reseed').onclick = () => derive({ seed: true });
   $('empty').onclick = () => derive({ seed: false });
 
+  // Where a link into the page asks to start: `#tour=<path>` opens Show me
+  // around on that scenario, and `#explore` opens Let me explore.
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.has('tour')) tour = hash.get('tour');
+  if (hash.has('explore')) showAll = true;
+
   await derive({ seed: true });
   // After the first derive, never before: this renders, and there is
   // nothing to render until the server exists.
