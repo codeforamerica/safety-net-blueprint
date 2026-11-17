@@ -84,6 +84,8 @@ The old offsets — `$now+7d`, `$now+8h`, `$now+30m`, `$now+1w` — still resolv
 
 All tokens in a single seed load resolve against the same instant, so relative timestamps within a fixture are internally consistent.
 
+`createdAt` and `updatedAt` are the exception: seeding sets both on every record to a fixed date in 2024, a minute apart, so lists come out in the same order on every run. Whatever mock data gives for them, tokens included, is replaced.
+
 Malformed tokens (e.g. `$now+7dasys`) cause the server to exit with an error rather than writing the raw string to the database.
 
 ```yaml

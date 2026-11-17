@@ -61,7 +61,7 @@ const clientsDir  = clientsArg  ? resolve(process.cwd(), clientsArg.slice('--cli
 // tool scripts (which read from their --content arg) can find them there.
 if (configDir !== outDir) {
   mkdirSync(outDir, { recursive: true });
-  cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
+  if (existsSync(join(configDir, 'config.yaml'))) cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
   const cmConfig  = join(configDir, 'context-map', 'config');
   if (existsSync(cmConfig))  cpSync(cmConfig,  join(outDir, 'context-map', 'config'),  { recursive: true });
 }
