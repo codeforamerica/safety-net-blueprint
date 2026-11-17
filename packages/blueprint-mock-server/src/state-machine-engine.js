@@ -924,39 +924,3 @@ export function applyStepsWithCalls(steps, resource, context, store, perform) {
 export function whenReady(value, next) {
   return value && typeof value.then === 'function' ? value.then(next) : next(value);
 }
-
-/**
- * Apply a single set effect to a resource.
- * @param {Object} effect - Effect definition with field and value
- * @param {Object} resource - The resource to modify (mutated in place)
- * @param {Object} context - Context with caller info
- */
-export function applySetEffect(effect, resource, context) {
-  const value = fillValue(effect.value, context);
-  if (value !== undefined) {
-    resource[effect.field] = value;
-  }
-}
-
-/**
- * Apply a single create effect — resolves all fields and returns the data to create.
- * Engine stays pure: no database dependency.
- * @param {Object} effect - Effect definition with entity and fields
- * @param {Object} context - Context with caller, object, and now info
- * @returns {{ entity: string, data: Object }}
- */
-export function applyCreateEffect(effect, context) {
-  return { entity: effect.entity, data: fillFields(effect.fields, context) };
-}
-
-/**
- * Apply a single event effect — resolves data fields and returns the event to emit.
- * The engine populates envelope fields (domain, resource, resourceId, etc.) automatically
- * from context; the effect only specifies action and optional data.
- * @param {Object} effect - Effect definition with action and optional data
- * @param {Object} context - Context with caller, object, and now info
- * @returns {{ action: string, data: Object }}
- */
-export function applyEventEffect(effect, context) {
-  return { action: effect.action, data: fillFields(effect.data, context) };
-}
