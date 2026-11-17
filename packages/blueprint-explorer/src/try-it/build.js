@@ -6,26 +6,30 @@
  * the set's Arazzo scenarios a step at a time; "Let me explore" sends any
  * operation a request.
  *
- * Three files, each loaded with a classic <script>, so the page works both
- * served over http(s) and opened from disk (`file://`), where a page cannot
+ * The mock itself goes in <contentDir>/mock/, for every page that runs it,
+ * as two files each loaded with a classic <script>, so a page works both
+ * served over http(s) and opened from disk (`file://`), where it cannot
  * fetch or import a file beside it:
  *
- *   index.html    the page
- *   mock.js       the mock server and what the page reads contracts with,
+ *   mock.js       the mock server and what pages read contracts with,
  *                 defining `BlueprintMock` (built by scripts/build-browser.js)
  *   contracts.js  the contract set as one artifact, defining
- *                 `BlueprintContracts`
+ *                 `BlueprintContracts`, and its version as
+ *                 `BlueprintContractsVersion`, so records saved against an
+ *                 older build are not restored
  *
- * And tours.json, the scenarios Show me around offers, for the hub's card to
- * link to each with `index.html#tour=<path>`.
+ * Beside the page goes tours.json, the scenarios Show me around offers, for
+ * the hub's card to link to each with `index.html#tour=<path>`.
  */
 
+import { createHash } from 'crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
 import { loadConfig } from '../lib/config.js';
 import { buildSpecLink } from '../lib/paths.js';
+import { breadcrumb } from '../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,13 +45,19 @@ export function build({ contentDir, resolvedDir }) {
   }
 
   const outputDir = join(contentDir, 'try-it');
-  rmSync(outputDir, { recursive: true, force: true });
-  mkdirSync(outputDir, { recursive: true });
+  const mockDir = join(contentDir, 'mock');
+  for (const dir of [outputDir, mockDir]) {
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+  }
 
   const docs = discover(resolvedDir).map(load);
   const artifact = generate(docs, 'artifact');
-  writeFileSync(join(outputDir, 'contracts.js'), `globalThis.BlueprintContracts = ${JSON.stringify(artifact)};\n`);
-  copyFileSync(BUNDLE, join(outputDir, 'mock.js'));
+  const json = JSON.stringify(artifact);
+  const version = createHash('sha256').update(json).digest('hex').slice(0, 16);
+  writeFileSync(join(mockDir, 'contracts.js'),
+    `globalThis.BlueprintContractsVersion = ${JSON.stringify(version)};\nglobalThis.BlueprintContracts = ${json};\n`);
+  copyFileSync(BUNDLE, join(mockDir, 'mock.js'));
   writeFileSync(join(outputDir, 'tours.json'), JSON.stringify(toursIn(docs)));
 
   // Where each step's contract file is browsable, from config.yaml's repo,
@@ -55,10 +65,12 @@ export function build({ contentDir, resolvedDir }) {
   const config = loadConfig(contentDir);
   const sourceUrl = buildSpecLink(config.repo, '')?.replace(/\/$/, '') ?? null;
   const pageConfig = JSON.stringify({ sourceUrl, firstTour: config.first_tour ?? null });
-  const page = readFileSync(join(__dirname, 'page.html'), 'utf8').replace(
+  // The same way back to the explorer every other page has.
+  const crumbs = breadcrumb([{ label: 'Explorer', href: '../index.html' }, { label: 'Try it out' }]);
+  const page = readFileSync(join(__dirname, 'page.html'), 'utf8').replace('<body>', () => `<body>\n${crumbs}`).replace(
     '<script type="module">',
     () => `<script type="application/json" id="page-config">${pageConfig.replace(/</g, '\\u003c')}</script>\n` +
-      '<script src="mock.js"></script>\n<script src="contracts.js"></script>\n<script type="module">',
+      '<script src="../mock/mock.js"></script>\n<script src="../mock/contracts.js"></script>\n<script type="module">',
   );
   writeFileSync(join(outputDir, 'index.html'), page);
 

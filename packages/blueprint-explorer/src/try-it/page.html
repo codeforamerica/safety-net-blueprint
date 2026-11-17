@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Try it out</title>
+<title>Not your average Mock Server</title>
 <!--
   A playground over the browser mock, rather than a tour of it.
 
@@ -400,7 +400,7 @@
 <body>
 <header id="masthead">
   <div class="intro">
-    <h1>Try it out</h1>
+    <h1>Not your average Mock Server</h1>
     <p class="lede">
       An entire server, generated from a set of contracts, running in this tab.
       <b>No custom code.</b> Everything is derived on the fly when the server
@@ -424,8 +424,12 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations } =
+const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations, restoreRecords, saveRecords } =
   globalThis.BlueprintMock;
+
+// Where this explorer keeps the mock's records between its pages: under the
+// mock's own folder, which every page that runs it shares.
+const records = { scope: new URL('../mock/', location.href).href, version: globalThis.BlueprintContractsVersion };
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, text = '', className = '') => {
@@ -2835,10 +2839,11 @@ const requestFor = async (op) => {
     const valueOf = (record) => record?.[name] ?? record?.id;
     const walked = index === 0 ? made.get(collection) : undefined;
     // A pick whose record has since gone — deleted, or the store reset — is
-    // dropped rather than sent.
+    // dropped rather than sent. A value typed in is kept whether or not a
+    // record has it, so asking for one that isn't there shows the 404.
     const picked = chosen.get(`${keyOf(op)}:${name}`);
-    const stillThere = picked !== undefined && held.some((record) => valueOf(record) === picked);
-    const value = (stillThere ? picked : undefined) ?? walked ?? valueOf(held[0]);
+    const stillThere = picked !== undefined && (picked.typed || held.some((record) => valueOf(record) === picked.value));
+    const value = (stillThere ? picked.value : undefined) ?? walked ?? valueOf(held[0]);
     if (value) params[name] = value;
     pickers.push({ name, records: held, value, valueOf });
   }
@@ -2978,25 +2983,34 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   if (showAll && group) panel.append(el('p', group.about, 'about'));
   if (showAll && op.operation.description) panel.append(el('p', op.operation.description, 'note'));
 
-  // Path parameters become a picker of records the server actually holds,
-  // rather than a box to paste a UUID into.
+  // Path parameters suggest the records the server actually holds, rather
+  // than leave a UUID to paste in; anything else can be typed, such as an id
+  // that isn't there.
   if (!fixed) {
     for (const { name, records: held, value, valueOf } of pickers) {
       const field = el('label', '', 'field');
       field.append(el('span', name));
       if (held.length > 0) {
-        const picker = el('select');
+        const picker = el('input');
+        picker.type = 'text';
+        const suggestions = el('datalist');
+        suggestions.id = `held-${keyOf(op)}-${name}`.replace(/[^\w-]/g, '-');
         for (const record of held) {
           // Just what is sent: the id, or the field the parameter is named for.
-          const choice = el('option', valueOf(record));
+          const choice = el('option');
           choice.value = valueOf(record);
-          picker.append(choice);
+          suggestions.append(choice);
         }
+        picker.setAttribute('list', suggestions.id);
         picker.value = value ?? '';
-        // Redrawn on a pick: the path line shows the new value, and any
-        // parameter after this one lists what is under it.
-        picker.onchange = () => { chosen.set(`${keyOf(op)}:${name}`, picker.value); renderStage(); };
-        field.append(picker);
+        // Redrawn once a value is chosen or typed: the path line shows it, and
+        // any parameter after this one lists what is under it.
+        picker.onchange = () => {
+          const typed = !held.some((record) => valueOf(record) === picker.value);
+          chosen.set(`${keyOf(op)}:${name}`, { value: picker.value, typed });
+          renderStage();
+        };
+        field.append(picker, suggestions);
       } else {
         const box = el('input');
         box.type = 'text';
@@ -3184,6 +3198,10 @@ const boot = async () => {
   if (hash.has('explore')) showAll = true;
 
   await derive({ seed: true });
+  // What an earlier page left, carried here; and what this page leaves, for
+  // the next. Restarting with data, or empty, replaces them, as it should.
+  restoreRecords(mock, records);
+  addEventListener('pagehide', () => saveRecords(mock, records));
   // After the first derive, never before: this renders, and there is
   // nothing to render until the server exists.
   mode(showAll);

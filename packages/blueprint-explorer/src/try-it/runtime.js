@@ -1,8 +1,8 @@
 /**
  * What the pages need in a browser, in one bundle.
  *
- * Both pages load this as `mock.js` (or as the inlined `BlueprintMock`
- * global in the single-file build). It exists because the explorer re-scopes
+ * The explorer's pages that run the mock load this as `mock/mock.js`, which
+ * defines the `BlueprintMock` global. It exists because the explorer re-scopes
  * the contract set when you change which domains are loaded — that is
  * `extract` and `generate`, which live in blueprint-core, not in the mock
  * server. Bundling a shim rather than two files keeps one script tag per
@@ -14,3 +14,4 @@
  */
 export { createMockServer, runScenario, startScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/server';
 export { extract, generate } from '@codeforamerica/blueprint-core/browser';
+export { restoreRecords, saveRecords } from './records.js';
