@@ -136,9 +136,6 @@ adopted:
   - name: CEL
     url: https://github.com/google/cel-spec
     use: Use it for every expression.
-    exception: >
-      SLA types, metrics and some where clauses still use JSON Logic, and are
-      being moved to CEL. Don't use JSON Logic in anything new.
     details: docs/architecture/cross-cutting/behavioral-contract-dsl.md
 
   - name: HTTP

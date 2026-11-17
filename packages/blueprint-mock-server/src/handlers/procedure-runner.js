@@ -35,10 +35,10 @@ function resolveWhereValue(val, resource, context, resolved) {
  * with every match, a step uses forEach:, which takes the same from:/where:.
  *   where: { id: <value> }           → that record (findById)
  *   where: { otherField: <value> }   → the first record matching
- *   JSON Logic or CEL where:         → the first record the condition is true for
+ *   CEL where:                       → the first record the condition is true for
  *   (no where)                       → the first record in the collection
  *
- * WHERE CLAUSE — three supported forms:
+ * WHERE CLAUSE — two supported forms:
  *
  *   (1) Field-value equality pairs. Values may be:
  *         $object.field  → field on the primary resource being evaluated
@@ -46,12 +46,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  *         $alias.field   → field on a previously resolved binding (chaining)
  *         literal string → exact match value
  *
- *   (2) JSON Logic expression — evaluated per candidate record. Variable references:
- *         { var: "fieldName" }        → field on the candidate record
- *         { var: "this.field" }       → field on the triggering event/context
- *         { var: "alias.field" }      → field on a previously resolved binding
- *
- *   (3) CEL expression — a string, evaluated per candidate record:
+ *   (2) CEL expression — a string, evaluated per candidate record:
  *         item      → the candidate record
  *         object    → the primary resource
  *         request   → the request body
@@ -103,29 +98,6 @@ function resolveContextBindings(contextBindings, resource, context, store) {
         }
       };
       resolved[alias] = candidates.find(matches) ?? null;
-      continue;
-    }
-
-    const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
-    const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
-
-    if (isJsonLogic) {
-      const { items: allItems } = store.findAll(collection, {}, { limit: null });
-      const logicData = {
-        this: context?.this ?? {},
-        object: resource,
-        ...Object.fromEntries(Object.entries(resolved))
-      };
-      const entity = allItems.find(item => {
-        try {
-          return jsonLogic.apply(where, { ...logicData, ...item });
-        } catch (e) {
-          console.warn(`Context binding "${alias}": JSON Logic where filter error — ${e.message}`);
-          return false;
-        }
-      }) ?? null;
-
-      resolved[alias] = entity;
       continue;
     }
 

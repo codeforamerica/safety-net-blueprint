@@ -328,10 +328,10 @@ test('executeProcedures — order field overrides declaration order', () => {
 });
 
 // =============================================================================
-// Context binding — JSON Logic where
+// Context binding — CEL where
 // =============================================================================
 
-test('executeProcedures — JSON Logic where in context binding returns first match', () => {
+test('executeProcedures — CEL where in context binding returns first match', () => {
   store.clearAll('workflow/queues');
   store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
   store.insertResource('workflow/queues', { id: 'q-general', name: 'general-intake', priority: 2 });
@@ -342,7 +342,7 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
     context: [{
       snapQueue: {
         from: 'workflow/queues',
-        where: { '==': [{ var: 'name' }, 'snap-intake'] }
+        where: 'item.name == "snap-intake"'
       }
     }],
     conditions: [{

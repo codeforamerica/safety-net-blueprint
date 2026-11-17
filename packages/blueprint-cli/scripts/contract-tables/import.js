@@ -495,9 +495,7 @@ function importMetrics(csvData, existingDoc) {
       const parseSource = (collection, filter) => {
         if (!collection) return undefined;
         const s = { collection };
-        if (filter) {
-          try { s.filter = JSON.parse(filter); } catch { /* leave as string */ }
-        }
+        if (filter) s.filter = filter;
         return s;
       };
 
@@ -574,10 +572,8 @@ function importSlaTypes(csvData, existingDoc) {
       autoAssignWhen, startWhen, pauseWhen, resumeWhen, completedWhen, resetWhen
     ] = row;
 
-    const parseCondition = (val) => {
-      if (!val) return undefined;
-      try { return JSON.parse(val); } catch { return val; }
-    };
+    // A condition is a CEL expression, kept as written.
+    const parseCondition = (val) => val || undefined;
 
     const slaType = { id, name };
     if (durationAmount && durationUnit) {
