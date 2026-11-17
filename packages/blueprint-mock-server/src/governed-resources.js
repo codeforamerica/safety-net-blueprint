@@ -16,7 +16,7 @@
 
 import { resolveContextLayers } from './handlers/procedure-runner.js';
 import { checkGuardClauses, inWords } from './state-machine-runner.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { storageName } from './collection-utils.js';
 
 /**
  * The machines governing each create and update, by operation, domain and path.
@@ -72,21 +72,22 @@ export function governorsByRoute(stateMachines) {
  * @param {Object} options.body      - The body being created, or the change
  * @param {{ id: string|null, roles: string[] }} options.caller
  * @param {Object} options.store
+ * @param {Object} [options.instance] - The mock (instance.js), whose resource index the guards' context bindings read
  * @param {Function} [options.checkBody] - `() => refusal|null`: the body against the operation's schema, after the role check
  * @returns {{ status: number, code: string, message: string, details?: object[] }|null} The refusal, or null when every machine passes
  */
-export function checkGoverned({ governors, verb, params, body, caller, store, checkBody }) {
+export function checkGoverned({ governors, verb, params, body, caller, store, instance, checkBody }) {
   for (const { entry, name, operation, owner } of governors ?? []) {
     let record = null;
     if (owner) {
-      const collection = deriveCollectionName(owner.path('collection'), '');
+      const collection = storageName(entry.domain, owner.path('collection'));
       record = store.findById(collection, params[owner.item.parameter]);
       if (!record) {
         return { status: 404, code: 'NOT_FOUND', message: `${entry.object} not found` };
       }
     }
 
-    const baseContext = { caller, ...(record ? { object: { ...record } } : {}), request: body, now: new Date().toISOString() };
+    const baseContext = { caller, ...(record ? { object: { ...record } } : {}), request: body, now: new Date().toISOString(), instance };
     const entities = resolveContextLayers(
       [entry.stateMachine.context, entry.machine.context, operation.context],
       record, baseContext, store

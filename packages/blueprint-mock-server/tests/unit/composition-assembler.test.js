@@ -484,12 +484,12 @@ describe('deriveStateResource', () => {
     const result = deriveStateResource(
       { schema: { name: 'ReviewProgress' } },
       '/applications/{applicationId}/review',
-      '/intake'
+      'intake'
     );
     assert.deepStrictEqual(result, {
       defsKey: 'ReviewProgress',
       pathSegment: 'review-progress',
-      collectionName: 'application-review-progress',
+      collectionName: 'intake/applications/review-progress',
       camelKey: 'reviewProgress',
     });
   });
@@ -723,8 +723,9 @@ describe('assembleSectionPanel — pagination response shape', () => {
 // ---------------------------------------------------------------------------
 
 describe('assembleSectionPanel — state embedding', () => {
-  // collection name is derived from the endpoint path: /applications/{applicationId}/review-progress → application-review-progress
-  const STATE_COLL = 'application-review-progress';
+  // Kept under the path the state is served at, /applications/{applicationId}/review-progress,
+  // with no domain given: applications/review-progress
+  const STATE_COLL = 'applications/review-progress';
 
   const STATE_COMPOSITION = {
     compositeType: 'sectionView',
@@ -811,7 +812,7 @@ describe('assembleSectionPanel — state embedding', () => {
 // ---------------------------------------------------------------------------
 
 describe('assembleSectionIndex — state embedding', () => {
-  const STATE_COLL = 'application-review-progress';
+  const STATE_COLL = 'applications/review-progress';
 
   const STATE_COMPOSITION = {
     compositeType: 'sectionView',

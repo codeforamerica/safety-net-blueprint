@@ -4,7 +4,7 @@
  */
 
 import jsonLogic from 'json-logic-js';
-import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
+import { collectionNamed, resolveDotPath } from '../collection-utils.js';
 import { applySteps, applyStepsWithCalls, fillValue, whenReady, caughtEntities } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
@@ -36,7 +36,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  *   where: { id: <value> }           → that record (findById)
  *   where: { otherField: <value> }   → the first record matching
  *   JSON Logic or CEL where:         → the first record the condition is true for
- *   (no where)                       → binding is skipped with a warning; alias resolves to null
+ *   (no where)                       → the first record in the collection
  *
  * WHERE CLAUSE — three supported forms:
  *
@@ -63,7 +63,8 @@ function resolveWhereValue(val, resource, context, resolved) {
  *
  * @param {Array} contextBindings - Array of single-key objects { alias: { from, where } }
  * @param {Object} resource - Primary resource for $object.field resolution
- * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
+ * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution;
+ *   its `instance` is the mock, whose resource index names each `from:` collection
  * @returns {Object} Map of alias → entity|null
  */
 function resolveContextBindings(contextBindings, resource, context, store) {
@@ -74,12 +75,14 @@ function resolveContextBindings(contextBindings, resource, context, store) {
     const config = binding[alias];
     if (!config || !config.from) continue;
 
-    const collection = deriveCollectionName(config.from, config.from.split('/')[0]);
+    const collection = collectionNamed(config.from, context?.instance?.resources);
     const where = config.where;
 
+    // With no where:, the first record in the collection — a domain's one
+    // settings record, say (state-machine-schema.yaml, ContextBinding).
     if (!where) {
-      console.warn(`Context binding "${alias}": no where clause — skipping binding`);
-      resolved[alias] = null;
+      const { items } = store.findAll(collection, {}, { limit: 1 });
+      resolved[alias] = items[0] ?? null;
       continue;
     }
 
@@ -175,12 +178,10 @@ export function resolveContextLayers(layers, resource, baseContext, store) {
 /**
  * Apply a pending array-append (PATCH with $push body) to a resource in the database.
  */
-function applyPendingAppend({ path, body }, store) {
+function applyPendingAppend({ path, body }, store, instance) {
   const parts = path.split('/');
   const id = parts.pop();
-  const collectionPath = parts.join('/');
-  const domain = parts[0];
-  const collection = deriveCollectionName(collectionPath, domain);
+  const collection = collectionNamed(parts.join('/'), instance?.resources);
 
   const existing = store.findById(collection, id);
   if (!existing) {
@@ -287,7 +288,7 @@ function applyPendingWrites(procedureId, { pendingCreates, pendingAppends }, sto
   }
 
   for (const append of pendingAppends) {
-    applyPendingAppend(append, store);
+    applyPendingAppend(append, store, instance);
   }
 }
 
@@ -423,7 +424,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context, stor
       }
 
       for (const append of pendingAppends) {
-        applyPendingAppend(append, store);
+        applyPendingAppend(append, store, stepContext.instance);
       }
 
       allPendingOperations.push(...pendingOperations);

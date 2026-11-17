@@ -295,5 +295,6 @@ test('a record a step updates directly is announced as an API update would be', 
   assert.equal(after.firstName, 'Rosa');
   const updated = (await events('intake.application_member.updated')).find((e) => e.subject === member.id);
   assert.ok(updated, 'an updated event');
-  assert.equal(updated.authid, 'worker-1');
+  // A call by path is the machine's own write, made as the system.
+  assert.equal(updated.authid, 'system');
 });

@@ -15,7 +15,7 @@
  */
 
 import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
-import { deriveCollectionName, extractPrimaryParam, resolveDotPath, toKebabCase } from './collection-utils.js';
+import { storageName, extractPrimaryParam, resolveDotPath, toKebabCase } from './collection-utils.js';
 import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ function buildBindValues(params) {
  * @param {Object} stateDefaults - Default field values for the state resource
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', store } = {}) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', domain = null, store } = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -218,7 +218,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const resolvedBase = basePath.replace(/:(\w+)/g, (_, name) => params[name] ?? `:${name}`);
 
   // Resolve state resource info once for the whole index
-  const stateInfo = composition.state ? deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath) : null;
+  const stateInfo = composition.state ? deriveStateResource(composition.state, composition.endpoint?.path, domain) : null;
   const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
   const sections = [];
@@ -415,7 +415,7 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
  * @param {Object} [opts.paginationDefaults={}] - Domain pagination defaults
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {}, store } = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', domain = null, queryParams = {}, paginationDefaults = {}, store } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -446,7 +446,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
 
   // Resolve state resource info once — used for both section-level and per-item embedding.
   const stateInfo = composition.state
-    ? deriveStateResource(composition.state, composition.endpoint?.path, serverBasePath)
+    ? deriveStateResource(composition.state, composition.endpoint?.path, domain)
     : null;
   const bindParam = stateInfo ? extractPrimaryParam(composition.endpoint?.path ?? '') : null;
 
@@ -521,16 +521,16 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
  * Derive state resource metadata from a composition state config block.
  *
  * Extracts the $defs key from the $ref, converts to camelCase (response key)
- * and kebab-case (URL path segment). The DB collection name is derived via
- * deriveCollectionName so it matches the collection names used by the route
- * generator and seeder.
+ * and kebab-case (URL path segment). The records are kept under the domain
+ * and the path the state resource is served at (storageName), as every
+ * collection is: `intake/applications/review-progress`.
  *
  * @param {Object} stateConfig - composition.state
  * @param {string} [endpointPath] - OpenAPI-style composition endpoint path (e.g. /applications/{applicationId}/review)
- * @param {string} [basePath] - Server base path (e.g. /intake)
+ * @param {string|null} [domain] - The domain the composition's API declares (e.g. intake)
  * @returns {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string } | null}
  */
-export function deriveStateResource(stateConfig, endpointPath, basePath) {
+export function deriveStateResource(stateConfig, endpointPath, domain = null) {
   const defsKey = stateConfig?.schema?.name;
   if (!defsKey) return null;
   const pathSegment = toKebabCase(defsKey);
@@ -539,7 +539,7 @@ export function deriveStateResource(stateConfig, endpointPath, basePath) {
   const parentBase = (endpointPath || '').replace(/\/[^/]+$/, '');
   const stateResourcePath = parentBase ? `${parentBase}/${pathSegment}` : pathSegment;
   const collectionName = endpointPath
-    ? deriveCollectionName(stateResourcePath, basePath || '')
+    ? storageName(domain, stateResourcePath)
     : pathSegment;
   return { defsKey, pathSegment, collectionName, camelKey };
 }

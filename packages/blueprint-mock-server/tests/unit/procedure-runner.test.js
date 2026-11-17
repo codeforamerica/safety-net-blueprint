@@ -30,10 +30,10 @@ function makeInlineRule({ id = 'test-rule', evaluation = 'first-match-wins', con
 }
 
 function seedQueues() {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
-  store.insertResource('queues', { id: 'q-general', name: 'general-intake' });
-  store.insertResource('queues', { id: 'q-alameda', name: 'alameda-intake' });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
+  store.insertResource('workflow/queues', { id: 'q-general', name: 'general-intake' });
+  store.insertResource('workflow/queues', { id: 'q-alameda', name: 'alameda-intake' });
 }
 
 // =============================================================================
@@ -41,10 +41,10 @@ function seedQueues() {
 // =============================================================================
 
 test('executeProcedures — context binding resolves entity and makes fields available', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'] });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -68,7 +68,7 @@ test('executeProcedures — context binding resolves entity and makes fields ava
 // =============================================================================
 
 test('executeProcedures — entity not found skips rule set entirely', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -93,7 +93,7 @@ test('executeProcedures — entity not found skips rule set entirely', () => {
 // =============================================================================
 
 test('executeProcedures — missing from field value skips rule set entirely', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -118,7 +118,7 @@ test('executeProcedures — missing from field value skips rule set entirely', (
 // =============================================================================
 
 test('executeProcedures — optional binding skipped when from field missing, rule set continues', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -147,7 +147,7 @@ test('executeProcedures — optional binding skipped when from field missing, ru
 });
 
 test('executeProcedures — optional binding skipped when entity not found, rule set continues', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -180,12 +180,12 @@ test('executeProcedures — optional binding skipped when entity not found, rule
 // =============================================================================
 
 test('executeProcedures — chained binding resolves entity via prior resolved entity field', () => {
-  store.clearAll('applications');
-  store.clearAll('cases');
+  store.clearAll('intake/applications');
+  store.clearAll('case-management/cases');
   seedQueues();
 
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
-  store.insertResource('cases', { id: 'case-99', county: 'alameda' });
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
+  store.insertResource('case-management/cases', { id: 'case-99', county: 'alameda' });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -332,9 +332,9 @@ test('executeProcedures — order field overrides declaration order', () => {
 // =============================================================================
 
 test('executeProcedures — JSON Logic where in context binding returns first match', () => {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
-  store.insertResource('queues', { id: 'q-general', name: 'general-intake', priority: 2 });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
+  store.insertResource('workflow/queues', { id: 'q-general', name: 'general-intake', priority: 2 });
 
   const task = { id: 'task-1', queueId: null };
 
@@ -360,10 +360,10 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
 // =============================================================================
 
 test('executeProcedures — rule-level context adds bindings not in caller scope', () => {
-  store.clearAll('applications');
-  store.clearAll('queues');
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('intake/applications');
+  store.clearAll('workflow/queues');
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   // Rule has its own context: (application binding) not provided by caller
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
@@ -383,10 +383,10 @@ test('executeProcedures — rule-level context adds bindings not in caller scope
 });
 
 test('executeProcedures — rule-level context can chain from caller-scope entities', () => {
-  store.clearAll('applications');
-  store.clearAll('queues');
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('intake/applications');
+  store.clearAll('workflow/queues');
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 

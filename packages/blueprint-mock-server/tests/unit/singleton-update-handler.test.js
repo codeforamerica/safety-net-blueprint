@@ -16,6 +16,12 @@ import { createInstance } from '../../src/instance.js';
 const store = createMemoryStore();
 const instance = createInstance({ store });
 import { registerRoutes } from '../../src/route-generator.js';
+import { apiSpecsFromDocs } from '../../src/spec-loader.js';
+import { load } from '@codeforamerica/blueprint-core';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { tmpdir } from 'node:os';
+import yaml from 'js-yaml';
 import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 // ---------------------------------------------------------------------------
@@ -36,15 +42,32 @@ function listRoutes(table) {
   }));
 }
 
-function createSingletonMetadata(path, method = 'patch') {
-  return {
-    name: 'test',
-    title: 'Test API',
-    serverBasePath: '/test',
-    endpoints: [
-      { path, method: method.toUpperCase(), operationId: 'updateHouseholdInfo' }
-    ]
-  };
+/**
+ * An API serving a household-info singleton under each application, as the
+ * server loads it: through core's model of its document, which is what makes
+ * the path a singleton.
+ */
+function createSingletonMetadata() {
+  const ok = (schema) => ({ 200: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });
+  const dir = mkdtempSync(join(tmpdir(), 'singleton-'));
+  try {
+    const path = join(dir, 'test-openapi.yaml');
+    writeFileSync(path, yaml.dump({
+      openapi: '3.1.0',
+      info: { title: 'Test API', version: '1', 'x-domain': 'test' },
+      servers: [{ url: 'http://localhost:1080/test' }],
+      paths: {
+        '/applications/{applicationId}': { get: { operationId: 'getApplication', responses: ok('Application') } },
+        '/applications/{applicationId}/household-info': {
+          get: { operationId: 'getHouseholdInfo', responses: ok('HouseholdInfo') },
+          patch: { operationId: 'updateHouseholdInfo', responses: ok('HouseholdInfo') },
+        },
+      },
+    }));
+    return apiSpecsFromDocs([load({ path, relativePath: basename(path) })])[0];
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -64,11 +87,11 @@ async function callRoute(route, params, body, headers = {}) {
 // ---------------------------------------------------------------------------
 
 test('singleton PATCH — create (upsert): emits .created with full resource snapshot', async () => {
-  store.clearAll('household-info');
-  store.clearAll('events');
+  store.clearAll('test/applications/household-info');
+  store.clearAll('platform/events');
 
   const table = new Map();
-  const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
+  const metadata = createSingletonMetadata();
   registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
@@ -81,10 +104,11 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
   assert.ok(res._data.id, 'response has an id');
   assert.strictEqual(res._data.size, 3);
 
-  const { items: events } = store.findAll('events', {});
+  const { items: events } = store.findAll('platform/events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
-  assert.ok(event.type.endsWith('.created'), `event type should end with .created, got ${event.type}`);
+  // Named for the resource the document's model says this is.
+  assert.strictEqual(event.type, 'test.household_info.created');
   // Created event carries full snapshot, not a changes array
   assert.strictEqual(event.data.size, 3);
   assert.strictEqual(event.data.housingCosts, 1200);
@@ -92,11 +116,11 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
 });
 
 test('singleton PATCH — update: emits .updated with changes diff', async () => {
-  store.clearAll('household-info');
-  store.clearAll('events');
+  store.clearAll('test/applications/household-info');
+  store.clearAll('platform/events');
 
   // Pre-seed an existing record
-  store.insertResource('household-info', {
+  store.insertResource('test/applications/household-info', {
     id: 'hh-1',
     applicationId: 'app-2',
     size: 3,
@@ -104,7 +128,7 @@ test('singleton PATCH — update: emits .updated with changes diff', async () =>
   });
 
   const table = new Map();
-  const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
+  const metadata = createSingletonMetadata();
   registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
@@ -116,7 +140,7 @@ test('singleton PATCH — update: emits .updated with changes diff', async () =>
   assert.strictEqual(res._code, 200);
   assert.strictEqual(res._data.size, 4);
 
-  const { items: events } = store.findAll('events', {});
+  const { items: events } = store.findAll('platform/events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
   assert.ok(event.type.endsWith('.updated'), `event type should end with .updated, got ${event.type}`);
@@ -130,17 +154,17 @@ test('singleton PATCH — update: emits .updated with changes diff', async () =>
 });
 
 test('singleton PATCH — update with no meaningful change: emits .updated with empty changes', async () => {
-  store.clearAll('household-info');
-  store.clearAll('events');
+  store.clearAll('test/applications/household-info');
+  store.clearAll('platform/events');
 
-  store.insertResource('household-info', {
+  store.insertResource('test/applications/household-info', {
     id: 'hh-3',
     applicationId: 'app-3',
     size: 3,
   });
 
   const table = new Map();
-  const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
+  const metadata = createSingletonMetadata();
   registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store, instance });
   const route = listRoutes(table).find(r => r.method === 'PATCH');
 
@@ -151,7 +175,7 @@ test('singleton PATCH — update with no meaningful change: emits .updated with 
 
   assert.strictEqual(res._code, 200);
 
-  const { items: events } = store.findAll('events', {});
+  const { items: events } = store.findAll('platform/events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
   assert.ok(event.type.endsWith('.updated'));

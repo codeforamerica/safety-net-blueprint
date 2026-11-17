@@ -10,12 +10,13 @@ import { assertFetchShaped, queryOf } from '../http/request.js';
 
 /**
  * Resource mapping configuration.
- * Maps each SearchResultType to its database, searchable fields,
+ * Maps each SearchResultType to its collection — its domain and path, as the
+ * routes keep it (collection-utils.js storageName) — searchable fields,
  * and functions that produce the uniform SearchResult shape.
  */
 const RESOURCE_MAP = {
   person: {
-    dbName: 'persons',
+    dbName: 'client-management/persons',
     searchableFields: ['name.firstName', 'name.lastName', 'email', 'phoneNumber'],
     title: (r) => {
       const first = r.name?.firstName || '';
@@ -31,7 +32,7 @@ const RESOURCE_MAP = {
   },
 
   case: {
-    dbName: 'cases',
+    dbName: 'case-management/cases',
     searchableFields: ['status'],
     title: (r) => r.id,
     url: (r) => `/cases/${r.id}`,
@@ -42,7 +43,7 @@ const RESOURCE_MAP = {
   },
 
   application: {
-    dbName: 'applications',
+    dbName: 'intake/applications',
     searchableFields: ['status', 'state'],
     title: (r) => {
       const member = r.household?.members?.[0];
@@ -61,7 +62,7 @@ const RESOURCE_MAP = {
   },
 
   task: {
-    dbName: 'tasks',
+    dbName: 'workflow/tasks',
     searchableFields: ['name', 'description', 'status'],
     title: (r) => r.name || r.id,
     url: (r) => `/tasks/${r.id}`,
@@ -72,7 +73,7 @@ const RESOURCE_MAP = {
   },
 
   appointment: {
-    dbName: 'appointments',
+    dbName: 'scheduling/appointments',
     searchableFields: ['appointmentType', 'status', 'notes'],
     title: (r) => {
       const type = r.appointmentType || 'Appointment';

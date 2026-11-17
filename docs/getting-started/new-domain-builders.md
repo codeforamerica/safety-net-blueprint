@@ -102,6 +102,23 @@ During resolve, RPC endpoints are generated from the state machine and merged in
 
 See [Contract-Driven Architecture — State Machine](../architecture/contract-driven-architecture.md#state-machine) for the format and examples.
 
+### Roles
+
+A guard names who may run an action in `actors:`, and every role it names must be in `RoleType`. The framework's `RoleType` has `readonly`, `readwrite`, `admin` and `system`; add your own roles with an overlay that appends them to its `enum`:
+
+```yaml
+# overlays/roles.yaml
+overlay: 1.0.0
+info: {title: Permit roles, version: 1.0.0}
+actions:
+  - target: $.$defs.RoleType.enum
+    file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Add the roles the permit state machine names.
+    append: [inspector, permit_clerk]
+```
+
+Give the overlay to `blueprint-resolve` with `--overlay` (see [Resolving](#resolving)). Without it, validation reports each role a state machine names that `RoleType` doesn't have.
+
 ## Enriching Your Domain (optional)
 
 ### Annotations

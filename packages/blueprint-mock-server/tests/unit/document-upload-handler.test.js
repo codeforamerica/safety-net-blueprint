@@ -58,7 +58,7 @@ test('uploadDocument — creates document and version records from the file meta
   assert.strictEqual(body.documentTypeId, DOC_TYPE);
   assert.strictEqual(body.lifecycleState, 'active');
 
-  const version = store.findById('document-versions', body.latestVersionId);
+  const version = store.findById('document-management/document-versions', body.latestVersionId);
   assert.strictEqual(version.fileName, 'test.txt');
   assert.strictEqual(version.mimeType, 'text/plain');
   assert.strictEqual(version.sizeBytes, CONTENT.length);
@@ -74,7 +74,7 @@ test('uploadDocument — stores no file bytes anywhere', async () => {
   const serialized = JSON.stringify(store.snapshot());
 
   assert.ok(!serialized.includes(CONTENT), 'uploaded content must not appear in the store');
-  assert.strictEqual(store.findById('document-versions', body.latestVersionId).content, undefined);
+  assert.strictEqual(store.findById('document-management/document-versions', body.latestVersionId).content, undefined);
 });
 
 test('uploadDocument — returns 422 when file is missing', async () => {
@@ -129,7 +129,7 @@ test('uploadDocumentVersion — adds a version and increments versionNumber', as
   assert.strictEqual(status, 201);
   assert.strictEqual(version.versionNumber, 2);
   assert.strictEqual(version.documentId, document.id);
-  assert.strictEqual(store.findById('documents', document.id).latestVersionId, version.id);
+  assert.strictEqual(store.findById('document-management/documents', document.id).latestVersionId, version.id);
 });
 
 test('uploadDocumentVersion — returns 404 when the document does not exist', async () => {

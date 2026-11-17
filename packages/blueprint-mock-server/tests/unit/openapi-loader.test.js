@@ -169,23 +169,29 @@ test('OpenAPI Loader Tests', async (t) => {
     console.log('  ✓ Endpoint paths prefixed with serverBasePath');
   });
 
-  await t.test('extractMetadata - does not double-prefix paths already starting with serverBasePath', () => {
-    const spec = {
-      info: { title: 'Test API', version: '1.0.0' },
-      servers: [{ url: 'http://localhost:1080/workflow' }],
+  // OpenAPI paths are relative to the server URL, so a path that starts with
+  // the same word as the server's base is still under it: `/orders` in an API
+  // served at /orders is /orders/orders, and `/menu-items` at /menu is
+  // /menu/menu-items.
+  await t.test('extractMetadata - prefixes a path that starts with the same word as serverBasePath', () => {
+    const orders = extractMetadata({
+      info: { title: 'Orders', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:1080/orders' }],
       paths: {
-        '/tasks': { get: { operationId: 'listTasks', responses: {} } },
-        '/workflow/metrics': { get: { operationId: 'listMetrics', responses: {} } }
+        '/orders': { get: { operationId: 'listOrders', responses: {} } },
+        '/orders/{orderId}': { get: { operationId: 'getOrder', responses: {} } }
       }
-    };
+    }, 'orders');
+    assert.deepStrictEqual(orders.endpoints.map(e => e.path), ['/orders/orders', '/orders/orders/{orderId}']);
+    assert.strictEqual(orders.baseResource, '/orders/orders');
 
-    const metadata = extractMetadata(spec, 'workflow');
-    const paths = metadata.endpoints.map(e => e.path);
-
-    assert.ok(paths.includes('/workflow/tasks'), 'Regular path should get /workflow prefix');
-    assert.ok(paths.includes('/workflow/metrics'), 'Already-prefixed path should not be doubled');
-    assert.ok(!paths.includes('/workflow/workflow/metrics'), 'Should not produce double prefix');
-    console.log('  ✓ Already-prefixed paths are not double-prefixed');
+    const menu = extractMetadata({
+      info: { title: 'Menu', version: '1.0.0' },
+      servers: [{ url: 'http://localhost:1080/menu' }],
+      paths: { '/menu-items': { get: { operationId: 'listMenuItems', responses: {} } } }
+    }, 'menu');
+    assert.deepStrictEqual(menu.endpoints.map(e => e.path), ['/menu/menu-items']);
+    assert.strictEqual(menu.baseResource, '/menu/menu-items');
   });
 
   await t.test('extractMetadata - baseResource includes serverBasePath', () => {

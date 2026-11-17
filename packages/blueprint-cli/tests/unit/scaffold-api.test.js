@@ -50,7 +50,7 @@ test('generate-api tests', async (t) => {
   });
 
   await t.test('toCamelCase - converts PascalCase', () => {
-    assert.strictEqual(toCamelCase('CaseWorker'), 'caseworker');
+    assert.strictEqual(toCamelCase('CaseWorker'), 'caseWorker');
   });
 
   await t.test('toCamelCase - single word lowercased', () => {
@@ -226,14 +226,15 @@ test('generate-api tests', async (t) => {
     assert.ok(spec.includes('"$ref": "#/components/schemas/BenefitList"'));
     assert.ok(spec.includes('"$ref": "#/components/schemas/BenefitCreate"'));
     assert.ok(spec.includes('"$ref": "#/components/schemas/BenefitUpdate"'));
-    assert.ok(spec.includes('"$ref": "./components/parameters.yaml#/SearchQueryParam"'));
-    assert.ok(spec.includes('"$ref": "./components/responses.yaml#/BadRequest"'));
+    assert.ok(spec.includes('"$ref": "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"'));
+    assert.ok(spec.includes('"$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"'));
   });
 
   await t.test('generateApiSpec - handles multi-word resources', () => {
     const spec = generateApiSpec('case-workers', 'CaseWorker');
     assert.ok(spec.includes('title: CaseWorker API'));
-    assert.ok(spec.includes('"/caseworkers"'));
+    assert.ok(spec.includes('"/case-workers"'));
+    assert.ok(spec.includes('"/case-workers/{caseWorkerId}"'));
     assert.ok(spec.includes('operationId: listCaseWorkers'));
     assert.ok(spec.includes('"$ref": "#/components/schemas/CaseWorker"'));
   });
@@ -278,11 +279,31 @@ test('generate-api tests', async (t) => {
     assert.ok(spec.includes('$ref: "#/components/examples/BenefitExample1"'));
   });
 
-  await t.test('generateApiSpec - uses default ./components prefix', () => {
+  await t.test('generateApiSpec - refers to the framework components by default', () => {
     const spec = generateApiSpec('benefits', 'Benefit');
-    assert.ok(spec.includes('"$ref": "./components/parameters.yaml#/SearchQueryParam"'));
-    assert.ok(spec.includes('"$ref": "./components/responses.yaml#/BadRequest"'));
-    assert.ok(spec.includes('"$ref": "./components/responses.yaml#/InternalError"'));
+    assert.ok(spec.includes('"$ref": "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"'));
+    assert.ok(spec.includes('"$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"'));
+    assert.ok(spec.includes('"$ref": "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"'));
+  });
+
+  await t.test('generateApiSpec - serves under the domain', () => {
+    const spec = generateApiSpec('menu', 'MenuItem');
+    assert.ok(spec.includes('url: http://localhost:1080/menu'));
+    assert.ok(spec.includes('"/menu-items"'));
+    assert.ok(spec.includes('operationId: listMenuItems'));
+    assert.ok(spec.includes('"$ref": "#/components/schemas/MenuItem"'));
+  });
+
+  await t.test('parseArgs - accepts --flag=value', () => {
+    const saved = process.argv;
+    process.argv = ['node', 'scaffold-api.js', '--name=menu', '--resource=MenuItem'];
+    try {
+      const options = parseArgs();
+      assert.strictEqual(options.name, 'menu');
+      assert.strictEqual(options.resource, 'MenuItem');
+    } finally {
+      process.argv = saved;
+    }
   });
 
   await t.test('generateApiSpec - uses custom components prefix', () => {

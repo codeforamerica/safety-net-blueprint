@@ -16,7 +16,7 @@
  */
 
 import { createParser } from 'eventsource-parser';
-import { emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope, EVENTS_COLLECTION } from './emit-event.js';
 
 const STREAM = '/platform/events/stream';
 const LIST = '/platform/events';
@@ -104,7 +104,7 @@ function follow(entry, types, instance, signal) {
     if (!event?.id || !types.includes(event.type)) return;
     lastId = event.id;
     lastTime = event.time ?? lastTime;
-    if (store.findById('events', event.id)) return;
+    if (store.findById(EVENTS_COLLECTION, event.id)) return;
     arrivals.set(event.id, entry);
     if (arrivals.size > ARRIVALS_KEPT) arrivals.delete(arrivals.keys().next().value);
     emitEventEnvelope(event, instance);

@@ -4,6 +4,8 @@
 
 import jsonLogic from 'json-logic-js';
 import { assertFetchShaped, queryOf } from '../http/request.js';
+import { storageName } from '../collection-utils.js';
+import { EVENTS_COLLECTION } from '../emit-event.js';
 
 /**
  * Apply a JSON Logic filter to a list of records.
@@ -57,23 +59,29 @@ function applyQueryFilters(records, queryFilters, collection) {
 }
 
 /**
- * Every collection name the metric definitions reference.
+ * The records of every collection the metric definitions reference, for each
+ * domain's metrics, under the name a metric gives it.
  *
  * A metric names its source collection, a ratio names a second for its
  * denominator, a duration names both ends, and a breakdown can name its own.
  * Collecting them from the definitions means a contract set can count whatever
- * it likes without this handler being taught about it.
+ * it likes without this handler being taught about it. A metric names one of
+ * its own domain's collections — `tasks` in workflow is `workflow/tasks` — or
+ * `events`, the platform's event log.
  *
- * @param {{ metrics?: object[] }[]} entries - From `extract(docs, 'metrics')`
- * @returns {Set<string>}
+ * @param {{ domain: string, metrics?: object[] }[]} entries - From `extract(docs, 'metrics')`
+ * @param {Object} store
+ * @returns {Map<string, Record<string, object[]>>} Domain to its metrics' collections, by name
  */
-function collectionNamesIn(entries) {
-  const names = new Set();
-  const add = (definition) => {
-    if (definition?.collection) names.add(definition.collection);
-  };
-
+function collectionsByDomain(entries, store) {
+  const byDomain = new Map();
   for (const entry of entries ?? []) {
+    const collections = byDomain.get(entry.domain) ?? {};
+    byDomain.set(entry.domain, collections);
+    const add = (definition) => {
+      const name = definition?.collection;
+      if (name && !(name in collections)) collections[name] = getCollection(storedAs(name, entry.domain), store);
+    };
     for (const metric of entry.metrics ?? []) {
       add(metric.source);
       add(metric.total);
@@ -82,7 +90,12 @@ function collectionNamesIn(entries) {
       for (const breakdown of metric.breakdowns ?? []) add(breakdown.source ?? breakdown);
     }
   }
-  return names;
+  return byDomain;
+}
+
+/** Where a collection a metric names is kept: the event log, or its domain's. */
+function storedAs(name, domain) {
+  return name === 'events' ? EVENTS_COLLECTION : storageName(domain, name);
 }
 
 /**
@@ -246,9 +259,7 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
       // they count applications and determinations (#448). Looked up once per
       // request rather than per metric, which is why it is a map and not a
       // call inside the aggregation.
-      const collections = Object.fromEntries(
-        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name, store)])
-      );
+      const collections = collectionsByDomain(allMetrics, store);
 
       // Collect all metric definitions, optionally filtered by domain
       let entries = allMetrics;
@@ -270,8 +281,9 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
       const page = flat.slice(offset, offset + limit);
 
       const items = page.map(({ metric, domain }) => {
-        const breakdown = groupBy ? computeBreakdown(metric, collections, groupBy, queryFilters) : null;
-        const value = breakdown ? null : computeScalar(metric, collections, queryFilters);
+        const own = collections.get(domain) ?? {};
+        const breakdown = groupBy ? computeBreakdown(metric, own, groupBy, queryFilters) : null;
+        const value = breakdown ? null : computeScalar(metric, own, queryFilters);
         return formatMetric(metric, domain, value, breakdown, computedAt);
       });
 
@@ -337,14 +349,13 @@ export function createMetricsGetHandler(allMetrics, { store } = {}) {
       // they count applications and determinations (#448). Looked up once per
       // request rather than per metric, which is why it is a map and not a
       // call inside the aggregation.
-      const collections = Object.fromEntries(
-        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name, store)])
-      );
+      const collections = collectionsByDomain(allMetrics, store);
 
+      const own = collections.get(found.domain) ?? {};
       const breakdown = groupBy
-        ? computeBreakdown(found.metric, collections, groupBy, queryFilters)
+        ? computeBreakdown(found.metric, own, groupBy, queryFilters)
         : null;
-      const value = breakdown ? null : computeScalar(found.metric, collections, queryFilters);
+      const value = breakdown ? null : computeScalar(found.metric, own, queryFilters);
 
       return Response.json(formatMetric(found.metric, found.domain, value, breakdown, computedAt));
     } catch (error) {

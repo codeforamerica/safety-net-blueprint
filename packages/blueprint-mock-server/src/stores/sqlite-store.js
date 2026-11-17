@@ -61,9 +61,12 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
   function getDatabase(collection) {
     if (databases.has(collection)) return databases.get(collection);
 
-    if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
+    // A collection is named for its domain and path, `intake/applications/members`,
+    // so its file sits in a folder for each: intake/applications/members.db.
+    const file = join(dataDir, `${collection}.db`);
+    if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true });
 
-    const db = new Database(join(dataDir, `${collection}.db`));
+    const db = new Database(file);
     db.pragma('journal_mode = WAL');
 
     try {

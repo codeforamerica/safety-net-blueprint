@@ -1,11 +1,14 @@
 /**
- * Unit tests for update handler utilities
- * Tests deepEqual and buildChanges.
+ * Unit tests for the update handler: its utilities, deepEqual and
+ * buildChanges, and what a PATCH is checked against.
  */
 
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import { deepEqual, buildChanges } from '../../src/handlers/update-handler.js';
+import { createMockServer } from '../../src/server.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
 
 // =============================================================================
 // deepEqual
@@ -171,4 +174,99 @@ test('buildChanges — nested object added whole (before null) emits top-level f
   const changes = buildChanges(before, after);
   assert.strictEqual(changes.length, 1);
   assert.deepStrictEqual(changes[0], { field: 'address', before: null, after: { city: 'Oakland', state: 'CA' } });
+});
+
+// =============================================================================
+// What a PATCH is checked against
+// =============================================================================
+
+/** Boot a mock over a contract set, quietly, and send it requests. */
+async function boot(contracts) {
+  const log = console.log; const warn = console.warn; console.log = () => {}; console.warn = () => {};
+  let mock;
+  try { mock = await createMockServer({ contracts, store: createMemoryStore(), seed: true }); } finally { console.log = log; console.warn = warn; }
+  return async (method, path, body) => {
+    const response = await mock.fetch(new Request(`http://localhost${path}`, {
+      method, headers: { 'content-type': 'application/json', 'x-caller-id': 'worker-1' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }));
+    const text = await response.text();
+    return { status: response.status, body: text ? JSON.parse(text) : null };
+  };
+}
+
+const ok = (schema, status = 200) => ({ [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });
+const sends = (schema) => ({ requestBody: { required: true, content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });
+
+// A journal whose update schema allows only `name`, and whose notes require one.
+const journal = {
+  artifactVersion: 1,
+  docs: [{
+    path: '/x/domains/journal/journal-openapi.yaml',
+    relativePath: 'domains/journal/journal-openapi.yaml',
+    domain: 'journal',
+    type: 'openapi',
+    provenance: null,
+    content: {
+      openapi: '3.1.0',
+      info: { title: 'Journal', version: '1', 'x-domain': 'journal' },
+      servers: [{ url: 'http://localhost:1080/journal' }],
+      paths: {
+        '/notes': { get: { operationId: 'listNotes', responses: ok('NoteList') }, post: { operationId: 'createNote', ...sends('NoteCreate'), responses: ok('Note', 201) } },
+        '/notes/{noteId}': {
+          parameters: [{ name: 'noteId', in: 'path', required: true, schema: { type: 'string' } }],
+          get: { operationId: 'getNote', responses: ok('Note') },
+          patch: { operationId: 'updateNote', ...sends('NoteUpdate'), responses: ok('Note') },
+        },
+      },
+      components: {
+        schemas: {
+          Note: {
+            type: 'object', required: ['id', 'name'],
+            properties: { id: { type: 'string', readOnly: true }, name: { type: 'string', minLength: 1 }, createdAt: { type: 'string' }, updatedAt: { type: 'string' } },
+          },
+          NoteCreate: { type: 'object', required: ['name'], additionalProperties: false, properties: { name: { type: 'string' } } },
+          NoteUpdate: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' } } },
+          NoteList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Note' } } } },
+        },
+      },
+    },
+  }],
+};
+
+describe('PATCH', () => {
+  // The update schema is for what the client sends; the record's id and
+  // timestamps were never part of it.
+  test('a closed update schema accepts a change to a field it names', async () => {
+    const send = await boot(journal);
+    const { body: note } = await send('POST', '/journal/notes', { name: 'first' });
+    const { status, body } = await send('PATCH', `/journal/notes/${note.id}`, { name: 'second' });
+    assert.strictEqual(status, 200, JSON.stringify(body));
+    assert.strictEqual(body.name, 'second');
+  });
+
+  test('a closed update schema refuses a field it does not name', async () => {
+    const send = await boot(journal);
+    const { body: note } = await send('POST', '/journal/notes', { name: 'first' });
+    const { status, body } = await send('PATCH', `/journal/notes/${note.id}`, { title: 'not a field' });
+    assert.strictEqual(status, 422);
+    assert.ok(body.details.some((d) => d.field === 'title'), JSON.stringify(body));
+  });
+
+  test('the record a change leaves is checked against the resource\'s schema', async () => {
+    const send = await boot(journal);
+    const { body: note } = await send('POST', '/journal/notes', { name: 'first' });
+    const { status } = await send('PATCH', `/journal/notes/${note.id}`, { name: '' });
+    assert.strictEqual(status, 422);
+  });
+
+  // The framework's own TranscriptionProfileUpdate is closed.
+  test('the framework\'s PATCH /communication/profiles/{profileId} succeeds', async () => {
+    const send = await boot(JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8')));
+    const { body: list } = await send('GET', '/communication/profiles?limit=1');
+    const [profile] = list.items;
+    const { status, body } = await send('PATCH', `/communication/profiles/${profile.id}`, { description: 'Changed.' });
+    assert.strictEqual(status, 200, JSON.stringify(body));
+    assert.strictEqual(body.description, 'Changed.');
+  });
 });

@@ -26,7 +26,7 @@ const seedDir        = seedArg.slice('--seed='.length);
 // Cleanup function — uses SQL DELETE rather than file deletion to
 // avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm
 // causes WAL to be replayed into the new file, restoring deleted rows).
-const cleanup = () => { store.clearAll('persons'); };
+const cleanup = () => { store.clearAll('client-management/persons'); };
 
 /**
  * Load the documents the seeder now takes, from the directories these cases use.
@@ -54,11 +54,11 @@ test('Database Seeder Tests', async (t) => {
     const summary = seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
-    const seededCount = summary['persons'] ?? 0;
+    const seededCount = summary['client-management/persons'] ?? 0;
     assert.ok(seededCount >= 0, 'Should return count');
 
     if (seededCount > 0) {
-      const dbCount = store.count('persons');
+      const dbCount = store.count('client-management/persons');
       assert.strictEqual(dbCount, seededCount, 'Database should have seeded count');
       console.log(`  ✓ Seeded ${seededCount} person(s)`);
     } else {
@@ -78,7 +78,7 @@ test('Database Seeder Tests', async (t) => {
       ],
     };
     seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
-    const records = store.findAll('persons', {});
+    const records = store.findAll('client-management/persons', {});
 
     if (records.length > 0) {
       const first = records[0];
@@ -101,7 +101,7 @@ test('Database Seeder Tests', async (t) => {
       ],
     };
     seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
-    const records = store.findAll('persons', {});
+    const records = store.findAll('client-management/persons', {});
 
     if (records.length > 1) {
       for (let i = 0; i < records.length - 1; i++) {
@@ -123,7 +123,7 @@ test('Database Seeder Tests', async (t) => {
     };
     seedAllDatabases(loadDocs(fixtureSpecDir), store, { seeded: false });
 
-    assert.strictEqual(store.count('persons'), 0, 'Should be empty with no seedDir');
+    assert.strictEqual(store.count('client-management/persons'), 0, 'Should be empty with no seedDir');
     console.log('  ✓ Empty databases with null seedDir');
   });
 
@@ -142,7 +142,7 @@ test('Database Seeder Tests', async (t) => {
     };
     seedAllDatabases(loadDocs(fixtureSpecDir, emptyDir), store, { seeded: Boolean(emptyDir) });
 
-    assert.strictEqual(store.count('persons'), 0, 'Should be empty when no seed files found');
+    assert.strictEqual(store.count('client-management/persons'), 0, 'Should be empty when no seed files found');
     console.log('  ✓ Empty databases when no mock-data files present');
   });
   
@@ -198,7 +198,7 @@ test('Database Seeder Tests', async (t) => {
         } },
       }));
 
-      const target = 'widget-parts';
+      const target = 'widgets/widgets/parts';
       const sentinelId = '00000000-dead-beef-0000-000000000001';
       store.insertResource(target, {
         id: sentinelId,
@@ -224,8 +224,8 @@ test('Database Seeder Tests', async (t) => {
     // via startsWith, causing member records to be seeded into applications.db.
     // After the fix, longest-prefix matching assigns each key to the most
     // specific collection only.
-    store.clearAll('applications');
-    store.clearAll('application-members');
+    store.clearAll('intake/applications');
+    store.clearAll('intake/applications/members');
 
     const api = {
       name: 'intake',
@@ -290,17 +290,17 @@ test('Database Seeder Tests', async (t) => {
 
     seedAllDatabases(loadDocs(tmpSeedDir), store);
 
-    const appsInApplications = store.findAll('applications', {}).total;
-    const membersInApplications = store.findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
-    const membersInMembers = store.findAll('application-members', {}).total;
+    const appsInApplications = store.findAll('intake/applications', {}).total;
+    const membersInApplications = store.findAll('intake/applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
+    const membersInMembers = store.findAll('intake/applications/members', {}).total;
 
     assert.strictEqual(appsInApplications, 1, 'applications collection should have exactly 1 record');
     assert.strictEqual(membersInApplications, 0, 'member record must not appear in applications collection');
     assert.strictEqual(membersInMembers, 1, 'application-members collection should have exactly 1 record');
-    console.log('  ✓ Prefix collision: member records correctly isolated to application-members');
+    console.log('  ✓ Prefix collision: member records correctly isolated to intake/applications/members');
 
-    store.clearAll('applications');
-    store.clearAll('application-members');
+    store.clearAll('intake/applications');
+    store.clearAll('intake/applications/members');
   });
 
   await t.test('seedAllDatabases - seeds from seedDir when it differs from specsDir', async () => {
@@ -332,6 +332,55 @@ test('Database Seeder Tests', async (t) => {
     console.log('  ✓ seedDir correctly overrides specsDir for seed loading');
 
     store.clearAll('widgets');
+  });
+
+  // A record can hold a list of its own — a basket and the things in it —
+  // and is seeded like any other. Only an example shaped as a list response
+  // is left out.
+  await t.test('seedAllDatabases - seeds a record that has an items array of its own', async () => {
+    const { writeFileSync, mkdtempSync, rmSync } = await import('fs');
+    const { join: pathJoin } = await import('path');
+    const { tmpdir } = await import('os');
+    const yaml = (await import('js-yaml')).default;
+
+    const dir = mkdtempSync(pathJoin(tmpdir(), 'snb-items-'));
+    try {
+      writeFileSync(pathJoin(dir, 'shop-openapi.yaml'), yaml.dump({
+        openapi: '3.1.0',
+        info: { title: 'Shop', version: '1.0.0', 'x-domain': 'shop' },
+        servers: [{ url: 'http://localhost:1080/shop' }],
+        paths: {
+          '/baskets': { get: { responses: { 200: { description: 'ok', content: { 'application/json': {
+            schema: { $ref: '#/components/schemas/BasketList' } } } } } } },
+          '/baskets/{basketId}': { get: {} },
+        },
+        components: { schemas: {
+          Basket: { type: 'object', properties: { id: { type: 'string' }, items: { type: 'array', items: { type: 'object' } } } },
+          BasketList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Basket' } } } },
+        } },
+      }));
+      writeFileSync(pathJoin(dir, 'shop-mock-data.yaml'), yaml.dump({
+        BasketExample1: { id: 'b1', label: 'two apples', items: [{ name: 'apple', quantity: 2 }] },
+        BasketExample2: { id: 'b2', label: 'no items field' },
+        BasketListExample: { items: [{ id: 'b3' }], total: 1, limit: 25, offset: 0 },
+      }));
+
+      const warn = console.warn;
+      const warnings = [];
+      console.warn = (message) => warnings.push(message);
+      try {
+        seedAllDatabases(loadDocs(dir, dir), store);
+      } finally {
+        console.warn = warn;
+      }
+
+      assert.deepStrictEqual(store.findAll('shop/baskets', {}).items.map((b) => b.id).sort(), ['b1', 'b2']);
+      assert.deepStrictEqual(store.findById('shop/baskets', 'b1').items, [{ name: 'apple', quantity: 2 }]);
+      assert.ok(warnings.some((w) => w.includes('BasketListExample')), 'the list response left out is named');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      store.clearAll('shop/baskets');
+    }
   });
 
 });
