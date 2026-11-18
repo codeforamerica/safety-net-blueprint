@@ -15,3 +15,4 @@
 export { createMockServer, runScenario, startScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/server';
 export { extract, generate } from '@codeforamerica/blueprint-core/browser';
 export { restoreRecords, saveRecords } from './records.js';
+export { mountSendPanels } from './send-panel.js';

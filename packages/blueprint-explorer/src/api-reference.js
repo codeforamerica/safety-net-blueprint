@@ -561,7 +561,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
         const nameCell = `<span role="button" tabindex="0" data-expand-id="${eid}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</span>`;
         // Expand row spans all columns so content gets full table width (avoids clipping)
         const expandRow = `<tr id="${eid}" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;">${expandContent}</td></tr>`;
-        return `<tr>
+        return `<tr data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}">
           <td style="padding:5px 12px;white-space:nowrap;">${nameCell}</td>
           <td style="padding:5px 12px;">${typeCell}</td>
           <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
@@ -571,7 +571,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
       }
     }
     const descCell = `${renderMarkdown(p.description ?? '')}${enumVals}`;
-    return `<tr>
+    return `<tr data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(p.name ?? '')}</td>
       <td style="padding:5px 12px;">${typeCell}</td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
@@ -584,7 +584,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
   return `<div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="${thStyle}">Name</th>
         <th style="${thStyle}">Type</th>
@@ -622,7 +622,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
     bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)}</div>`;
   }
 
-  return `<div style="margin-top:16px;">
+  return `<div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body${reqBody.required ? ` <span style="color:${COLORS.richRed};font-weight:700;">required</span>` : ''}
     </div>
@@ -684,7 +684,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
     </div>`;
   }).join('');
 
-  return `<div style="margin-top:16px;">
+  return `<div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${entries}</div>
   </div>`;
@@ -692,7 +692,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 
 // ── Endpoint block ────────────────────────────────────────────────────────
 
-function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
+function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null, tryFile = null) {
   const id       = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
   const params   = op.parameters ?? [];
   const descHtml = op.description
@@ -715,7 +715,9 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     return '';
   })();
 
-  return `<div id="${id}" class="content-item" style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  // Where Send fills in a Try it panel, once the mock has loaded.
+  const tryAttrs = tryFile && op.operationId ? ` data-try-op="${esc(op.operationId)}" data-try-file="${esc(tryFile)}"` : '';
+  return `<div id="${id}" class="content-item"${tryAttrs} style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
@@ -786,7 +788,11 @@ function readDictionary(inventoryPath) {
   return { fields, prefixOf };
 }
 
+// A first look at Send, on one page only until it has been tried.
+const SEND_ON = new Set(['intake']);
+
 function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
+  const tryFile = SEND_ON.has(slug) && doc ? doc.relativePath : null;
   // Only where there is one to link to. A data dictionary is built from a
   // domain's annotations, so a domain with none gets no page — and every
   // field on this page pointed into it regardless, which is hundreds of
@@ -896,7 +902,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, dictionary.fields, slug, dictionary.prefixOf)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, dictionary.fields, slug, dictionary.prefixOf, tryFile)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>
@@ -916,6 +922,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
       <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">${total} endpoint${total !== 1 ? 's' : ''}</span>
     </div>
     ${metaSubtitle}
+    ${tryFile ? '<div id="try-it-bar"></div>' : ''}
   </div>`;
 
   const mainHtml = `
@@ -925,7 +932,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     </div>
     ${sections}`;
 
-  return twoColumnPage({
+  const page = twoColumnPage({
     title: `${projectName} \u2014 ${esc(info.title ?? slug)}`,
     breadcrumbs: [
       { label: 'Explorer',      href: hubHref },
@@ -938,6 +945,16 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     navWidth: 260,
     navSearch: true,
   });
+  if (!tryFile) return page;
+  // The mock loads after the page has rendered, so reading never waits on it.
+  return page.replace('</body>', () => `<script src="../mock/mock.js" defer></script>
+<script src="../mock/contracts.js" defer></script>
+<script type="module">
+if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
+  BlueprintMock.mountSendPanels({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href });
+}
+</script>
+</body>`);
 }
 
 // ── Index (landing) page ──────────────────────────────────────────────────
