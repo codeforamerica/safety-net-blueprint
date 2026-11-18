@@ -11,13 +11,15 @@
  * the records the mock holds, an Example list, and the request as curl or as
  * a call through the generated TypeScript client, whose body is edited in
  * place. Send sits in that code, and what comes back is the first of the
- * response tabs, beside the documented ones. Who is calling is one setting
+ * response tabs, beside the documented ones. A rules endpoint has a third
+ * tab, the client's local evaluation, which Run evaluates in the page. Who is calling is one setting
  * for the page, shown and changed in any operation; the mock's status and
  * its Restart and Start empty end the header's line of sources.
  */
 
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { extract } from '@codeforamerica/blueprint-core/browser';
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { restoreRecords, saveRecords } from './records.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -71,7 +73,7 @@ const shellQuote = (text) => `'${String(text).replace(/'/g, `'\\''`)}'`;
  * With `bodyMark`, the body is left as that mark, for the page to put an
  * editable body in its place.
  */
-const snippets = ({ doc, method, operationId, request, bodyMark }) => {
+const snippets = ({ doc, method, operationId, request, bodyMark, local }) => {
   const { path, query, headers, body, type } = request;
   const parsed = (() => { try { return body === undefined ? undefined : JSON.parse(body); } catch { return undefined; } })();
   const args = [];
@@ -92,7 +94,33 @@ const response = await ${namespace}.${operationId}(${args.length ? `{\n${args.ma
     lines.push(`  -H ${shellQuote(`Content-Type: ${type}`)}`);
     lines.push(`  -d ${bodyMark ? `'${bodyMark}'` : shellQuote(parsed === undefined ? body : JSON.stringify(parsed, null, 2))}`);
   }
-  return { typescript, curl: lines.join(' \\\n') };
+  const written = { typescript, curl: lines.join(' \\\n') };
+  // A ruleset's evaluation, run in the caller's own code by the client.
+  if (local) {
+    written.local = `import { ${local.namespace} } from './generated'; // where you generated the client
+
+const result = ${local.namespace}.Rules.${local.ruleset}.evaluate(${bodyMark ?? (parsed === undefined ? (body ?? '{}').trim() : tsValue(parsed))});`;
+  }
+  return written;
+};
+
+/**
+ * The ruleset an operation evaluates, when it is a rules endpoint: the
+ * domain's rules document names the path, and the compiled graph is what the
+ * client's `Rules.<ruleset>.evaluate` runs. Null for any other operation.
+ */
+const rulesetOf = (docs, op) => {
+  const domain = op.doc.content?.info?.['x-domain'];
+  const template = op.path.slice(basePathOf(op.doc).length);
+  for (const doc of docs) {
+    if (doc.content?.domain !== domain || !doc.content?.rulesets) continue;
+    for (const [name, ruleset] of Object.entries(doc.content.rulesets)) {
+      if (ruleset?.endpoint?.path !== template) continue;
+      const graph = docs.find((d) => d.type === 'graph' && d.content?.domain === domain && d.content?.ruleset === name)?.content;
+      if (graph) return { name, graph, namespace: domain.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) };
+    }
+  }
+  return null;
 };
 
 const STREAM_MS = 3000;
@@ -181,6 +209,14 @@ const startingBodies = (docs, examples, op) => {
   }
   if (json.example !== undefined) return [{ name: 'Example', value: json.example }];
   if (type === 'application/json-patch+json') return [{ name: 'Empty', value: [] }];
+  // A rules endpoint: the ruleset's own examples, from its examples document.
+  const ruleset = rulesetOf(docs, op);
+  if (ruleset) {
+    const domain = op.doc.content?.info?.['x-domain'];
+    const declared = docs.flatMap((doc) => (doc.content?.domain === domain ? doc.content?.rulesets?.[ruleset.name]?.examples ?? [] : []));
+    const listed = declared.filter((example) => example?.inputs).map((example, i) => ({ name: example.description ?? `Example ${i + 1}`, value: example.inputs }));
+    if (listed.length) return [...listed, { name: 'Empty', value: {} }];
+  }
   const fields = fieldsOf(op.doc, json.schema);
   if (op.method === 'PATCH' || op.method === 'PUT') return [{ name: 'The record', fromRecord: true, fields }];
   const resource = resourceOf(op);
@@ -199,7 +235,7 @@ const STYLE = `
   .try-params input, .try-body textarea, .try-body select { font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; width: 100%; box-sizing: border-box; background: #fff; }
   .try-body textarea { min-height: 9rem; resize: vertical; }
   .try-body .pick { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 11px; color: #555; }
-  .try-body .pick select { width: auto; }
+  .try-body .pick select { width: auto; max-width: 100%; min-width: 0; flex: 0 1 auto; }
   .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
   .try-code .send { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
   .try-code .send:disabled { opacity: .5; cursor: default; }
@@ -436,10 +472,17 @@ export async function mountSendPanels({ contracts, version, scope }) {
     // written to run against the contract's server.
     const code = el('div', '', 'try-code');
     const tabs = el('div', '', 'tabs');
+    const ruleset = rulesetOf(docs, op);
+    const local = ruleset ? { namespace: ruleset.namespace, ruleset: ruleset.name } : undefined;
     const tabButtons = { curl: el('button', 'curl'), typescript: el('button', 'TypeScript') };
+    if (local) tabButtons.local = el('button', 'TypeScript (local)');
+    // The tab chosen on another operation, unless this one doesn't have it.
+    const tabOf = () => (tabButtons[snippetTab] ? snippetTab : 'typescript');
     const copy = el('button', 'Copy', 'copy');
     const pre = el('pre');
-    tabs.append(tabButtons.curl, tabButtons.typescript, el('span', serverOf(op.doc), 'target'), copy);
+    const target = el('span', '', 'target');
+    const button = el('button', 'Send', 'send');
+    tabs.append(...Object.values(tabButtons), target, copy);
     code.append(tabs, pre);
     let written = {};
     // Tried, the body in the code is where it's edited: the text around it
@@ -449,28 +492,32 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const bodyEdit = el('span', '', 'body-edit');
     bodyEdit.contentEditable = 'plaintext-only';
     bodyEdit.spellcheck = false;
-    const indentOf = () => (snippetTab === 'typescript' ? '  ' : '');
+    const indentOf = () => (tabOf() === 'typescript' ? '  ' : '');
     bodyEdit.addEventListener('input', (event) => {
       event.stopPropagation();
       const pad = indentOf();
       bodyBox.value = bodyEdit.textContent.split('\n').map((line, i) => (i && line.startsWith(pad) ? line.slice(pad.length) : line)).join('\n');
       try { JSON.parse(bodyBox.value); bodyEdit.classList.remove('invalid'); } catch { bodyEdit.classList.add('invalid'); }
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }) });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }), local });
     });
     const refresh = () => {
       const request = requestFor({ placeholders: true });
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, local });
+      const tab = tabOf();
+      // The local call runs in the caller's code, not against a server.
+      target.textContent = tab === 'local' ? 'runs in your code' : serverOf(op.doc);
+      button.textContent = tab === 'local' ? 'Run' : 'Send';
       if (bodyBox) {
-        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK })[snippetTab].split(MARK);
+        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK, local })[tab].split(MARK);
         if (document.activeElement !== bodyEdit) {
           bodyEdit.textContent = bodyBox.value.split('\n').map((line, i) => (i ? indentOf() + line : line)).join('\n');
         }
         if (bodyEdit.parentNode !== pre) pre.replaceChildren(document.createTextNode(before), bodyEdit, document.createTextNode(after));
         else { pre.firstChild.textContent = before; pre.lastChild.textContent = after; }
       } else {
-        pre.textContent = written[snippetTab];
+        pre.textContent = written[tab];
       }
-      for (const [name, button] of Object.entries(tabButtons)) button.classList.toggle('on', name === snippetTab);
+      for (const [name, tabButton] of Object.entries(tabButtons)) tabButton.classList.toggle('on', name === tab);
     };
     for (const [name, button] of Object.entries(tabButtons)) {
       button.onclick = () => {
@@ -479,7 +526,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
       };
     }
     copy.onclick = async () => {
-      try { await navigator.clipboard.writeText(written[snippetTab]); copy.textContent = 'Copied'; } catch { copy.textContent = 'Select and copy'; }
+      try { await navigator.clipboard.writeText(written[tabOf()]); copy.textContent = 'Copied'; } catch { copy.textContent = 'Select and copy'; }
       setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
     };
     holder.addEventListener('input', refresh);
@@ -488,12 +535,12 @@ export async function mountSendPanels({ contracts, version, scope }) {
     place(code);
 
     // Send, inside the code block, and what came back as the first of the
-    // response tabs, beside the documented ones.
+    // response tabs, beside the documented ones: one tab for what was sent,
+    // and one for what a local run returned.
     const foot = el('div', '', 'foot');
-    const button = el('button', 'Send', 'send');
     foot.append(button);
     code.append(foot);
-    const showSent = (tabText, ok, content) => {
+    const showSent = (tabText, ok, content, key = 'sent') => {
       let section = holder.querySelector('.op-side > .responses-section');
       if (!section) {
         section = el('div', '', 'op-section responses-section');
@@ -501,14 +548,14 @@ export async function mountSendPanels({ contracts, version, scope }) {
         side.append(section);
       }
       const tabs = section.querySelector('.resp-tabs');
-      let tab = tabs.querySelector('.resp-tab.sent');
-      let panel = section.querySelector('.resp-panel[data-resp="sent"]');
+      let tab = tabs.querySelector(`.resp-tab[data-resp="${key}"]`);
+      let panel = section.querySelector(`.resp-panel[data-resp="${key}"]`);
       if (!tab) {
         tab = Object.assign(el('button', '', 'resp-tab sent'), { type: 'button' });
-        tab.dataset.resp = 'sent';
+        tab.dataset.resp = key;
         tabs.prepend(tab);
         panel = el('div', '', 'resp-panel');
-        panel.dataset.resp = 'sent';
+        panel.dataset.resp = key;
         tabs.after(panel);
       }
       tab.textContent = tabText;
@@ -519,6 +566,22 @@ export async function mountSendPanels({ contracts, version, scope }) {
       for (const other of section.querySelectorAll('.resp-panel')) other.hidden = other !== panel;
     };
     button.onclick = async () => {
+      if (tabOf() === 'local') {
+        // What the client's Rules.<ruleset>.evaluate returns: each output,
+        // and every node it worked out on the way.
+        try {
+          const nodes = evaluate(ruleset.graph, JSON.parse(bodyBox?.value ?? '{}'));
+          const result = Object.fromEntries((ruleset.graph.outputs ?? []).map((name) => [name, nodes[name]]));
+          result.nodes = nodes;
+          showSent('local', true, [
+            el('div', 'Run in the page by the rules engine. Nothing was sent to the server.', 'sent-status ok'),
+            el('pre', JSON.stringify(result, null, 2), 'sent-body'),
+          ], 'local');
+        } catch (error) {
+          showSent('local · failed', false, [el('div', `Not run: ${error.message}`, 'sent-status bad')], 'local');
+        }
+        return;
+      }
       if (!mock) return;
       button.disabled = true;
       try {

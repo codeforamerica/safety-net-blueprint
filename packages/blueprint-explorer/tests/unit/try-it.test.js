@@ -11,7 +11,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +23,8 @@ import { noticeProblems } from '../../../../scripts/third-party-notices.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const resolvedDir = resolve(here, '../../../blueprint-harness/generated/resolved');
+
+const configOf = (html) => JSON.parse(html.match(/<script type="application\/json" id="page-config">([^<]*)<\/script>/)[1]);
 
 const built = await (async () => {
   await buildBrowser();
@@ -67,11 +69,20 @@ test('mock/mock.js defines the BlueprintMock global', () => {
 });
 
 test('the page links contract files from config.yaml and opens on its first tour', () => {
-  const config = JSON.parse(built.html.match(/<script type="application\/json" id="page-config">([^<]*)<\/script>/)[1]);
-  assert.deepEqual(config, {
+  assert.deepEqual(configOf(built.html), {
     sourceUrl: 'https://github.com/example/contracts/blob/main/contracts',
     firstTour: 'scenarios/framework-features.arazzo.yaml',
+    apiPages: [],
   });
+});
+
+test('the page knows which API reference pages were built, for steps to link to', () => {
+  const contentDir = mkdtempSync(join(tmpdir(), 'try-it-'));
+  mkdirSync(join(contentDir, 'api-reference'));
+  for (const name of ['index.html', 'intake.html', 'intake-rules.html']) writeFileSync(join(contentDir, 'api-reference', name), '');
+  build({ contentDir, resolvedDir });
+  const { apiPages } = configOf(readFileSync(join(contentDir, 'try-it', 'index.html'), 'utf8'));
+  assert.deepEqual(apiPages.sort(), ['intake', 'intake-rules'], 'every page but the index');
 });
 
 test('the bundle carries the notices of every third-party package inside it', async () => {
