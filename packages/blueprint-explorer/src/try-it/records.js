@@ -10,7 +10,15 @@
  * Saved under the explorer's own address, so two explorers on one site keep
  * their records apart, and with the contract set's version, so records saved
  * against contracts that have since been rebuilt are not restored.
+ *
+ * A reload starts fresh: it is how someone gets back to the sample records,
+ * so only going from page to page carries them.
  */
+
+/** Whether this page was reached by reloading it. */
+const reloaded = () => {
+  try { return performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { return false; }
+};
 
 const keyFor = (scope) => `blueprint-mock-records:${scope}`;
 
@@ -24,6 +32,7 @@ const keyFor = (scope) => `blueprint-mock-records:${scope}`;
  * @returns {boolean} Whether anything was restored
  */
 export function restoreRecords(mock, { scope, version }) {
+  if (reloaded()) return false;
   let saved;
   try {
     saved = JSON.parse(sessionStorage.getItem(keyFor(scope)) ?? 'null');

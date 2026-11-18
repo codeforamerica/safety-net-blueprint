@@ -1,5 +1,5 @@
 ---
-"@codeforamerica/blueprint-explorer": patch
+"@codeforamerica/blueprint-explorer": minor
 ---
 
-Before, an API reference page's sidebar listed only its groups, and each operation led with its path. Now the sidebar lists every operation by name with its method, going to one opens it, and each operation leads with its name.
+Before, an API reference page described each operation for reading only. Now its sidebar lists every operation by name, and each operation shows its curl and TypeScript call beside its responses, ready to send to the mock running in the page with a body picked from the sample records.
