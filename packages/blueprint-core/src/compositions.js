@@ -522,10 +522,11 @@ export function generateSectionViewPanelEndpoints(compositionName, endpointPath,
  * @param {Object} composition - Composition definition
  * @param {string} endpointPath - Composition endpoint path (e.g. /applications/{applicationId}/review)
  * @param {Map<string, string>} paramIndex - From buildParameterIndex
- * @param {string} compositionFilePath - Absolute path to the composition YAML file
+ * @param {string|null} [sectionsSchemaName] - The composition's section enum
+ *   (e.g. ApplicationReviewSections), which `section` takes its values from
  * @returns {{ pathEntries: Object, schemaEntries: Object }}
  */
-export function generateStateEndpoints(composition, endpointPath, paramIndex) {
+export function generateStateEndpoints(composition, endpointPath, paramIndex, sectionsSchemaName = null) {
   const stateNameInfo = deriveStateResourceName(composition.state);
   if (!stateNameInfo) return { pathEntries: {}, schemaEntries: {} };
 
@@ -545,7 +546,8 @@ export function generateStateEndpoints(composition, endpointPath, paramIndex) {
     return ref ? { $ref: ref } : { name, in: 'path', required: true, schema: { type: 'string' } };
   });
 
-  const sectionParam = { name: 'section', in: 'path', required: true, schema: { type: 'string' },
+  const sectionParam = { name: 'section', in: 'path', required: true,
+    schema: sectionsSchemaName ? { $ref: `#/components/schemas/${sectionsSchemaName}` } : { type: 'string' },
     description: 'Section name within the sectionView composition.' };
   const itemIdParam = { name: 'itemId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' },
     description: 'Item identifier for collection-backed sections.' };
@@ -952,6 +954,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     }
 
     // sectionView compositions: also generate static per-section panel endpoints and section enum
+    let sectionsSchemaName = null;
     if (composition.compositeType === 'sectionView') {
       const sections = composition.sections || {};
       const panel = generateSectionViewPanelEndpoints(compositionName, endpointPath, sections, paramIndex);
@@ -982,6 +985,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
       const sectionKeys = Object.keys(sections);
       if (sectionKeys.length > 0) {
         const enumName = `${toPascalCase(compositionName)}Sections`;
+        sectionsSchemaName = enumName;
         schemasUpdate[enumName] = {
           type: 'string',
           description: `Valid section names for the ${compositionName} sectionView.`,
@@ -993,7 +997,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
 
     // If the composition declares state:, also generate state resource endpoints
     if (composition.state) {
-      const { pathEntries, schemaEntries } = generateStateEndpoints(composition, endpointPath, paramIndex);
+      const { pathEntries, schemaEntries } = generateStateEndpoints(composition, endpointPath, paramIndex, sectionsSchemaName);
       Object.assign(pathsUpdate, pathEntries);
       Object.assign(schemasUpdate, schemaEntries);
     }

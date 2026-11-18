@@ -607,7 +607,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
       </div>
       ${first ? `<div class="fdesc">${renderMarkdown(first)}</div>` : ''}
       ${more}
-      ${!refName ? renderEnumValues(schema.enum) : ''}
+      ${renderEnumValues(schema.enum)}
     </div>`;
   };
 
