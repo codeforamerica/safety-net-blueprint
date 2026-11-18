@@ -73,6 +73,14 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -98,7 +106,34 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-determinations" class="nav-link">Determinations <span class="nav-count">5</span></a><a href="#section-decisions" class="nav-link">Decisions <span class="nav-count">2</span></a>
+        <div class="nav-section">
+    <a href="#section-determinations" class="nav-section-label nav-group">Determinations</a>
+    <a href="#op-get-determinations" class="nav-link nav-op" title="GET /determinations">
+      <span class="nav-op-name">List determinations</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-determinations" class="nav-link nav-op" title="POST /determinations">
+      <span class="nav-op-name">Create a determination</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-determinations-determinationId" class="nav-link nav-op" title="GET /determinations/{determinationId}">
+      <span class="nav-op-name">Get a determination</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-determinations-determinationId" class="nav-link nav-op" title="PATCH /determinations/{determinationId}">
+      <span class="nav-op-name">Update a determination</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-post-determinations-determinationId-complete" class="nav-link nav-op" title="POST /determinations/{determinationId}/complete">
+      <span class="nav-op-name">Complete determination</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-decisions" class="nav-section-label nav-group">Decisions</a>
+    <a href="#op-get-determinations-determinationId-decisions" class="nav-link nav-op" title="GET /determinations/{determinationId}/decisions">
+      <span class="nav-op-name">List decisions</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-determinations-determinationId-decisions-decisionId" class="nav-link nav-op" title="GET /determinations/{determinationId}/decisions/{decisionId}">
+      <span class="nav-op-name">Get a decision</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
@@ -116,10 +151,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List determinations</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List determinations</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -427,10 +464,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Create a determination</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Create a determination</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -773,10 +812,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations/{determinationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a determination</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a determination</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations/{determinationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1002,10 +1043,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations/{determinationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update a determination</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update a determination</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations/{determinationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1356,10 +1399,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations/{determinationId}/complete</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Complete determination</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Complete determination</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations/{determinationId}/complete</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1711,10 +1756,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations/{determinationId}/decisions</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List decisions</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List decisions</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations/{determinationId}/decisions</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2020,10 +2067,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/determinations/{determinationId}/decisions/{decisionId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a decision</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a decision</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/determinations/{determinationId}/decisions/{decisionId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2416,5 +2465,14 @@
     })();
     
   </script>
+<script>
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
 </body>
 </html>

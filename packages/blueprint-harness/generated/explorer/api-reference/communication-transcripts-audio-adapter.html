@@ -73,6 +73,14 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -98,7 +106,19 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-connections" class="nav-link">Connections <span class="nav-count">1</span></a><a href="#section-keys" class="nav-link">Keys <span class="nav-count">1</span></a>
+        <div class="nav-section">
+    <a href="#section-connections" class="nav-section-label nav-group">Connections</a>
+    <a href="#op-post-issue-connection" class="nav-link nav-op" title="POST /issue-connection">
+      <span class="nav-op-name">Issue a connection to a transcription service</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-keys" class="nav-section-label nav-group">Keys</a>
+    <a href="#op-get-.well-known-jwks.json" class="nav-link nav-op" title="GET /.well-known/jwks.json">
+      <span class="nav-op-name">The public keys a relay checks tokens with</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
@@ -116,10 +136,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/issue-connection</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Issue a connection to a transcription service</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Issue a connection to a transcription service</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/issue-connection</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -490,10 +512,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/.well-known/jwks.json</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">The public keys a relay checks tokens with</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">The public keys a relay checks tokens with</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/.well-known/jwks.json</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -806,5 +830,14 @@
     })();
     
   </script>
+<script>
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
 </body>
 </html>

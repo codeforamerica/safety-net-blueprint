@@ -73,6 +73,14 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -98,7 +106,67 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-transcripts" class="nav-link">Transcripts <span class="nav-count">9</span></a><a href="#section-transcript-entries" class="nav-link">Transcript entries <span class="nav-count">4</span></a><a href="#section-transcription-profiles" class="nav-link">Transcription profiles <span class="nav-count">4</span></a>
+        <div class="nav-section">
+    <a href="#section-transcripts" class="nav-section-label nav-group">Transcripts</a>
+    <a href="#op-get-transcripts" class="nav-link nav-op" title="GET /transcripts">
+      <span class="nav-op-name">List transcripts</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-transcripts" class="nav-link nav-op" title="POST /transcripts">
+      <span class="nav-op-name">Start a transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-transcripts-transcriptId" class="nav-link nav-op" title="GET /transcripts/{transcriptId}">
+      <span class="nav-op-name">Get a transcript</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-transcripts-transcriptId" class="nav-link nav-op" title="PATCH /transcripts/{transcriptId}">
+      <span class="nav-op-name">Update a transcript</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-delete-transcripts-transcriptId" class="nav-link nav-op" title="DELETE /transcripts/{transcriptId}">
+      <span class="nav-op-name">Delete a transcript</span>
+      <span class="nav-method nav-method-delete">DEL</span>
+    </a><a href="#op-post-transcripts-transcriptId-pause" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/pause">
+      <span class="nav-op-name">Pause transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcripts-transcriptId-resume" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/resume">
+      <span class="nav-op-name">Resume transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcripts-transcriptId-get-connection" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/get-connection">
+      <span class="nav-op-name">Get connection transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcripts-transcriptId-close" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/close">
+      <span class="nav-op-name">Close transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-transcript-entries" class="nav-section-label nav-group">Transcript entries</a>
+    <a href="#op-get-transcripts-transcriptId-entries" class="nav-link nav-op" title="GET /transcripts/{transcriptId}/entries">
+      <span class="nav-op-name">List a transcript's entries</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-transcripts-transcriptId-entries" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/entries">
+      <span class="nav-op-name">Add an entry to a transcript</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="GET /transcripts/{transcriptId}/entries/{entryId}">
+      <span class="nav-op-name">Get a transcript entry</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="PATCH /transcripts/{transcriptId}/entries/{entryId}">
+      <span class="nav-op-name">End a pause entry</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-transcription-profiles" class="nav-section-label nav-group">Transcription profiles</a>
+    <a href="#op-get-profiles" class="nav-link nav-op" title="GET /profiles">
+      <span class="nav-op-name">List transcription profiles</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-profiles" class="nav-link nav-op" title="POST /profiles">
+      <span class="nav-op-name">Add a transcription profile</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-profiles-profileId" class="nav-link nav-op" title="GET /profiles/{profileId}">
+      <span class="nav-op-name">Get a transcription profile</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-profiles-profileId" class="nav-link nav-op" title="PATCH /profiles/{profileId}">
+      <span class="nav-op-name">Change a transcription profile</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
@@ -116,10 +184,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List transcripts</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List transcripts</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -562,10 +632,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Start a transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Start a transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1094,10 +1166,12 @@ or another record already has the <code style="font-size:11px;background:#f0f0f0
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1470,10 +1544,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update a transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update a transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1987,10 +2063,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Delete a transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Delete a transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2162,10 +2240,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/pause</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Pause transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Pause transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/pause</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2721,10 +2801,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/resume</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Resume transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Resume transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/resume</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -3280,10 +3362,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/get-connection</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get connection transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get connection transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/get-connection</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -3730,10 +3814,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/close</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Close transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Close transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/close</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -4295,10 +4381,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/entries</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List a transcript's entries</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List a transcript's entries</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/entries</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -4721,10 +4809,12 @@ safety-net-contracts might say `worker` and `applicant`.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/entries</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Add an entry to a transcript</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Add an entry to a transcript</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/entries</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -5245,10 +5335,12 @@ for a different request.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/entries/{entryId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a transcript entry</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a transcript entry</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/entries/{entryId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -5553,10 +5645,12 @@ safety-net-contracts might say `worker` and `applicant`.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcripts/{transcriptId}/entries/{entryId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">End a pause entry</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">End a pause entry</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcripts/{transcriptId}/entries/{entryId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -5972,10 +6066,12 @@ safety-net-contracts might say `worker` and `applicant`.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/profiles</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List transcription profiles</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List transcription profiles</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/profiles</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6287,10 +6383,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/profiles</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Add a transcription profile</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Add a transcription profile</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/profiles</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6682,10 +6780,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/profiles/{profileId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a transcription profile</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a transcription profile</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/profiles/{profileId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6927,10 +7027,12 @@ heard from. Absent, a transcript never closes for being idle.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/profiles/{profileId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Change a transcription profile</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Change a transcription profile</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/profiles/{profileId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -7481,5 +7583,14 @@ heard from. Absent, a transcript never closes for being idle.
     })();
     
   </script>
+<script>
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
 </body>
 </html>
