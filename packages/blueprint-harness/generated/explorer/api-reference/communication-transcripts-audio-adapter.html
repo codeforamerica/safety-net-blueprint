@@ -86,6 +86,7 @@
       <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">2 endpoints</span>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcripts-audio-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcripts-audio-adapter-openapi.yaml</code></a></div>
+    
   </div>
   </div>
   <div class="page-layout">
@@ -129,7 +130,7 @@
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where transcription software connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does; a token, as ElevenLabs, Deepgram and AssemblyAI issue; or, for a service behind a relay, the relay's URL, its subprotocol and a JWT the adapter signs for it.</p><p style="margin:0 0 6px;">Asked again, it issues a fresh credential: that is how software renews one, and how it reconnects.</p></div></div>
       
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -242,7 +243,7 @@
       </div></div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -504,7 +505,7 @@
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The public keys of the tokens the adapter signs for a relay, as a JSON Web Key Set (RFC 7517). A relay reads them to check a token's signature, choosing the key by the token's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">kid</code>, and may cache them. To change keys, publish the new one before signing with it, and keep the old one until the tokens it signed have expired. An adapter that signs no tokens, because no service it issues for sits behind a relay, answers 404.</p></div></div>
       
       
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">

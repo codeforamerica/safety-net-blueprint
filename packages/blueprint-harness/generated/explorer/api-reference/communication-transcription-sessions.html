@@ -86,6 +86,7 @@
       <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">13 endpoints</span>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcription-sessions-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-openapi.yaml</code></a> · State machine: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcription-sessions-state-machine.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-state-machine.yaml</code></a></div>
+    
   </div>
   </div>
   <div class="page-layout">
@@ -129,7 +130,7 @@
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Start keeping track of the software's connection, for a transcript. Name an existing transcript with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">transcriptId</code> to carry on after a session failed; otherwise give what a new transcript is started with — <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">profileId</code>, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">client</code> and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">startedAt</code>, and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">model</code> unless the profile's service is <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">none</code> — and it's started the first time the software asks how to stream. The session begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created</code>.</p></div></div>
       
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -260,7 +261,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -616,7 +617,7 @@ or gives neither a transcript nor what to start one with.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a session by identifier.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -624,7 +625,7 @@ or gives neither a transcript nor what to start one with.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -634,7 +635,7 @@ or gives neither a transcript nor what to start one with.
     </table>
   </div>
       
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -910,7 +911,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Get where to connect and a short-lived credential, starting the transcript the first time.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -918,7 +919,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -927,7 +928,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -992,7 +993,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -1360,7 +1361,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Get a fresh credential while connected, with no change to the session.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -1368,7 +1369,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -1377,7 +1378,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -1442,7 +1443,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -1810,7 +1811,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -1818,7 +1819,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -1827,7 +1828,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body
     </div>
@@ -1869,7 +1870,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -2301,7 +2302,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service dropped; the software will try again.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -2309,7 +2310,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -2319,7 +2320,7 @@ subject can't be found that way.
     </table>
   </div>
       
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -2709,7 +2710,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -2717,7 +2718,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -2726,7 +2727,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -2782,7 +2783,7 @@ safety-net-contracts might say `worker` and `applicant`.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -3214,7 +3215,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -3222,7 +3223,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -3231,7 +3232,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -3329,7 +3330,7 @@ safety-net-contracts might say `worker` and `applicant`.
       </div></div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -3761,7 +3762,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Take the conversation off the record. The transcript keeps the pause; the software closes the connection.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -3769,7 +3770,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -3778,7 +3779,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -3800,7 +3801,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -4232,7 +4233,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -4240,7 +4241,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -4249,7 +4250,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -4271,7 +4272,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -4703,7 +4704,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -4711,7 +4712,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -4720,7 +4721,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -4742,7 +4743,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -5174,7 +5175,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The last text is in and the connection is closed; the transcript closes.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -5182,7 +5183,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -5191,7 +5192,7 @@ subject can't be found that way.
     </tr></tbody>
     </table>
   </div>
-      <div style="margin-top:16px;">
+      <div class="request-body-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
@@ -5213,7 +5214,7 @@ subject can't be found that way.
     </div>
     </details>
   </div>
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -5645,7 +5646,7 @@ subject can't be found that way.
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The software gave up connecting or reconnecting. The transcript stays open.</p></div></div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
       <thead><tr>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
@@ -5653,7 +5654,7 @@ subject can't be found that way.
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
-      <tbody><tr>
+      <tbody><tr data-param="transcriptionSessionId" data-in="path">
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">transcriptionSessionId</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
@@ -5663,7 +5664,7 @@ subject can't be found that way.
     </table>
   </div>
       
-      <div style="margin-top:16px;">
+      <div class="responses-section" style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
     <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
