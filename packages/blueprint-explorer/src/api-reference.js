@@ -692,8 +692,13 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 
 // ── Endpoint block ────────────────────────────────────────────────────────
 
+/** The element id an operation's card has, for links and the sidebar. */
+function endpointId(method, path) {
+  return `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
+}
+
 function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null, tryFile = null) {
-  const id       = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
+  const id       = endpointId(method, path);
   const params   = op.parameters ?? [];
   const descHtml = op.description
     ? `<div style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
@@ -721,10 +726,12 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;">${methodBadge(method)}</span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:${COLORS.text};word-break:break-all;">${esc(path)}</code>
-        ${op.summary ? `<span style="display:block;font-size:12px;color:#666;margin-top:2px;">${esc(op.summary)}</span>` : ''}
+        ${op.summary ? `<span style="display:block;font-size:14px;font-weight:700;color:${COLORS.text};margin-bottom:3px;">${esc(op.summary)}</span>` : ''}
+        <span style="display:flex;align-items:center;gap:8px;">
+          ${methodBadge(method)}
+          <code style="font-size:12px;color:#555;word-break:break-all;">${esc(path)}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         ${op.deprecated ? `<span style="font-size:9px;font-weight:700;color:#7A4800;background:${COLORS.lightYellow};border:1px solid ${COLORS.warmYellow};border-radius:3px;padding:1px 6px;">DEPRECATED</span>` : ''}
@@ -787,6 +794,28 @@ function readDictionary(inventoryPath) {
   };
   return { fields, prefixOf };
 }
+
+// The sidebar's operations: a name that wraps, and its method, small, at the right.
+const NAV_STYLE = `
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+`;
+
+// Going to an operation, from the sidebar or a link, opens it.
+const OPEN_ON_NAV = `
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+`;
 
 // A first look at Send, on one page only until it has been tried.
 const SEND_ON = new Set(['intake']);
@@ -895,9 +924,15 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     return `section-${tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
   }
 
-  const navHtml = [...byTag.entries()].map(([tag, ops]) =>
-    `<a href="#${sectionId(tag)}" class="nav-link">${esc(tag)} <span class="nav-count">${ops.length}</span></a>`
-  ).join('');
+  // Each group's operations by name, with the method beside each, so a
+  // reader goes straight to one rather than to its group.
+  const navHtml = [...byTag.entries()].map(([tag, ops]) => `<div class="nav-section">
+    <a href="#${sectionId(tag)}" class="nav-section-label nav-group">${esc(tag)}</a>
+    ${ops.map(({ path, method, op }) => `<a href="#${endpointId(method, path)}" class="nav-link nav-op" title="${esc(method.toUpperCase())} ${esc(path)}">
+      <span class="nav-op-name">${esc(op.summary ?? path)}</span>
+      <span class="nav-method nav-method-${esc(method.toLowerCase())}">${esc(method.toUpperCase() === 'DELETE' ? 'DEL' : method.toUpperCase())}</span>
+    </a>`).join('')}
+  </div>`).join('');
 
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
@@ -944,10 +979,12 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     mainHtml,
     navWidth: 260,
     navSearch: true,
+    extraStyle: NAV_STYLE,
   });
-  if (!tryFile) return page;
+  const withNav = page.replace('</body>', () => `<script>${OPEN_ON_NAV}</script>\n</body>`);
+  if (!tryFile) return withNav;
   // The mock loads after the page has rendered, so reading never waits on it.
-  return page.replace('</body>', () => `<script src="../mock/mock.js" defer></script>
+  return withNav.replace('</body>', () => `<script src="../mock/mock.js" defer></script>
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
