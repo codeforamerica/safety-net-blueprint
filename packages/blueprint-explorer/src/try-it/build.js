@@ -23,7 +23,7 @@
  */
 
 import { createHash } from 'crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
@@ -64,7 +64,13 @@ export function build({ contentDir, resolvedDir }) {
   // and the scenario Show me around opens with.
   const config = loadConfig(contentDir);
   const sourceUrl = buildSpecLink(config.repo, '')?.replace(/\/$/, '') ?? null;
-  const pageConfig = JSON.stringify({ sourceUrl, firstTour: config.first_tour ?? null });
+  // The API reference pages built before this one, so a step can link to its
+  // operation's page only when there is one.
+  const apiDir = join(contentDir, 'api-reference');
+  const apiPages = existsSync(apiDir)
+    ? readdirSync(apiDir).filter((name) => name.endsWith('.html') && name !== 'index.html').map((name) => name.slice(0, -'.html'.length))
+    : [];
+  const pageConfig = JSON.stringify({ sourceUrl, firstTour: config.first_tour ?? null, apiPages });
   // The same way back to the explorer every other page has.
   const crumbs = breadcrumb([{ label: 'Explorer', href: '../index.html' }, { label: 'Try it out' }]);
   const page = readFileSync(join(__dirname, 'page.html'), 'utf8').replace('<body>', () => `<body>\n${crumbs}`).replace(
