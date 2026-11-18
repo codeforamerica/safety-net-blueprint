@@ -56,3 +56,11 @@ test('nothing saved leaves the page as it started', () => {
   assert.equal(restoreRecords(next, where), false);
   assert.deepEqual(ids(next, 'intake/applications'), ['seeded']);
 });
+
+test('a reload starts from the sample records, not what was saved', (t) => {
+  saveRecords(mockWith({ 'intake/applications': [{ id: 'made-here' }] }), where);
+  t.mock.method(performance, 'getEntriesByType', () => [{ type: 'reload' }]);
+  const next = mockWith({ 'intake/applications': [{ id: 'seeded' }] });
+  assert.equal(restoreRecords(next, where), false);
+  assert.deepEqual(ids(next, 'intake/applications'), ['seeded']);
+});

@@ -18,7 +18,7 @@ import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { COLORS, FONT } from './lib/theme.js';
-import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEid, expandHidden, expandChip, headerMetaSubtitle, fieldNameLink, dataDictFieldHref, stateMachineLink, rulesLink, stateMachineDocsHref, rulesDocsHref } from './lib/html.js';
+import { METHOD_STYLE, esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEid, expandHidden, expandChip, headerMetaSubtitle, fieldNameLink, dataDictFieldHref, stateMachineLink, rulesLink, stateMachineDocsHref, rulesDocsHref } from './lib/html.js';
 import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedSourcePairs } from './lib/paths.js';
@@ -137,14 +137,36 @@ try {
 
 // ── Enum display ──────────────────────────────────────────────────────────
 
-const ENUM_VALUE_STYLE = `font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;`;
-const ENUM_LABEL_STYLE = `font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;`;
-
-/** Render enum values as a compact chip list with an "enum" label. */
+/** Render enum values as chips under a "Values" label. */
 function renderEnumValues(values) {
   if (!values?.length) return '';
-  const chips = values.map(v => `<code style="${ENUM_VALUE_STYLE}">${esc(String(v))}</code>`).join(' ');
-  return `<div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="${ENUM_LABEL_STYLE}">enum</span>${chips}</div>`;
+  const chips = values.map(v => `<code class="value-chip">${esc(String(v))}</code>`).join('');
+  return `<div class="values"><span class="values-label">Values</span>${chips}</div>`;
+}
+
+/** A field's type as plain text: `string · date`, or the schema it names. */
+function fieldType(type, format = '') {
+  return `<span class="ftype">${esc(type)}${format ? ` · ${esc(format)}` : ''}</span>`;
+}
+
+const REQUIRED = `<span class="freq">required</span>`;
+
+/** The fields an object has, through allOf and array items, for a preview. */
+function childNames(schema, depth = 0) {
+  if (!schema || typeof schema !== 'object' || depth > 4) return [];
+  if (schema.type === 'array' && schema.items) return childNames(schema.items, depth + 1);
+  return [...new Set([
+    ...Object.keys(schema.properties ?? {}),
+    ...(schema.allOf ?? []).flatMap((part) => childNames(part, depth + 1)),
+  ])];
+}
+
+/** A collapsed object's fields at a glance, as API docs show them: `{ city, state, street, +1 }`. */
+function childPreview(schema) {
+  const names = childNames(schema).sort();
+  if (!names.length) return '';
+  const shown = names.slice(0, 3);
+  return `<span class="fpreview">{ ${shown.map(esc).join(', ')}${names.length > shown.length ? `, +${names.length - shown.length}` : ''} }</span>`;
 }
 
 // ── Schema type inference ─────────────────────────────────────────────────
@@ -240,7 +262,7 @@ function namedPropRef(rawProp) {
 /** Render a oneOf/anyOf schema as a collapsible "(one of)" row with per-variant accordions.
  *  @param {string|null} typeName  Optional schema name to show as a type chip (e.g. "EvaluationFact") */
 function renderOneOfBlock(variants, discriminatorProp, depth, rawSchemas, fileMap, typeName = null, fieldPath = '', dataDictHref = null, validPaths = null) {
-  const pad = 12 + depth * 20;
+  const pad = 0;
   const variantPad = pad;
   const variantsHtml = variants.map(v => {
     let title = v.title;
@@ -262,24 +284,28 @@ function renderOneOfBlock(variants, discriminatorProp, depth, rawSchemas, fileMa
   const typeChip = typeName
     ? `<span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeName)}</span>`
     : '';
-  return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+  return `<div style="padding:7px 0;">
     <details>
       <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">(one of)</span>
         ${typeChip}
       </summary>
-      <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${variantsHtml}</div>
+      <div class="nested">${variantsHtml}</div>
     </details>
   </div>`;
 }
 
-function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fileMap = null, fieldPath = '', dataDictHref = null, validPaths = null) {
+function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fileMap = null, fieldPath = '', dataDictHref = null, validPaths = null, alsoRequired = []) {
   if (depth > 8 || !schema || typeof schema !== 'object') return '';
 
   // Merge allOf into a single view, propagating the correct raw schema for each entry.
+  // A part may only list what's required of fields another part declares —
+  // `allOf: [{ $ref: Writable }, { required: [...] }]` — so every part's
+  // required list applies to the fields of all of them.
   if (schema.allOf) {
     const rawAllOf = rawSchema?.allOf ?? [];
+    const required = [...alsoRequired, ...schema.allOf.flatMap((part) => part?.required ?? [])];
     return schema.allOf
       .filter(s => s && typeof s === 'object')
       .map((s, i) => {
@@ -290,14 +316,14 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
         } else if (rawEntry && !rawEntry['$ref']) {
           entryRaw = rawEntry;
         }
-        return renderProps(s, depth, rawSchemas, entryRaw, fileMap, fieldPath, dataDictHref, validPaths);
+        return renderProps(s, depth, rawSchemas, entryRaw, fileMap, fieldPath, dataDictHref, validPaths, required);
       })
       .join('');
   }
 
   // Render array schemas as a collapsible "[] items" row showing the item shape
   if (schema.type === 'array' && schema.items && typeof schema.items === 'object') {
-    const pad = 12 + depth * 20;
+    const pad = 0;
     const items = schema.items;
     const rawItems = rawSchema?.items ?? null;
     const rawItemRef = rawItems?.['$ref'] ?? null;
@@ -305,7 +331,7 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
     const itemTypeLabel = itemRefName ?? typeStr(items);
     const innerHtml = renderProps(items, depth + 1, rawSchemas, itemRefName ? (rawSchemas?.[itemRefName] ?? null) : rawItems, fileMap, fieldPath, dataDictHref, validPaths);
     const typeChip = `<span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(itemTypeLabel)}</span>`;
-    return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+    return `<div style="padding:7px 0;">
       <details>
         <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
           <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
@@ -313,7 +339,7 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
           ${typeChip}
         </summary>
         ${innerHtml
-          ? `<div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>`
+          ? `<div class="nested">${innerHtml}</div>`
           : `<div style="padding:6px 12px 6px ${pad + 20}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
       </details>
     </div>`;
@@ -326,9 +352,9 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
   }
 
   const props    = schema.properties ?? {};
-  const reqs     = new Set(schema.required ?? []);
+  const reqs     = new Set([...(schema.required ?? []), ...alsoRequired]);
   const rawProps = getRawProps(rawSchema, fileMap);
-  const pad      = 12 + depth * 20;
+  const pad      = 0;
 
   // Render additionalProperties as a synthetic "* (any key)" row when there
   // are no explicit properties — covers map-typed schemas like EvaluationResult.
@@ -352,20 +378,20 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
     const innerHtml   = innerSchema ? renderProps(innerSchema, depth + 1, rawSchemas, innerRaw, fileMap, fieldPath, dataDictHref, validPaths) : '';
     // Simple scalar map — no meaningful inner content, show as flat note
     if (!innerHtml) {
-      return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;display:flex;align-items:baseline;gap:6px;">
+      return `<div style="padding:7px 0;display:flex;align-items:baseline;gap:6px;">
         <span style="font-family:monospace;font-size:11px;color:#aaa;">{ [key: string]:</span>
         <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
         <span style="font-family:monospace;font-size:11px;color:#aaa;">}</span>
       </div>`;
     }
-    return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+    return `<div style="padding:7px 0;">
       <details>
         <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
           <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">* (any key)</span>
           <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
         </summary>
-        <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>
+        <div class="nested">${innerHtml}</div>
       </details>
     </div>`;
   })();
@@ -399,18 +425,21 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
       const nameHtml = (dataDictHref && dataDictPath)
         ? fieldNameLink(name, `${dataDictHref}#field-${encodeURIComponent(dataDictPath)}`)
         : `<span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>`;
-      return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+      return `<div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            ${nameHtml}
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
-            ${isReq ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};letter-spacing:0.04em;text-transform:uppercase;">required</span>` : ''}
-            ${readOnly}${writeOnly}
-            ${desc ? `<span style="font-size:11px;color:#555;margin-left:2px;">${esc(desc)}</span>` : ''}
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              ${nameHtml}
+              ${fieldType(typeLabel)}
+              ${childPreview(innerSchema)}
+              ${isReq ? REQUIRED : ''}
+              ${readOnly}${writeOnly}
+            </span>
+            ${desc ? `<span class="fdesc">${esc(desc)}</span>` : ''}
           </summary>
           ${innerHtml
-            ? `<div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>`
+            ? `<div class="nested">${innerHtml}</div>`
             : `<div style="padding:6px 12px 6px ${pad + 20}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
         </details>
       </div>`;
@@ -422,8 +451,6 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
       : prop.type === 'array' && prop.items?.enum
         ? renderEnumValues(prop.items.enum)
         : '';
-    const formatTag = prop.format
-      ? `<span style="font-size:10px;color:#999;font-family:monospace;"> (${esc(prop.format)})</span>` : '';
     const readOnly  = prop.readOnly  ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>` : '';
     const writeOnly = prop.writeOnly ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">write-only</span>` : '';
 
@@ -447,17 +474,37 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
       ? fieldNameLink(name, `${dataDictHref}#field-${encodeURIComponent(dataDictPath)}`)
       : `<span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>`;
 
-    return `<div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;${hasCh ? 'background:rgba(0,0,0,0.015);' : ''}">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    // An object's own fields start folded away, its names previewed.
+    if (hasCh) {
+      return `<div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              ${nameHtml}
+              ${fieldType(type, prop.format)}
+              ${childPreview(inner)}
+              ${isReq ? REQUIRED : ''}
+              ${readOnly}${writeOnly}
+            </span>
+            ${desc ? `<span class="fdesc">${esc(desc)}</span>` : ''}
+          </summary>
+          ${enumVals}
+          <div class="nested">${children}</div>
+        </details>
+      </div>`;
+    }
+
+    return `<div class="field">
+      <div class="field-head">
         ${nameHtml}
-        ${typeBadge(type)}${formatTag}
-        ${isReq ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};letter-spacing:0.04em;text-transform:uppercase;">required</span>` : ''}
+        ${fieldType(type, prop.format)}
+        ${isReq ? REQUIRED : ''}
         ${readOnly}${writeOnly}
-        ${desc ? `<span style="font-size:11px;color:#555;margin-left:2px;">${esc(desc)}</span>` : ''}
       </div>
+      ${desc ? `<div class="fdesc">${esc(desc)}</div>` : ''}
       ${enumVals}
-    </div>
-    ${children}`;
+    </div>`;
   }).join('');
 }
 
@@ -533,68 +580,46 @@ function responseLink(name, eid = '') {
 // ── Parameter table ───────────────────────────────────────────────────────
 
 // paramNameByKey: Map of "name:in" → component parameter name, built per spec in buildDomainPage.
-// Used to detect named component params without fragile raw-array index matching.
+const PARAM_GROUPS = [['path', 'Path parameters'], ['query', 'Query parameters'], ['header', 'Headers'], ['cookie', 'Cookies']];
+
+/**
+ * Parameters as a list, grouped by where each goes, as most API docs show
+ * them: name, type and whether it's required on one line, the description
+ * beneath. A long description shows its first paragraph, with the rest a
+ * click away.
+ */
 function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
   if (!params?.length) return '';
 
-  const rows = params.map((p, i) => {
+  const item = (p, i) => {
     if (!p || typeof p !== 'object') return '';
-    const rawP      = rawParams[i];
-    const refName   = localRef(rawP);
-    const schema    = p.schema ?? {};
-    const type      = typeStr(schema);
-    const typeCell  = refName ? schemaLink(refName) : typeBadge(type);
-    const enumVals  = (!refName && schema.enum)
-      ? renderEnumValues(schema.enum)
-      : '';
-    // Detect named component params via: (1) raw $ref name, or (2) name:in reverse lookup
-    const componentParamName = localParamRef(rawP) ?? (p.name && p.in ? paramNameByKey.get(`${p.name}:${p.in}`) : undefined);
-    if (componentParamName) {
-      const desc = p.description ?? '';
-      // Only expand if the expanded panel would show something beyond a short description:
-      // long description or enum values (which can be numerous). Scalar metadata like
-      // default/minimum/maximum/example is shown inline and doesn't warrant an expand.
-      const shouldExpand = desc.length > 80 || schema.enum?.length > 0;
-      if (shouldExpand) {
-        const eid = nextEid();
-        const expandContent = `${renderMarkdown(desc)}${renderEnumValues(schema.enum)}`;
-        const nameCell = `<span role="button" tabindex="0" data-expand-id="${eid}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</span>`;
-        // Expand row spans all columns so content gets full table width (avoids clipping)
-        const expandRow = `<tr id="${eid}" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;">${expandContent}</td></tr>`;
-        return `<tr data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}">
-          <td style="padding:5px 12px;white-space:nowrap;">${nameCell}</td>
-          <td style="padding:5px 12px;">${typeCell}</td>
-          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
-          <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
-          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">${esc(desc.split('\n')[0].slice(0, 80))}</td>
-        </tr>${expandRow}`;
-      }
-    }
-    const descCell = `${renderMarkdown(p.description ?? '')}${enumVals}`;
-    return `<tr data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}">
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(p.name ?? '')}</td>
-      <td style="padding:5px 12px;">${typeCell}</td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
-      <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
-      <td style="padding:5px 12px;">${descCell}</td>
-    </tr>`;
+    const rawP    = rawParams[i];
+    const refName = localRef(rawP);
+    const schema  = p.schema ?? {};
+    const type    = refName ? schemaLink(refName) : fieldType(typeStr(schema), schema.format);
+    const [first, ...rest] = (p.description ?? '').trim().split(/\n\s*\n/);
+    const more    = rest.length ? `<details class="more"><summary>More</summary>${renderMarkdown(rest.join('\n\n'))}</details>` : '';
+    return `<div class="param" data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}"${p.required ? ' data-required' : ''}>
+      <div class="field-head">
+        <code class="fname">${esc(p.name ?? '')}</code>
+        ${type}
+        ${p.required ? REQUIRED : ''}
+      </div>
+      ${first ? `<div class="fdesc">${renderMarkdown(first)}</div>` : ''}
+      ${more}
+      ${!refName ? renderEnumValues(schema.enum) : ''}
+    </div>`;
+  };
+
+  const indexed = params.map((p, i) => [p, i]);
+  return PARAM_GROUPS.map(([where, label]) => {
+    const group = indexed.filter(([p]) => p?.in === where);
+    if (!group.length) return '';
+    return `<div class="op-section params-section">
+      <h4 class="op-h">${label}</h4>
+      ${group.map(([p, i]) => item(p, i)).join('')}
+    </div>`;
   }).join('');
-
-  const thStyle = `padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;`;
-
-  return `<div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table class="params-table" style="width:100%;border-collapse:collapse;border:1px solid #eee;">
-      <thead><tr>
-        <th style="${thStyle}">Name</th>
-        <th style="${thStyle}">Type</th>
-        <th style="${thStyle}">In</th>
-        <th style="${thStyle}">Req</th>
-        <th style="${thStyle}">Description</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
 }
 
 // ── Request body ──────────────────────────────────────────────────────────
@@ -607,86 +632,54 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
   if (!schema) return '';
 
   const refName = localRef(rawReqBody);
-  let bodyContent;
-  if (refName) {
-    const rawSchema = rawSchemas?.[refName] ?? null;
-    const rootPrefix = prefixOf(refName) ?? domainSlug;
-    bodyContent = `<details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
-      <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-        <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(refName)}</span>
-      </summary>
-      <div style="border-top:1px solid #eee;">${renderSchema(schema, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths)}</div>
-    </details>`;
-  } else {
-    bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)}</div>`;
-  }
+  const type = Object.keys(content)[0] ?? 'application/json';
+  const fields = refName
+    ? renderSchema(schema, rawSchemas, rawSchemas?.[refName] ?? null, fileMap, prefixOf(refName) ?? domainSlug, dataDictHref, validPaths)
+    : renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths);
 
-  return `<div class="request-body-section" style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
-      Request body${reqBody.required ? ` <span style="color:${COLORS.richRed};font-weight:700;">required</span>` : ''}
-    </div>
-    ${bodyContent}
+  return `<div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      ${refName ? `<span class="schema-name">${esc(refName)}</span>` : ''}
+      <span class="pill">${esc(type)}</span>
+      ${reqBody.required ? `<span class="pill pill-req">required</span>` : ''}
+    </h4>
+    <div class="body-fields">${fields}</div>
   </div>`;
 }
-
 // ── Response section ──────────────────────────────────────────────────────
 
 function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
   if (!responses || !Object.keys(responses).length) return '';
 
-  const entries = Object.entries(responses).map(([status, resp]) => {
-    if (!resp) return '';
-    const statusNum = parseInt(status, 10);
-    const statusColor = statusNum >= 200 && statusNum < 300 ? COLORS.deepGreen
-      : statusNum >= 400 && statusNum < 500 ? COLORS.richRed
-      : statusNum >= 500 ? '#7A4800' : '#444';
+  // One tab per status, the first open: most readers want the success.
+  const statuses = Object.entries(responses).filter(([, resp]) => resp);
+  const tabs = statuses.map(([status], i) => {
+    const n = parseInt(status, 10);
+    const kind = n >= 200 && n < 300 ? 'ok' : n >= 400 ? 'bad' : 'other';
+    return `<button type="button" class="resp-tab resp-${kind}${i === 0 ? ' on' : ''}" data-resp="${i}">${esc(status)}</button>`;
+  }).join('');
 
-    const content   = resp.content ?? {};
-    const mediaType = content['application/json'] ?? Object.values(content)[0] ?? {};
-    const schema    = mediaType.schema;
-
-    // Check for named shared response ref first, then named schema ref
+  const panels = statuses.map(([status, resp], i) => {
+    const content    = resp.content ?? {};
+    const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
+    const schema     = mediaType.schema;
     const responseRefName = localResponseRef(rawResponses[status]);
     const schemaRefName   = !responseRefName ? localRef(rawResponses[status]) : null;
-    let schemaHtml = '';
-    if (responseRefName) {
-      const inner = schema
-        ? renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)
-        : `<div style="padding:8px 12px;font-size:12px;color:#555;">${esc(resp.description ?? '')}</div>`;
-      schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(responseRefName)}</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;">${inner}</div>
-      </details>`;
-    } else if (schemaRefName) {
-      const rawSchema = rawSchemas?.[schemaRefName] ?? null;
-      const rootPrefix = prefixOf(schemaRefName) ?? domainSlug;
-      schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(schemaRefName)}</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths)}</div>
-      </details>`;
-    } else if (schema) {
-      schemaHtml = `<div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)}</div>`;
-    }
-
-    return `<div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:${statusColor};">${esc(status)}</span>
-        <span style="font-size:11px;color:#555;">${inlineMd(resp.description ?? '')}</span>
-      </div>
-      ${schemaHtml}
+    const rawSchema  = schemaRefName ? (rawSchemas?.[schemaRefName] ?? null) : null;
+    const rootPrefix = schemaRefName ? (prefixOf(schemaRefName) ?? domainSlug) : domainSlug;
+    const name       = schemaRefName ?? responseRefName;
+    const type       = Object.keys(content)[0];
+    const fields     = schema ? renderSchema(schema, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths) : '';
+    return `<div class="resp-panel" data-resp="${i}"${i === 0 ? '' : ' hidden'}>
+      <div class="fdesc">${inlineMd(resp.description ?? '')}${name ? ` <span class="schema-name">${esc(name)}</span>` : ''}${type ? ` <span class="pill">${esc(type)}</span>` : ''}</div>
+      ${fields ? `<div class="body-fields">${fields}</div>` : ''}
     </div>`;
   }).join('');
 
-  return `<div class="responses-section" style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${entries}</div>
+  return `<div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist">${tabs}</div>
+    ${panels}
   </div>`;
 }
 
@@ -722,28 +715,29 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 
   // Where Send fills in a Try it panel, once the mock has loaded.
   const tryAttrs = tryFile && op.operationId ? ` data-try-op="${esc(op.operationId)}" data-try-file="${esc(tryFile)}"` : '';
-  return `<div id="${id}" class="content-item"${tryAttrs} style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:10px;overflow:hidden;">
+  return `<div id="${id}" class="content-item op-${esc(method.toLowerCase())}"${tryAttrs} style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex:1;min-width:0;">
-        ${op.summary ? `<span style="display:block;font-size:14px;font-weight:700;color:${COLORS.text};margin-bottom:3px;">${esc(op.summary)}</span>` : ''}
-        <span style="display:flex;align-items:center;gap:8px;">
-          ${methodBadge(method)}
-          <code style="font-size:12px;color:#555;word-break:break-all;">${esc(path)}</code>
-        </span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        ${methodBadge(method)}
+        <code class="op-path">${esc(path)}</code>
+        ${op.summary ? `<span class="op-name">${esc(op.summary)}</span>` : ''}
       </span>
+      ${op.operationId ? `<code class="op-id" title="operationId">${esc(op.operationId)}</code>` : ''}
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         ${op.deprecated ? `<span style="font-size:9px;font-weight:700;color:#7A4800;background:${COLORS.lightYellow};border:1px solid ${COLORS.warmYellow};border-radius:3px;padding:1px 6px;">DEPRECATED</span>` : ''}
         ${relBadge}
         <a href="#${id}" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      ${descHtml}
-      ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
-      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
+    <div class="op-body">
+      <div class="op-docs">
+        ${descHtml}
+        ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
+        ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
+      </div>
+      <aside class="op-side">${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}</aside>
     </div>
   </details>
 </div>`;
@@ -797,6 +791,55 @@ function readDictionary(inventoryPath) {
 
 // The sidebar's operations: a name that wraps, and its method, small, at the right.
 const NAV_STYLE = `
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: ${COLORS.text}; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: ${METHOD_STYLE.get.border} !important; }    .op-get > details > summary    { background: ${METHOD_STYLE.get.bg}66; }
+  .content-item.op-post   { border-color: ${METHOD_STYLE.post.border} !important; }   .op-post > details > summary   { background: ${METHOD_STYLE.post.bg}88; }
+  .content-item.op-patch, .content-item.op-put { border-color: ${METHOD_STYLE.patch.border} !important; } .op-patch > details > summary, .op-put > details > summary { background: ${METHOD_STYLE.patch.bg}88; }
+  .content-item.op-delete { border-color: ${METHOD_STYLE.delete.border} !important; } .op-delete > details > summary { background: ${METHOD_STYLE.delete.bg}88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: ${COLORS.text}; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: ${COLORS.text}; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: ${COLORS.richRed}; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: ${COLORS.midBlue}; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: ${COLORS.midBlue}; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: ${COLORS.richRed}; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: ${COLORS.text}; border-bottom-color: ${COLORS.midBlue}; }
+  .resp-tab.resp-ok.on { border-bottom-color: ${COLORS.deepGreen}; }
+  .resp-tab.resp-bad.on { border-bottom-color: ${COLORS.richRed}; }
+
   a.nav-group { display: block; text-decoration: none; }
   a.nav-group:hover { color: rgba(255,255,255,0.7); }
   #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
@@ -806,22 +849,41 @@ const NAV_STYLE = `
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 `;
 
-// Going to an operation, from the sidebar or a link, opens it.
+// Going to an operation, from the sidebar or a link, opens it; a response
+// tab shows its response.
 const OPEN_ON_NAV = `
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
   const openTarget = () => {
-    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
     const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
     if (details && !details.open) details.open = true;
   };
   addEventListener('hashchange', openTarget);
   openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
 `;
 
-// A first look at Send, on one page only until it has been tried.
-const SEND_ON = new Set(['intake']);
 
 function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
-  const tryFile = SEND_ON.has(slug) && doc ? doc.relativePath : null;
+  // Which document the page's operations are sent from, in the mock.
+  const tryFile = doc ? doc.relativePath : null;
   // Only where there is one to link to. A data dictionary is built from a
   // domain's annotations, so a domain with none gets no page — and every
   // field on this page pointed into it regardless, which is hundreds of
@@ -960,12 +1022,18 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     ${tryFile ? '<div id="try-it-bar"></div>' : ''}
   </div>`;
 
-  const mainHtml = `
-    <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid ${COLORS.sandDark};">
+  // Where operations have code, each shows the server it calls, so the page
+  // doesn't repeat it above them.
+  const baseUrl = serverUrl && !tryFile
+    ? `<div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">${esc(serverUrl)}</code></div>`
+    : '';
+  const intro = info.description || baseUrl
+    ? `<div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid ${COLORS.sandDark};">
       ${info.description ? `<div style="max-width:720px;">${renderMarkdown(info.description)}</div>` : ''}
-      ${serverUrl ? `<div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">${esc(serverUrl)}</code></div>` : ''}
-    </div>
-    ${sections}`;
+      ${baseUrl}
+    </div>`
+    : '';
+  const mainHtml = `${intro}${sections}`;
 
   const page = twoColumnPage({
     title: `${projectName} \u2014 ${esc(info.title ?? slug)}`,
