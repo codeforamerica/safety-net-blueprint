@@ -122,11 +122,11 @@
   .resp-tab.resp-ok.on { border-bottom-color: #006152; }
   .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
@@ -156,31 +156,31 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-determinations" class="nav-section-label nav-group">Determinations</a>
-    <a href="#op-get-determinations" class="nav-link nav-op" title="GET /determinations">
-      <span class="nav-op-name">List determinations</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>determinations</span></div>
+    <a href="#op-get-determinations" class="nav-link nav-op" title="List determinations">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-determinations" class="nav-link nav-op" title="POST /determinations">
-      <span class="nav-op-name">Create a determination</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-determinations" class="nav-link nav-op" title="Create a determination">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-determinations-determinationId" class="nav-link nav-op" title="GET /determinations/{determinationId}">
-      <span class="nav-op-name">Get a determination</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-determinations-determinationId" class="nav-link nav-op" title="Get a determination">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-determinations-determinationId" class="nav-link nav-op" title="PATCH /determinations/{determinationId}">
-      <span class="nav-op-name">Update a determination</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{determinationId}</span></span>
+    </a><a href="#op-patch-determinations-determinationId" class="nav-link nav-op" title="Update a determination">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-post-determinations-determinationId-complete" class="nav-link nav-op" title="POST /determinations/{determinationId}/complete">
-      <span class="nav-op-name">Complete determination</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{determinationId}</span></span>
+    </a><a href="#op-post-determinations-determinationId-complete" class="nav-link nav-op" title="Complete determination">
       <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{determinationId}</span>/<wbr><span>complete</span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-decisions" class="nav-section-label nav-group">Decisions</a>
-    <a href="#op-get-determinations-determinationId-decisions" class="nav-link nav-op" title="GET /determinations/{determinationId}/decisions">
-      <span class="nav-op-name">List decisions</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span>/<wbr><span>decisions</span></div>
+    <a href="#op-get-determinations-determinationId-decisions" class="nav-link nav-op" title="List decisions">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-determinations-determinationId-decisions-decisionId" class="nav-link nav-op" title="GET /determinations/{determinationId}/decisions/{decisionId}">
-      <span class="nav-op-name">Get a decision</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-determinations-determinationId-decisions-decisionId" class="nav-link nav-op" title="Get a decision">
       <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{decisionId}</span></span>
     </a>
   </div>
       </div>

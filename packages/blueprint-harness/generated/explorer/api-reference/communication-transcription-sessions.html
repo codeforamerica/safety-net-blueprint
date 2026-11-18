@@ -122,11 +122,11 @@
   .resp-tab.resp-ok.on { border-bottom-color: #006152; }
   .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
@@ -156,49 +156,46 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-transcription-sessions" class="nav-section-label nav-group">Transcription sessions</a>
-    <a href="#op-post-transcription-sessions" class="nav-link nav-op" title="POST /transcription-sessions">
-      <span class="nav-op-name">Start a transcription session</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>transcription-sessions</span></div>
+    <a href="#op-post-transcription-sessions" class="nav-link nav-op" title="Start a transcription session">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-transcription-sessions-transcriptionSessionId" class="nav-link nav-op" title="GET /transcription-sessions/{transcriptionSessionId}">
-      <span class="nav-op-name">Get a transcription session</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-transcription-sessions-transcriptionSessionId" class="nav-link nav-op" title="Get a transcription session">
       <span class="nav-method nav-method-get">GET</span>
-    </a>
-  </div><div class="nav-section">
-    <a href="#section-transcription-sessions" class="nav-section-label nav-group">Transcription Sessions</a>
-    <a href="#op-post-transcription-sessions-transcriptionSessionId-get-connection" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/get-connection">
-      <span class="nav-op-name">Get connection transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-get-connection" class="nav-link nav-op" title="Get connection transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-renew-connection" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/renew-connection">
-      <span class="nav-op-name">Renew connection transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>get-connection</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-renew-connection" class="nav-link nav-op" title="Renew connection transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-connect" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/connect">
-      <span class="nav-op-name">Connect transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>renew-connection</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-connect" class="nav-link nav-op" title="Connect transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-disconnect" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/disconnect">
-      <span class="nav-op-name">Disconnect transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>connect</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-disconnect" class="nav-link nav-op" title="Disconnect transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-update-line" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/update-line">
-      <span class="nav-op-name">Update line transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>disconnect</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-update-line" class="nav-link nav-op" title="Update line transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-add-line" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/add-line">
-      <span class="nav-op-name">Add line transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>update-line</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-add-line" class="nav-link nav-op" title="Add line transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-pause" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/pause">
-      <span class="nav-op-name">Pause transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>add-line</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-pause" class="nav-link nav-op" title="Pause transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-resume" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/resume">
-      <span class="nav-op-name">Resume transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>pause</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-resume" class="nav-link nav-op" title="Resume transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-stop" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/stop">
-      <span class="nav-op-name">Stop transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>resume</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-stop" class="nav-link nav-op" title="Stop transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-close" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/close">
-      <span class="nav-op-name">Close transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>stop</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-close" class="nav-link nav-op" title="Close transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-fail" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/fail">
-      <span class="nav-op-name">Fail transcriptionsession</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>close</span></span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-fail" class="nav-link nav-op" title="Fail transcriptionsession">
       <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptionSessionId}</span>/<wbr><span>fail</span></span>
     </a>
   </div>
       </div>
