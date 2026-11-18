@@ -49,9 +49,13 @@ const serverOf = (doc) => {
 const namespaceOf = (doc) => (doc.relativePath ?? '').split('/').pop().replace(/-openapi\.yaml$/, '')
   .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
+/** TypeScript to write as it is, not as a value: a variable's name. */
+class Code { constructor(code) { this.code = code; } }
+
 /** A value as TypeScript source: names unquoted where they can be, strings in single quotes. */
 const tsValue = (value, indent = '') => {
   const inner = `${indent}  `;
+  if (value instanceof Code) return value.code;
   if (Array.isArray(value)) {
     return value.length ? `[\n${value.map((v) => inner + tsValue(v, inner)).join(',\n')},\n${indent}]` : '[]';
   }
@@ -59,7 +63,7 @@ const tsValue = (value, indent = '') => {
     const entries = Object.entries(value);
     if (!entries.length) return '{}';
     const key = (k) => (/^[A-Za-z_$][\w$]*$/.test(k) ? k : `'${k.replace(/'/g, "\\'")}'`);
-    return `{\n${entries.map(([k, v]) => `${inner}${key(k)}: ${tsValue(v, inner)}`).join(',\n')},\n${indent}}`;
+    return `{\n${entries.map(([k, v]) => (v instanceof Code && v.code === k ? `${inner}${k}` : `${inner}${key(k)}: ${tsValue(v, inner)}`)).join(',\n')},\n${indent}}`;
   }
   return typeof value === 'string' ? `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` : JSON.stringify(value);
 };
@@ -73,18 +77,32 @@ const shellQuote = (text) => `'${String(text).replace(/'/g, `'\\''`)}'`;
  * With `bodyMark`, the body is left as that mark, for the page to put an
  * editable body in its place.
  */
-const snippets = ({ doc, method, operationId, request, bodyMark, local }) => {
+const snippets = ({ doc, method, operationId, request, bodyMark, local, constants = new Map() }) => {
   const { path, query, headers, body, type } = request;
   const parsed = (() => { try { return body === undefined ? undefined : JSON.parse(body); } catch { return undefined; } })();
+  const namespace = namespaceOf(doc);
+  // A parameter whose values the client exports as a constant is set from
+  // it, in a variable of its own, with the choices beside it.
+  const lead = [];
+  const fromConstants = (where, values) => Object.fromEntries(Object.entries(values).map(([name, value]) => {
+    const constant = constants.get(`${where}:${name}`);
+    const placeholder = /^<.*>$/.test(value);
+    if (!constant || (!placeholder && !constant.values.includes(value))) return [name, value];
+    const at = `${namespace}.${constant.name}`;
+    lead.push(`// ${name} is one of ${at}: ${constant.values.map(constKey).join(', ')}`,
+      `const ${name} = ${at}.${constKey(placeholder ? constant.values[0] : value)};`);
+    return [name, new Code(name)];
+  }));
+  const pathArgs = fromConstants('path', path);
+  const queryArgs = fromConstants('query', query);
   const args = [];
-  if (Object.keys(path).length) args.push(`path: ${tsValue(path, '  ')}`);
-  if (Object.keys(query).length) args.push(`query: ${tsValue(query, '  ')}`);
+  if (Object.keys(path).length) args.push(`path: ${tsValue(pathArgs, '  ')}`);
+  if (Object.keys(query).length) args.push(`query: ${tsValue(queryArgs, '  ')}`);
   if (Object.keys(headers).length) args.push(`headers: ${tsValue(headers, '  ')}`);
   if (body !== undefined) args.push(`body: ${bodyMark ?? (parsed === undefined ? body.trim() : tsValue(parsed, '  '))}`);
-  const namespace = namespaceOf(doc);
   const typescript = `import { ${namespace} } from './generated'; // where you generated the client
 
-const response = await ${namespace}.${operationId}(${args.length ? `{\n${args.map((a) => `  ${a},`).join('\n')}\n}` : ''});`;
+${lead.length ? `${lead.join('\n')}\n\n` : ''}const response = await ${namespace}.${operationId}(${args.length ? `{\n${args.map((a) => `  ${a},`).join('\n')}\n}` : ''});`;
 
   const filled = Object.entries(path).reduce((at, [name, value]) => at.replace(`{${name}}`, /^<.*>$/.test(value) ? value : encodeURIComponent(value)), request.template);
   const search = new URLSearchParams(query).toString();
@@ -140,6 +158,24 @@ const firstOf = async (response, ms) => {
   } catch { /* closed */ }
   clearTimeout(stop);
   return text;
+};
+
+/** A value's key in the client's constant for its enum: in_person → IN_PERSON. */
+const constKey = (value) => String(value).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+/**
+ * The constant the generated client exports for a parameter's values: a
+ * string enum its schema references by name, such as
+ * `ApplicationReviewSections`. Null for any other parameter, or one whose
+ * name can't be a variable.
+ */
+const enumConstantOf = (doc, param) => {
+  const ref = param?.schema?.$ref;
+  if (typeof ref !== 'string' || !ref.startsWith('#/components/schemas/') || !/^[A-Za-z_$][\w$]*$/.test(param.name)) return null;
+  const schema = local(doc, param.schema);
+  return schema?.type === 'string' && Array.isArray(schema.enum) && schema.enum.length
+    ? { name: ref.split('/').pop(), values: schema.enum.map(String) }
+    : null;
 };
 
 /** A same-document `$ref`, followed; anything else as it is. */
@@ -369,6 +405,14 @@ export async function mountSendPanels({ contracts, version, scope }) {
     if (!op || !body) continue;
 
 
+    // The parameters whose values the client exports as a constant.
+    const constants = new Map(); // "in:name" → { name, values }
+    for (const declared of [...(op.item?.parameters ?? []), ...(op.operation.parameters ?? [])]) {
+      const param = local(op.doc, declared);
+      const constant = enumConstantOf(op.doc, param);
+      if (constant) constants.set(`${param.in}:${param.name}`, constant);
+    }
+
     // A box for each parameter, in the order the docs list them.
     const values = new Map(); // "in:name" → input
     const form = el('div', '', 'try-params');
@@ -379,7 +423,16 @@ export async function mountSendPanels({ contracts, version, scope }) {
       label.append(el('span', param.dataset.in));
       const row = el('div', '', 'row');
       row.append(label, box);
-      if (param.dataset.in === 'path') {
+      const constant = constants.get(`${param.dataset.in}:${param.dataset.param}`);
+      if (constant) {
+        // One of the enum's values, offered as they are.
+        const list = el('datalist');
+        list.id = `values-${op.operation.operationId}-${param.dataset.param}`;
+        list.append(...constant.values.map((value) => Object.assign(el('option'), { value })));
+        box.setAttribute('list', list.id);
+        box.placeholder = param.hasAttribute('data-required') ? 'pick one' : 'optional, pick one';
+        row.append(list);
+      } else if (param.dataset.in === 'path') {
         const list = el('datalist');
         list.id = `held-${op.operation.operationId}-${param.dataset.param}`;
         box.setAttribute('list', list.id);
@@ -401,7 +454,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
       .replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(pathBox(n)?.value ?? ''));
     for (const name of pathNames) {
       const box = pathBox(name);
-      if (!box) continue;
+      if (!box || constants.has(`path:${name}`)) continue;
       box.onfocus = async () => {
         const list = document.getElementById(box.getAttribute('list'));
         list?.replaceChildren(...(await heldUnder(prefixFor(name), name)).map((value) => Object.assign(el('option'), { value })));
@@ -473,9 +526,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const code = el('div', '', 'try-code');
     const tabs = el('div', '', 'tabs');
     const ruleset = rulesetOf(docs, op);
-    const local = ruleset ? { namespace: ruleset.namespace, ruleset: ruleset.name } : undefined;
+    const localCall = ruleset ? { namespace: ruleset.namespace, ruleset: ruleset.name } : undefined;
     const tabButtons = { curl: el('button', 'curl'), typescript: el('button', 'TypeScript') };
-    if (local) tabButtons.local = el('button', 'TypeScript (local)');
+    if (localCall) tabButtons.local = el('button', 'TypeScript (local)');
     // The tab chosen on another operation, unless this one doesn't have it.
     const tabOf = () => (tabButtons[snippetTab] ? snippetTab : 'typescript');
     const copy = el('button', 'Copy', 'copy');
@@ -498,17 +551,17 @@ export async function mountSendPanels({ contracts, version, scope }) {
       const pad = indentOf();
       bodyBox.value = bodyEdit.textContent.split('\n').map((line, i) => (i && line.startsWith(pad) ? line.slice(pad.length) : line)).join('\n');
       try { JSON.parse(bodyBox.value); bodyEdit.classList.remove('invalid'); } catch { bodyEdit.classList.add('invalid'); }
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }), local });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }), local: localCall, constants });
     });
     const refresh = () => {
       const request = requestFor({ placeholders: true });
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, local });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, local: localCall, constants });
       const tab = tabOf();
       // The local call runs in the caller's code, not against a server.
       target.textContent = tab === 'local' ? 'runs in your code' : serverOf(op.doc);
       button.textContent = tab === 'local' ? 'Run' : 'Send';
       if (bodyBox) {
-        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK, local })[tab].split(MARK);
+        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK, local: localCall, constants })[tab].split(MARK);
         if (document.activeElement !== bodyEdit) {
           bodyEdit.textContent = bodyBox.value.split('\n').map((line, i) => (i ? indentOf() + line : line)).join('\n');
         }
@@ -626,7 +679,8 @@ export async function mountSendPanels({ contracts, version, scope }) {
       const box = pathBox(pathNames[at]);
       if (!box) return fill(at + 1);
       if (box.value) return fill(at + 1);
-      for (const value of await heldUnder(prefixFor(pathNames[at]), pathNames[at])) {
+      const constant = constants.get(`path:${pathNames[at]}`);
+      for (const value of constant ? constant.values : await heldUnder(prefixFor(pathNames[at]), pathNames[at])) {
         box.value = value;
         if (await fill(at + 1)) return true;
       }
