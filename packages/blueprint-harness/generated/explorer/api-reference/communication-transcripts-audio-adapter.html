@@ -122,11 +122,11 @@
   .resp-tab.resp-ok.on { border-bottom-color: #006152; }
   .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
@@ -156,16 +156,16 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-connections" class="nav-section-label nav-group">Connections</a>
-    <a href="#op-post-issue-connection" class="nav-link nav-op" title="POST /issue-connection">
-      <span class="nav-op-name">Issue a connection to a transcription service</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>issue-connection</span></div>
+    <a href="#op-post-issue-connection" class="nav-link nav-op" title="Issue a connection to a transcription service">
       <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-keys" class="nav-section-label nav-group">Keys</a>
-    <a href="#op-get-.well-known-jwks.json" class="nav-link nav-op" title="GET /.well-known/jwks.json">
-      <span class="nav-op-name">The public keys a relay checks tokens with</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>.well-known</span>/<wbr><span>jwks.json</span></div>
+    <a href="#op-get-.well-known-jwks.json" class="nav-link nav-op" title="The public keys a relay checks tokens with">
       <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span></span>
     </a>
   </div>
       </div>

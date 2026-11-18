@@ -122,11 +122,11 @@
   .resp-tab.resp-ok.on { border-bottom-color: #006152; }
   .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
@@ -156,64 +156,64 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-transcripts" class="nav-section-label nav-group">Transcripts</a>
-    <a href="#op-get-transcripts" class="nav-link nav-op" title="GET /transcripts">
-      <span class="nav-op-name">List transcripts</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>transcripts</span></div>
+    <a href="#op-get-transcripts" class="nav-link nav-op" title="List transcripts">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-transcripts" class="nav-link nav-op" title="POST /transcripts">
-      <span class="nav-op-name">Start a transcript</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-transcripts" class="nav-link nav-op" title="Start a transcript">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-transcripts-transcriptId" class="nav-link nav-op" title="GET /transcripts/{transcriptId}">
-      <span class="nav-op-name">Get a transcript</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-transcripts-transcriptId" class="nav-link nav-op" title="Get a transcript">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-transcripts-transcriptId" class="nav-link nav-op" title="PATCH /transcripts/{transcriptId}">
-      <span class="nav-op-name">Update a transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span></span>
+    </a><a href="#op-patch-transcripts-transcriptId" class="nav-link nav-op" title="Update a transcript">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-delete-transcripts-transcriptId" class="nav-link nav-op" title="DELETE /transcripts/{transcriptId}">
-      <span class="nav-op-name">Delete a transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span></span>
+    </a><a href="#op-delete-transcripts-transcriptId" class="nav-link nav-op" title="Delete a transcript">
       <span class="nav-method nav-method-delete">DEL</span>
-    </a><a href="#op-post-transcripts-transcriptId-pause" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/pause">
-      <span class="nav-op-name">Pause transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span></span>
+    </a><a href="#op-post-transcripts-transcriptId-pause" class="nav-link nav-op" title="Pause transcript">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcripts-transcriptId-resume" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/resume">
-      <span class="nav-op-name">Resume transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span>/<wbr><span>pause</span></span>
+    </a><a href="#op-post-transcripts-transcriptId-resume" class="nav-link nav-op" title="Resume transcript">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcripts-transcriptId-get-connection" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/get-connection">
-      <span class="nav-op-name">Get connection transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span>/<wbr><span>resume</span></span>
+    </a><a href="#op-post-transcripts-transcriptId-get-connection" class="nav-link nav-op" title="Get connection transcript">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-transcripts-transcriptId-close" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/close">
-      <span class="nav-op-name">Close transcript</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span>/<wbr><span>get-connection</span></span>
+    </a><a href="#op-post-transcripts-transcriptId-close" class="nav-link nav-op" title="Close transcript">
       <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{transcriptId}</span>/<wbr><span>close</span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-transcript-entries" class="nav-section-label nav-group">Transcript entries</a>
-    <a href="#op-get-transcripts-transcriptId-entries" class="nav-link nav-op" title="GET /transcripts/{transcriptId}/entries">
-      <span class="nav-op-name">List a transcript's entries</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>transcripts</span>/<wbr><span>{transcriptId}</span>/<wbr><span>entries</span></div>
+    <a href="#op-get-transcripts-transcriptId-entries" class="nav-link nav-op" title="List a transcript's entries">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-transcripts-transcriptId-entries" class="nav-link nav-op" title="POST /transcripts/{transcriptId}/entries">
-      <span class="nav-op-name">Add an entry to a transcript</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-transcripts-transcriptId-entries" class="nav-link nav-op" title="Add an entry to a transcript">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="GET /transcripts/{transcriptId}/entries/{entryId}">
-      <span class="nav-op-name">Get a transcript entry</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="Get a transcript entry">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="PATCH /transcripts/{transcriptId}/entries/{entryId}">
-      <span class="nav-op-name">End a pause entry</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{entryId}</span></span>
+    </a><a href="#op-patch-transcripts-transcriptId-entries-entryId" class="nav-link nav-op" title="End a pause entry">
       <span class="nav-method nav-method-patch">PATCH</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{entryId}</span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-transcription-profiles" class="nav-section-label nav-group">Transcription profiles</a>
-    <a href="#op-get-profiles" class="nav-link nav-op" title="GET /profiles">
-      <span class="nav-op-name">List transcription profiles</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>profiles</span></div>
+    <a href="#op-get-profiles" class="nav-link nav-op" title="List transcription profiles">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-profiles" class="nav-link nav-op" title="POST /profiles">
-      <span class="nav-op-name">Add a transcription profile</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-profiles" class="nav-link nav-op" title="Add a transcription profile">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-profiles-profileId" class="nav-link nav-op" title="GET /profiles/{profileId}">
-      <span class="nav-op-name">Get a transcription profile</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-profiles-profileId" class="nav-link nav-op" title="Get a transcription profile">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-profiles-profileId" class="nav-link nav-op" title="PATCH /profiles/{profileId}">
-      <span class="nav-op-name">Change a transcription profile</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{profileId}</span></span>
+    </a><a href="#op-patch-profiles-profileId" class="nav-link nav-op" title="Change a transcription profile">
       <span class="nav-method nav-method-patch">PATCH</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{profileId}</span></span>
     </a>
   </div>
       </div>

@@ -122,11 +122,11 @@
   .resp-tab.resp-ok.on { border-bottom-color: #006152; }
   .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
@@ -156,136 +156,142 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-applications" class="nav-section-label nav-group">Applications</a>
-    <a href="#op-get-applications" class="nav-link nav-op" title="GET /applications">
-      <span class="nav-op-name">List applications</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span></div>
+    <a href="#op-get-applications" class="nav-link nav-op" title="List applications">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications" class="nav-link nav-op" title="POST /applications">
-      <span class="nav-op-name">Create an application</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-applications" class="nav-link nav-op" title="Create an application">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId" class="nav-link nav-op" title="GET /applications/{applicationId}">
-      <span class="nav-op-name">Get an application</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-applications-applicationId" class="nav-link nav-op" title="Get an application">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-applications-applicationId" class="nav-link nav-op" title="PATCH /applications/{applicationId}">
-      <span class="nav-op-name">Update an application</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span></span>
+    </a><a href="#op-patch-applications-applicationId" class="nav-link nav-op" title="Update an application">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-delete-applications-applicationId" class="nav-link nav-op" title="DELETE /applications/{applicationId}">
-      <span class="nav-op-name">Delete a draft application</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span></span>
+    </a><a href="#op-delete-applications-applicationId" class="nav-link nav-op" title="Delete a draft application">
       <span class="nav-method nav-method-delete">DEL</span>
-    </a><a href="#op-get-applications-applicationId-income-verifications" class="nav-link nav-op" title="GET /applications/{applicationId}/income-verifications">
-      <span class="nav-op-name">List an application's income verifications</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications-applicationId-income-verifications" class="nav-link nav-op" title="POST /applications/{applicationId}/income-verifications">
-      <span class="nav-op-name">Record an income verification</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span></span>
+    </a><a href="#op-post-applications-applicationId-submit" class="nav-link nav-op" title="Submit application">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId-income-verifications-incomeVerificationId" class="nav-link nav-op" title="GET /applications/{applicationId}/income-verifications/{incomeVerificationId}">
-      <span class="nav-op-name">Get an income verification</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-applications-applicationId-incomes" class="nav-link nav-op" title="GET /applications/{applicationId}/incomes">
-      <span class="nav-op-name">List an application's incomes</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications-applicationId-incomes" class="nav-link nav-op" title="POST /applications/{applicationId}/incomes">
-      <span class="nav-op-name">Report an income</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>submit</span></span>
+    </a><a href="#op-post-applications-applicationId-open" class="nav-link nav-op" title="Open application">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="GET /applications/{applicationId}/incomes/{incomeId}">
-      <span class="nav-op-name">Get an income</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>open</span></span>
+    </a><a href="#op-post-applications-applicationId-close" class="nav-link nav-op" title="Close application">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>close</span></span>
+    </a><a href="#op-post-applications-applicationId-withdraw" class="nav-link nav-op" title="Withdraw application">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>withdraw</span></span>
+    </a><a href="#op-get-applications-applicationId-summary" class="nav-link nav-op" title="Get applicationSummary">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/incomes/{incomeId}">
-      <span class="nav-op-name">Update an income</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>summary</span></span>
+    </a><a href="#op-get-applications-applicationId-interview-flags-inputs" class="nav-link nav-op" title="Get interviewFlagsInputs">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>interview-flags-inputs</span></span>
+    </a><a href="#op-get-applications-applicationId-review" class="nav-link nav-op" title="Get applicationReview">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span></span>
+    </a><a href="#op-get-applications-applicationId-details" class="nav-link nav-op" title="Get applicationDetails">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>details</span></span>
+    </a><a href="#op-patch-applications-applicationId-details" class="nav-link nav-op" title="Change applicationDetails">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-get-applications-applicationId-interviews" class="nav-link nav-op" title="GET /applications/{applicationId}/interviews">
-      <span class="nav-op-name">List an application's interviews</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>details</span></span>
+    </a><a href="#op-get-applications-applicationId-review-demographics" class="nav-link nav-op" title="Get applicationReview demographics section panel">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications-applicationId-interviews" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews">
-      <span class="nav-op-name">Schedule an interview</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId-interviews-interviewId" class="nav-link nav-op" title="GET /applications/{applicationId}/interviews/{interviewId}">
-      <span class="nav-op-name">Get an interview</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span>/<wbr><span>demographics</span></span>
+    </a><a href="#op-get-applications-applicationId-review-contact" class="nav-link nav-op" title="Get applicationReview contact section panel">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications-applicationId-submit" class="nav-link nav-op" title="POST /applications/{applicationId}/submit">
-      <span class="nav-op-name">Submit application</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-open" class="nav-link nav-op" title="POST /applications/{applicationId}/open">
-      <span class="nav-op-name">Open application</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-close" class="nav-link nav-op" title="POST /applications/{applicationId}/close">
-      <span class="nav-op-name">Close application</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-withdraw" class="nav-link nav-op" title="POST /applications/{applicationId}/withdraw">
-      <span class="nav-op-name">Withdraw application</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-interviews-interviewId-start" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/start">
-      <span class="nav-op-name">Start interview</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/process-suggestions">
-      <span class="nav-op-name">Process suggestions interview</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-post-applications-applicationId-interviews-interviewId-complete" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/complete">
-      <span class="nav-op-name">Complete interview</span>
-      <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId-summary" class="nav-link nav-op" title="GET /applications/{applicationId}/summary">
-      <span class="nav-op-name">Get applicationSummary</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-applications-applicationId-interview-flags-inputs" class="nav-link nav-op" title="GET /applications/{applicationId}/interview-flags-inputs">
-      <span class="nav-op-name">Get interviewFlagsInputs</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-applications-applicationId-review" class="nav-link nav-op" title="GET /applications/{applicationId}/review">
-      <span class="nav-op-name">Get applicationReview</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-applications-applicationId-details" class="nav-link nav-op" title="GET /applications/{applicationId}/details">
-      <span class="nav-op-name">Get applicationDetails</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-applications-applicationId-details" class="nav-link nav-op" title="PATCH /applications/{applicationId}/details">
-      <span class="nav-op-name">Change applicationDetails</span>
-      <span class="nav-method nav-method-patch">PATCH</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{applicationId}</span>/<wbr><span>review</span>/<wbr><span>contact</span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-household-members" class="nav-section-label nav-group">Household Members</a>
-    <a href="#op-get-applications-applicationId-members" class="nav-link nav-op" title="GET /applications/{applicationId}/members">
-      <span class="nav-op-name">List household members</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>income-verifications</span></div>
+    <a href="#op-get-applications-applicationId-income-verifications" class="nav-link nav-op" title="List an application's income verifications">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-post-applications-applicationId-members" class="nav-link nav-op" title="POST /applications/{applicationId}/members">
-      <span class="nav-op-name">Add a household member</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-applications-applicationId-income-verifications" class="nav-link nav-op" title="Record an income verification">
       <span class="nav-method nav-method-post">POST</span>
-    </a><a href="#op-get-applications-applicationId-members-memberId" class="nav-link nav-op" title="GET /applications/{applicationId}/members/{memberId}">
-      <span class="nav-op-name">Get a household member</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-applications-applicationId-income-verifications-incomeVerificationId" class="nav-link nav-op" title="Get an income verification">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-patch-applications-applicationId-members-memberId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/members/{memberId}">
-      <span class="nav-op-name">Update a household member</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{incomeVerificationId}</span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>incomes</span></div>
+    <a href="#op-get-applications-applicationId-incomes" class="nav-link nav-op" title="List an application's incomes">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-applications-applicationId-incomes" class="nav-link nav-op" title="Report an income">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="Get an income">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{incomeId}</span></span>
+    </a><a href="#op-patch-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="Update an income">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-delete-applications-applicationId-members-memberId" class="nav-link nav-op" title="DELETE /applications/{applicationId}/members/{memberId}">
-      <span class="nav-op-name">Remove a household member</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{incomeId}</span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>interviews</span></div>
+    <a href="#op-get-applications-applicationId-interviews" class="nav-link nav-op" title="List an application's interviews">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-applications-applicationId-interviews" class="nav-link nav-op" title="Schedule an interview">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-applications-applicationId-interviews-interviewId" class="nav-link nav-op" title="Get an interview">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{interviewId}</span></span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-start" class="nav-link nav-op" title="Start interview">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{interviewId}</span>/<wbr><span>start</span></span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="nav-link nav-op" title="Process suggestions interview">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{interviewId}</span>/<wbr><span>process-suggestions</span></span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-complete" class="nav-link nav-op" title="Complete interview">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{interviewId}</span>/<wbr><span>complete</span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>members</span></div>
+    <a href="#op-get-applications-applicationId-members" class="nav-link nav-op" title="List household members">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-post-applications-applicationId-members" class="nav-link nav-op" title="Add a household member">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-applications-applicationId-members-memberId" class="nav-link nav-op" title="Get a household member">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{memberId}</span></span>
+    </a><a href="#op-patch-applications-applicationId-members-memberId" class="nav-link nav-op" title="Update a household member">
+      <span class="nav-method nav-method-patch">PATCH</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{memberId}</span></span>
+    </a><a href="#op-delete-applications-applicationId-members-memberId" class="nav-link nav-op" title="Remove a household member">
       <span class="nav-method nav-method-delete">DEL</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{memberId}</span></span>
     </a>
   </div><div class="nav-section">
-    <a href="#section-review" class="nav-section-label nav-group">Review</a>
-    <a href="#op-get-applications-applicationId-review-demographics" class="nav-link nav-op" title="GET /applications/{applicationId}/review/demographics">
-      <span class="nav-op-name">Get applicationReview demographics section panel</span>
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>applications</span>/<wbr><span>{applicationId}</span>/<wbr><span>review-progress</span></div>
+    <a href="#op-get-applications-applicationId-review-progress-section" class="nav-link nav-op" title="List ReviewProgress state records for a section">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-get-applications-applicationId-review-contact" class="nav-link nav-op" title="GET /applications/{applicationId}/review/contact">
-      <span class="nav-op-name">Get applicationReview contact section panel</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a>
-  </div><div class="nav-section">
-    <a href="#section-review-progress" class="nav-section-label nav-group">Review Progress</a>
-    <a href="#op-get-applications-applicationId-review-progress-section" class="nav-link nav-op" title="GET /applications/{applicationId}/review-progress/{section}">
-      <span class="nav-op-name">List ReviewProgress state records for a section</span>
-      <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-put-applications-applicationId-review-progress-section" class="nav-link nav-op" title="PUT /applications/{applicationId}/review-progress/{section}">
-      <span class="nav-op-name">Replace ReviewProgress state for a section</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span></span>
+    </a><a href="#op-put-applications-applicationId-review-progress-section" class="nav-link nav-op" title="Replace ReviewProgress state for a section">
       <span class="nav-method nav-method-put">PUT</span>
-    </a><a href="#op-patch-applications-applicationId-review-progress-section" class="nav-link nav-op" title="PATCH /applications/{applicationId}/review-progress/{section}">
-      <span class="nav-op-name">Update ReviewProgress state for a section</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span></span>
+    </a><a href="#op-patch-applications-applicationId-review-progress-section" class="nav-link nav-op" title="Update ReviewProgress state for a section">
       <span class="nav-method nav-method-patch">PATCH</span>
-    </a><a href="#op-get-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="GET /applications/{applicationId}/review-progress/{section}/{itemId}">
-      <span class="nav-op-name">Get ReviewProgress state for a collection item</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span></span>
+    </a><a href="#op-get-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="Get ReviewProgress state for a collection item">
       <span class="nav-method nav-method-get">GET</span>
-    </a><a href="#op-put-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="PUT /applications/{applicationId}/review-progress/{section}/{itemId}">
-      <span class="nav-op-name">Replace ReviewProgress state for a collection item</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></span>
+    </a><a href="#op-put-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="Replace ReviewProgress state for a collection item">
       <span class="nav-method nav-method-put">PUT</span>
-    </a><a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/review-progress/{section}/{itemId}">
-      <span class="nav-op-name">Update ReviewProgress state for a collection item</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></span>
+    </a><a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="Update ReviewProgress state for a collection item">
       <span class="nav-method nav-method-patch">PATCH</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{section}</span>/<wbr><span>{itemId}</span></span>
     </a>
   </div>
       </div>
