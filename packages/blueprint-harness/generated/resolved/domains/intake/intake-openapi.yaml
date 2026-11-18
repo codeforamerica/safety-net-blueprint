@@ -896,7 +896,7 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          $ref: "#/components/schemas/ApplicationReviewSections"
         description: Section name within the sectionView composition.
     get:
       summary: List ReviewProgress state records for a section
@@ -969,7 +969,7 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          $ref: "#/components/schemas/ApplicationReviewSections"
         description: Section name within the sectionView composition.
       - name: itemId
         in: path

@@ -14034,9 +14034,9 @@ export type ListReviewProgressBySectionData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
     };
     query?: {
         /**
@@ -14260,9 +14260,9 @@ export type UpdateReviewProgressBySectionData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
     };
     query?: never;
     url: '/applications/{applicationId}/review-progress/{section}';
@@ -14385,9 +14385,9 @@ export type ReplaceReviewProgressBySectionData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
     };
     query?: never;
     url: '/applications/{applicationId}/review-progress/{section}';
@@ -14502,9 +14502,9 @@ export type GetReviewProgressByItemData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
         /**
          * Item identifier for collection-backed sections.
          */
@@ -14593,9 +14593,9 @@ export type UpdateReviewProgressByItemData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
         /**
          * Item identifier for collection-backed sections.
          */
@@ -14722,9 +14722,9 @@ export type ReplaceReviewProgressByItemData = {
          */
         applicationId: string;
         /**
-         * Section name within the sectionView composition.
+         * Valid section names for the applicationReview sectionView.
          */
-        section: string;
+        section: 'demographics' | 'contact';
         /**
          * Item identifier for collection-backed sections.
          */

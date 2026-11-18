@@ -6320,7 +6320,7 @@ export const zListReviewProgressBySectionData = z.object({
     body: z.optional(z.never()),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string()
+        section: z.enum(['demographics', 'contact'])
     }),
     query: z.optional(z.object({
         q: z.optional(z.string()),
@@ -6368,7 +6368,7 @@ export const zUpdateReviewProgressBySectionData = z.object({
     }),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string()
+        section: z.enum(['demographics', 'contact'])
     }),
     query: z.optional(z.never())
 });
@@ -6405,7 +6405,7 @@ export const zReplaceReviewProgressBySectionData = z.object({
     }),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string()
+        section: z.enum(['demographics', 'contact'])
     }),
     query: z.optional(z.never())
 });
@@ -6435,7 +6435,7 @@ export const zGetReviewProgressByItemData = z.object({
     body: z.optional(z.never()),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string(),
+        section: z.enum(['demographics', 'contact']),
         itemId: z.uuid()
     }),
     query: z.optional(z.never())
@@ -6473,7 +6473,7 @@ export const zUpdateReviewProgressByItemData = z.object({
     }),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string(),
+        section: z.enum(['demographics', 'contact']),
         itemId: z.uuid()
     }),
     query: z.optional(z.never())
@@ -6511,7 +6511,7 @@ export const zReplaceReviewProgressByItemData = z.object({
     }),
     path: z.object({
         applicationId: z.uuid(),
-        section: z.string(),
+        section: z.enum(['demographics', 'contact']),
         itemId: z.uuid()
     }),
     query: z.optional(z.never())

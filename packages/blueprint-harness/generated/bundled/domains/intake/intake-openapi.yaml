@@ -13211,6 +13211,11 @@ paths:
         required: true
         schema:
           type: string
+          description: Valid section names for the applicationReview sectionView.
+          enum:
+            - demographics
+            - contact
+          x-generated: section-enum
         description: Section name within the sectionView composition.
     get:
       summary: List ReviewProgress state records for a section
@@ -13888,6 +13893,11 @@ paths:
         required: true
         schema:
           type: string
+          description: Valid section names for the applicationReview sectionView.
+          enum:
+            - demographics
+            - contact
+          x-generated: section-enum
         description: Section name within the sectionView composition.
       - name: itemId
         in: path
