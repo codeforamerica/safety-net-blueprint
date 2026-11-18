@@ -840,11 +840,11 @@ const NAV_STYLE = `
   .resp-tab.resp-ok.on { border-bottom-color: ${COLORS.deepGreen}; }
   .resp-tab.resp-bad.on { border-bottom-color: ${COLORS.richRed}; }
 
-  a.nav-group { display: block; text-decoration: none; }
-  a.nav-group:hover { color: rgba(255,255,255,0.7); }
-  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
-  .nav-op-name { flex: 1; min-width: 0; }
-  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 `;
@@ -986,13 +986,33 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     return `section-${tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
   }
 
-  // Each group's operations by name, with the method beside each, so a
-  // reader goes straight to one rather than to its group.
-  const navHtml = [...byTag.entries()].map(([tag, ops]) => `<div class="nav-section">
-    <a href="#${sectionId(tag)}" class="nav-section-label nav-group">${esc(tag)}</a>
-    ${ops.map(({ path, method, op }) => `<a href="#${endpointId(method, path)}" class="nav-link nav-op" title="${esc(method.toUpperCase())} ${esc(path)}">
-      <span class="nav-op-name">${esc(op.summary ?? path)}</span>
+  // The sidebar by resource, as Stripe's is: each group headed by a
+  // collection's path, written once, and each operation by its method and
+  // the rest of its path, with its name on hover. A collection is a path some
+  // operation follows with an id (…/incomes, because …/incomes/{incomeId});
+  // an operation goes under the longest one its path starts with.
+  const allOps = [...byTag.values()].flat();
+  const collections = new Set();
+  for (const { path } of allOps) {
+    const segments = path.split('/');
+    segments.forEach((segment, i) => {
+      if (i > 0 && /^\{.+\}$/.test(segment) && !/^\{.+\}$/.test(segments[i - 1])) collections.add(segments.slice(0, i).join('/'));
+    });
+  }
+  const byCollection = new Map();
+  for (const entry of allOps) {
+    const under = [...collections].filter((c) => entry.path === c || entry.path.startsWith(`${c}/`))
+      .sort((a, b) => b.length - a.length)[0] ?? entry.path;
+    if (!byCollection.has(under)) byCollection.set(under, []);
+    byCollection.get(under).push(entry);
+  }
+  // A path breaks only after a slash when it wraps.
+  const wrapped = (path) => path.split('/').map((segment) => `<span>${esc(segment)}</span>`).join('/<wbr>');
+  const navHtml = [...byCollection.entries()].map(([under, ops]) => `<div class="nav-section">
+    <div class="nav-section-label nav-resource">${wrapped(under)}</div>
+    ${ops.map(({ path, method, op }) => `<a href="#${endpointId(method, path)}" class="nav-link nav-op" title="${esc(op.summary ?? '')}">
       <span class="nav-method nav-method-${esc(method.toLowerCase())}">${esc(method.toUpperCase() === 'DELETE' ? 'DEL' : method.toUpperCase())}</span>
+      <span class="nav-op-path">${wrapped(path.slice(under.length))}</span>
     </a>`).join('')}
   </div>`).join('');
 
