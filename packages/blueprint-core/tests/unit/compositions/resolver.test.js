@@ -1123,6 +1123,33 @@ describe('generateCompositionOverlay — sectionView panel', () => {
     assert.equal(enumSchema['x-generated'], 'section-enum');
   });
 
+  test('a state resource\'s section parameter takes its values from the section enum', () => {
+    const compositionFile = {
+      domain: 'intake',
+      doc: {
+        compositions: {
+          reviewContext: {
+            compositeType: 'sectionView',
+            resource: 'Application',
+            endpoint: { path: '/applications/{applicationId}/review' },
+            sections: { demographics: {}, income: {} },
+            state: { resource: 'ReviewProgress', bind: 'applicationId', schema: { name: 'ReviewProgress', properties: {} } },
+          }
+        }
+      }
+    };
+    const overlay = generateCompositionOverlay(compositionFile, makeParamIndex());
+    const pathsAction = overlay.actions.find(a => a.target === '$.paths');
+    const sectionParams = Object.entries(pathsAction.update)
+      .filter(([path]) => path.includes('/{section}'))
+      .flatMap(([, item]) => item.parameters ?? [])
+      .filter((param) => param.name === 'section');
+    assert.ok(sectionParams.length > 0, 'state paths take a section');
+    for (const param of sectionParams) {
+      assert.deepEqual(param.schema, { $ref: '#/components/schemas/ReviewContextSections' });
+    }
+  });
+
   test('sectionView with no sections does not emit section enum', () => {
     const compositionFile = {
       domain: 'intake',
