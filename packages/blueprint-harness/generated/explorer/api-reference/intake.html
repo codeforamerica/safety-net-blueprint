@@ -73,6 +73,14 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -98,7 +106,139 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-applications" class="nav-link">Applications <span class="nav-count">27</span></a><a href="#section-household-members" class="nav-link">Household Members <span class="nav-count">5</span></a><a href="#section-review" class="nav-link">Review <span class="nav-count">2</span></a><a href="#section-review-progress" class="nav-link">Review Progress <span class="nav-count">6</span></a>
+        <div class="nav-section">
+    <a href="#section-applications" class="nav-section-label nav-group">Applications</a>
+    <a href="#op-get-applications" class="nav-link nav-op" title="GET /applications">
+      <span class="nav-op-name">List applications</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications" class="nav-link nav-op" title="POST /applications">
+      <span class="nav-op-name">Create an application</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId" class="nav-link nav-op" title="GET /applications/{applicationId}">
+      <span class="nav-op-name">Get an application</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-applications-applicationId" class="nav-link nav-op" title="PATCH /applications/{applicationId}">
+      <span class="nav-op-name">Update an application</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-delete-applications-applicationId" class="nav-link nav-op" title="DELETE /applications/{applicationId}">
+      <span class="nav-op-name">Delete a draft application</span>
+      <span class="nav-method nav-method-delete">DEL</span>
+    </a><a href="#op-get-applications-applicationId-income-verifications" class="nav-link nav-op" title="GET /applications/{applicationId}/income-verifications">
+      <span class="nav-op-name">List an application's income verifications</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications-applicationId-income-verifications" class="nav-link nav-op" title="POST /applications/{applicationId}/income-verifications">
+      <span class="nav-op-name">Record an income verification</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId-income-verifications-incomeVerificationId" class="nav-link nav-op" title="GET /applications/{applicationId}/income-verifications/{incomeVerificationId}">
+      <span class="nav-op-name">Get an income verification</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-applications-applicationId-incomes" class="nav-link nav-op" title="GET /applications/{applicationId}/incomes">
+      <span class="nav-op-name">List an application's incomes</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications-applicationId-incomes" class="nav-link nav-op" title="POST /applications/{applicationId}/incomes">
+      <span class="nav-op-name">Report an income</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="GET /applications/{applicationId}/incomes/{incomeId}">
+      <span class="nav-op-name">Get an income</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-applications-applicationId-incomes-incomeId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/incomes/{incomeId}">
+      <span class="nav-op-name">Update an income</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-get-applications-applicationId-interviews" class="nav-link nav-op" title="GET /applications/{applicationId}/interviews">
+      <span class="nav-op-name">List an application's interviews</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications-applicationId-interviews" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews">
+      <span class="nav-op-name">Schedule an interview</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId-interviews-interviewId" class="nav-link nav-op" title="GET /applications/{applicationId}/interviews/{interviewId}">
+      <span class="nav-op-name">Get an interview</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications-applicationId-submit" class="nav-link nav-op" title="POST /applications/{applicationId}/submit">
+      <span class="nav-op-name">Submit application</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-open" class="nav-link nav-op" title="POST /applications/{applicationId}/open">
+      <span class="nav-op-name">Open application</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-close" class="nav-link nav-op" title="POST /applications/{applicationId}/close">
+      <span class="nav-op-name">Close application</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-withdraw" class="nav-link nav-op" title="POST /applications/{applicationId}/withdraw">
+      <span class="nav-op-name">Withdraw application</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-start" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/start">
+      <span class="nav-op-name">Start interview</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-process-suggestions" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/process-suggestions">
+      <span class="nav-op-name">Process suggestions interview</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-applications-applicationId-interviews-interviewId-complete" class="nav-link nav-op" title="POST /applications/{applicationId}/interviews/{interviewId}/complete">
+      <span class="nav-op-name">Complete interview</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId-summary" class="nav-link nav-op" title="GET /applications/{applicationId}/summary">
+      <span class="nav-op-name">Get applicationSummary</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-applications-applicationId-interview-flags-inputs" class="nav-link nav-op" title="GET /applications/{applicationId}/interview-flags-inputs">
+      <span class="nav-op-name">Get interviewFlagsInputs</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-applications-applicationId-review" class="nav-link nav-op" title="GET /applications/{applicationId}/review">
+      <span class="nav-op-name">Get applicationReview</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-applications-applicationId-details" class="nav-link nav-op" title="GET /applications/{applicationId}/details">
+      <span class="nav-op-name">Get applicationDetails</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-applications-applicationId-details" class="nav-link nav-op" title="PATCH /applications/{applicationId}/details">
+      <span class="nav-op-name">Change applicationDetails</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-household-members" class="nav-section-label nav-group">Household Members</a>
+    <a href="#op-get-applications-applicationId-members" class="nav-link nav-op" title="GET /applications/{applicationId}/members">
+      <span class="nav-op-name">List household members</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-post-applications-applicationId-members" class="nav-link nav-op" title="POST /applications/{applicationId}/members">
+      <span class="nav-op-name">Add a household member</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-applications-applicationId-members-memberId" class="nav-link nav-op" title="GET /applications/{applicationId}/members/{memberId}">
+      <span class="nav-op-name">Get a household member</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-patch-applications-applicationId-members-memberId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/members/{memberId}">
+      <span class="nav-op-name">Update a household member</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-delete-applications-applicationId-members-memberId" class="nav-link nav-op" title="DELETE /applications/{applicationId}/members/{memberId}">
+      <span class="nav-op-name">Remove a household member</span>
+      <span class="nav-method nav-method-delete">DEL</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-review" class="nav-section-label nav-group">Review</a>
+    <a href="#op-get-applications-applicationId-review-demographics" class="nav-link nav-op" title="GET /applications/{applicationId}/review/demographics">
+      <span class="nav-op-name">Get applicationReview demographics section panel</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-get-applications-applicationId-review-contact" class="nav-link nav-op" title="GET /applications/{applicationId}/review/contact">
+      <span class="nav-op-name">Get applicationReview contact section panel</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-review-progress" class="nav-section-label nav-group">Review Progress</a>
+    <a href="#op-get-applications-applicationId-review-progress-section" class="nav-link nav-op" title="GET /applications/{applicationId}/review-progress/{section}">
+      <span class="nav-op-name">List ReviewProgress state records for a section</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-put-applications-applicationId-review-progress-section" class="nav-link nav-op" title="PUT /applications/{applicationId}/review-progress/{section}">
+      <span class="nav-op-name">Replace ReviewProgress state for a section</span>
+      <span class="nav-method nav-method-put">PUT</span>
+    </a><a href="#op-patch-applications-applicationId-review-progress-section" class="nav-link nav-op" title="PATCH /applications/{applicationId}/review-progress/{section}">
+      <span class="nav-op-name">Update ReviewProgress state for a section</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a><a href="#op-get-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="GET /applications/{applicationId}/review-progress/{section}/{itemId}">
+      <span class="nav-op-name">Get ReviewProgress state for a collection item</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a><a href="#op-put-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="PUT /applications/{applicationId}/review-progress/{section}/{itemId}">
+      <span class="nav-op-name">Replace ReviewProgress state for a collection item</span>
+      <span class="nav-method nav-method-put">PUT</span>
+    </a><a href="#op-patch-applications-applicationId-review-progress-section-itemId" class="nav-link nav-op" title="PATCH /applications/{applicationId}/review-progress/{section}/{itemId}">
+      <span class="nav-op-name">Update ReviewProgress state for a collection item</span>
+      <span class="nav-method nav-method-patch">PATCH</span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
@@ -116,10 +256,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List applications</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List applications</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1653,10 +1795,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Create an application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Create an application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -3381,10 +3525,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get an application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get an application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -4836,10 +4982,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update an application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update an application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6572,10 +6720,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Delete a draft application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Delete a draft application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6747,10 +6897,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/income-verifications</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List an application's income verifications</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List an application's income verifications</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/income-verifications</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -7077,10 +7229,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/income-verifications</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Record an income verification</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Record an income verification</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/income-verifications</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -7545,10 +7699,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/income-verifications/{incomeVerificationId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get an income verification</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get an income verification</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/income-verifications/{incomeVerificationId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -7811,10 +7967,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/incomes</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List an application's incomes</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List an application's incomes</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/incomes</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -8160,10 +8318,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/incomes</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Report an income</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Report an income</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/incomes</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -8666,10 +8826,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/incomes/{incomeId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get an income</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get an income</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/incomes/{incomeId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -8951,10 +9113,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/incomes/{incomeId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update an income</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update an income</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/incomes/{incomeId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -9411,10 +9575,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List an application's interviews</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List an application's interviews</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -9720,10 +9886,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Schedule an interview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Schedule an interview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -10116,10 +10284,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get an interview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get an interview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -10361,10 +10531,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/submit</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Submit application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Submit application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/submit</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -11936,10 +12108,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/open</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Open application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Open application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/open</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -13511,10 +13685,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/close</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Close application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Close application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/close</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -15159,10 +15335,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/withdraw</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Withdraw application</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Withdraw application</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/withdraw</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -16734,10 +16912,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/start</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Start interview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Start interview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/start</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -17099,10 +17279,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/process-suggestions</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Process suggestions interview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Process suggestions interview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/process-suggestions</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -17464,10 +17646,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/complete</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Complete interview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Complete interview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interviews/{interviewId}/complete</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -17829,10 +18013,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/summary</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get applicationSummary</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get applicationSummary</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/summary</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -17968,10 +18154,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/interview-flags-inputs</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get interviewFlagsInputs</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get interviewFlagsInputs</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/interview-flags-inputs</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -18107,10 +18295,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get applicationReview</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get applicationReview</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -18246,10 +18436,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/details</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get applicationDetails</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get applicationDetails</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/details</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -20367,10 +20559,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/details</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Change applicationDetails</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Change applicationDetails</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/details</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -22679,10 +22873,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/members</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List household members</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List household members</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/members</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -23370,10 +23566,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/members</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Add a household member</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Add a household member</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/members</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -24528,10 +24726,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a household member</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a household member</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -25149,10 +25349,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update a household member</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update a household member</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -26261,10 +26463,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Remove a household member</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Remove a household member</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/members/{memberId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -26448,10 +26652,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review/demographics</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get applicationReview demographics section panel</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get applicationReview demographics section panel</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review/demographics</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -26611,10 +26817,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review/contact</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get applicationReview contact section panel</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get applicationReview contact section panel</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review/contact</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -26780,10 +26988,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List ReviewProgress state records for a section</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">List ReviewProgress state records for a section</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -27061,10 +27271,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Replace ReviewProgress state for a section</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Replace ReviewProgress state for a section</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -27371,10 +27583,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update ReviewProgress state for a section</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update ReviewProgress state for a section</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -27681,10 +27895,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get ReviewProgress state for a collection item</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get ReviewProgress state for a collection item</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -27892,10 +28108,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Replace ReviewProgress state for a collection item</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Replace ReviewProgress state for a collection item</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PUT</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -28208,10 +28426,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update ReviewProgress state for a collection item</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update ReviewProgress state for a collection item</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/applications/{applicationId}/review-progress/{section}/{itemId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -28675,6 +28895,15 @@
     })();
     
   </script>
+<script>
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
 <script src="../mock/mock.js" defer></script>
 <script src="../mock/contracts.js" defer></script>
 <script type="module">

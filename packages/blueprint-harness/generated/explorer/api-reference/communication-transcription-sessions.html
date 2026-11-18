@@ -73,6 +73,14 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  a.nav-group { display: block; text-decoration: none; }
+  a.nav-group:hover { color: rgba(255,255,255,0.7); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-name { flex: 1; min-width: 0; }
+  .nav-method { flex-shrink: 0; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -98,7 +106,52 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-transcription-sessions" class="nav-link">Transcription sessions <span class="nav-count">2</span></a><a href="#section-transcription-sessions" class="nav-link">Transcription Sessions <span class="nav-count">11</span></a>
+        <div class="nav-section">
+    <a href="#section-transcription-sessions" class="nav-section-label nav-group">Transcription sessions</a>
+    <a href="#op-post-transcription-sessions" class="nav-link nav-op" title="POST /transcription-sessions">
+      <span class="nav-op-name">Start a transcription session</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-get-transcription-sessions-transcriptionSessionId" class="nav-link nav-op" title="GET /transcription-sessions/{transcriptionSessionId}">
+      <span class="nav-op-name">Get a transcription session</span>
+      <span class="nav-method nav-method-get">GET</span>
+    </a>
+  </div><div class="nav-section">
+    <a href="#section-transcription-sessions" class="nav-section-label nav-group">Transcription Sessions</a>
+    <a href="#op-post-transcription-sessions-transcriptionSessionId-get-connection" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/get-connection">
+      <span class="nav-op-name">Get connection transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-renew-connection" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/renew-connection">
+      <span class="nav-op-name">Renew connection transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-connect" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/connect">
+      <span class="nav-op-name">Connect transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-disconnect" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/disconnect">
+      <span class="nav-op-name">Disconnect transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-update-line" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/update-line">
+      <span class="nav-op-name">Update line transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-add-line" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/add-line">
+      <span class="nav-op-name">Add line transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-pause" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/pause">
+      <span class="nav-op-name">Pause transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-resume" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/resume">
+      <span class="nav-op-name">Resume transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-stop" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/stop">
+      <span class="nav-op-name">Stop transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-close" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/close">
+      <span class="nav-op-name">Close transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a><a href="#op-post-transcription-sessions-transcriptionSessionId-fail" class="nav-link nav-op" title="POST /transcription-sessions/{transcriptionSessionId}/fail">
+      <span class="nav-op-name">Fail transcriptionsession</span>
+      <span class="nav-method nav-method-post">POST</span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
@@ -116,10 +169,12 @@
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Start a transcription session</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Start a transcription session</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -602,10 +657,12 @@ or gives neither a transcript nor what to start one with.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a transcription session</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get a transcription session</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -896,10 +953,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/get-connection</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get connection transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Get connection transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/get-connection</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1346,10 +1405,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/renew-connection</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Renew connection transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Renew connection transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/renew-connection</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -1796,10 +1857,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/connect</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Connect transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Connect transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/connect</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2287,10 +2350,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/disconnect</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Disconnect transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Disconnect transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/disconnect</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -2695,10 +2760,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/update-line</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update line transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Update line transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/update-line</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -3200,10 +3267,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/add-line</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Add line transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Add line transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/add-line</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -3747,10 +3816,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/pause</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Pause transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Pause transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/pause</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -4218,10 +4289,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/resume</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Resume transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Resume transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/resume</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -4689,10 +4762,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/stop</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Stop transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Stop transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/stop</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -5160,10 +5235,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/close</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Close transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Close transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/close</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -5631,10 +5708,12 @@ subject can't be found that way.
   <details>
     <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
       <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/fail</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Fail transcriptionsession</span>
+        <span style="display:block;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:3px;">Fail transcriptionsession</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+          <code style="font-size:12px;color:#555;word-break:break-all;">/transcription-sessions/{transcriptionSessionId}/fail</code>
+        </span>
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
@@ -6190,5 +6269,14 @@ subject can't be found that way.
     })();
     
   </script>
+<script>
+  const openTarget = () => {
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
 </body>
 </html>
