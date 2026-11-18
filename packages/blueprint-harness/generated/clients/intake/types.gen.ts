@@ -4947,9 +4947,19 @@ export type ListApplicationsData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -4984,19 +4994,11 @@ export type ListApplicationsData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -5033,9 +5035,23 @@ export type ListApplicationsData = {
          * with `-` for descending order. The first field is the primary sort;
          * subsequent fields are tie-breakers in declaration order.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples below show
-         * human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Allowed fields
          *
          * Which fields a given list endpoint allows is declared in the operation's
          * `x-sortable.fields` extension. Sending a field name not present in that
@@ -5048,21 +5064,11 @@ export type ListApplicationsData = {
          * See `api-patterns.yaml#sorting` for the full convention and
          * `docs/architecture/x-extensions.md` for the extension shape.
          *
-         * ## Syntax
+         * ## URL encoding
          *
-         * | Pattern | Description | Example |
-         * |---------|-------------|---------|
-         * | `fieldName` | Ascending | `sort=createdAt` |
-         * | `-fieldName` | Descending | `sort=-createdAt` |
-         * | `field1,field2` | Multi-field | `sort=status,-priority` |
-         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-         *
-         * ## Examples
-         *
-         * - `sort=createdAt` — oldest first
-         * - `sort=-createdAt` — newest first
-         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
-         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples above show human-readable syntax for
+         * clarity.
          *
          */
         sort?: string;
@@ -7543,9 +7549,19 @@ export type ListIncomeVerificationsData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -7580,19 +7596,11 @@ export type ListIncomeVerificationsData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -8038,9 +8046,19 @@ export type ListApplicationIncomesData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -8075,19 +8093,11 @@ export type ListApplicationIncomesData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -8716,9 +8726,19 @@ export type ListApplicationInterviewsData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -8753,19 +8773,11 @@ export type ListApplicationInterviewsData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -9149,9 +9161,19 @@ export type ListApplicationMembersData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -9186,19 +9208,11 @@ export type ListApplicationMembersData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -9235,9 +9249,23 @@ export type ListApplicationMembersData = {
          * with `-` for descending order. The first field is the primary sort;
          * subsequent fields are tie-breakers in declaration order.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples below show
-         * human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Allowed fields
          *
          * Which fields a given list endpoint allows is declared in the operation's
          * `x-sortable.fields` extension. Sending a field name not present in that
@@ -9250,21 +9278,11 @@ export type ListApplicationMembersData = {
          * See `api-patterns.yaml#sorting` for the full convention and
          * `docs/architecture/x-extensions.md` for the extension shape.
          *
-         * ## Syntax
+         * ## URL encoding
          *
-         * | Pattern | Description | Example |
-         * |---------|-------------|---------|
-         * | `fieldName` | Ascending | `sort=createdAt` |
-         * | `-fieldName` | Descending | `sort=-createdAt` |
-         * | `field1,field2` | Multi-field | `sort=status,-priority` |
-         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-         *
-         * ## Examples
-         *
-         * - `sort=createdAt` — oldest first
-         * - `sort=-createdAt` — newest first
-         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
-         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples above show human-readable syntax for
+         * clarity.
          *
          */
         sort?: string;
@@ -13629,9 +13647,19 @@ export type GetApplicationReviewDemographicsSectionData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -13666,19 +13694,11 @@ export type GetApplicationReviewDemographicsSectionData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -13715,9 +13735,23 @@ export type GetApplicationReviewDemographicsSectionData = {
          * with `-` for descending order. The first field is the primary sort;
          * subsequent fields are tie-breakers in declaration order.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples below show
-         * human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Allowed fields
          *
          * Which fields a given list endpoint allows is declared in the operation's
          * `x-sortable.fields` extension. Sending a field name not present in that
@@ -13730,21 +13764,11 @@ export type GetApplicationReviewDemographicsSectionData = {
          * See `api-patterns.yaml#sorting` for the full convention and
          * `docs/architecture/x-extensions.md` for the extension shape.
          *
-         * ## Syntax
+         * ## URL encoding
          *
-         * | Pattern | Description | Example |
-         * |---------|-------------|---------|
-         * | `fieldName` | Ascending | `sort=createdAt` |
-         * | `-fieldName` | Descending | `sort=-createdAt` |
-         * | `field1,field2` | Multi-field | `sort=status,-priority` |
-         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-         *
-         * ## Examples
-         *
-         * - `sort=createdAt` — oldest first
-         * - `sort=-createdAt` — newest first
-         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
-         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples above show human-readable syntax for
+         * clarity.
          *
          */
         sort?: string;
@@ -13819,9 +13843,19 @@ export type GetApplicationReviewContactSectionData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -13856,19 +13890,11 @@ export type GetApplicationReviewContactSectionData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -13905,9 +13931,23 @@ export type GetApplicationReviewContactSectionData = {
          * with `-` for descending order. The first field is the primary sort;
          * subsequent fields are tie-breakers in declaration order.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples below show
-         * human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Allowed fields
          *
          * Which fields a given list endpoint allows is declared in the operation's
          * `x-sortable.fields` extension. Sending a field name not present in that
@@ -13920,21 +13960,11 @@ export type GetApplicationReviewContactSectionData = {
          * See `api-patterns.yaml#sorting` for the full convention and
          * `docs/architecture/x-extensions.md` for the extension shape.
          *
-         * ## Syntax
+         * ## URL encoding
          *
-         * | Pattern | Description | Example |
-         * |---------|-------------|---------|
-         * | `fieldName` | Ascending | `sort=createdAt` |
-         * | `-fieldName` | Descending | `sort=-createdAt` |
-         * | `field1,field2` | Multi-field | `sort=status,-priority` |
-         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-         *
-         * ## Examples
-         *
-         * - `sort=createdAt` — oldest first
-         * - `sort=-createdAt` — newest first
-         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
-         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples above show human-readable syntax for
+         * clarity.
          *
          */
         sort?: string;
@@ -14013,9 +14043,19 @@ export type ListReviewProgressBySectionData = {
          * Search query using field:value syntax. Multiple conditions separated by
          * spaces are ANDed together.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples in this documentation
-         * show human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
          *
          * ## Syntax
          *
@@ -14050,19 +14090,11 @@ export type ListReviewProgressBySectionData = {
          * matches when some member is named Jo and some member, not necessarily the
          * same one, is over 60. There is no way to require the same item.
          *
-         * ## Examples
+         * ## URL encoding
          *
-         * - `john` — exact match for "john" in searchable fields
-         * - `*john*` — contains "john" in searchable fields
-         * - `name:*smith*` — name contains "smith" (case-insensitive)
-         * - `email:*@example.com` — email ends with "@example.com"
-         * - `status:approved` — exact match on status field
-         * - `status:approved,pending` — status is "approved" OR "pending"
-         * - `income:>=1000` — income greater than or equal to 1000
-         * - `created:>2024-01-01` — created after January 1, 2024
-         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
-         * - `-status:denied` — exclude records with status "denied"
-         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples in this documentation show
+         * human-readable syntax for clarity.
          * - `applicant.state:CA` — nested field filter
          *
          * ## URL Encoding Reference
@@ -14099,9 +14131,23 @@ export type ListReviewProgressBySectionData = {
          * with `-` for descending order. The first field is the primary sort;
          * subsequent fields are tie-breakers in declaration order.
          *
-         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
-         * Most HTTP clients handle this automatically. Examples below show
-         * human-readable syntax for clarity.
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Allowed fields
          *
          * Which fields a given list endpoint allows is declared in the operation's
          * `x-sortable.fields` extension. Sending a field name not present in that
@@ -14114,21 +14160,11 @@ export type ListReviewProgressBySectionData = {
          * See `api-patterns.yaml#sorting` for the full convention and
          * `docs/architecture/x-extensions.md` for the extension shape.
          *
-         * ## Syntax
+         * ## URL encoding
          *
-         * | Pattern | Description | Example |
-         * |---------|-------------|---------|
-         * | `fieldName` | Ascending | `sort=createdAt` |
-         * | `-fieldName` | Descending | `sort=-createdAt` |
-         * | `field1,field2` | Multi-field | `sort=status,-priority` |
-         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
-         *
-         * ## Examples
-         *
-         * - `sort=createdAt` — oldest first
-         * - `sort=-createdAt` — newest first
-         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
-         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         * This parameter must be URL-encoded when sent over HTTP. Most HTTP clients
+         * handle this automatically. Examples above show human-readable syntax for
+         * clarity.
          *
          */
         sort?: string;
