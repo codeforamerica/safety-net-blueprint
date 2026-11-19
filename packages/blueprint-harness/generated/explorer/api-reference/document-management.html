@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -198,6 +200,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">DocumentList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Query parameters</h4>
       <div class="param" data-param="q" data-in="query">
@@ -444,9 +447,11 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">multipart/form-data</code> request carrying the file itself. The response describes what was stored — name, type, size and a content hash — and not the contents, which are never written anywhere.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Document</span></div>
         
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
+      
       
       <span class="pill">multipart/form-data</span>
       <span class="pill pill-req">required</span>
@@ -665,6 +670,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">Document</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="documentId" data-in="path" data-required>

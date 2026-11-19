@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -199,9 +201,11 @@
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where transcription software connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does; a token, as ElevenLabs, Deepgram and AssemblyAI issue; or, for a service behind a relay, the relay's URL, its subprotocol and a JWT the adapter signs for it.</p><p style="margin:0 0 6px;">Asked again, it issues a fresh credential: that is how software renews one, and how it reconnects.</p></div></div>
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ConnectionRequest</span>
+      <span class="returns">→</span> <span class="schema-name">ConnectionResponse</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -531,6 +535,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The public keys of the tokens the adapter signs for a relay, as a JSON Web Key Set (RFC 7517). A relay reads them to check a token's signature, choosing the key by the token's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">kid</code>, and may cache them. To change keys, publish the new one before signing with it, and keep the old one until the tokens it signed have expired. An adapter that signs no tokens, because no service it issues for sits behind a relay, answers 404.</p></div></div>
+        
         
         
       </div>

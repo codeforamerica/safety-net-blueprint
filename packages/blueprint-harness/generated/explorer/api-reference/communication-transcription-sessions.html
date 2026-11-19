@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -229,9 +231,11 @@
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Start keeping track of the software's connection, for a transcript. Name an existing transcript with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">transcriptId</code> to carry on after a session failed; otherwise give what a new transcript is started with — <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">profileId</code>, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">client</code> and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">startedAt</code>, and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">model</code> unless the profile's service is <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">none</code> — and it's started the first time the software asks how to stream. The session begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created</code>.</p></div></div>
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">TranscriptionSessionCreate</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -646,6 +650,7 @@ or gives neither a transcript nor what to start one with.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a session by identifier.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">TranscriptionSession</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -898,6 +903,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Get where to connect and a short-lived credential, starting the transcript the first time.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -914,6 +920,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">GetConnectionRequest</span>
+      <span class="returns">→</span> <span class="schema-name">StreamConnection</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -1261,6 +1268,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Get a fresh credential while connected, with no change to the session.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -1277,6 +1285,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">GetConnectionRequest</span>
+      <span class="returns">→</span> <span class="schema-name">StreamConnection</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -1624,6 +1633,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -1640,6 +1650,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ConnectRequest</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       
     </h4>
@@ -2031,6 +2042,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The connection to the service dropped; the software will try again.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">TranscriptionSession</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -2367,6 +2379,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A line in progress, to show. Nothing is kept; it's tied to its finished line by its key.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -2383,6 +2396,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">LineInProgress</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -2784,6 +2798,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A finished line, added to the transcript with its key, so a retry adds it once. Allowed while paused, for the last text before the pause; the transcript keeps it if it started before.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -2800,6 +2815,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">FinishedLine</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -3243,6 +3259,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Take the conversation off the record. The transcript keeps the pause; the software closes the connection.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -3259,6 +3276,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">AtRequest</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -3625,6 +3643,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Put the conversation back on the record. The software then asks how to stream again. From created, a new session carries on a paused transcript.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -3641,6 +3660,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">AtRequest</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -4007,6 +4027,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Finish. The software sends the end of the audio and waits for the last text, or closes at once when no connection is open.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -4023,6 +4044,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">AtRequest</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -4389,6 +4411,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The last text is in and the connection is closed; the transcript closes.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
@@ -4405,6 +4428,7 @@ subject can't be found that way.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">AtRequest</span>
+      <span class="returns">→</span> <span class="schema-name">TranscriptionSession</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -4771,6 +4795,7 @@ subject can't be found that way.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The software gave up connecting or reconnecting. The transcript stays open.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">TranscriptionSession</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="transcriptionSessionId" data-in="path" data-required>
