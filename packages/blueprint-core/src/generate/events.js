@@ -22,11 +22,16 @@
  * Each document is written beside the OpenAPI document whose resources send
  * the events, as `<name>-events-asyncapi.yaml`, the way a rules file's
  * endpoints are documented in an OpenAPI document generated beside it.
+ *
+ * Each message carries one example, a whole CloudEvent, so a reader or a
+ * tool can send it as it is. Its data comes from the resource's first sample
+ * record where the record has it, and from the schema where it doesn't.
  */
 
 import { eventType } from '../event-names.js';
 import { readStateMachines } from '../contract-readers.js';
 import { extractDomain, extractCapability } from '../contract-types.js';
+import { buildExamples } from '../examples.js';
 
 const BASE_EVENTS = 'https://blueprint.codeforamerica.org/base/schemas/events.yaml';
 
@@ -39,6 +44,93 @@ const BASE_EVENTS = 'https://blueprint.codeforamerica.org/base/schemas/events.ya
 const OPENAPI_SCHEMA_FORMAT = 'application/vnd.oai.openapi;version=3.1.0';
 const asOpenApi = (schema) => ({ schemaFormat: OPENAPI_SCHEMA_FORMAT, schema });
 const ENVELOPE = { $ref: `${BASE_EVENTS}#/$defs/Event` };
+
+// What an example event says where nothing in the set says otherwise.
+const EXAMPLE_EVENT_ID = '00000000-0000-4000-8000-000000000000';
+const EXAMPLE_SUBJECT = '00000000-0000-4000-8000-000000000001';
+const EXAMPLE_TIME = '2024-01-01T00:00:00Z';
+// Set by the server, so never what a change to a record changes.
+const MANAGED_FIELDS = new Set(['id', 'createdAt', 'updatedAt', 'status']);
+
+/** A schema's own type, leaving out `null` from a list of them. */
+const typeOf = (schema) => (Array.isArray(schema?.type) ? schema.type.find((t) => t !== 'null') : schema?.type);
+
+/**
+ * A value for a schema: the record's, when it has the field, else what the
+ * schema itself suggests — its const, example, default or first enum value,
+ * then a value of its type. A reference is not followed; it gets `{}`.
+ */
+function sampleValue(schema, name, record) {
+  if (record && name in record) return record[name];
+  if (!schema || typeof schema !== 'object' || schema.$ref) return {};
+  if ('const' in schema) return schema.const;
+  if (schema.example !== undefined) return schema.example;
+  if (Array.isArray(schema.examples) && schema.examples.length) return schema.examples[0];
+  if (schema.default !== undefined) return schema.default;
+  if (Array.isArray(schema.enum) && schema.enum.length) return schema.enum[0];
+  const type = typeOf(schema);
+  if (type === 'object' || schema.properties) return sampleData(schema, null);
+  if (type === 'array') return [];
+  if (type === 'integer' || type === 'number') return 0;
+  if (type === 'boolean') return false;
+  if (schema.format === 'uuid') return EXAMPLE_SUBJECT;
+  if (schema.format === 'date-time') return EXAMPLE_TIME;
+  if (schema.format === 'date') return EXAMPLE_TIME.slice(0, 10);
+  return 'example';
+}
+
+/** An object for a schema: its required fields, or all of them when none is required. */
+function sampleData(schema, record) {
+  const properties = schema?.properties ?? {};
+  const names = Array.isArray(schema?.required) && schema.required.length ? schema.required : Object.keys(properties);
+  return Object.fromEntries(names.map((name) => [name, sampleValue(properties[name], name, record)]));
+}
+
+/** A schema's properties, through `allOf` and references within its document. */
+function propertiesOf(schema, schemas, seen = new Set()) {
+  const local = typeof schema?.$ref === 'string' && schema.$ref.startsWith('#/components/schemas/')
+    ? schemas[schema.$ref.split('/').pop()] : schema;
+  if (!local || typeof local !== 'object' || seen.has(local)) return {};
+  seen.add(local);
+  return Object.assign({}, ...(local.allOf ?? []).map((part) => propertiesOf(part, schemas, seen)), local.properties ?? {});
+}
+
+/**
+ * An updated event's one change: a field of the record whose schema lists
+ * its values, moved to another of them; else a text field, given a new value.
+ */
+function sampleChange(record, properties) {
+  const fields = Object.entries(properties).filter(([name, schema]) => !MANAGED_FIELDS.has(name) && !schema?.readOnly && name in record);
+  const listed = fields.find(([name, schema]) => Array.isArray(schema?.enum) && schema.enum.some((v) => v !== record[name]));
+  if (listed) {
+    const [name, schema] = listed;
+    return { field: name, before: record[name], after: schema.enum.find((v) => v !== record[name]) };
+  }
+  const text = fields.find(([name]) => typeof record[name] === 'string');
+  return text ? { field: text[0], before: record[text[0]], after: 'example' } : null;
+}
+
+/** The example CloudEvent for one event. */
+function exampleEvent({ type, kind, dataSchema, timerId }, { domain, record, properties }) {
+  const subject = record?.id ?? EXAMPLE_SUBJECT;
+  let data;
+  if (kind === 'created') data = record ?? {};
+  else if (kind === 'updated') data = { changes: [record && sampleChange(record, properties)].filter(Boolean) };
+  else if (kind === 'deleted') data = {};
+  // domain.timerType.objectId, as TimerRequestedEvent names it.
+  else if (kind === 'timer') data = { timerId: `${domain}.${timerId}.${subject}` };
+  else if (dataSchema && !dataSchema.$ref) data = sampleData(dataSchema, record);
+  return {
+    specversion: '1.0',
+    id: EXAMPLE_EVENT_ID,
+    source: `/${domain}`,
+    type,
+    subject,
+    time: EXAMPLE_TIME,
+    datacontenttype: 'application/json',
+    ...(data !== undefined ? { data } : {}),
+  };
+}
 
 /** `intake.application_member.created` → `IntakeApplicationMemberCreated`. */
 const pascal = (type) => type.split(/[._-]/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join('');
@@ -72,6 +164,7 @@ function eventsOf(api, machines) {
         type: eventType(domain, resource.name, 'created'),
         summary: `A ${resource.name} was created. Carries the record as created.`,
         data: { $ref: `./${fileName}#/components/schemas/${resource.name}` },
+        example: { kind: 'created', object: resource.name },
       });
     }
     if (item?.patch) {
@@ -79,6 +172,7 @@ function eventsOf(api, machines) {
         type: eventType(domain, resource.name, 'updated'),
         summary: `A ${resource.name} was changed. Carries each changed field, before and after.`,
         data: { $ref: `${BASE_EVENTS}#/ResourceUpdatedEvent` },
+        example: { kind: 'updated', object: resource.name },
       });
     }
     if (item?.delete) {
@@ -86,6 +180,7 @@ function eventsOf(api, machines) {
         type: eventType(domain, resource.name, 'deleted'),
         summary: `A ${resource.name} was deleted. The subject is the record's id.`,
         data: { $ref: `${BASE_EVENTS}#/ResourceDeletedEvent` },
+        example: { kind: 'deleted', object: resource.name },
       });
     }
   }
@@ -96,6 +191,7 @@ function eventsOf(api, machines) {
         type: eventType(entry.domain, entry.object, emitted.id),
         summary: emitted.description ?? `${entry.object} ${emitted.id}.`,
         data: emitted.schema ?? null,
+        example: { kind: 'emitted', object: entry.object, dataSchema: emitted.schema ?? null },
       });
     }
     for (const timer of entry.machine.timers ?? []) {
@@ -105,6 +201,7 @@ function eventsOf(api, machines) {
         data: { $ref: `${BASE_EVENTS}#/TimerCallbackEvent` },
         // The timer service sends it, not this API; the machine receives it.
         timer: true,
+        example: { kind: 'timer', object: entry.object, timerId: timer.id },
       });
     }
   }
@@ -162,6 +259,7 @@ function operation(action, key, messageNames) {
  * @returns {{ relativePath: string, content: object, events: string[] }[]}
  */
 export function buildEventCatalogs(positioned) {
+  const samples = buildExamples(positioned);
   let machines = [];
   try {
     machines = readStateMachines(positioned);
@@ -180,10 +278,21 @@ export function buildEventCatalogs(positioned) {
     const messages = {};
     const schemas = {};
     const operations = {};
-    for (const { type, summary, data, timer } of events) {
+    const domain = api.domain ?? extractDomain(api.content);
+    const apiSchemas = api.content?.components?.schemas ?? {};
+    for (const { type, summary, data, timer, example } of events) {
       const name = pascal(type);
+      const record = samples[example.object]?.[0]?.data ?? null;
+      const payload = exampleEvent({ type, ...example }, {
+        domain, record, properties: propertiesOf({ $ref: `#/components/schemas/${example.object}` }, apiSchemas),
+      });
       channels[type] = { address: type, messages: { [name]: { $ref: `#/components/messages/${name}` } } };
-      messages[name] = { name: type, summary, payload: asOpenApi({ $ref: `#/components/schemas/${name}Event` }) };
+      messages[name] = {
+        name: type,
+        summary,
+        payload: asOpenApi({ $ref: `#/components/schemas/${name}Event` }),
+        examples: [{ name: 'Example', summary: `An example ${type} event.`, payload }],
+      };
       const properties = { type: { type: 'string', const: type } };
       if (data) properties.data = data;
       schemas[`${name}Event`] = asOpenApi({ allOf: [ENVELOPE, { type: 'object', properties }] });

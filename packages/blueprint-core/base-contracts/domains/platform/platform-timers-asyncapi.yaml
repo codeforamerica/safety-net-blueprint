@@ -36,12 +36,43 @@ components:
         Cancels a pending timer; a no-op if it has already fired.
       payload:
         $ref: '#/components/schemas/TimerCancelledEvent'
+      examples:
+        - name: Example
+          summary: Cancels the timer requested in the platform.timer.requested example, by its id.
+          payload:
+            specversion: '1.0'
+            id: 00000000-0000-4000-8000-000000000002
+            source: /workflow
+            type: platform.timer.cancelled
+            subject: 00000000-0000-4000-8000-000000000001
+            time: '2024-01-01T00:00:00Z'
+            datacontenttype: application/json
+            data:
+              timerId: workflow.creation_deadline.00000000-0000-4000-8000-000000000001
     TimerRequestedMessage:
       name: platform.timer.requested
       summary: >-
         Asks for a timer; the scheduler registers it and publishes the callback event when it fires.
       payload:
         $ref: '#/components/schemas/TimerRequestedEvent'
+      examples:
+        - name: Example
+          summary: Asks for workflow.creation_deadline to be sent about a task three days from now.
+          payload:
+            specversion: '1.0'
+            id: 00000000-0000-4000-8000-000000000000
+            source: /workflow
+            type: platform.timer.requested
+            subject: 00000000-0000-4000-8000-000000000001
+            time: '2024-01-01T00:00:00Z'
+            datacontenttype: application/json
+            data:
+              timerId: workflow.creation_deadline.00000000-0000-4000-8000-000000000001
+              fireAfter: PT72H
+              callback:
+                event: workflow.creation_deadline
+                data:
+                  taskId: 00000000-0000-4000-8000-000000000001
   schemas:
     TimerCancelledEvent:
       allOf:
