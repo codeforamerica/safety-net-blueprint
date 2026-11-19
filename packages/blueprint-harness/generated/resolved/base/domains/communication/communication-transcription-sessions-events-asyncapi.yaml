@@ -142,6 +142,18 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionCreatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.created
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data: {}
     CommunicationTranscriptionSessionConnecting:
       name: communication.transcription_session.connecting
       summary: The software is getting where to connect and opening the connection.
@@ -149,6 +161,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionConnectingEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.connecting event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.connecting
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionConnected:
       name: communication.transcription_session.connected
       summary: The connection to the service is open.
@@ -156,6 +179,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionConnectedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.connected event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.connected
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionDisconnected:
       name: communication.transcription_session.disconnected
       summary: The connection dropped; the software is trying again.
@@ -163,6 +197,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionDisconnectedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.disconnected event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.disconnected
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionPaused:
       name: communication.transcription_session.paused
       summary: Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.
@@ -170,6 +215,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionPausedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.paused event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.paused
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionStopping:
       name: communication.transcription_session.stopping
       summary: Stop was asked for. The software sends the end of the audio and waits for the last text.
@@ -177,6 +233,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionStoppingEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.stopping event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.stopping
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionClosed:
       name: communication.transcription_session.closed
       summary: The session is done and the transcript closed. The software closes any connection still open, whoever closed it.
@@ -184,6 +251,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionClosedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.closed event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.closed
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionFailed:
       name: communication.transcription_session.failed
       summary: The software gave up connecting or reconnecting. The transcript is still open.
@@ -191,6 +269,17 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionFailedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.failed event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.failed
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
     CommunicationTranscriptionSessionLineUpdated:
       name: communication.transcription_session.line_updated
       summary: A line in progress, to show. Not kept.
@@ -198,6 +287,21 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionLineUpdatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.line_updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.line_updated
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              key: example
+              text: example
+              startedAt: "2024-01-01T00:00:00Z"
     CommunicationTranscriptionSessionLineAdded:
       name: communication.transcription_session.line_added
       summary: A finished line was added to the transcript.
@@ -205,6 +309,20 @@ components:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
           $ref: "#/components/schemas/CommunicationTranscriptionSessionLineAddedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.line_added event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.line_added
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              key: example
+              entryId: 00000000-0000-4000-8000-000000000001
   schemas:
     CommunicationTranscriptionSessionCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
