@@ -130,6 +130,52 @@ describe('the generated event catalog', () => {
   });
 });
 
+describe('the example on each generated event', () => {
+  // The same API with a sample case, whose priority lists its values.
+  const withSample = toDoc({
+    ...api,
+    content: {
+      ...api.content,
+      components: {
+        schemas: {
+          ...api.content.components.schemas,
+          Case: { type: 'object', properties: { id: { type: 'string', readOnly: true }, county: { type: 'string' }, priority: { type: 'string', enum: ['low', 'high'] } } },
+        },
+        examples: { CaseExample1: { value: { id: 'case-1', county: 'Adams', priority: 'low' } } },
+      },
+    },
+  });
+  const [catalog] = eventsAsyncapis([withSample, machine]);
+  const example = (name) => catalog.content.components.messages[name].examples[0].payload;
+
+  test('is a whole CloudEvent of the message\'s type, about the sample record', () => {
+    for (const [name, message] of Object.entries(catalog.content.components.messages)) {
+      const payload = message.examples[0].payload;
+      assert.equal(payload.type, message.name, name);
+      assert.equal(payload.specversion, '1.0');
+      assert.equal(payload.source, '/case-management');
+      assert.equal(payload.subject, 'case-1');
+      assert.equal(payload.datacontenttype, 'application/json');
+    }
+  });
+
+  test('carries the sample record as a created event\'s data', () => {
+    assert.deepEqual(example('CaseManagementCaseCreated').data, { id: 'case-1', county: 'Adams', priority: 'low' });
+  });
+
+  test('changes a field with listed values to another of them for an updated event', () => {
+    assert.deepEqual(example('CaseManagementCaseUpdated').data, { changes: [{ field: 'priority', before: 'low', after: 'high' }] });
+  });
+
+  test('builds an emitted event\'s data from its schema, taking the record\'s value where it has the field', () => {
+    assert.deepEqual(example('CaseManagementCaseTransferred').data, { county: 'Adams' });
+  });
+
+  test('gives a timer\'s callback the timer id the timer service adds, as domain.timerType.objectId', () => {
+    assert.deepEqual(example('CaseManagementReviewDue').data, { timerId: 'case-management.review_due.case-1' });
+  });
+});
+
 describe('the operations in a generated event catalog', () => {
   const catalogs = eventsAsyncapis([api, machine, noticesApi, noticesMachine]);
   const cases = catalogs.find((c) => c.relativePath.startsWith('domains/case-management/'));
