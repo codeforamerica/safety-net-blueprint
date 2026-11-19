@@ -565,12 +565,6 @@ function localResponseRef(rawResponse) {
 
 const CHIP_STYLE = `display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;`;
 
-function schemaLink(name, eid = '') {
-  return eid
-    ? expandChip(esc(name), eid, CHIP_STYLE)
-    : `<a href="#schema-${esc(name)}" style="${CHIP_STYLE}"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ${esc(name)}</a>`;
-}
-
 function responseLink(name, eid = '') {
   return eid
     ? expandChip(esc(name), eid, CHIP_STYLE)
@@ -596,7 +590,8 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
     const rawP    = rawParams[i];
     const refName = localRef(rawP);
     const schema  = p.schema ?? {};
-    const type    = refName ? schemaLink(refName) : fieldType(typeStr(schema), schema.format);
+    // A named schema by its name; the page has no section to link it to.
+    const type    = refName ? `<span class="schema-name">${esc(refName)}</span>` : fieldType(typeStr(schema), schema.format);
     const [first, ...rest] = (p.description ?? '').trim().split(/\n\s*\n/);
     const more    = rest.length ? `<details class="more"><summary>More</summary>${renderMarkdown(rest.join('\n\n'))}</details>` : '';
     return `<div class="param" data-param="${esc(p.name ?? '')}" data-in="${esc(p.in ?? '')}"${p.required ? ' data-required' : ''}>
@@ -624,7 +619,13 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
 // ── Request body ──────────────────────────────────────────────────────────
 
-function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null) {
+/** The schema a success answers with, by name: the first 2xx response's. Null when it has none. */
+function returnsName(rawResponses = {}) {
+  const [, raw] = Object.entries(rawResponses).find(([status]) => /^2/.test(status)) ?? [];
+  return raw ? (localRef(raw) ?? localResponseRef(raw)) : null;
+}
+
+function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', prefixOf = () => null, returns = null) {
   if (!reqBody) return '';
   const content    = reqBody.content ?? {};
   const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
@@ -640,6 +641,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
   return `<div class="op-section request-body-section">
     <h4 class="op-h">Body
       ${refName ? `<span class="schema-name">${esc(refName)}</span>` : ''}
+      ${refName && returns ? `<span class="returns">→</span> <span class="schema-name">${esc(returns)}</span>` : ''}
       <span class="pill">${esc(type)}</span>
       ${reqBody.required ? `<span class="pill pill-req">required</span>` : ''}
     </h4>
@@ -697,6 +699,12 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     ? `<div style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
     : '';
 
+  // What a success answers with: beside the body's name when there's a
+  // named body (ApplicationCreate → Application), else a line of its own.
+  const returns = returnsName(rawOp?.responses ?? {});
+  const returnsLine = returns && !localRef(rawOp?.requestBody)
+    ? `<div class="op-returns">Returns <span class="schema-name">${esc(returns)}</span></div>` : '';
+
   const rel = relIndex.get(`${method.toLowerCase()}:${path}`);
   const relBadge = (() => {
     if (!rel) return '';
@@ -734,8 +742,9 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     <div class="op-body">
       <div class="op-docs">
         ${descHtml}
+        ${returnsLine}
         ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-        ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}
+        ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf, returns)}
       </div>
       <aside class="op-side">${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, prefixOf)}</aside>
     </div>
@@ -832,6 +841,8 @@ const NAV_STYLE = `
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: ${COLORS.midBlue}; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: ${COLORS.midBlue}; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: ${COLORS.richRed}; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
