@@ -77,7 +77,7 @@ const shellQuote = (text) => `'${String(text).replace(/'/g, `'\\''`)}'`;
  * With `bodyMark`, the body is left as that mark, for the page to put an
  * editable body in its place.
  */
-const snippets = ({ doc, method, operationId, request, bodyMark, local, constants = new Map() }) => {
+const snippets = ({ doc, method, operationId, request, bodyMark, local, constants = new Map(), exampleQuery = null }) => {
   const { path, query, headers, body, type } = request;
   const parsed = (() => { try { return body === undefined ? undefined : JSON.parse(body); } catch { return undefined; } })();
   const namespace = namespaceOf(doc);
@@ -93,6 +93,8 @@ const snippets = ({ doc, method, operationId, request, bodyMark, local, constant
       `const ${name} = ${at}.${constKey(placeholder ? constant.values[0] : value)};`);
     return [name, new Code(name)];
   }));
+  // A search is easier built with the client's helpers than written by hand.
+  if (exampleQuery) lead.push(`// To search, build q with the client's helpers, like:`, `// import { q, search } from './generated';`, `// q(${exampleQuery})`, '');
   const pathArgs = fromConstants('path', path);
   const queryArgs = fromConstants('query', query);
   const args = [];
@@ -102,7 +104,7 @@ const snippets = ({ doc, method, operationId, request, bodyMark, local, constant
   if (body !== undefined) args.push(`body: ${bodyMark ?? (parsed === undefined ? body.trim() : tsValue(parsed, '  '))}`);
   const typescript = `import { ${namespace} } from './generated'; // where you generated the client
 
-${lead.length ? `${lead.join('\n')}\n\n` : ''}const response = await ${namespace}.${operationId}(${args.length ? `{\n${args.map((a) => `  ${a},`).join('\n')}\n}` : ''});`;
+${lead.length ? `${lead.join('\n').replace(/\n+$/, '')}\n\n` : ''}const response = await ${namespace}.${operationId}(${args.length ? `{\n${args.map((a) => `  ${a},`).join('\n')}\n}` : ''});`;
 
   const filled = Object.entries(path).reduce((at, [name, value]) => at.replace(`{${name}}`, /^<.*>$/.test(value) ? value : encodeURIComponent(value)), request.template);
   const search = new URLSearchParams(query).toString();
@@ -176,6 +178,34 @@ const enumConstantOf = (doc, param) => {
   return schema?.type === 'string' && Array.isArray(schema.enum) && schema.enum.length
     ? { name: ref.split('/').pop(), values: schema.enum.map(String) }
     : null;
+};
+
+/**
+ * An example search for an operation that takes `q`, written with the
+ * client's helpers: a field of the listed resource with fixed values, and a
+ * date-time one, so it shows two helpers combined. Placeholders when the
+ * resource has neither. Null when the operation takes no `q`.
+ */
+const exampleSearch = (doc, op, takesQ) => {
+  if (!takesQ) return null;
+  const listed = local(doc, op.operation.responses?.['200']?.content?.['application/json']?.schema);
+  const item = local(doc, propertiesOf(doc, listed).items?.items);
+  const fields = Object.entries(propertiesOf(doc, item)).map(([name, schema]) => [name, local(doc, schema) ?? {}]);
+  const fixed = fields.find(([, schema]) => schema.type === 'string' && Array.isArray(schema.enum) && schema.enum.length);
+  const dated = fields.find(([, schema]) => schema.type === 'string' && schema.format === 'date-time');
+  const parts = [
+    ...(fixed ? [`search.eq('${fixed[0]}', '${fixed[1].enum[0]}')`] : []),
+    ...(dated ? [`search.gte('${dated[0]}', '2024-01-01')`] : []),
+  ];
+  return parts.length ? parts.join(', ') : `search.eq('<field>', '<value>')`;
+};
+
+/** A schema's properties, through `allOf` and same-document `$ref`s. */
+const propertiesOf = (doc, schema, seen = new Set()) => {
+  const node = local(doc, schema);
+  if (!node || typeof node !== 'object' || seen.has(node)) return {};
+  seen.add(node);
+  return Object.assign({}, ...(node.allOf ?? []).map((part) => propertiesOf(doc, part, seen)), node.properties ?? {});
 };
 
 /** A same-document `$ref`, followed; anything else as it is. */
@@ -448,6 +478,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
     form.prepend(el('h4', values.size ? 'Parameters' : 'Request', 'op-h'), callerRow());
     place(form);
+    const searchExample = exampleSearch(op.doc, op, values.has('query:q'));
     const pathNames = [...op.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
     const pathBox = (name) => values.get(`path:${name}`);
     const prefixFor = (name) => op.path.slice(0, op.path.indexOf(`/{${name}}`))
@@ -551,17 +582,17 @@ export async function mountSendPanels({ contracts, version, scope }) {
       const pad = indentOf();
       bodyBox.value = bodyEdit.textContent.split('\n').map((line, i) => (i && line.startsWith(pad) ? line.slice(pad.length) : line)).join('\n');
       try { JSON.parse(bodyBox.value); bodyEdit.classList.remove('invalid'); } catch { bodyEdit.classList.add('invalid'); }
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }), local: localCall, constants });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request: requestFor({ placeholders: true }), local: localCall, constants, exampleQuery: searchExample });
     });
     const refresh = () => {
       const request = requestFor({ placeholders: true });
-      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, local: localCall, constants });
+      written = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, local: localCall, constants, exampleQuery: searchExample });
       const tab = tabOf();
       // The local call runs in the caller's code, not against a server.
       target.textContent = tab === 'local' ? 'runs in your code' : serverOf(op.doc);
       button.textContent = tab === 'local' ? 'Run' : 'Send';
       if (bodyBox) {
-        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK, local: localCall, constants })[tab].split(MARK);
+        const [before, after] = snippets({ doc: op.doc, method: op.method, operationId: op.operation.operationId, request, bodyMark: MARK, local: localCall, constants, exampleQuery: searchExample })[tab].split(MARK);
         if (document.activeElement !== bodyEdit) {
           bodyEdit.textContent = bodyBox.value.split('\n').map((line, i) => (i ? indentOf() + line : line)).join('\n');
         }
