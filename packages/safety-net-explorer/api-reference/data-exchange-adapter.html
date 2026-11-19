@@ -73,6 +73,65 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
+  .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
+  .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
+  .content-item.op-delete { border-color: #AF121D !important; } .op-delete > details > summary { background: #F9C8CB88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #1a1a1a; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: #1a1a1a; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: #AF121D; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: #AF121D; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: #1a1a1a; border-bottom-color: #5650BE; }
+  .resp-tab.resp-ok.on { border-bottom-color: #006152; }
+  .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
+
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -86,6 +145,7 @@
       <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">0 endpoints</span>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">data-exchange-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/refactor/blueprint-core-package/packages/safety-net-contracts/src/domains/data-exchange/data-exchange-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">data-exchange-adapter-openapi.yaml</code></a></div>
+    <div id="try-it-bar"></div>
   </div>
   </div>
   <div class="page-layout">
@@ -101,14 +161,12 @@
       </div>
     </nav>
     <main id="content">
-      
-    <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
+      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
       <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for data exchange adapters — state-implemented components that call external agencies and data sources on behalf of the blueprint.</p><p style="margin:0 0 6px;">This spec documents the result payload schemas adapters must return for each service type. The blueprint emits a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">data-exchange.call.completed</code> event carrying a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ServiceCallResult</code> whose <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">serviceResult</code> field conforms to the schema for the corresponding service type defined here.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Result schemas are stubs. States should define the full
 shape based on the CMS FDSH technical documentation and their adapter
 implementation.</blockquote></div></div>
       
     </div>
-    
     </main>
   </div>
   <script>
@@ -262,5 +320,40 @@ implementation.</blockquote></div></div>
     })();
     
   </script>
+<script>
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+</script>
+<script src="../mock/mock.js" defer></script>
+<script src="../mock/contracts.js" defer></script>
+<script type="module">
+if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
+  BlueprintMock.mountSendPanels({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href });
+}
+</script>
 </body>
 </html>
