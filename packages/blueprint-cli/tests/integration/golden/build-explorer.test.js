@@ -15,8 +15,7 @@
  *   node packages/blueprint-cli/scripts/build-explorer.js \
  *     --spec=packages/blueprint-harness/generated/resolved \
  *     --out=packages/blueprint-harness/generated/explorer \
- *     --config=packages/blueprint-harness/explorer \
- *     --clients=packages/blueprint-harness/generated/clients
+ *     --config=packages/blueprint-harness/explorer
  */
 
 import { describe, it, after } from 'node:test';
@@ -27,7 +26,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-import { resolvedDir, clientsDir, harnessAuthoredDir, explorerDir } from '../../paths.js';
+import { resolvedDir, harnessAuthoredDir, explorerDir } from '../../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../../scripts/build-explorer.js');
@@ -43,7 +42,6 @@ describe('build-explorer', () => {
       `--spec=${resolvedDir}`,
       `--out=${tmpDir}`,
       `--config=${harnessAuthoredDir}`,
-      `--clients=${clientsDir}`,
     ], { stdio: 'inherit' });
 
     function walkAndCompare(dir) {

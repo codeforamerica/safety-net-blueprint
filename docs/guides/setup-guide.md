@@ -140,12 +140,10 @@ The Explorer generates visual and reference documentation from your resolved spe
 
 ```bash
 node packages/explorer/build.js \
-  --resolved=./resolved \
-  --clients=./clients
+  --resolved=./resolved
 ```
 
 - `--resolved` — path to your resolved specs (output of `npm run resolve`). If omitted and the default location is empty, the build resolves automatically using the base contracts.
-- `--clients` — path to your generated TypeScript clients directory. Defaults to `packages/clients`.
 
 Build individual tools with `--only`:
 

@@ -5,6 +5,5 @@ export { build as buildStateMachineDocs }    from './state-machine-docs/build.js
 export { build as buildRulesDocs }           from './rules-docs/build.js';
 export { build as buildEventCatalog }        from './event-catalog.js';
 export { build as buildApiReference }        from './api-reference.js';
-export { build as buildClientReference }     from './client-reference.js';
 export { build as buildTryIt }               from './try-it/build.js';
 export { build as buildHub }                 from './hub.js';
