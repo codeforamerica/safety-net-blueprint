@@ -8,13 +8,12 @@
     "index.html",
     "diagrams/",
     "api-reference/",
-    "client-reference/",
     "data-dictionaries/",
     "event-catalog/",
     "state-machine-docs/"
   ],
   "scripts": {
-    "build": "node ../blueprint-explorer/build.js --content=. --resolved=../generated/contracts --clients=../generated/clients"
+    "build": "node ../blueprint-explorer/build.js --content=. --resolved=../generated/contracts"
   },
   "engines": {
     "node": ">=22.11.0"

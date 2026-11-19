@@ -2,7 +2,7 @@
  * Shared page layout helpers for all explorer build scripts.
  *
  * twoColumnPage() — dark sticky sidebar with search + active nav + scrollable main.
- *   Used by: api-reference domain pages, client-reference domain pages.
+ *   Used by: api-reference domain pages, annotations-explorer type pages.
  *
  * singleColumnPage() — centered single-column layout.
  *   Used by: event-catalog, state-machine-docs, index pages.

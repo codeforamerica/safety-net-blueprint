@@ -122,7 +122,6 @@ function rulesLabel(slug) {
 
 const apiPages     = scanPages(join(contentDir, 'api-reference'));
 const dictPages    = scanPages(join(contentDir, 'data-dictionaries'));
-const clientPages  = scanPages(join(contentDir, 'client-reference'));
 const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
 const rulesPages   = scanPages(join(contentDir, 'rules-docs'), rulesLabel);
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
@@ -500,26 +499,6 @@ const html = `<!DOCTYPE html>
             ${sectionTitle(contentDir, "Data Dictionary", "data-dictionaries/index.html")}
           </div>
           <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>${outputTags(dictPages, `data-dictionaries`, 'dot-green', { href: 'data-dictionaries/index.html', noun: 'data dictionaries' })}
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-accent accent-sand"></div>
-        <div class="card-body">
-          <div class="card-icon icon-sand">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="3" y="2" width="9" height="12" rx="1.5" fill="#b5917a"/>
-              <rect x="5" y="5" width="5" height="1.5" rx="0.75" fill="#f7ede8"/>
-              <rect x="5" y="8" width="4" height="1.5" rx="0.75" fill="#f7ede8"/>
-              <circle cx="14.5" cy="14.5" r="4" fill="#e9ccbe" stroke="#b5917a" stroke-width="1.5"/>
-              <line x1="13" y1="14.5" x2="16" y2="14.5" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="14.5" y1="13" x2="14.5" y2="16" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            ${sectionTitle(contentDir, "Client Reference", "client-reference/index.html")}
-          </div>
-          <p>Generated TypeScript client reference — SDK functions, types, and Zod schemas for each domain, with search helper documentation.</p>${outputTags(clientPages, `client-reference`, 'dot-grey', { href: 'client-reference/index.html', noun: 'clients' })}
         </div>
       </div>
 

@@ -65,7 +65,6 @@ run(join(CLI, 'build-explorer.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
   `--out=${join(HARNESS, 'generated/explorer')}`,
   `--config=${join(HARNESS, 'explorer')}`,
-  `--clients=${join(HARNESS, 'generated/clients')}`,
 ]);
 
 console.log('  [6/8] Generating Postman collection...');

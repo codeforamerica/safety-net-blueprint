@@ -97,7 +97,6 @@ safety-net-blueprint/
 │   │
 │   ├── safety-net-explorer/        # Built Explorer HTML output (committed)
 │   │   ├── api-reference/
-│   │   ├── client-reference/
 │   │   ├── data-dictionaries/
 │   │   └── state-machine-docs/
 │   │

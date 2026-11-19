@@ -15,12 +15,11 @@ npm install --save-dev @codeforamerica/blueprint-explorer
 
 ## What It Does
 
-Generates a set of static HTML reference tools from resolved Blueprint contract artifacts. Point it at your resolved specs and TypeScript clients to produce a browsable documentation hub that can be published as a GitHub Pages site or any static host.
+Generates a set of static HTML reference tools from resolved Blueprint contract artifacts. Point it at your resolved specs to produce a browsable documentation hub that can be published as a GitHub Pages site or any static host.
 
 | Tool | Description |
 |------|-------------|
-| **API Reference** | Endpoint docs derived from resolved OpenAPI specs — parameters, request/response schemas, status codes, and links to related state machine transitions |
-| **Client Reference** | TypeScript SDK reference — types, methods, and usage examples per domain |
+| **API Reference** | Endpoint docs derived from resolved OpenAPI specs — parameters, request/response schemas, status codes, and links to related state machine transitions. Each operation shows its call as curl and through the generated TypeScript client, and sends it to the mock running in the page |
 | **State Machine Docs** | Full state machine reference — states, transitions, guard conditions, actor restrictions, and event subscriptions per resource |
 | **Event Catalog** | Cross-domain event index — every emitted event with its publisher, payload schema, and known subscribers |
 | **Data Dictionaries** | Field-level reference derived from writable schemas — field names, types, policy citations, and data classifications |
@@ -33,11 +32,10 @@ Generates a set of static HTML reference tools from resolved Blueprint contract 
 # Build all tools
 node build.js \
   --content=./packages/safety-net-explorer \
-  --resolved=./resolved \
-  --clients=./clients
+  --resolved=./resolved
 
 # Build a single tool
-node build.js --only=api-reference --resolved=./resolved --clients=./clients
+node build.js --only=api-reference --resolved=./resolved
 node build.js --only=state-machine-docs --resolved=./resolved
 node build.js --only=event-catalog --resolved=./resolved
 node build.js --only=data-dictionaries --resolved=./resolved

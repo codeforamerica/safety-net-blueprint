@@ -42,7 +42,7 @@ const graphFiles = readdirSync(resolvedDir, { recursive: true })
 // Return, never exit. This runs as one call inside build.js, so ending the
 // process here ended the whole explorer build — and with status 0, so every
 // caller recorded a success. Everything ordered after this tool (the event
-// catalog, the API reference, the client reference and the hub itself) went
+// catalog, the API reference and the hub itself) went
 // unwritten for five weeks while preflight stayed green.
 if (!graphFiles.length) {
   console.log(`No *-graph.yaml files found in ${resolvedDir} — skipping rules-docs`);
