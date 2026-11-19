@@ -186,6 +186,24 @@ channels:
                               type: string
                               format: uri-reference
                               description: Link to the related Application resource.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.created
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                id: 33333333-3333-4333-8333-333333333333
+                applicationId: 11111111-1111-4111-8111-111111111111
+                status: pending
+                expedited: false
+                createdAt: "2026-02-01T09:20:00Z"
+                updatedAt: "2026-02-01T09:20:00Z"
   eligibility.determination.updated:
     address: eligibility.determination.updated
     messages:
@@ -338,6 +356,22 @@ channels:
                                 description: Value of the field before the update.
                               after:
                                 description: Value of the field after the update.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.updated event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.updated
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                changes:
+                  - field: applicationId
+                    before: 11111111-1111-4111-8111-111111111111
+                    after: example
   eligibility.determination.complete:
     address: eligibility.determination.complete
     messages:
@@ -458,6 +492,17 @@ channels:
                     type:
                       type: string
                       const: eligibility.determination.complete
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.complete event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.complete
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
   intake.application.submitted:
     address: intake.application.submitted
     messages:
@@ -589,6 +634,20 @@ channels:
                           items:
                             type: string
                           description: The programs the household applied for, which eligibility screens.
+        examples:
+          - name: Example
+            summary: An example intake.application.submitted event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /intake
+              type: intake.application.submitted
+              subject: 11111111-1111-4111-8111-111111111111
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                programsAppliedFor:
+                  - snap
 operations:
   sendEligibilityDeterminationCreated:
     action: send
@@ -773,6 +832,24 @@ operations:
                                 type: string
                                 format: uri-reference
                                 description: Link to the related Application resource.
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.created event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.created
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  id: 33333333-3333-4333-8333-333333333333
+                  applicationId: 11111111-1111-4111-8111-111111111111
+                  status: pending
+                  expedited: false
+                  createdAt: "2026-02-01T09:20:00Z"
+                  updatedAt: "2026-02-01T09:20:00Z"
     messages:
       - name: eligibility.determination.created
         summary: A Determination was created. Carries the record as created.
@@ -951,6 +1028,24 @@ operations:
                               type: string
                               format: uri-reference
                               description: Link to the related Application resource.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.created
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                id: 33333333-3333-4333-8333-333333333333
+                applicationId: 11111111-1111-4111-8111-111111111111
+                status: pending
+                expedited: false
+                createdAt: "2026-02-01T09:20:00Z"
+                updatedAt: "2026-02-01T09:20:00Z"
   sendEligibilityDeterminationUpdated:
     action: send
     channel:
@@ -1105,6 +1200,22 @@ operations:
                                   description: Value of the field before the update.
                                 after:
                                   description: Value of the field after the update.
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.updated event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.updated
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  changes:
+                    - field: applicationId
+                      before: 11111111-1111-4111-8111-111111111111
+                      after: example
     messages:
       - name: eligibility.determination.updated
         summary: A Determination was changed. Carries each changed field, before and after.
@@ -1254,6 +1365,22 @@ operations:
                                 description: Value of the field before the update.
                               after:
                                 description: Value of the field after the update.
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.updated event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.updated
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                changes:
+                  - field: applicationId
+                    before: 11111111-1111-4111-8111-111111111111
+                    after: example
   sendEligibilityDeterminationComplete:
     action: send
     channel:
@@ -1376,6 +1503,17 @@ operations:
                       type:
                         type: string
                         const: eligibility.determination.complete
+          examples:
+            - name: Example
+              summary: An example eligibility.determination.complete event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /eligibility
+                type: eligibility.determination.complete
+                subject: 33333333-3333-4333-8333-333333333333
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
     messages:
       - name: eligibility.determination.complete
         summary: TODO — describe when this event is emitted and who consumes it.
@@ -1493,6 +1631,17 @@ operations:
                     type:
                       type: string
                       const: eligibility.determination.complete
+        examples:
+          - name: Example
+            summary: An example eligibility.determination.complete event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /eligibility
+              type: eligibility.determination.complete
+              subject: 33333333-3333-4333-8333-333333333333
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
   receiveIntakeApplicationSubmitted:
     action: receive
     channel:
@@ -1626,6 +1775,20 @@ operations:
                             items:
                               type: string
                             description: The programs the household applied for, which eligibility screens.
+          examples:
+            - name: Example
+              summary: An example intake.application.submitted event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /intake
+                type: intake.application.submitted
+                subject: 11111111-1111-4111-8111-111111111111
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data:
+                  programsAppliedFor:
+                    - snap
     messages:
       - name: intake.application.submitted
         summary: TODO — describe when this event is emitted and who consumes it.
@@ -1754,6 +1917,20 @@ operations:
                           items:
                             type: string
                           description: The programs the household applied for, which eligibility screens.
+        examples:
+          - name: Example
+            summary: An example intake.application.submitted event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /intake
+              type: intake.application.submitted
+              subject: 11111111-1111-4111-8111-111111111111
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data:
+                programsAppliedFor:
+                  - snap
 components:
   messages:
     EligibilityDeterminationCreated:
@@ -1934,6 +2111,24 @@ components:
                             type: string
                             format: uri-reference
                             description: Link to the related Application resource.
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.created
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: 33333333-3333-4333-8333-333333333333
+              applicationId: 11111111-1111-4111-8111-111111111111
+              status: pending
+              expedited: false
+              createdAt: "2026-02-01T09:20:00Z"
+              updatedAt: "2026-02-01T09:20:00Z"
     EligibilityDeterminationUpdated:
       name: eligibility.determination.updated
       summary: A Determination was changed. Carries each changed field, before and after.
@@ -2083,6 +2278,22 @@ components:
                               description: Value of the field before the update.
                             after:
                               description: Value of the field after the update.
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.updated
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              changes:
+                - field: applicationId
+                  before: 11111111-1111-4111-8111-111111111111
+                  after: example
     EligibilityDeterminationComplete:
       name: eligibility.determination.complete
       summary: TODO — describe when this event is emitted and who consumes it.
@@ -2200,6 +2411,17 @@ components:
                   type:
                     type: string
                     const: eligibility.determination.complete
+      examples:
+        - name: Example
+          summary: An example eligibility.determination.complete event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /eligibility
+            type: eligibility.determination.complete
+            subject: 33333333-3333-4333-8333-333333333333
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
   schemas:
     EligibilityDeterminationCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
