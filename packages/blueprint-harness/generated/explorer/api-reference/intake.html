@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -321,6 +323,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Query parameters</h4>
       <div class="param" data-param="q" data-in="query">
@@ -1872,9 +1875,11 @@
       <div class="op-docs">
         
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationCreate</span>
+      <span class="returns">→</span> <span class="schema-name">Application</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -3585,6 +3590,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">Application</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -5039,6 +5045,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -5055,6 +5062,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationUpdate</span>
+      <span class="returns">→</span> <span class="schema-name">Application</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -6756,6 +6764,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -6890,6 +6899,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">IncomeVerificationList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -7191,6 +7201,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -7207,6 +7218,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">IncomeVerificationCreate</span>
+      <span class="returns">→</span> <span class="schema-name">IncomeVerification</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -7572,6 +7584,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">IncomeVerification</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -7801,6 +7814,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationIncomeList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -8126,6 +8140,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -8142,6 +8157,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationIncomeCreate</span>
+      <span class="returns">→</span> <span class="schema-name">ApplicationIncome</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -8555,6 +8571,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationIncome</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -8808,6 +8825,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -8833,6 +8851,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationIncomeUpdate</span>
+      <span class="returns">→</span> <span class="schema-name">ApplicationIncome</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -9207,6 +9226,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">InterviewList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -9489,6 +9509,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -9505,6 +9526,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">InterviewCreate</span>
+      <span class="returns">→</span> <span class="schema-name">Interview</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -9805,6 +9827,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">Interview</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -10015,6 +10038,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Formally submits a draft application, starting the regulatory processing clock.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Application</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -11559,6 +11583,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Moves a submitted application into active caseworker review.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Application</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -13103,6 +13128,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Closes the application once intake processing is complete.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -13119,6 +13145,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">CloseRequest</span>
+      <span class="returns">→</span> <span class="schema-name">Application</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -14702,6 +14729,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Withdraws the application at the household's request.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Application</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -16246,6 +16274,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Starts the interview and puts its flags to the worker.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Interview</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -16546,6 +16575,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Interview</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -16846,6 +16876,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Finishes the interview and expires its suggestions still open.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Interview</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -17146,6 +17177,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationSummaryResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -17250,6 +17282,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">InterviewFlagsInputsResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -17354,6 +17387,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationReviewResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -17458,6 +17492,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationDetailsResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -19588,6 +19623,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Applies a JSON Patch (RFC 6902) all or nothing. Each change is made through its record's own operation, as the caller, with that operation's permissions, guards and events; if any change is refused, nothing is saved and no events are sent. A change may add a record under an id the caller chooses, and another change in the same patch may name it.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">ApplicationDetailsResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -19615,6 +19651,7 @@
     </div>
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
+      
       
       <span class="pill">application/json-patch+json</span>
       <span class="pill pill-req">required</span>
@@ -21866,6 +21903,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationMemberList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -22531,6 +22569,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -22547,6 +22586,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationMemberCreate</span>
+      <span class="returns">→</span> <span class="schema-name">ApplicationMember</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -23604,6 +23644,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationMember</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -24188,6 +24229,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -24213,6 +24255,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ApplicationMemberUpdate</span>
+      <span class="returns">→</span> <span class="schema-name">ApplicationMember</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -25231,6 +25274,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -25380,6 +25424,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationReviewSectionResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -25523,6 +25568,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ApplicationReviewSectionResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -25672,6 +25718,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ReviewProgressListResponse</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -25686,7 +25733,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -25929,6 +25976,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -25943,7 +25991,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -25954,6 +26002,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ReviewProgressWritable</span>
+      <span class="returns">→</span> <span class="schema-name">ReviewProgress</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -26172,6 +26221,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -26186,7 +26236,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -26197,6 +26247,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ReviewProgressWritable</span>
+      <span class="returns">→</span> <span class="schema-name">ReviewProgress</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -26415,6 +26466,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        <div class="op-returns">Returns <span class="schema-name">ReviewProgress</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -26429,7 +26481,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -26591,6 +26643,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -26605,7 +26658,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -26625,6 +26678,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ReviewProgressWritable</span>
+      <span class="returns">→</span> <span class="schema-name">ReviewProgress</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -26843,6 +26897,7 @@
     <div class="op-body">
       <div class="op-docs">
         
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="applicationId" data-in="path" data-required>
@@ -26857,7 +26912,7 @@
     </div><div class="param" data-param="section" data-in="path" data-required>
       <div class="field-head">
         <code class="fname">section</code>
-        <a href="#schema-ApplicationReviewSections" style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:2px 8px;text-decoration:none;cursor:pointer;"><span class="chip-arrow" style="font-size:9px;opacity:0.7;">&#x25B6;</span> ApplicationReviewSections</a>
+        <span class="schema-name">ApplicationReviewSections</span>
         <span class="freq">required</span>
       </div>
       <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Section name within the sectionView composition.</p></div></div>
@@ -26877,6 +26932,7 @@
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">ReviewProgressWritable</span>
+      <span class="returns">→</span> <span class="schema-name">ReviewProgress</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>

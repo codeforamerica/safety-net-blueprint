@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -193,9 +195,11 @@
       <div class="op-docs">
         
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">InterviewFlagsRequest</span>
+      <span class="returns">→</span> <span class="schema-name">InterviewFlagsResponse</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>

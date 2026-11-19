@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -201,6 +203,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Queryable log of all domain events across the blueprint. Supports REST polling as an integration pattern and provides permanent audit history regardless of whether a message broker is in use.</p><p style="margin:0 0 6px;">Events are returned in ascending time order (oldest first) to support cursor-based polling.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">EventList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Query parameters</h4>
       <div class="param" data-param="q" data-in="query">
@@ -608,9 +611,11 @@
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Publish a CloudEvents 1.0 envelope to the event log. Used by domain producers to record state transitions and significant data mutations.</p></div></div>
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">Event</span>
+      <span class="returns">→</span> <span class="schema-name">Event</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -1058,6 +1063,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Real-time stream of domain events delivered as Server-Sent Events (SSE).</p><p style="margin:0 0 6px;">Connect with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Accept: text/event-stream</code>. Each event is one SSE message: an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id:</code> line with the event's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>, and a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">data:</code> line with the JSON-encoded <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Event</code>.</p><p style="margin:0 0 6px;">To pick up after a dropped connection, reconnect with the last <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code> received in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Last-Event-ID</code>, as a browser's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">EventSource</code> does on its own: the stream first sends every matching event after that one, in the order they happened, then carries on live. An <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code> the log no longer has is answered <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">410 Gone</code>, so a reader never quietly misses events; it reads what it needs afresh and connects again without one.</p><p style="margin:0 0 6px;">The filters are the ones listing events takes.</p><p style="margin:0 0 6px;">A server that can't hold a connection open — behind an API gateway that ends requests early, say — may leave the stream out and answer <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">501</code>. Readers then poll listing events, with the same filters and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">start</code>, which every server serves.</p><p style="margin:0 0 6px;">The stream stays open until the client disconnects. A <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">: heartbeat</code> comment is sent every 30 seconds to prevent proxy timeouts.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Query parameters</h4>
       <div class="param" data-param="type" data-in="query">
@@ -1353,6 +1359,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single domain event by its identifier.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Event</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="eventId" data-in="path" data-required>

@@ -114,6 +114,8 @@
   details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
   details.more[open] > summary { margin-bottom: 4px; }
   .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
   .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
   .pill-req { color: #AF121D; border-color: #f3c2c2; }
   .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
@@ -207,6 +209,7 @@
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a paginated list of suggestions. Search on <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">metadata</code> for the ones proposed during something — <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">q=metadata.intake.interviewId:…</code> — and on <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status</code> for the ones still open.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">SuggestionList</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Query parameters</h4>
       <div class="param" data-param="q" data-in="query">
@@ -1013,9 +1016,11 @@ fingerprint. Ids of existing records are kept.
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Propose a suggestion. It begins in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code>.</p><p style="margin:0 0 6px;">An operation suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its operation does not exist, or its call doesn't fit the operation: a parameter the operation doesn't declare, a required parameter left out, or a parameter value or request body the operation's schemas refuse. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code> names the field, as <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">call.requestBody.payload.&lt;field&gt;</code> for the body. A call leaves out an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Idempotency-Key</code> header its operation requires: the accept supplies one, the suggestion's id.</p><p style="margin:0 0 6px;">A call whose body is a JSON Patch (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">contentType: application/json-patch+json</code>) is applied, in memory, to what its operation would change as it is now; nothing is saved. It is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">replace</code>, or a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">remove</code> of a field, doesn't come right after a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">test</code> of the same path with the value the proposer read, or when a change names a record that neither exists nor is created earlier in the same patch, or when an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">evidence</code> entry's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">path</code> is no change's path. Each record the patch creates, changes or removes becomes a call to that record's own operation, and each call is checked as an operation suggestion's call is, refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when it doesn't fit. It is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code> when a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">test</code> fails: the data changed after the proposer read it. The operations themselves aren't run until the suggestion is accepted.</p><p style="margin:0 0 6px;">An informing suggestion is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">422</code> when its category does not exist, when it has neither a category nor a message, or when its <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">path</code> isn't a JSON Pointer.</p><p style="margin:0 0 6px;">One whose fingerprint matches a suggestion still open (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">proposed</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">refused</code>) or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">dismissed</code> is refused with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">409</code>, naming that suggestion in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details</code>. One matching an <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">accepted</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">expired</code> suggestion may be proposed again.</p></div></div>
         
+        
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">SuggestionCreate</span>
+      <span class="returns">→</span> <span class="schema-name">Suggestion</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -2177,6 +2182,7 @@ fingerprint. Ids of existing records are kept.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single suggestion by identifier.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Suggestion</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="suggestionId" data-in="path" data-required>
@@ -2904,6 +2910,7 @@ fingerprint. Ids of existing records are kept.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.</p><p style="margin:0 0 6px;">It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">details[0]</code> is this record as it now is.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="suggestionId" data-in="path" data-required>
@@ -2920,6 +2927,7 @@ fingerprint. Ids of existing records are kept.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">AcceptRequest</span>
+      <span class="returns">→</span> <span class="schema-name">Suggestion</span>
       <span class="pill">application/json</span>
       
     </h4>
@@ -3863,6 +3871,7 @@ fingerprint. Ids of existing records are kept.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Say no, with a reason.</p></div></div>
+        
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="suggestionId" data-in="path" data-required>
@@ -3879,6 +3888,7 @@ fingerprint. Ids of existing records are kept.
         <div class="op-section request-body-section">
     <h4 class="op-h">Body
       <span class="schema-name">DismissRequest</span>
+      <span class="returns">→</span> <span class="schema-name">Suggestion</span>
       <span class="pill">application/json</span>
       <span class="pill pill-req">required</span>
     </h4>
@@ -4726,6 +4736,7 @@ fingerprint. Ids of existing records are kept.
     <div class="op-body">
       <div class="op-docs">
         <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Close a suggestion that no longer applies, before anyone decided.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">Suggestion</span></div>
         <div class="op-section params-section">
       <h4 class="op-h">Path parameters</h4>
       <div class="param" data-param="suggestionId" data-in="path" data-required>
