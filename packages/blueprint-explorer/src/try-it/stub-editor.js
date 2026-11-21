@@ -211,9 +211,9 @@ function formShell({ stub, opensAsJson, fields, built, ready, save, cancel }) {
 // The envelope's own attributes, the same on every event or never repeated: not worth matching on.
 const ENVELOPE = new Set(['specversion', 'id', 'type', 'time', 'datacontenttype', 'traceparent', 'partitionkey', 'authid', 'authtype', 'causationid']);
 
-/** Whether an AsyncAPI document describes a WebSocket connection rather than events. */
-const overWebSocket = (content) => Object.values(content?.servers ?? {}).some((server) => /^wss?$/.test(server?.protocol ?? ''))
-  || Object.values(content?.channels ?? {}).some((channel) => channel?.bindings?.ws);
+/** Whether an AsyncAPI document describes events, which no protocol of its own carries, or an API such as a WebSocket's. */
+const ofEvents = (doc) => doc.type === 'asyncapi' && !doc.protocols.length;
+const overWebSocket = (doc) => doc.type === 'asyncapi' && doc.protocols.includes('ws');
 
 /**
  * What the contracts offer the three kinds of stub.
@@ -226,7 +226,7 @@ const overWebSocket = (content) => Object.values(content?.servers ?? {}).some((s
 export function stubChoices(docs, records = {}) {
   // Each event type, with its example.
   const events = new Map();
-  for (const doc of docs.filter((d) => d.type === 'asyncapi' && !overWebSocket(d.content))) {
+  for (const doc of docs.filter(ofEvents)) {
     for (const message of Object.values(doc.content?.components?.messages ?? {})) {
       if (message?.name && !events.has(message.name)) {
         events.set(message.name, { summary: message.summary ?? '', example: message.examples?.[0]?.payload ?? null });
@@ -567,7 +567,7 @@ const skeleton = (schema, content, depth = 0) => {
 /** Each WebSocket channel, with the messages the mock receives and sends on it. */
 function channelsIn(docs) {
   const channels = [];
-  for (const doc of docs.filter((d) => d.type === 'asyncapi' && overWebSocket(d.content))) {
+  for (const doc of docs.filter(overWebSocket)) {
     const content = doc.content ?? {};
     const file = String(doc.relativePath ?? '').split('/').pop();
     for (const [key, channel] of Object.entries(content.channels ?? {})) {

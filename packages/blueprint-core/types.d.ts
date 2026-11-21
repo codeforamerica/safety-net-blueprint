@@ -104,6 +104,14 @@ export interface Doc {
    * name. Null for every other type.
    */
   api: string | null;
+  /**
+   * The protocols the document's API is reached over, each once, sorted:
+   * `['http']` for OpenAPI, and for AsyncAPI what its servers declare, with
+   * `wss` read as `ws` and `https` as `http`. Empty for an events AsyncAPI
+   * document, which declares no servers because the event bus carries its
+   * messages, and for every other type.
+   */
+  protocols: string[];
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;

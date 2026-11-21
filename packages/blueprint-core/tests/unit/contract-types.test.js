@@ -27,6 +27,7 @@ import {
   isAuthored,
   isDeprecated,
   apiNameOf,
+  protocolsOf,
 } from '../../src/contract-types.js';
 import { toDoc } from '../../src/doc.js';
 
@@ -284,5 +285,28 @@ describe('apiNameOf', () => {
     const machine = toDoc({ relativePath: 'domains/intake/intake-state-machine.yaml', type: 'state-machine', content: { domain: 'intake' } });
     assert.equal(api.api, 'intake');
     assert.equal(machine.api, null);
+  });
+});
+
+describe('protocolsOf', () => {
+  test('an OpenAPI document is reached over http', () => {
+    assert.deepEqual(protocolsOf('openapi', {}), ['http']);
+  });
+  test('an AsyncAPI document over what its servers declare, a secure variant read as the plain one', () => {
+    const relay = { servers: { relay: { host: '{relayHost}', protocol: 'wss' }, local: { host: 'localhost:1080', protocol: 'ws' } } };
+    assert.deepEqual(protocolsOf('asyncapi', relay), ['ws']);
+  });
+  test('an events AsyncAPI document, with no servers, over none: the event bus carries it', () => {
+    assert.deepEqual(protocolsOf('asyncapi', { channels: {} }), []);
+  });
+  test('a document whose servers speak more than one protocol lists each', () => {
+    const mixed = { servers: { socket: { protocol: 'wss' }, broker: { protocol: 'kafka' }, local: { protocol: 'ws' } } };
+    assert.deepEqual(protocolsOf('asyncapi', mixed), ['kafka', 'ws']);
+  });
+  test('a Doc carries them as protocols, and every other type has none', () => {
+    const machine = toDoc({ relativePath: 'domains/intake/intake-state-machine.yaml', type: 'state-machine', content: { domain: 'intake' } });
+    const api = toDoc({ relativePath: 'domains/intake/intake-openapi.yaml', type: 'openapi', content: { info: { 'x-domain': 'intake' } } });
+    assert.deepEqual(api.protocols, ['http']);
+    assert.deepEqual(machine.protocols, []);
   });
 });

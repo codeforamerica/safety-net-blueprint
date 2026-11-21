@@ -349,3 +349,31 @@ export function apiNameOf(relativePath) {
   const file = (relativePath ?? '').split('/').pop();
   return file.replace(/-events-asyncapi\.yaml$|-openapi\.yaml$|-asyncapi\.yaml$/, '');
 }
+
+/**
+ * The protocols a document's API is reached over, each once, sorted: `http`
+ * for an OpenAPI document, and for an AsyncAPI document what its servers
+ * declare in `protocol` (`ws`, `kafka`, `amqp`). A secure variant is the same
+ * protocol over TLS, so `wss` is `ws` and `https` is `http`; this folding is
+ * ours, not AsyncAPI's.
+ *
+ * An events AsyncAPI document declares no servers, so it has none: the
+ * deployment's event bus carries its messages. That is what tells an event
+ * document from one an API is reached over, such as the transcript relay's
+ * WebSocket (`['ws']`). A document whose servers speak more than one protocol
+ * lists each; AsyncAPI lets each channel name the servers it uses.
+ *
+ * The one place that works it out, read as `doc.protocols` everywhere else.
+ *
+ * @param {string} type - From `detectType`
+ * @param {*} content - The parsed document
+ * @returns {string[]}
+ */
+export function protocolsOf(type, content) {
+  if (type === 'openapi') return ['http'];
+  if (type !== 'asyncapi') return [];
+  const declared = Object.values(content?.servers ?? {})
+    .map((server) => String(server?.protocol ?? '').toLowerCase().replace(/^(ws|http)s$/, '$1'))
+    .filter(Boolean);
+  return [...new Set(declared)].sort();
+}
