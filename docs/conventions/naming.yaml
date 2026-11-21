@@ -113,8 +113,9 @@ naming:
   values: snake_case
 
   # CloudEvents types: {domain}.{resource}.{event}
-  # Full format: org.codeforamerica.safety-net-blueprint.{domain}.{resource}.{event}
-  # Example: org.codeforamerica.safety-net-blueprint.data-exchange.external_service_call.created
+  # Example: data-exchange.external_service_call.created
+  # A state that sets x-event-type-prefix gets its namespace in front, from
+  # resolve: gov.ca.dss.data-exchange.external_service_call.created.
   # The domain as it is declared (kebab-case, the same as everywhere else); the
   # resource as its schema is named, in snake_case (ApplicationMember →
   # application_member); the event in snake_case (created, paused, approval_needed).

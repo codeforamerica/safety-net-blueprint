@@ -7,7 +7,6 @@ All available npm scripts in the Safety Net Blueprint toolkit.
 | Command | Description |
 |---------|-------------|
 | `npm start` | Start mock server |
-| `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate resolved specs (all layers) |
 | `npm run resolve` | Run the overlay resolve pipeline |
 | `npm run mock:reset` | Reset database to example data |
@@ -117,17 +116,6 @@ npm start
 
 Default: http://localhost:1080
 
-### `npm run mock:start:all`
-
-Starts both the mock server and Swagger UI.
-
-```bash
-npm run mock:start:all
-```
-
-- Mock server: http://localhost:1080
-- Swagger UI: http://localhost:3000
-
 ### `npm run mock:start`
 
 Starts only the mock server.
@@ -163,16 +151,6 @@ Clears all data and reseeds from examples.
 ```bash
 npm run mock:reset
 ```
-
-### `npm run mock:swagger`
-
-Starts only the Swagger UI server.
-
-```bash
-npm run mock:swagger
-```
-
-Default: http://localhost:3000
 
 ## Test Commands
 

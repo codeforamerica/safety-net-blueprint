@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build the bundle the Try it out page runs: the mock server and what the
+ * Build the bundle the explorer's pages run: the mock server and what a
  * page reads the contract set with, in one classic script.
  *
  * A classic script defining the `BlueprintMock` global, not a module, because

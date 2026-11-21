@@ -1,7 +1,6 @@
 # The demo page's walk-through: a tour of the framework's core features —
-# resources, compositions, state machines, rules, the event log, and the mock's
-# own controls — with one SNAP application as the example that ties them
-# together. Each step's first line is its title in the page, and its bullets
+# resources, compositions, state machines, rules and the event log — with one
+# SNAP application as the example that ties them together. Each step's first line is its title in the page, and its bullets
 # are what the page shows under What to notice; each workflow's description
 # opens its section.
 arazzo: 1.1.0
@@ -444,7 +443,7 @@ workflows:
           Submit the application
 
           - The contract declares this move as `draft → submitted`. From any other state the server refuses it — not from a check somebody wrote for this endpoint, but by reading that line.
-          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `platform.timer.requested`. The stand-in the developer registered answers it immediately, so `intake.review_reminder` is already in the event log rather than three days away.
+          - This action also calls `requestTimer` with a `fireAfter` of 72 hours, which emits `platform.timer.requested`. The stand-in the developer registered answers it immediately, so `intake.application.review_reminder` is already in the event log rather than three days away.
           - `submittedAt` is annotated with `snap-processing-clock`, which the shared policy registry resolves to 7 CFR § 273.2(g). SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
           - `200` and `400`, `404`, `409`, `500` are all declared on this operation, and the server worked out which one applied and returned it. A `409` is declared here because the contract anticipates this call being made out of turn.
         operationId: $sourceDescriptions.intake.submitApplication
@@ -636,28 +635,3 @@ workflows:
             value: '5'
         successCriteria:
           - condition: $statusCode == 200
-
-  - workflowId: theMock
-    summary: The mock server's own controls
-    description: |
-      - The mock server has a few controls of its own, outside the contracts, for putting its records into a known state.
-    steps:
-      - stepId: emptyTheStore
-        x-actors: [developer]
-        description: |
-          Empty the store
-
-          - No contract declares this endpoint. It belongs to the mock server, not to the system it is running.
-          - It clears records, never contracts — afterwards the API is exactly the API it was.
-        operationId: $sourceDescriptions.mock.resetMock
-        successCriteria:
-          - condition: $statusCode == 204
-      - stepId: putTheDataBack
-        x-actors: [developer]
-        description: |
-          Put the data back
-
-          - The records come from the contract set's own `*-mock-data.yaml`, and are checked against the same schemas as anything a client app sends.
-        operationId: $sourceDescriptions.mock.reseedMock
-        successCriteria:
-          - condition: $statusCode == 204

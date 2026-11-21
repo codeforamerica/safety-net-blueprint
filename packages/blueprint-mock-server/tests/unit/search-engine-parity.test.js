@@ -187,6 +187,31 @@ describe('parity — traceid param', () => {
   parity('absent traceparent — excluded', { traceid: 'abc123abc123abc1' });
 });
 
+describe('parity — start and end, an event log\'s time bounds', () => {
+  const EVENTS = [
+    { id: 'e1', type: 'a.b.c', time: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00Z' },
+    { id: 'e2', type: 'a.b.c', time: '2024-01-02T00:00:00.000Z', createdAt: '2024-01-02T00:00:00Z' },
+    { id: 'e3', type: 'a.b.c', time: '2024-01-03T00:00:00.000Z', createdAt: '2024-01-03T00:00:00Z' },
+  ];
+  const DECLARED = ['type', 'start', 'end'];
+  const both = (label, queryParams, expected, searchableFields = DECLARED) => test(label, () => {
+    const { sqlite, memory, cleanup } = makeStores(EVENTS);
+    try {
+      for (const store of [sqlite, memory]) {
+        const result = executeSearch(store, COLLECTION, queryParams, searchableFields, { limit: 100 });
+        assert.deepStrictEqual(sortedIds(result.items), expected);
+      }
+      assert.deepStrictEqual(sortedIds(filterItems(EVENTS, queryParams, searchableFields)), expected);
+    } finally {
+      cleanup();
+    }
+  });
+  both('start keeps events at or after it', { start: '2024-01-02T00:00:00.000Z' }, ['e2', 'e3']);
+  both('end keeps events at or before it', { end: '2024-01-02T00:00:00.000Z' }, ['e1', 'e2']);
+  both('both bound a window', { start: '2024-01-02T00:00:00.000Z', end: '2024-01-02T00:00:00.000Z' }, ['e2']);
+  both('undeclared, start is a field like any other', { start: '2024-01-02T00:00:00.000Z' }, [], []);
+});
+
 // ---------------------------------------------------------------------------
 // Legacy search= parameter
 //

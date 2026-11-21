@@ -48,7 +48,7 @@ const CONTRACTS = {
       '/applications/{id}/submit': {
         post: {
           operationId: 'submitApplication',
-          'x-relationship': { type: 'state-machine-action', domain: 'intake', id: 'submit' },
+          'x-relationship': { type: 'state-machine-action', domain: 'intake', resource: 'Application', id: 'submit' },
           responses: { 200: {} },
         },
       },
@@ -210,10 +210,8 @@ describe('generate', () => {
 describe('extract', () => {
   test('finds the endpoint a state machine action generated', () => {
     const index = extract(docs, 'relationships');
-    assert.deepEqual(index.get('state-machine-action:intake:submit'), {
-      path: '/applications/{id}/submit',
-      method: 'post',
-    });
+    const { path, method } = index.get('state-machine-action:intake:Application:submit');
+    assert.deepEqual({ path, method }, { path: '/applications/{id}/submit', method: 'post' });
   });
 });
 

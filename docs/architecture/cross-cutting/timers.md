@@ -53,7 +53,7 @@ The callback payload schema is `TimerCallbackEvent` in `schemas/events-schema.ya
 
 ## Declaring timers in state machines
 
-Domain state machine files declare their timer types in a `timers:` section at the machine level. Each entry has a short identifier — the full event name is `{domain}.{id}` by convention. This makes each timer type a named domain event declared alongside the state machine that uses it.
+Domain state machine files declare their timer types in a `timers:` section at the machine level. Each entry has a short identifier — the full event name is `{domain}.{resource}.{id}`, like every other event the resource sends. This makes each timer type a named domain event declared alongside the state machine that uses it.
 
 ```yaml
 timers:
@@ -67,7 +67,7 @@ The state machine subscribes to each timer event by its full name:
 
 ```yaml
 on:
-  - type: intake.snap_deadline
+  - type: intake.application.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, requestBody: {payload: {reason: snap_deadline_exceeded}}}
 ```
@@ -81,7 +81,7 @@ A step schedules a timer by emitting `platform.timer.requested`, and cancels one
       timerId: "intake.snap_deadline.{$object.id}"
       fireAfter: P30D
       calendarType: calendar
-      callback: {event: intake.snap_deadline, data: {}}
+      callback: {event: intake.application.snap_deadline, data: {}}
 - emit:
     type: platform.timer.cancelled
     data: {timerId: "intake.snap_deadline.{$object.id}"}
@@ -144,7 +144,7 @@ The safety-net contracts also offer `requestTimer` and `cancelTimer` procedures 
 - AWS EventBridge Scheduler, Google Cloud Tasks, Azure Durable Functions, Quartz/Spring, and Temporal all implement pure pass-through for timer callbacks. The caller specifies exactly what to fire or deliver when the timer expires; the scheduler relays it unchanged. No major platform derives a type field from the timer ID or adds metadata beyond what the caller requested.
 - A single generic event with a `timerType` field requires every machine that handles timers to implement a dispatch step. Named events eliminate this boilerplate — each event subscription handles exactly one timer type, the same way every other event subscription works.
 - Named events make the catalog explicit: each timer type is a declared event, not an unnamed field value. This is consistent with how all other machine event subscriptions work and makes state machine contracts self-documenting.
-- When timer types are separate named events, each domain declares its own timers in the state machine `timers:` section. The event name follows the convention `{domain}.{id}`, avoiding collisions across domains.
+- When timer types are separate named events, each domain declares its own timers in the state machine `timers:` section. The event name follows the convention `{domain}.{resource}.{id}`, avoiding collisions across domains and resources.
 
 **Options:**
 - **(A)** Single generic event (`scheduler.timer.fired`) with a `timerType` field — fewer catalog entries, but requires dispatch logic in every machine and a non-standard field added by the timer service.

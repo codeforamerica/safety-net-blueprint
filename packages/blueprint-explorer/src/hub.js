@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from './lib/config.js';
 import { esc } from './lib/html.js';
 import { build as buildAuthored } from './authored.js';
+import { addControlPanel } from './lib/control-panel.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -118,25 +119,35 @@ function rulesLabel(slug) {
   return rulesetName.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
 }
 
+// An annotation registry's page is titled with its name as the contracts
+// write it, `probeQuestions`; its slug is lowercased, `probequestions`.
+function titleLabel(dir) {
+  return (slug) => {
+    const title = readFileSync(join(dir, `${slug}.html`), 'utf8').match(/<title>([^<]*?)\s+—/)?.[1];
+    return title ? defaultLabel(title.replace(/([a-z])([A-Z])/g, '$1 $2')) : defaultLabel(slug);
+  };
+}
+
 // ── Discover pages ────────────────────────────────────────────────────────────
 
 const apiPages     = scanPages(join(contentDir, 'api-reference'));
 const dictPages    = scanPages(join(contentDir, 'data-dictionaries'));
 const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
 const rulesPages   = scanPages(join(contentDir, 'rules-docs'), rulesLabel);
+const eventPages   = scanPages(join(contentDir, 'event-catalog'));
+const annotationPages = scanPages(join(contentDir, 'annotations-explorer'), titleLabel(join(contentDir, 'annotations-explorer')));
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
   .filter(p => p.slug.startsWith('domain_'));
 
-// The scenarios the Try it out page offers, the one it opens with first, each
-// opened with #tour=<path>; then exploring by hand.
-const toursFile = join(contentDir, 'try-it', 'tours.json');
+// The scenarios the Scenarios page offers, the one it opens with first, each
+// opened with #tour=<path>.
+const toursFile = join(contentDir, 'scenarios', 'tours.json');
 const tours = existsSync(toursFile) ? JSON.parse(readFileSync(toursFile, 'utf8')) : null;
-const tryItTags = tours ? tagList(
+const scenarioTags = tours ? tagList(
   [...tours].sort((x, y) => (y.path === hubConfig.first_tour) - (x.path === hubConfig.first_tour))
-    .map(({ path, title }) => ({ href: `try-it/index.html#tour=${encodeURIComponent(path)}`, label: esc(title) })),
+    .map(({ path, title }) => ({ href: `scenarios/index.html#tour=${encodeURIComponent(path)}`, label: esc(title) })),
   'dot-blue',
-  { href: 'try-it/index.html', noun: 'scenarios' },
-  [tag('try-it/index.html#explore', 'Let me explore', 'dot-grey')],
+  { href: 'scenarios/index.html', noun: 'scenarios' },
 ) : '';
 
 // ── Featured links HTML ───────────────────────────────────────────────────────
@@ -450,7 +461,7 @@ const html = `<!DOCTYPE html>
 
     <div class="card-grid">
 
-      <div class="card">
+      ${tours?.length ? `<div class="card">
         <div class="card-accent accent-blue"></div>
         <div class="card-body">
           <div class="card-icon icon-blue">
@@ -460,13 +471,13 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            ${sectionTitle(contentDir, "Try it out", "try-it/index.html")}
+            ${sectionTitle(contentDir, "Scenarios", "scenarios/index.html")}
           </div>
-          <p>The mock server running in your browser, built from the contracts. Play the scenarios a step at a time, or send any operation a request.</p>${tryItTags}
+          <p>Play the scenarios a step at a time. Each step runs live against the mock server in your browser, built from the contracts.</p>${scenarioTags}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${apiPages.length ? `<div class="card">
         <div class="card-accent accent-green"></div>
         <div class="card-body">
           <div class="card-icon icon-green">
@@ -482,9 +493,9 @@ const html = `<!DOCTYPE html>
           </div>
           <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>${outputTags(apiPages, `api-reference`, 'dot-green', { href: 'api-reference/index.html', noun: 'APIs' })}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${dictPages.length ? `<div class="card">
         <div class="card-accent accent-green"></div>
         <div class="card-body">
           <div class="card-icon icon-green">
@@ -500,9 +511,9 @@ const html = `<!DOCTYPE html>
           </div>
           <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>${outputTags(dictPages, `data-dictionaries`, 'dot-green', { href: 'data-dictionaries/index.html', noun: 'data dictionaries' })}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${smPages.length ? `<div class="card">
         <div class="card-accent accent-blue"></div>
         <div class="card-body">
           <div class="card-icon icon-blue">
@@ -519,9 +530,9 @@ const html = `<!DOCTYPE html>
           </div>
           <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>${outputTags(smPages, `state-machine-docs`, 'dot-blue', { href: 'state-machine-docs/index.html', noun: 'state machines' })}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${rulesPages.length ? `<div class="card">
         <div class="card-accent accent-blue"></div>
         <div class="card-body">
           <div class="card-icon icon-blue">
@@ -542,9 +553,9 @@ const html = `<!DOCTYPE html>
           </div>
           <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>${outputTags(rulesPages, `rules-docs`, 'dot-blue', { href: 'rules-docs/index.html', noun: 'rulesets' })}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${eventPages.length ? `<div class="card">
         <div class="card-accent accent-blue"></div>
         <div class="card-body">
           <div class="card-icon icon-blue">
@@ -564,11 +575,11 @@ const html = `<!DOCTYPE html>
           <div class="card-header-row">
             ${sectionTitle(contentDir, "Event Catalog", "event-catalog/index.html")}
           </div>
-          <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
+          <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>${outputTags(eventPages, `event-catalog`, 'dot-blue', { href: 'event-catalog/index.html', noun: 'domains' })}
         </div>
-      </div>
+      </div>` : ''}
 
-      <div class="card">
+      ${annotationPages.length ? `<div class="card">
         <div class="card-accent accent-sand"></div>
         <div class="card-body">
           <div class="card-icon icon-sand">
@@ -585,12 +596,12 @@ const html = `<!DOCTYPE html>
           <div class="card-header-row">
             ${sectionTitle(contentDir, "Annotation Registry", "annotations-explorer/index.html")}
           </div>
-          <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
+          <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>${outputTags(annotationPages, `annotations-explorer`, 'dot-yellow', { href: 'annotations-explorer/index.html', noun: 'registries' })}
         </div>
-      </div>
+      </div>` : ''}
 
 
-      <div class="card">
+      ${contextPages.length ? `<div class="card">
         <div class="card-accent accent-blue"></div>
         <div class="card-body">
           <div class="card-icon icon-blue">
@@ -611,7 +622,7 @@ const html = `<!DOCTYPE html>
           </div>
           <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>${outputTags(contextPages, `context-map`, 'dot-blue', { href: 'context-map/domains.html', noun: 'domains' })}
         </div>
-      </div>
+      </div>` : ''}
 
     </div>
 
@@ -628,6 +639,9 @@ const html = `<!DOCTYPE html>
 
 writeFileSync(join(contentDir, 'index.html'), html, 'utf8');
 console.log(`  wrote ${join(contentDir, 'index.html')}`);
+
+// Built last, the hub puts the control panel's button on every page, its own too.
+addControlPanel(contentDir);
 } // end build()
 
 // CLI entry point

@@ -46,7 +46,7 @@ const machine = toDoc({
       emits: [{ id: 'transferred', description: 'The case moved county.', schema: { type: 'object', required: ['county'] } }],
       timers: [{ id: 'review_due', description: 'Reviews a case nobody has looked at.' }],
       on: [
-        { type: 'case-management.review_due', steps: [] },
+        { type: 'case-management.case.review_due', steps: [] },
         { type: 'case-management.case.created', steps: [] },
       ],
     }],
@@ -98,14 +98,14 @@ describe('the generated event catalog', () => {
   test('has each resource\'s writes and its machine\'s emits, named domain.resource.event', () => {
     assert.deepEqual(Object.keys(catalog.content.channels), [
       'case-management.case.created', 'case-management.case.updated', 'case-management.case.deleted',
-      'case-management.case.transferred', 'case-management.review_due',
+      'case-management.case.transferred', 'case-management.case.review_due',
     ]);
   });
 
   test('has a channel for each timer its machine declares, carrying the timer service\'s callback', () => {
-    const data = catalog.content.components.schemas.CaseManagementReviewDueEvent.schema.allOf[1].properties.data;
+    const data = catalog.content.components.schemas.CaseManagementCaseReviewDueEvent.schema.allOf[1].properties.data;
     assert.deepEqual(data, { $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/TimerCallbackEvent' });
-    assert.match(catalog.content.components.messages.CaseManagementReviewDue.summary, /^Reviews a case nobody has looked at\. Sent by the timer service/);
+    assert.match(catalog.content.components.messages.CaseManagementCaseReviewDue.summary, /^Reviews a case nobody has looked at\. Published by the timer service/);
   });
 
   test('carries the resource as a created event\'s data, and the declared schema as an emitted one\'s', () => {
@@ -172,7 +172,7 @@ describe('the example on each generated event', () => {
   });
 
   test('gives a timer\'s callback the timer id the timer service adds, as domain.timerType.objectId', () => {
-    assert.deepEqual(example('CaseManagementReviewDue').data, { timerId: 'case-management.review_due.case-1' });
+    assert.deepEqual(example('CaseManagementCaseReviewDue').data, { timerId: 'case-management.review_due.case-1' });
   });
 });
 
@@ -190,11 +190,11 @@ describe('the operations in a generated event catalog', () => {
   });
 
   test('has no send operation for a timer, which the timer service sends', () => {
-    assert.ok(!('sendCaseManagementReviewDue' in cases.content.operations));
+    assert.ok(!('sendCaseManagementCaseReviewDue' in cases.content.operations));
   });
 
   test('has a receive operation for each event its machines react to, on its own channel when the API sends it', () => {
-    assert.equal(cases.content.operations.receiveCaseManagementReviewDue.action, 'receive');
+    assert.equal(cases.content.operations.receiveCaseManagementCaseReviewDue.action, 'receive');
     assert.deepEqual(cases.content.operations.receiveCaseManagementCaseCreated.channel, { $ref: '#/channels/case-management.case.created' });
   });
 

@@ -99,9 +99,9 @@ if (doBuild('api-reference')) {
   await buildApiReference({ contentDir, resolvedDir });
 }
 
-// ── Try it out ────────────────────────────────────────────────────────────────
+// ── Scenarios ─────────────────────────────────────────────────────────────────
 
-if (doBuild('try-it')) {
+if (doBuild('scenarios')) {
   buildTryIt({ contentDir, resolvedDir });
 }
 

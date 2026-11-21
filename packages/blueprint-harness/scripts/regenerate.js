@@ -59,7 +59,7 @@ console.log('  [5/8] Building explorer...');
 // the engine as it was at the last install. generate-artifacts.sh does the
 // same before building the safety-net explorer.
 run(resolve(__dirname, '../../blueprint-rules-engine/scripts/build-browser.js'), []);
-// The same for the mock server the Try it out page runs.
+// The same for the mock server the explorer's pages run.
 run(resolve(__dirname, '../../blueprint-explorer/scripts/build-browser.js'), []);
 run(join(CLI, 'build-explorer.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,

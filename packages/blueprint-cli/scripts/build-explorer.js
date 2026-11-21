@@ -19,7 +19,7 @@
  *   --authored  Path to authored HTML pages source directory. Defaults to the
  *               blueprint-explorer package's built-in authored/ directory.
  *   --only      Build one tool only: context-map, data-dictionaries,
- *               state-machine-docs, rules-docs, event-catalog, api-reference, try-it
+ *               state-machine-docs, rules-docs, event-catalog, api-reference, scenarios
  */
 
 import { cpSync, existsSync, mkdirSync } from 'fs';
@@ -74,7 +74,7 @@ if (doBuild('state-machine-docs')) buildStateMachineDocs({ contentDir, resolvedD
 if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
 if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
 if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
-if (doBuild('try-it'))            buildTryIt({ contentDir, resolvedDir });
+if (doBuild('scenarios'))         buildTryIt({ contentDir, resolvedDir });
 
 // Hub is always rebuilt last so it can scan all tool output directories
 buildHub({ contentDir, authoredDir });

@@ -10,7 +10,10 @@
  *   the specified response event when the stub matches.
  * - Timer: `{ on: "platform.timer.requested", match? }` — fires the callback
  *   event embedded in the triggering event's `data.callback` envelope. `response`
- *   is not needed; the callback type and data come from the event itself.
+ *   is not needed; the callback type and data come from the event itself. A
+ *   timer already requested and still waiting when the stub is registered is
+ *   fired then (fireWaitingTimer), so a stub stands in for the timer service
+ *   whether it comes before the request or after.
  *
  * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs/events.
  * Each mock has its own (instance.js), so a stub registered on one never
@@ -19,7 +22,7 @@
  * See docs/guides/mock-server.md for usage patterns.
  */
 
-import { emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope, EVENTS_COLLECTION } from './emit-event.js';
 import { resolveTimeTokens } from './time-tokens.js';
 import { resolveDotPath, toCamelCase } from './collection-utils.js';
 import { assertValid, dotted } from './mock-schemas.js';
@@ -314,6 +317,43 @@ function dispatchStubResponse(stub, envelope, instance) {
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
   }, instance);
   console.log(`[stub] matched ${stub.id} → fired ${fullType}`);
+}
+
+const TIMER_CANCELLED = 'platform.timer.cancelled';
+
+/**
+ * Fire a timer that is already waiting, for a timer stub just registered: the
+ * oldest request in the log that the stub matches and that hasn't fired or
+ * been cancelled since. A timer asked for again under the same `timerId`
+ * waits as its latest request. The stub is used up, as when it answers a
+ * request as it happens; with no timer waiting, it stays to answer the next.
+ *
+ * @param {object} stub - As registered, with its id
+ * @param {object} instance - The mock (instance.js): its log, stubs and bus
+ * @returns {boolean} Whether a waiting timer was fired
+ */
+export function fireWaitingTimer(stub, instance) {
+  if (stub.on !== TIMER_REQUESTED) return false;
+  const logged = instance.store.findAll(EVENTS_COLLECTION, {}, { limit: null }).items ?? [];
+  const byTime = [...logged].sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  // The latest request for each timer, and whether anything closed it after.
+  const latest = new Map();
+  for (const event of byTime) {
+    const timerId = event.data?.timerId;
+    if (!timerId) continue;
+    if (event.type === TIMER_REQUESTED) latest.set(timerId, { request: event, closed: false });
+    else if (latest.has(timerId)) {
+      const entry = latest.get(timerId);
+      if (event.type === TIMER_CANCELLED || event.type === entry.request.data?.callback?.event) entry.closed = true;
+    }
+  }
+  const waiting = [...latest.values()]
+    .filter((entry) => !entry.closed && matchCriteria(stub, entry.request))
+    .map((entry) => entry.request);
+  if (!waiting.length) return false;
+  instance.stubs.removeStub(stub.id);
+  dispatchStubResponse(stub, waiting[0], instance);
+  return true;
 }
 
 /**

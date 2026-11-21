@@ -13,18 +13,27 @@
  *   onEvent.type  subscribing across domains is the point of an event bus.
  *
  * Timer callbacks are exempt. They are derived from `timers:` declarations as
- * `{domain}.{timerId}` — the timer declaration names the event and
+ * `{domain}.{resource}.{timerId}`, like every other event a resource sends
+ * (event-names.js) — the timer declaration names the event and
  * `TimerCallbackEvent` in base-contracts gives its payload.
  */
+
+import { eventType } from '../event-names.js';
 
 /**
  * @param {import('../../types.js').Doc} doc - A state-machine document
  * @param {{ all: Set<string> }} channels - Every documented event type
+ * @param {Set<string>} [domains] - The domains the set defines
  * @returns {{ rule: string, message: string, path: string }[]}
  */
-export function validateEvents(doc, channels) {
+export function validateEvents(doc, channels, domains = new Set()) {
   const errors = [];
   const machines = doc.model()?.machines ?? [];
+
+  for (const { type, path } of [...emittedTypes(machines, doc.content?.procedures), ...subscribedTypes(machines)]) {
+    const shape = eventNameError(type, domains);
+    if (shape) errors.push({ ...shape, path });
+  }
 
   for (const { type, path } of emittedTypes(machines, doc.content?.procedures)) {
     if (!channels.all.has(type)) {
@@ -48,6 +57,57 @@ export function validateEvents(doc, channels) {
     }
   }
 
+  return errors;
+}
+
+
+const SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
+
+/**
+ * Whether an event type is named `{domain}.{resource}.{event}`
+ * (event-names.js): a domain the set defines, then the resource and the event,
+ * each in snake_case. A bus namespace ahead of the domain
+ * (`x-event-type-prefix`, `ca.intake.application.submitted`) is allowed, so the
+ * domain is found among the set's domains rather than taken as the first part,
+ * and a version after the event (`.v2`) is allowed (docs/conventions/events.yaml).
+ * With no domains to go by, the last three parts are checked.
+ *
+ * @param {string} type
+ * @param {Set<string>} domains - The domains the set defines
+ * @returns {{ rule: string, message: string }|null} The error, or null when it's well named
+ */
+export function eventNameError(type, domains) {
+  const parts = String(type).split('.');
+  const at = domains.size ? parts.findIndex((part) => domains.has(part)) : parts.length - 3;
+  const [resource, event, ...extra] = at >= 0 ? parts.slice(at + 1) : [];
+  // A breaking change to a payload is published as a new version: .v2.
+  const versioned = extra.length === 0 || (extra.length === 1 && /^v\d+$/.test(extra[0]));
+  if (at >= 0 && SNAKE.test(resource ?? '') && SNAKE.test(event ?? '') && versioned) return null;
+  return {
+    rule: 'event-name-shape',
+    message: `Event "${type}" isn't named {domain}.{resource}.{event}: the domain, the resource that sends it, ` +
+      'and what happened, the last two in snake_case (intake.application.submitted). A timer\'s callback is ' +
+      'named the same way, for the resource whose machine declares the timer (intake.application.review_reminder).',
+  };
+}
+
+/**
+ * Event names in an AsyncAPI document that aren't `{domain}.{resource}.{event}`:
+ * each channel addressed by an event. A WebSocket's channels are addressed by
+ * connection, or not at all, and are skipped.
+ *
+ * @param {import('../../types.js').Doc} doc - An AsyncAPI document
+ * @param {Set<string>} domains - The domains the set defines
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+export function channelNameErrors(doc, domains) {
+  const errors = [];
+  for (const [key, channel] of Object.entries(doc.content?.channels ?? {})) {
+    const address = channel?.address;
+    if (typeof address !== 'string' || address.includes('/') || channel?.bindings?.ws) continue;
+    const shape = eventNameError(address, domains);
+    if (shape) errors.push({ ...shape, path: `${doc.path}#channels.${key}` });
+  }
   return errors;
 }
 
@@ -115,15 +175,16 @@ function* subscribedTypes(machines) {
 /**
  * Whether a subscription is one of this document's own timer callbacks.
  *
- * A callback type is the domain-qualified timer id, and a state may put its
- * whole event vocabulary behind a bus namespace — `x-event-type-prefix`
- * rewrites the subscription to `ca.intake.review_reminder` while leaving
- * `domain` and the timer id alone, so the reconstructed name is a suffix of
- * the real one rather than equal to it. Anchored on the separator, so a
- * namespace is accepted but `xintake.review_reminder` is not.
+ * A callback type is the machine's event named for the timer, and a state
+ * may put its whole event vocabulary behind a bus namespace —
+ * `x-event-type-prefix` rewrites the subscription to
+ * `ca.intake.application.review_reminder` while leaving `domain` and the timer
+ * id alone, so the reconstructed name is a suffix of the real one rather than
+ * equal to it. Anchored on the separator, so a namespace is accepted but
+ * `xintake.application.review_reminder` is not.
  *
  * @param {string} type - Subscription type from the resolved document
- * @param {Set<string>} callbacks - Domain-qualified callback names
+ * @param {Set<string>} callbacks - Callback names, `{domain}.{resource}.{timerId}`
  * @returns {boolean}
  */
 function isTimerCallback(type, callbacks) {
@@ -134,7 +195,7 @@ function isTimerCallback(type, callbacks) {
 }
 
 /**
- * Timer callback types a document declares, as `{domain}.{timerId}`.
+ * Timer callback types a document declares, as `{domain}.{resource}.{timerId}`.
  *
  * @param {import('../../types.js').Doc} doc
  * @returns {Set<string>}
@@ -144,10 +205,8 @@ function timerCallbackTypes(doc) {
   if (!domain) return new Set();
 
   return new Set(
-    (doc.model()?.machines ?? [])
-      .flatMap((machine) => machine.timers ?? [])
-      .map((timer) => timer.id)
-      .filter(Boolean)
-      .map((id) => `${domain}.${id}`)
+    (doc.model()?.machines ?? []).flatMap((machine) => (machine.timers ?? [])
+      .filter((timer) => timer.id && machine.object)
+      .map((timer) => eventType(domain, machine.object, timer.id)))
   );
 }

@@ -240,9 +240,9 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
   const machine = {
     object: 'Application',
     on: [{
-      type: 'intake.review_reminder',
+      type: 'intake.application.review_reminder',
       transition: { from: 'submitted' },
-      steps: [{ emit: { type: 'intake.application.review-reminder' } }],
+      steps: [{ emit: { type: 'intake.application.review_overdue' } }],
     }],
   };
 
@@ -254,10 +254,10 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
   }];
 
   registerEventSubscriptions(smEntries, [], [], instance);
-  instance.bus.emit('domain-event', makeEvent('intake.review_reminder', APP_ID));
+  instance.bus.emit('domain-event', makeEvent('intake.application.review_reminder', APP_ID));
 
   setImmediate(() => {
-    const { items } = store.findAll('platform/events', { type: 'intake.application.review-reminder' }, { limit: null });
+    const { items } = store.findAll('platform/events', { type: 'intake.application.review_overdue' }, { limit: null });
     assert.equal(items.length, 1, 'the emitted event should be in the log');
     assert.equal(items[0].subject, APP_ID, 'and should name the resource it was about');
     done();

@@ -13,14 +13,17 @@
  * place. Send sits in that code, and what comes back is the first of the
  * response tabs, beside the documented ones. A rules endpoint has a third
  * tab, the client's local evaluation, which Run evaluates in the page. Who is calling is one setting
- * for the page, shown and changed in any operation; the mock's status and
- * its Restart and Start empty end the header's line of sources.
+ * for the page, shown and changed in any operation. The control panel
+ * (control-panel.js) shows the page's mock and starts it over.
  */
 
-import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
-import { restoreRecords, saveRecords } from './records.js';
+import { loadResults, saveResults } from './records.js';
+import { startMock } from './start-mock.js';
+import { whatHappened, trailFor, followedFrom, HAPPENED_STYLE } from './event-trail.js';
+import { hostMock, mockChanged } from './control-panel.js';
+import { combobox, COMBO_STYLE } from './combobox.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -294,6 +297,7 @@ const startingBodies = (docs, examples, op) => {
   return samples.length ? samples : [{ name: 'Empty', value: {} }];
 };
 
+
 const STYLE = `
   .try-params .row { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: 8px; align-items: center; padding: 3px 0; }
   .try-params label { font: 600 12px monospace; color: #333; }
@@ -317,11 +321,8 @@ const STYLE = `
   .try-code .tabs .target { margin-left: auto; color: #777; font: 11px monospace; }
   .try-code .tabs button.copy { margin-left: 8px; border: 1px solid #c7c4ea; background: #fff; }
   .try-code pre { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; overflow: auto; max-height: 24rem; white-space: pre; }
-  #try-it-bar { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; font-size: 11px; color: rgba(255,255,255,.75); }
   .try-params .caller-boxes { display: flex; gap: 6px; }
   .try-params .caller-boxes select { width: auto; }
-  #try-it-bar button { font: 600 11px sans-serif; padding: 2px 8px; border-radius: 3px; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; cursor: pointer; }
-  #try-it-bar .ready { color: #8ff0c0; }
 `;
 
 /**
@@ -329,9 +330,8 @@ const STYLE = `
  */
 export async function mountSendPanels({ contracts, version, scope }) {
   const holders = [...document.querySelectorAll('[data-try-op]')];
-  const bar = document.getElementById('try-it-bar');
-  if (!holders.length || !bar) return;
-  document.head.append(Object.assign(el('style'), { textContent: STYLE }));
+  if (!holders.length) return;
+  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE + HAPPENED_STYLE }));
 
   const docs = extract(contracts, 'docs');
   const examples = { records: extract(docs, 'examples'), config: {} };
@@ -341,21 +341,20 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   }
   const records = { scope, version };
+  // Where the events a call sets off lead.
+  const trail = trailFor(docs, scope);
+  // Each result catching up with what it set off since: a timer fired from
+  // another page, or from the control panel. Once the mock is up, and again
+  // whenever the control panel changes it.
+  const catchUps = [];
+  // What each operation last sent and got back, as this page was left.
+  const results = loadResults(records);
   const roles = docs.find((d) => Array.isArray(d.content?.$defs?.RoleType?.enum))?.content.$defs.RoleType.enum ?? [];
   const caller = { id: 'the-explorer', role: '' };
   const callerHeaders = () => ({
     ...(caller.id.trim() ? { 'X-Caller-Id': caller.id.trim() } : {}),
     ...(caller.role ? { 'X-Caller-Roles': caller.role } : {}),
   });
-
-  // ── The bar ──────────────────────────────────────────────────────────────
-  const status = el('span', 'starting the mock…');
-  const restart = el('button', 'Restart with data');
-  const empty = el('button', 'Start empty');
-  bar.append(status, restart, empty);
-  // The mock's controls end the line above, beside the page's sources.
-  const meta = bar.previousElementSibling;
-  if (meta) meta.append(bar);
 
   const refreshers = [];
   const refreshAll = () => { for (const refresh of refreshers) refresh(); };
@@ -391,18 +390,19 @@ export async function mountSendPanels({ contracts, version, scope }) {
 
   // ── The mock ─────────────────────────────────────────────────────────────
   let mock;
+  let session;
   const start = async ({ seed, restore }) => {
-    status.textContent = 'starting the mock…';
-    status.classList.remove('ready');
-    const started = performance.now();
-    mock = await createMockServer({ contracts, seed });
-    if (restore) restoreRecords(mock, records);
-    status.textContent = `mock ready · ${Math.round(performance.now() - started)} ms`;
-    status.classList.add('ready');
+    session = await startMock({ contracts, ...records, seed, restore });
+    mock = session.mock;
+    await refreshPickers();
+    // The control panel shows this mock, and starts it over.
+    hostMock({
+      ...session,
+      mock: () => mock,
+      restart: ({ seed: again }) => start({ seed: again, restore: false }),
+      changed: () => Promise.all(catchUps.map((catchUp) => catchUp())),
+    });
   };
-  restart.onclick = () => start({ seed: true, restore: false });
-  empty.onclick = () => start({ seed: false, restore: false });
-  addEventListener('pagehide', () => { if (mock) saveRecords(mock, records); });
 
   const send = (method, path, { body, type = 'application/json', headers = {} } = {}) => mock.fetch(new Request(ORIGIN + path, {
     method,
@@ -410,18 +410,51 @@ export async function mountSendPanels({ contracts, version, scope }) {
     body,
   }));
 
-  /** The values a path parameter can take: the records the mock holds under the path before it. */
+  /** The events the mock sent since a moment, oldest first. */
+  const eventsSince = async (since) => {
+    try {
+      const response = await send('GET', `/platform/events?start=${encodeURIComponent(since)}&sort=time&limit=100`);
+      if (!response.ok) return [];
+      return (await response.json())?.items ?? [];
+    } catch { return []; }
+  };
+
+  // ── Comboboxes ───────────────────────────────────────────────────────────
+  // A parameter with choices — an enum's values, the records held under a
+  // path — is a combobox (combobox.js). A record shows its status and
+  // when it was created, fields every resource has, and typing matches those
+  // too. Held records change only when something is sent, so every list is
+  // read again after each send and when the mock starts, ready before it opens.
+  const comboboxes = [];
+  const refreshPickers = () => Promise.all(comboboxes.map((refresh) => refresh()));
+  const createdText = (time) => {
+    const date = new Date(time);
+    if (Number.isNaN(date.getTime())) return '';
+    const today = date.toDateString() === new Date().toDateString();
+    return `created ${today ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : date.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+  };
+  const withPicker = (row, box, choicesOf) => {
+    const { setChoices } = combobox(box, { none: 'none held' });
+    comboboxes.push(async () => setChoices(await choicesOf()));
+  };
+
+  /**
+   * The values a path parameter can take: the records the mock holds under
+   * the path before it, newest first, each with its status and when it was created.
+   */
   const heldUnder = async (prefix, name) => {
     try {
       const response = await send('GET', `${prefix}?limit=100`);
       if (!response.ok) return [];
       const items = (await response.json())?.items ?? [];
-      return items.map((record) => record?.[name] ?? record?.id).filter(Boolean);
+      return items.map((record) => ({
+        value: record?.[name] ?? record?.id,
+        detail: [record?.status, record?.createdAt ? createdText(record.createdAt) : ''].filter(Boolean).join('   '),
+      })).filter((choice) => choice.value);
     } catch { return []; }
   };
 
   // ── Each operation ───────────────────────────────────────────────────────
-  const opened = []; // operations already open when the mock is ready
   for (const holder of holders) {
     const op = operationFor(docs, holder.dataset.tryFile, holder.dataset.tryOp);
     const body = holder.querySelector('details > div');
@@ -456,18 +489,13 @@ export async function mountSendPanels({ contracts, version, scope }) {
       const constant = constants.get(`${param.dataset.in}:${param.dataset.param}`);
       if (constant) {
         // One of the enum's values, offered as they are.
-        const list = el('datalist');
-        list.id = `values-${op.operation.operationId}-${param.dataset.param}`;
-        list.append(...constant.values.map((value) => Object.assign(el('option'), { value })));
-        box.setAttribute('list', list.id);
-        box.placeholder = param.hasAttribute('data-required') ? 'pick one' : 'optional, pick one';
-        row.append(list);
+        withPicker(row, box, () => constant.values.map((value) => ({ value, detail: '' })));
+        box.placeholder = param.hasAttribute('data-required') ? 'type or pick one' : 'optional';
       } else if (param.dataset.in === 'path') {
-        const list = el('datalist');
-        list.id = `held-${op.operation.operationId}-${param.dataset.param}`;
-        box.setAttribute('list', list.id);
+        // The records the mock holds there, newest first.
+        const name = param.dataset.param;
+        withPicker(row, box, () => heldUnder(prefixFor(name), name));
         box.placeholder = 'an id, or pick one';
-        row.append(list);
       } else if (param.dataset.param.toLowerCase() === 'idempotency-key') {
         box.value = crypto.randomUUID();
       } else {
@@ -481,15 +509,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const searchExample = exampleSearch(op.doc, op, values.has('query:q'));
     const pathNames = [...op.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
     const pathBox = (name) => values.get(`path:${name}`);
-    const prefixFor = (name) => op.path.slice(0, op.path.indexOf(`/{${name}}`))
-      .replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(pathBox(n)?.value ?? ''));
-    for (const name of pathNames) {
-      const box = pathBox(name);
-      if (!box || constants.has(`path:${name}`)) continue;
-      box.onfocus = async () => {
-        const list = document.getElementById(box.getAttribute('list'));
-        list?.replaceChildren(...(await heldUnder(prefixFor(name), name)).map((value) => Object.assign(el('option'), { value })));
-      };
+    function prefixFor(name) {
+      return op.path.slice(0, op.path.indexOf(`/{${name}}`))
+        .replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(pathBox(n)?.value ?? ''));
     }
 
     // An editor above the request body's schema.
@@ -558,10 +580,11 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const tabs = el('div', '', 'tabs');
     const ruleset = rulesetOf(docs, op);
     const localCall = ruleset ? { namespace: ruleset.namespace, ruleset: ruleset.name } : undefined;
+    // No generated client calls a document outside the contracts: curl only.
     const tabButtons = { curl: el('button', 'curl'), typescript: el('button', 'TypeScript') };
     if (localCall) tabButtons.local = el('button', 'TypeScript (local)');
     // The tab chosen on another operation, unless this one doesn't have it.
-    const tabOf = () => (tabButtons[snippetTab] ? snippetTab : 'typescript');
+    const tabOf = () => (tabButtons[snippetTab] ? snippetTab : (tabButtons.typescript ? 'typescript' : 'curl'));
     const copy = el('button', 'Copy', 'copy');
     const pre = el('pre');
     const target = el('span', '', 'target');
@@ -649,6 +672,17 @@ export async function mountSendPanels({ contracts, version, scope }) {
       for (const other of tabs.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
       for (const other of section.querySelectorAll('.resp-panel')) other.hidden = other !== panel;
     };
+    // A response, and what the call set off, as Send shows them.
+    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming, events, returnedEvent }) => {
+      const headerList = el('div', '', 'sent-headers');
+      for (const [name, value] of headers) headerList.append(el('div', `${name}: ${value}`));
+      showSent(`${status} · sent`, ok, [
+        el('div', `${status}${statusText ? ` ${statusText}` : ''} · ${ms} ms`, `sent-status ${ok ? 'ok' : 'bad'}`),
+        headerList,
+        el('pre', streaming ? `${shown || '(nothing yet)'}\n\n(a stream: shown for its first ${STREAM_MS / 1000} seconds, then closed)` : (shown || '(no body)'), 'sent-body'),
+        ...(events ? [whatHappened(events, { trail, shown: returnedEvent })] : []),
+      ]);
+    };
     button.onclick = async () => {
       if (tabOf() === 'local') {
         // What the client's Rules.<ruleset>.evaluate returns: each output,
@@ -673,24 +707,46 @@ export async function mountSendPanels({ contracts, version, scope }) {
         const path = op.path.replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(request.path[n] ?? ''));
         const query = new URLSearchParams(request.query);
         const started = performance.now();
+        const sentAt = new Date().toISOString();
         const response = await send(op.method, query.size ? `${path}?${query}` : path, {
           body: request.body,
           type: request.type,
           headers: request.headers,
         });
         const ms = Math.round(performance.now() - started);
+        // What the call set off: the events it caused, and what reacted to
+        // them. A GET changes nothing, so it sets off nothing.
+        const events = op.method !== 'GET' && response.ok ? await eventsSince(sentAt) : null;
         // A stream doesn't end, so show what arrives in its first seconds.
         const streaming = (response.headers.get('content-type') ?? '').includes('text/event-stream');
         const text = streaming ? await firstOf(response, STREAM_MS) : await response.text();
         let shown = text;
-        try { shown = JSON.stringify(JSON.parse(text), null, 2); } catch { /* not JSON */ }
-        const headerList = el('div', '', 'sent-headers');
-        for (const [name, value] of response.headers) headerList.append(el('div', `${name}: ${value}`));
-        showSent(`${response.status} · sent`, response.ok, [
-          el('div', `${response.status}${response.statusText ? ` ${response.statusText}` : ''} · ${ms} ms`, `sent-status ${response.ok ? 'ok' : 'bad'}`),
-          headerList,
-          el('pre', streaming ? `${shown || '(nothing yet)'}\n\n(a stream: shown for its first ${STREAM_MS / 1000} seconds, then closed)` : (shown || '(no body)'), 'sent-body'),
-        ]);
+        let returned = null;
+        try { returned = JSON.parse(text); shown = JSON.stringify(returned, null, 2); } catch { /* not JSON */ }
+        // A call that publishes an event returns it, and it heads what followed,
+        // though its time may be before the call was sent.
+        const returnedEvent = events && returned?.specversion && returned.id ? returned.id : undefined;
+        if (returnedEvent && !events.some((event) => event.id === returnedEvent)) events.unshift(returned);
+        const result = {
+          status: response.status, statusText: response.statusText, ok: response.ok, ms, headers: [...response.headers], shown, streaming, events,
+          since: sentAt,
+          returnedEvent,
+        };
+        showResult(result);
+        // Kept for coming back to this page, with what was sent.
+        if (holder.id) {
+          results[holder.id] = { params: Object.fromEntries([...values].map(([k, box]) => [k, box.value])), body: bodyBox?.value, result };
+          results.$last = holder.id;
+          saveResults(records, results);
+          // The address names the call last sent, so the browser's Back from
+          // wherever its result leads comes back to it.
+          history.replaceState(history.state, '', `${location.href.replace(/#.*$/, '')}#${holder.id}`);
+        }
+        // A request can register, remove or use up a stub; the next page keeps what's left.
+        await session.keep();
+        mockChanged();
+        // What was sent may have made or removed a record a list offers.
+        await refreshPickers();
         // A key used is spent: the next send gets a fresh one, unless typed over.
         const key = [...values].find(([k]) => k.toLowerCase() === 'header:idempotency-key')?.[1];
         if (key) key.value = crypto.randomUUID();
@@ -702,40 +758,36 @@ export async function mountSendPanels({ contracts, version, scope }) {
       }
     };
 
-    // Its empty path parameters start on records the mock holds, each
-    // under the one before: an application that has incomes, then one of
-    // its incomes.
-    const fill = async (at) => {
-      if (at === pathNames.length) return true;
-      const box = pathBox(pathNames[at]);
-      if (!box) return fill(at + 1);
-      if (box.value) return fill(at + 1);
-      const constant = constants.get(`path:${pathNames[at]}`);
-      for (const value of constant ? constant.values : await heldUnder(prefixFor(pathNames[at]), pathNames[at])) {
-        box.value = value;
-        if (await fill(at + 1)) return true;
-      }
-      box.value = '';
-      return false;
-    };
-    const prefill = async () => {
-      if (!mock) return;
-      await fill(0);
-      // Nothing held all the way down: take what there is at each level.
-      for (const name of pathNames) {
-        const box = pathBox(name);
-        if (box && !box.value) box.value = (await heldUnder(prefixFor(name), name))[0] ?? '';
-      }
-      await fillFromRecord();
+    // Coming back to the page: as it was left, open, with what was sent and what came back.
+    const kept = holder.id ? results[holder.id] : null;
+    if (kept?.result) {
+      for (const [k, value] of Object.entries(kept.params ?? {})) { const box = values.get(k); if (box) box.value = value; }
+      if (bodyBox && typeof kept.body === 'string') bodyBox.value = kept.body;
+      showResult(kept.result);
+      const details = holder.querySelector('details');
+      if (details) details.open = true;
       refresh();
-    };
-    // Opened, an operation is ready to send.
-    const details = holder.querySelector('details');
-    details?.addEventListener('toggle', () => { if (details.open) prefill(); });
-    opened.push(() => { if (details?.open) prefill(); });
+    }
+    catchUps.push(async () => {
+      const last = holder.id ? results[holder.id]?.result : null;
+      if (!last?.events || !last.since) return;
+      const added = followedFrom(last.events.map((event) => event.id), await eventsSince(last.since))
+        .filter((event) => !last.events.some((known) => known.id === event.id));
+      if (!added.length) return;
+      last.events = [...last.events, ...added];
+      showResult(last);
+      saveResults(records, results);
+    });
   }
   refreshAll();
+  // Results put back open push what's below them down, so once they're in,
+  // go again to where the address points, or else where the last request was sent.
+  if (Object.keys(results).length) {
+    const named = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const back = named ?? (results.$last ? document.getElementById(results.$last) : null);
+    if (back) requestAnimationFrame(() => back.scrollIntoView({ block: 'start' }));
+  }
 
   await start({ seed: true, restore: true });
-  for (const prefillOpen of opened) prefillOpen();
+  await Promise.all(catchUps.map((catchUp) => catchUp()));
 }
