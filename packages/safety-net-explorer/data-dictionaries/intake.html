@@ -277,10 +277,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -422,5 +444,40 @@ function exportCsv() {
 }
 
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

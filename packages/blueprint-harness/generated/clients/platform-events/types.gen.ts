@@ -37,7 +37,7 @@ export type Event = {
      */
     specversion: '1.0';
     /**
-     * Unique event identifier.
+     * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
      */
     id: string;
     /**
@@ -143,7 +143,7 @@ export type EventList = {
          */
         specversion: '1.0';
         /**
-         * Unique event identifier.
+         * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
          */
         id: string;
         /**
@@ -480,7 +480,7 @@ export type ListEventsResponses = {
              */
             specversion: '1.0';
             /**
-             * Unique event identifier.
+             * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
              */
             id: string;
             /**
@@ -570,7 +570,7 @@ export type PublishEventData = {
          */
         specversion: '1.0';
         /**
-         * Unique event identifier.
+         * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
          */
         id: string;
         /**
@@ -725,7 +725,7 @@ export type PublishEventResponses = {
          */
         specversion: '1.0';
         /**
-         * Unique event identifier.
+         * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
          */
         id: string;
         /**
@@ -888,7 +888,7 @@ export type StreamEventsResponses = {
          */
         specversion: '1.0';
         /**
-         * Unique event identifier.
+         * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
          */
         id: string;
         /**
@@ -1035,7 +1035,7 @@ export type GetEventResponses = {
          */
         specversion: '1.0';
         /**
-         * Unique event identifier.
+         * Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
          */
         id: string;
         /**

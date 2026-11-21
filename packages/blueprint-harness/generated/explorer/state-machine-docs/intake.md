@@ -27,8 +27,8 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 
 ### Event subscriptions
 
-- **`intake.review_reminder`**
-  - Emits `intake.application.review-reminder` — Notify supervisors that this application needs immediate attention.
+- **`intake.application.review_reminder`**
+  - Emits `intake.application.review_overdue` — Notify supervisors that this application needs immediate attention.
 
 ---
 

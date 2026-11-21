@@ -153,9 +153,9 @@ machines:
                 timerId: decision-support.suggestion_expiry.{$object.id}
                 fireAt: $object.expiresAt
                 callback:
-                  event: decision-support.suggestion_expiry
+                  event: decision-support.suggestion.suggestion_expiry
                   data: {}
-      - type: decision-support.suggestion_expiry
+      - type: decision-support.suggestion.suggestion_expiry
         description: Expire a suggestion nobody decided by its expiresAt.
         transition:
           from:

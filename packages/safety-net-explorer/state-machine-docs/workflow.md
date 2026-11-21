@@ -41,7 +41,7 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Transition: `escalated` → `pending`
   - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-  - Emit: `workflow.task.de-escalated` — Emit a domain event recording the de-escalation
+  - Emit: `workflow.task.de_escalated` — Emit a domain event recording the de-escalation
 - **cancel** — Supervisor cancels a task from any active state
   - Actors: supervisor
   - Transition: `pending`/`in_progress`/`escalated` → `cancelled`
@@ -140,15 +140,15 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - If `this.data.changes.exists(c, c.field is "slaDeadline") and has(object.slaDeadline) and object.slaDeadline is not null`:
     - Schedule SLA warning escalation 48 hours before the task SLA deadline.
     - Schedule SLA breach escalation at the task SLA deadline.
-- **`workflow.creation_deadline`**
+- **`workflow.task.creation_deadline`**
   - Auto-escalate after 72h creation deadline
-- **`workflow.sla_warning`**
+- **`workflow.task.sla_warning`**
   - Auto-escalate 48h before SLA deadline
-- **`workflow.sla_breach`**
+- **`workflow.task.sla_breach`**
   - Escalate and record SLA breach at deadline
-- **`workflow.client_timeout`**
+- **`workflow.task.client_timeout`**
   - Auto-cancel after 30 days client unresponsive
-- **`workflow.verification_timeout`**
+- **`workflow.task.verification_timeout`**
   - Auto-resume after 7 days verification timeout; passes timer event ID as causationid
 - **`eligibility.determination.expedited`**
   - Look up: task

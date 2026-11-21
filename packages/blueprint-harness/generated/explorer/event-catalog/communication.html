@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blueprint Harness — Communication events</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
+  .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
+  .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
+  .content-item.op-delete { border-color: #AF121D !important; } .op-delete > details > summary { background: #F9C8CB88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #1a1a1a; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: #1a1a1a; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: #AF121D; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: #AF121D; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: #1a1a1a; border-bottom-color: #5650BE; }
+  .resp-tab.resp-ok.on { border-bottom-color: #006152; }
+  .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
+
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
+  .op-docs a { color: #5650BE; text-decoration: none; }
+  .op-docs .who-kind { color: #666; }
+  .op-docs .how { margin-top: 4px; font-size: 12px; color: #666; }
+  .event-example { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e8e6ff; border-radius: 6px; font-size: 11.5px; overflow: auto; max-height: 28rem; }
+  .op-docs a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Event Catalog</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Communication events</a></div>
+    <div style="background:#2B1A78;color:#FFFFFF;">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Communication events</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">21 events</span>
+    </div>
+    <div style="padding:0 1.25rem 0.6rem;font-size:11px;color:rgba(255,255,255,0.55);">What each event carries, who publishes it and who subscribes to it</div>
+  </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+    <div class="nav-section-label">transcript entry</div>
+    <a href="#event-communication.transcript_entry.created" class="nav-link nav-op" title="A TranscriptEntry was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-communication.transcript_entry.updated" class="nav-link nav-op" title="A TranscriptEntry was changed. Carries each changed field, before and after.">
+      <span class="nav-op-path">updated</span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label">transcript</div>
+    <a href="#event-communication.transcript.closed" class="nav-link nav-op" title="The transcript has ended.">
+      <span class="nav-op-path">closed</span>
+    </a><a href="#event-communication.transcript.created" class="nav-link nav-op" title="A Transcript was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-communication.transcript.deleted" class="nav-link nav-op" title="A Transcript was deleted. The subject is the record's id.">
+      <span class="nav-op-path">deleted</span>
+    </a><a href="#event-communication.transcript.idle_check" class="nav-link nav-op" title="Whether a recording transcript has gone quiet for its profile's idleTimeout. Published by the timer service when the timer fires; the subject is the record the timer is for.">
+      <span class="nav-op-path">idle_check</span>
+    </a><a href="#event-communication.transcript.paused" class="nav-link nav-op" title="The conversation went off the record. Anything said until it resumes is not stored.">
+      <span class="nav-op-path">paused</span>
+    </a><a href="#event-communication.transcript.resumed" class="nav-link nav-op" title="The conversation is back on the record.">
+      <span class="nav-op-path">resumed</span>
+    </a><a href="#event-communication.transcript.updated" class="nav-link nav-op" title="A Transcript was changed. Carries each changed field, before and after.">
+      <span class="nav-op-path">updated</span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label">transcription profile</div>
+    <a href="#event-communication.transcription_profile.created" class="nav-link nav-op" title="A TranscriptionProfile was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-communication.transcription_profile.updated" class="nav-link nav-op" title="A TranscriptionProfile was changed. Carries each changed field, before and after.">
+      <span class="nav-op-path">updated</span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label">transcription session</div>
+    <a href="#event-communication.transcription_session.closed" class="nav-link nav-op" title="The session is done and the transcript closed. The software closes any connection still open, whoever closed it.">
+      <span class="nav-op-path">closed</span>
+    </a><a href="#event-communication.transcription_session.connected" class="nav-link nav-op" title="The connection to the service is open.">
+      <span class="nav-op-path">connected</span>
+    </a><a href="#event-communication.transcription_session.connecting" class="nav-link nav-op" title="The software is getting where to connect and opening the connection.">
+      <span class="nav-op-path">connecting</span>
+    </a><a href="#event-communication.transcription_session.created" class="nav-link nav-op" title="A TranscriptionSession was created. Carries the record as created.">
+      <span class="nav-op-path">created</span>
+    </a><a href="#event-communication.transcription_session.disconnected" class="nav-link nav-op" title="The connection dropped; the software is trying again.">
+      <span class="nav-op-path">disconnected</span>
+    </a><a href="#event-communication.transcription_session.failed" class="nav-link nav-op" title="The software gave up connecting or reconnecting. The transcript is still open.">
+      <span class="nav-op-path">failed</span>
+    </a><a href="#event-communication.transcription_session.line_added" class="nav-link nav-op" title="A finished line was added to the transcript.">
+      <span class="nav-op-path">line_added</span>
+    </a><a href="#event-communication.transcription_session.line_updated" class="nav-link nav-op" title="A line in progress, to show. Not kept.">
+      <span class="nav-op-path">line_updated</span>
+    </a><a href="#event-communication.transcription_session.paused" class="nav-link nav-op" title="Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.">
+      <span class="nav-op-path">paused</span>
+    </a><a href="#event-communication.transcription_session.stopping" class="nav-link nav-op" title="Stop was asked for. The software sends the end of the audio and waits for the last text.">
+      <span class="nav-op-path">stopping</span>
+    </a>
+  </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div id="event-communication.transcript_entry.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript_entry.created</code>
+        <span class="op-name">A TranscriptEntry was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-communication.transcript_entry.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-post-transcripts-transcriptId-entries">Communication › POST /transcripts/{transcriptId}/entries</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcript-communication.transcript_entry.created">Communication › Transcript</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript_entry.created&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-0000000000e1&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;7a1e0c2d-0000-4000-8000-0000000000e1&quot;,
+    &quot;transcriptId&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+    &quot;kind&quot;: &quot;line&quot;,
+    &quot;startedAt&quot;: &quot;2026-10-11T14:00:05Z&quot;,
+    &quot;endedAt&quot;: &quot;2026-10-11T14:00:09Z&quot;,
+    &quot;text&quot;: &quot;Thanks for coming in. Can you tell me who lives in your household?&quot;,
+    &quot;speaker&quot;: &quot;staff&quot;,
+    &quot;speakerLabel&quot;: &quot;spk_0&quot;,
+    &quot;confidence&quot;: 0.96,
+    &quot;createdAt&quot;: &quot;2026-10-11T14:00:10Z&quot;,
+    &quot;updatedAt&quot;: &quot;2026-10-11T14:00:10Z&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript_entry.updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript_entry.updated</code>
+        <span class="op-name">A TranscriptEntry was changed. Carries each changed field, before and after.</span>
+      </span>
+      <a href="#event-communication.transcript_entry.updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId-entries-entryId">Communication › PATCH /transcripts/{transcriptId}/entries/{entryId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript_entry.updated&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-0000000000e1&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;changes&quot;: [
+      {
+        &quot;field&quot;: &quot;kind&quot;,
+        &quot;before&quot;: &quot;line&quot;,
+        &quot;after&quot;: &quot;example&quot;
+      }
+    ]
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.closed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.closed</code>
+        <span class="op-name">The transcript has ended.</span>
+      </span>
+      <a href="#event-communication.transcript.closed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcript-close">Communication › Transcript › close</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcript.closed">Communication › TranscriptionSession</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.closed&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.created</code>
+        <span class="op-name">A Transcript was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-communication.transcript.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-post-transcripts">Communication › POST /transcripts</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcript-communication.transcript.created">Communication › Transcript</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.created&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;id&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+    &quot;subjectType&quot;: &quot;interview&quot;,
+    &quot;subjectId&quot;: &quot;7a1e0c2d-0000-4000-8000-0000000000a1&quot;,
+    &quot;profileId&quot;: &quot;7a1e0c2d-0000-4000-8000-0000000000b1&quot;,
+    &quot;model&quot;: &quot;standard&quot;,
+    &quot;client&quot;: &quot;interview-assistant/0.1.0&quot;,
+    &quot;status&quot;: &quot;recording&quot;,
+    &quot;startedAt&quot;: &quot;2026-10-11T14:00:00Z&quot;,
+    &quot;createdAt&quot;: &quot;2026-10-11T14:00:00Z&quot;,
+    &quot;updatedAt&quot;: &quot;2026-10-11T14:00:00Z&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.deleted" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.deleted</code>
+        <span class="op-name">A Transcript was deleted. The subject is the record's id.</span>
+      </span>
+      <a href="#event-communication.transcript.deleted" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-delete-transcripts-transcriptId">Communication › DELETE /transcripts/{transcriptId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.deleted&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {}
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.idle_check" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.idle_check</code>
+        <span class="op-name">Whether a recording transcript has gone quiet for its profile's idleTimeout. Published by the timer service when the timer fires; the subject is the record the timer is for.</span>
+      </span>
+      <a href="#event-communication.transcript.idle_check" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div>The timer service, when the timer fires</div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcript-communication.transcript.idle_check">Communication › Transcript</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.idle_check&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;timerId&quot;: &quot;communication.idle_check.7a1e0c2d-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.paused" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.paused</code>
+        <span class="op-name">The conversation went off the record. Anything said until it resumes is not stored.</span>
+      </span>
+      <a href="#event-communication.transcript.paused" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcript-pause">Communication › Transcript › pause</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcript.paused">Communication › TranscriptionSession</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.paused&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.resumed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.resumed</code>
+        <span class="op-name">The conversation is back on the record.</span>
+      </span>
+      <a href="#event-communication.transcript.resumed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcript-resume">Communication › Transcript › resume</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.resumed&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcript.updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcript.updated</code>
+        <span class="op-name">A Transcript was changed. Carries each changed field, before and after.</span>
+      </span>
+      <a href="#event-communication.transcript.updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-patch-transcripts-transcriptId">Communication › PATCH /transcripts/{transcriptId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcript.updated&quot;,
+  &quot;subject&quot;: &quot;7a1e0c2d-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;changes&quot;: [
+      {
+        &quot;field&quot;: &quot;subjectType&quot;,
+        &quot;before&quot;: &quot;interview&quot;,
+        &quot;after&quot;: &quot;chat&quot;
+      }
+    ]
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_profile.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_profile.created</code>
+        <span class="op-name">A TranscriptionProfile was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-communication.transcription_profile.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-post-profiles">Communication › POST /profiles</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_profile.created&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {}
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_profile.updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_profile.updated</code>
+        <span class="op-name">A TranscriptionProfile was changed. Carries each changed field, before and after.</span>
+      </span>
+      <a href="#event-communication.transcription_profile.updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcripts.html#op-patch-profiles-profileId">Communication › PATCH /profiles/{profileId}</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcripts-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_profile.updated&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;changes&quot;: []
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.closed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.closed</code>
+        <span class="op-name">The session is done and the transcript closed. The software closes any connection still open, whoever closed it.</span>
+      </span>
+      <a href="#event-communication.transcription_session.closed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-close">Communication › TranscriptionSession › close</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.closed&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.connected" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.connected</code>
+        <span class="op-name">The connection to the service is open.</span>
+      </span>
+      <a href="#event-communication.transcription_session.connected" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-connect">Communication › TranscriptionSession › connect</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.connected&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.connecting" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.connecting</code>
+        <span class="op-name">The software is getting where to connect and opening the connection.</span>
+      </span>
+      <a href="#event-communication.transcription_session.connecting" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-get-connection">Communication › TranscriptionSession › get-connection</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.connecting&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.created" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.created</code>
+        <span class="op-name">A TranscriptionSession was created. Carries the record as created.</span>
+      </span>
+      <a href="#event-communication.transcription_session.created" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">Endpoint:</span> <a href="../api-reference/communication-transcription-sessions.html#op-post-transcription-sessions">Communication › POST /transcription-sessions</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.created&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {}
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.disconnected" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.disconnected</code>
+        <span class="op-name">The connection dropped; the software is trying again.</span>
+      </span>
+      <a href="#event-communication.transcription_session.disconnected" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-disconnect">Communication › TranscriptionSession › disconnect</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.disconnected&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.failed" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.failed</code>
+        <span class="op-name">The software gave up connecting or reconnecting. The transcript is still open.</span>
+      </span>
+      <a href="#event-communication.transcription_session.failed" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-fail">Communication › TranscriptionSession › fail</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.failed&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.line_added" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.line_added</code>
+        <span class="op-name">A finished line was added to the transcript.</span>
+      </span>
+      <a href="#event-communication.transcription_session.line_added" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-add-line">Communication › TranscriptionSession › add-line</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.line_added&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;key&quot;: &quot;example&quot;,
+    &quot;entryId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.line_updated" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.line_updated</code>
+        <span class="op-name">A line in progress, to show. Not kept.</span>
+      </span>
+      <a href="#event-communication.transcription_session.line_updated" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-update-line">Communication › TranscriptionSession › update-line</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.line_updated&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;key&quot;: &quot;example&quot;,
+    &quot;text&quot;: &quot;example&quot;,
+    &quot;startedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.paused" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.paused</code>
+        <span class="op-name">Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.</span>
+      </span>
+      <a href="#event-communication.transcription_session.paused" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-pause">Communication › TranscriptionSession › pause</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.paused&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.stopping" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.stopping</code>
+        <span class="op-name">Stop was asked for. The software sends the end of the audio and waits for the last text.</span>
+      </span>
+      <a href="#event-communication.transcription_session.stopping" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-stop">Communication › TranscriptionSession › stop</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.stopping&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;
+}</pre></aside>
+    </div>
+  </details>
+</div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        // A link to a collapsed card (an endpoint, say) should show the card,
+        // not its one-line summary — open it and anything it sits inside.
+        const own = el.matches('details') ? el : el.querySelector(':scope > details');
+        if (own) own.open = true;
+        for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+<script>
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+</script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
+</body>
+</html>

@@ -60,7 +60,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -276,7 +276,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -486,7 +486,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -698,7 +698,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -904,7 +904,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).
