@@ -1205,12 +1205,13 @@ function buildSocketPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     ],
     headerHtml,
     navHtml,
-    mainHtml: `${intro}${renderServers(spec, raw)}${sections}`,
+    // Try it connects to the mock in the page, beside where to connect (try-it/socket-panel.js).
+    mainHtml: `${intro}${renderServers(spec, raw)}<div data-try-socket="${esc(doc.relativePath)}" style="margin:-1.5rem 0 2.5rem;"></div>${sections}`,
     navWidth: 260,
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  return markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  return markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n${MOUNT_SEND_PANELS}\n</body>`);
 }
 
 // ── Index (landing) page ──────────────────────────────────────────────────

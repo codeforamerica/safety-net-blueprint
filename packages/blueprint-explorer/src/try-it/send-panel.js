@@ -23,6 +23,7 @@ import { loadResults, saveResults } from './records.js';
 import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
 import { hostMock, mockChanged } from './control-panel.js';
+import { mountSocketPanel, SOCKET_STYLE } from './socket-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf } from './routing.js';
 
@@ -358,8 +359,10 @@ const STYLE = `
  */
 export async function mountSendPanels({ contracts, version, scope }) {
   const holders = [...document.querySelectorAll('[data-try-op]')];
-  if (!holders.length) return;
-  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE }));
+  // An API reached over a WebSocket has one panel for the page (socket-panel.js).
+  const sockets = [...document.querySelectorAll('[data-try-socket]')];
+  if (!holders.length && !sockets.length) return;
+  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE + SOCKET_STYLE }));
   // An operation's responses as its view has them: what was sent, in the Try
   // it view; the documented ones, in the doc view.
   const showAnswers = (holder) => {
@@ -842,6 +845,14 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (details) details.open = true;
       refresh();
     }
+  }
+  for (const holder of sockets) {
+    mountSocketPanel(holder, {
+      docs,
+      mock: () => mock,
+      // A connection goes where the whole API is routed: no operation narrows it.
+      realTag: (tag, doc) => realTags.push({ tag, op: { operation: { operationId: null }, doc } }),
+    });
   }
   refreshAll();
   // Results put back open push what's below them down, so once they're in,
