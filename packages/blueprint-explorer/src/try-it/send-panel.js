@@ -24,6 +24,7 @@ import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
+import { routingInUse, entryFor, destinationOf } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -334,6 +335,8 @@ const STYLE = `
   .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
   .try-code .send { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
   .try-code .send:disabled { opacity: .5; cursor: default; }
+  .try-code .foot { gap: 8px; align-items: center; }
+  .try-code .real { font: 600 11px system-ui, sans-serif; color: #fff; background: #b45309; padding: 2px 8px; border-radius: 3px; }
   .resp-tab.sent { font-family: sans-serif; }
   .resp-panel .sent-status { font-weight: 700; } .resp-panel .sent-status.ok { color: #15803d; } .resp-panel .sent-status.bad { color: #b42318; }
   .resp-panel .sent-headers { margin: 4px 0 0; font: 11px monospace; color: #555; }
@@ -426,15 +429,29 @@ export async function mountSendPanels({ contracts, version, scope }) {
   // ── The mock ─────────────────────────────────────────────────────────────
   let mock;
   let session;
+  // Each operation's tag, shown when its call leaves the page: the site's
+  // routing sends it to a real service (routing.js).
+  const realTags = [];
+  const markReal = () => {
+    const routing = routingInUse(records);
+    for (const { tag, op } of realTags) {
+      const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
+      tag.hidden = !entry;
+      if (entry) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
+    }
+  };
   const start = async ({ seed, restore }) => {
     session = await startMock({ contracts, ...records, seed, restore });
     mock = session.mock;
+    markReal();
     await refreshPickers();
     // The control panel shows this mock, and starts it over.
     hostMock({
       ...session,
       mock: () => mock,
       restart: ({ seed: again }) => start({ seed: again, restore: false }),
+      // Routing changed: the same records and stubs, on a mock that takes it.
+      reroute: () => start({ seed: session.seeded, restore: true }),
       // The control panel changed the mock: a record may have come or gone.
       changed: refreshPickers,
     });
@@ -695,7 +712,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     // response tabs, beside the documented ones: one tab for what was sent,
     // and one for what a local run returned.
     const foot = el('div', '', 'foot');
-    foot.append(button);
+    const real = Object.assign(el('span', 'Real service', 'real'), { hidden: true });
+    realTags.push({ tag: real, op });
+    foot.append(real, button);
     code.append(foot);
     const showSent = (tabText, ok, content, key = 'sent') => {
       let section = holder.querySelector('.op-side > .responses-section');

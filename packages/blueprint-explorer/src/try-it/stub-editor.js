@@ -381,6 +381,8 @@ function operationsIn(docs, records) {
         operations.push({
           key: `${method.toUpperCase()} ${template}`,
           operationId: operation.operationId,
+          apiName: doc.api,
+          domain: doc.domain,
           callsOut: method === 'post' && callsOut(doc, path, rulePaths),
           api: content.info?.title ?? doc.relativePath,
           method: method.toUpperCase(),
@@ -455,14 +457,19 @@ const operationFor = (operations, method, url) => {
  * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, save: (stub: object) => Promise<string|null>, cancel: () => void }} options
  * @returns {HTMLElement}
  */
-export function httpStubForm({ choices, stub = null, save, cancel }) {
+export function httpStubForm({ choices, stub = null, preset = null, save, cancel }) {
   const { operations } = choices;
+  // Started on an operation the control panel names, with its first answer.
+  const first = (key) => {
+    const operation = operations.find((o) => o.key === key);
+    return operation?.answers.find((answer) => answer.status < 300) ?? operation?.answers[0];
+  };
   const written = stub ? operationFor(operations, stub.match?.method, (stub.match?.domain ? `/${stub.match.domain}` : '') + (stub.match?.url ?? '')) : null;
   const state = {
-    key: written?.operation.key ?? '',
+    key: written?.operation.key ?? (preset && operations.some((o) => o.key === preset) ? preset : ''),
     values: written?.values ?? {},
-    status: stub?.response?.status ?? '',
-    body: pretty(stub?.response?.body),
+    status: stub?.response?.status ?? (preset ? first(preset)?.status ?? '' : ''),
+    body: pretty(stub ? stub.response?.body : preset ? first(preset)?.body : undefined),
   };
   const chosen = () => operations.find((operation) => operation.key === state.key);
   const url = () => (chosen()?.template ?? '').replace(/\{([^}]+)\}/g, (_, name) => encodeURIComponent(state.values[name] ?? '') || `{${name}}`);
