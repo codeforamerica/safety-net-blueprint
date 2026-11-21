@@ -11,7 +11,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/server.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 // What an informing suggestion is about has to exist: Rosa, seeded in the harness.
 const ROSA = '11111111-1111-4111-8111-100000000001';
 
@@ -44,7 +44,7 @@ const inform = (mock, message = 'Rosa') => send(mock, 'POST', '/decision-support
 
 /** The event that expires a suggestion, as the scheduler sends it when its timer fires. */
 const expiry = (id) => ({
-  specversion: '1.0', id: crypto.randomUUID(), source: '/scheduling', type: 'decision-support.suggestion_expiry',
+  specversion: '1.0', id: crypto.randomUUID(), source: '/scheduling', type: 'decision-support.suggestion.suggestion_expiry',
   subject: id, time: new Date().toISOString(), data: { timerId: `decision-support.suggestion_expiry.${id}` },
 });
 
@@ -63,7 +63,7 @@ test("an event one mock sends reaches neither the other's reactions nor its even
   const sent = expiry(suggestion.id);
   assert.strictEqual((await send(one, 'POST', '/platform/events', sent)).status, 201);
   assert.strictEqual((await send(other, 'GET', `/decision-support/suggestions/${suggestion.id}`)).body.status, 'proposed');
-  const logged = (await send(other, 'GET', '/platform/events?type=decision-support.suggestion_expiry')).body.items;
+  const logged = (await send(other, 'GET', '/platform/events?type=decision-support.suggestion.suggestion_expiry')).body.items;
   assert.ok(!logged.some((event) => event.id === sent.id), "not in the other's log");
 
   // Sent to the second, it does.
@@ -73,7 +73,7 @@ test("an event one mock sends reaches neither the other's reactions nor its even
 
 test("an event one mock sends doesn't reach the other's event stream", async () => {
   const controller = new AbortController();
-  const response = await other.fetch(new Request('http://localhost/platform/events/stream?type=decision-support.suggestion_expiry', {
+  const response = await other.fetch(new Request('http://localhost/platform/events/stream?type=decision-support.suggestion.suggestion_expiry', {
     headers: { accept: 'text/event-stream' }, signal: controller.signal,
   }));
   assert.strictEqual(response.status, 200);

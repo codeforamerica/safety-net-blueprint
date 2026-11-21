@@ -155,22 +155,6 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
-      <td><code>workflow.client_timeout</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
-      <td><code>workflow.creation_deadline</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
-      <td><code>workflow.sla_breach</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
-      <td><code>workflow.sla_warning</code></td>
-      <td><span style="color:#999;font-size:11px;">unknown</span></td>
-      <td><a href="workflow.html">Workflow/Task</a></td>
-    </tr><tr>
       <td><code>workflow.task.approved</code></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
@@ -195,6 +179,10 @@
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
+      <td><code>workflow.task.client_timeout</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
+    </tr><tr>
       <td><code>workflow.task.completed</code></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
@@ -203,7 +191,11 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
-      <td><code>workflow.task.de-escalated</code></td>
+      <td><code>workflow.task.creation_deadline</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
+    </tr><tr>
+      <td><code>workflow.task.de_escalated</code></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
@@ -231,9 +223,17 @@
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
+      <td><code>workflow.task.sla_breach</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
+    </tr><tr>
       <td><code>workflow.task.sla_breached</code></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
+    </tr><tr>
+      <td><code>workflow.task.sla_warning</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
       <td><code>workflow.task.submitted_for_review</code></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
@@ -243,7 +243,7 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
     </tr><tr>
-      <td><code>workflow.verification_timeout</code></td>
+      <td><code>workflow.task.verification_timeout</code></td>
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="workflow.html">Workflow/Task</a></td>
     </tr></tbody>
@@ -253,7 +253,7 @@
     <h3 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2rem 0 0.75rem;">Subscribed but not emitted</h3>
     <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
     <ul style="font-size:13px;color:#666;">
-      <li><code>client-management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data-exchange.call.completed</code></li><li><code>document-management.document_version.created</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.created</code></li><li><code>workflow.client_timeout</code></li><li><code>workflow.creation_deadline</code></li><li><code>workflow.sla_breach</code></li><li><code>workflow.sla_warning</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.verification_timeout</code></li>
+      <li><code>client-management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data-exchange.call.completed</code></li><li><code>document-management.document_version.created</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.created</code></li><li><code>workflow.task.client_timeout</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.creation_deadline</code></li><li><code>workflow.task.sla_breach</code></li><li><code>workflow.task.sla_warning</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.task.verification_timeout</code></li>
     </ul></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {
@@ -268,5 +268,40 @@
     });
     
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

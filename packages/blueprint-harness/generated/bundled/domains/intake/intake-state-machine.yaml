@@ -24,10 +24,10 @@ machines:
     timers:
       - id: review_reminder
         description: |
-          Fires when an application has been awaiting caseworker review for too long. The callback event (intake.review_reminder) triggers an escalation notice.
+          Fires when an application has been awaiting caseworker review for too long. The callback event (intake.application.review_reminder) triggers an escalation notice.
     emits:
       - id: submitted
-        description: TODO — describe when this event is emitted and who consumes it.
+        description: Published when an application is submitted for review. Eligibility creates a pending determination for it.
         schema:
           type: object
           required:
@@ -40,10 +40,10 @@ machines:
                 type: string
               description: The programs the household applied for, which eligibility screens.
       - id: closed
-        description: TODO — describe when this event is emitted and who consumes it.
+        description: Published when a caseworker closes an application once intake processing is complete.
       - id: withdrawn
-        description: TODO — describe when this event is emitted and who consumes it.
-      - id: review-reminder
+        description: Published when the household, or a caseworker acting for it, withdraws an application.
+      - id: review_overdue
         description: Emitted when an application has been awaiting caseworker review for too long.
     actions:
       - id: submit
@@ -64,12 +64,12 @@ machines:
               type: intake.application.submitted
           - call: requestTimer
             with:
-              timerId: review_reminder
+              timerId: intake.review_reminder.{$object.id}
               fireAfter:
                 amount: 72
                 unit: hours
               callback:
-                event: intake.review_reminder
+                event: intake.application.review_reminder
             description: Escalate if no caseworker has opened this application in 72 hours.
       - id: open
         description: Moves a submitted application into active caseworker review.
@@ -122,16 +122,16 @@ machines:
               event: withdrawn
               type: intake.application.withdrawn
     "on":
-      - type: intake.review_reminder
+      - type: intake.application.review_reminder
         description: |
           Escalates an application that has been awaiting caseworker review for too long. Fired by the scheduling service when the review_reminder timer expires.
         transition:
           from: submitted
         steps:
           - emit:
-              event: review-reminder
+              event: review_overdue
               description: Notify supervisors that this application needs immediate attention.
-              type: intake.application.review-reminder
+              type: intake.application.review_overdue
   - object: Interview
     states:
       - id: scheduled
@@ -267,15 +267,7 @@ machines:
                   correction: $correction
           - forEach:
               from: decision-support/suggestions
-              where:
-                and:
-                  - "==":
-                      - var: metadata.intake.interviewId
-                      - var: object.id
-                  - in:
-                      - var: status
-                      - - proposed
-                        - refused
+              where: item.metadata.intake.interviewId == object.id && item.status in ["proposed", "refused"]
               as: open
             do:
               - if: |
@@ -338,15 +330,7 @@ machines:
         steps:
           - forEach:
               from: decision-support/suggestions
-              where:
-                and:
-                  - "==":
-                      - var: metadata.intake.interviewId
-                      - var: object.id
-                  - in:
-                      - var: status
-                      - - proposed
-                        - refused
+              where: item.metadata.intake.interviewId == object.id && item.status in ["proposed", "refused"]
               as: open
             do:
               - call: expireSuggestionOf

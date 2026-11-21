@@ -125,8 +125,15 @@ export function toPascalCase(name) {
 }
 
 /**
- * Extract individual resources from an examples object.
- * Filters out list examples, payload examples, and non-object entries.
+ * Extract individual resources from an examples object: each example that is
+ * a record, which is an object with an `id`.
+ *
+ * An example shaped as a list response — an `items` array beside `total`,
+ * `limit` and `offset` — is not a record, and neither is one with no `id`,
+ * such as a request body's. Each is left out with a warning naming it, so a
+ * record that isn't seeded says so. A record may hold an `items` array of its
+ * own — a basket and the things in it — and is kept.
+ *
  * Returns resources sorted by key name for consistent ordering.
  * @param {Object} examples - Examples object from YAML (key → value)
  * @returns {Array<{key: string, name: string, data: Object}>} Sorted array of resources
@@ -135,17 +142,29 @@ export function extractIndividualResources(examples) {
   const resources = [];
 
   for (const [key, value] of Object.entries(examples)) {
-    if (!value || typeof value !== 'object') continue;
-    if (value.items && Array.isArray(value.items)) continue;
-
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) continue;
-
-    if (value.id) {
-      resources.push({ key, name: key, data: value });
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    if (isListResponse(value)) {
+      console.warn(`Example "${key}" is a list response, not a record, so it is left out of the examples.`);
+      continue;
     }
+    if (!value.id) {
+      console.warn(`Example "${key}" has no id, so it is left out of the examples.`);
+      continue;
+    }
+    resources.push({ key, name: key, data: value });
   }
 
   resources.sort((a, b) => a.key.localeCompare(b.key));
   return resources;
+}
+
+/**
+ * Whether an example has the shape of a list response: an `items` array with
+ * `total`, `limit` and `offset` beside it.
+ *
+ * @param {Object} value
+ * @returns {boolean}
+ */
+function isListResponse(value) {
+  return Array.isArray(value.items) && ['total', 'limit', 'offset'].every((field) => field in value);
 }

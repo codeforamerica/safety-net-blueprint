@@ -5,7 +5,7 @@
  * schemas/config.schema.json. Fails fast with a clear error on invalid config.
  */
 
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -20,13 +20,16 @@ const validate = ajv.compile(schema);
 
 /**
  * Load and validate config.yaml from a content package directory.
- * Exits with an error message if validation fails.
+ * Exits with an error message if validation fails. Every setting in it is
+ * optional — the domains come from the contracts — so a project without one
+ * gets the defaults.
  *
  * @param {string} contentDir - Absolute path to the content package directory.
  * @returns {object} Validated config object.
  */
 export function loadConfig(contentDir) {
   const configPath = join(contentDir, 'config.yaml');
+  if (!existsSync(configPath)) return { name: 'Blueprint' };
   const config = yaml.load(readFileSync(configPath, 'utf8'));
   if (!validate(config)) {
     const errors = validate.errors

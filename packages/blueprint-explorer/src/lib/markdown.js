@@ -2,13 +2,18 @@
  * Shared GFM markdown renderer for explorer build scripts.
  */
 
-/** Inline markdown: bold, italic, code. Escapes HTML first. */
+/**
+ * Inline markdown: bold, italic, code. Escapes HTML first. A code span is
+ * shown as written, as CommonMark has it, so `*john*` keeps its asterisks:
+ * bold and italic apply only between code spans.
+ */
 export function inlineMd(raw) {
-  return String(raw ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`([^`\n]+)`/g, `<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">$1</code>`);
+  const escaped = String(raw ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Split on code spans: the odd parts are their contents.
+  return escaped.split(/`([^`\n]+)`/).map((part, i) => (i % 2
+    ? `<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">${part}</code>`
+    : part.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>'))).join('');
 }
 
 /** Render a GFM pipe table to an HTML table string, or null if not a table. */

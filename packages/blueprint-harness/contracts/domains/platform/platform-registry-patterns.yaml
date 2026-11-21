@@ -141,7 +141,7 @@ entries:
   state-machine-timer:
     description: >
       Timer declaration on a state machine. The scheduling service emits a callback
-      event ({domain}.{id}) when the timer fires; the machine subscribes to react.
+      event ({domain}.{resource}.{id}) when the timer fires; the machine subscribes to react.
       Exercises timer declaration rendering and the timer → event subscription link.
 
   state-machine-subscription:

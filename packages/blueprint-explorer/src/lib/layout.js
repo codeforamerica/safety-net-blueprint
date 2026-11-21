@@ -2,7 +2,7 @@
  * Shared page layout helpers for all explorer build scripts.
  *
  * twoColumnPage() — dark sticky sidebar with search + active nav + scrollable main.
- *   Used by: api-reference domain pages, client-reference domain pages.
+ *   Used by: api-reference domain pages, annotations-explorer type pages.
  *
  * singleColumnPage() — centered single-column layout.
  *   Used by: event-catalog, state-machine-docs, index pages.
@@ -271,10 +271,32 @@ export function twoColumnPage({
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();

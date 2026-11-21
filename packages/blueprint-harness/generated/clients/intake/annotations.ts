@@ -185,7 +185,7 @@ export const Annotations = {
         "snap-fair-hearing-rights"
       ]
     },
-    "intake.application.review-reminder": {
+    "intake.application.review_overdue": {
       "patterns": [
         "state-machine-timer"
       ]

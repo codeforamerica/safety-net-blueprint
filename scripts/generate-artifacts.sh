@@ -49,11 +49,13 @@ npm run clients:typescript --prefix "$ROOT" -- \
 echo "Rebuilding rules-engine browser bundle..."
 node "$ROOT/packages/blueprint-rules-engine/scripts/build-browser.js" 2>&1
 
+echo "Rebuilding the explorer's mock bundle..."
+node "$ROOT/packages/blueprint-explorer/scripts/build-browser.js" 2>&1
+
 echo "Rebuilding safety-net-explorer outputs..."
 node "$ROOT/packages/blueprint-explorer/build.js" \
   --content="$ROOT/packages/safety-net-explorer" \
-  --resolved="$ROOT/packages/generated/contracts" \
-  --clients="$ROOT/packages/generated/clients" 2>&1
+  --resolved="$ROOT/packages/generated/contracts" 2>&1
 
 echo "Regenerating blueprint-harness outputs..."
 node "$ROOT/packages/blueprint-harness/scripts/regenerate.js" 2>&1

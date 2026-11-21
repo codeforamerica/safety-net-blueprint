@@ -52,7 +52,7 @@ platform-state-machine.yaml          domain-state-machine.yaml
 
 **Guards** — named boolean conditions that control access to transitions. Each guard has a `condition:` expression and an id that can be referenced by name in transition definitions. Guards centralize access control logic — rather than repeating `"caseworker" in caller.roles` in every transition that requires a caseworker, a guard named `callerIsCaseworker` is declared once and referenced everywhere it applies.
 
-**Events** — the machine's subscriptions to named domain events. When an event arrives with a matching `name:`, the machine runs the associated steps. Object creation, field changes, and timer callbacks all arrive as events — see [Decision 4](#decision-4-fully-event-driven-model). Event subscriptions can load additional context (e.g., look up the application referenced in the event payload) before running their steps.
+**Events** — the machine's subscriptions to named domain events. When an event arrives with a matching `type:`, the machine runs the associated steps. Object creation, field changes, and timer callbacks all arrive as events — see [Decision 4](#decision-4-fully-event-driven-model). Event subscriptions can load additional context (e.g., look up the application referenced in the event payload) before running their steps.
 
 **Actions** — actor- or system-triggered state changes. Each action is an operation a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{actionId}` endpoint. An action declares a human-readable `description:` for the generated endpoint, an optional `schema:` with a `request:` schema for the POST body, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Actions without a `to:` are in-place operations that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
 
@@ -174,11 +174,18 @@ Procedures are invoked by name (string form). HTTP operations use the object for
 
 When a procedure declares `parameters:`, callers pass values via `with:`. Inside the procedure, parameters are referenced as `$params.name`.
 
-An HTTP call by method and path is the machine's own direct write. It skips the
-API's checks — the create or update schema, the checks on a call a record
-carries, the operation's guards, refusing a duplicate — and is checked only
-against the resource's full schema. A call to an operation, by its
-`operationId` (below), is the validated path.
+An HTTP call by method and path is the machine's own direct write. A create or
+an update skips the API's checks — the create or update schema, the checks on
+a call a record carries, the operation's guards, refusing a duplicate — and is
+checked only against the resource's full schema. A call to another record's
+action runs as the system: it skips only role matching, and the action's
+`from`, conditions and request schema still apply. The calls are made once
+the action or reaction has saved its record, so an action called on that
+record reads it as it was left. A call that fails — an action that refuses,
+a path no API declares, a write the schema refuses — fails the action: it
+answers with the call's status, and nothing it did is saved. In a reaction to
+an event, the reaction fails the same way, and the mock logs the call and why.
+A call to an operation, by its `operationId` (below), is the validated path.
 
 Use a call by path only for the machine's own domain's records. It skips the
 route table as well, so [routing](../../guides/mock-server.md#routing-to-a-real-service)
@@ -351,20 +358,24 @@ An event is always named for the resource that sends it. A step with no data to 
 
 Time-based callbacks follow the same event subscription model as all other events. See [Decision 5](#decision-5-timer-as-event).
 
-### Shared timer procedures
+### Requesting and cancelling a timer
 
-Two built-in shared procedures encapsulate the timer boilerplate:
+A step requests a timer by emitting `platform.timer.requested`, and cancels it by emitting `platform.timer.cancelled` with the same `timerId`. The framework provides both events to every contract set:
 
 ```yaml
-- call: requestTimer
-  with:
-    timerId: "intake.snap_deadline.{$object.id}"
-    fireAfter: P30D   # ISO 8601 duration; use fireAt + fireOffset for deadline-relative
-    calendarType: calendar   # or: business
-    callback: {event: intake.snap_deadline, data: {}}
-- call: cancelTimer
-  with: {timerId: "intake.snap_deadline.{$object.id}"}
+- emit:
+    type: platform.timer.requested
+    data:
+      timerId: "intake.snap_deadline.{$object.id}"
+      fireAfter: P30D   # ISO 8601 duration; use fireAt + fireOffset for deadline-relative
+      calendarType: calendar   # or: business
+      callback: {event: intake.application.snap_deadline, data: {}}
+- emit:
+    type: platform.timer.cancelled
+    data: {timerId: "intake.snap_deadline.{$object.id}"}
 ```
+
+The safety-net contracts also offer two shared procedures, `requestTimer` and `cancelTimer`, that emit these events; their state machines call them with `call: requestTimer` and `with:` the same fields. See [Timers](timers.md#shared-procedures).
 
 `fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Timers](timers.md) for the full event contract.
 
@@ -379,7 +390,7 @@ To store a deadline on the object, set it to a time from now: `$now`, then `+` o
     data:
       timerId: "decision-support.suggestion_expiry.{$object.id}"
       fireAt: $object.expiresAt
-      callback: {event: decision-support.suggestion_expiry, data: {}}
+      callback: {event: decision-support.suggestion.suggestion_expiry, data: {}}
 ```
 
 ### Receiving the callback
@@ -392,12 +403,12 @@ timers:
     description: 30-calendar-day SNAP processing deadline
 
 on:
-  - name: intake.snap_deadline
+  - type: intake.application.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, requestBody: {payload: {reason: snap_deadline_exceeded}}}
 ```
 
-The `timers:` section declares the timer types the machine uses. The event name follows the convention `{domain}.{id}` — `intake.snap_deadline` for a timer declared in the `intake` domain with id `snap_deadline`. The timer service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
+The `timers:` section declares the timer types the machine uses. The event is named like every other event the resource sends, `{domain}.{resource}.{id}` — `intake.application.snap_deadline` for a timer with id `snap_deadline` declared on the `intake` domain's `Application` machine. The timer service fires the callback event exactly as specified in the original request; no dispatch on a `timerType` field is needed.
 
 The timer service is a separate contract boundary — see [Timers](timers.md) for the full event contract, timer ID conventions, and implementation guidance. Because timers are events, timer behavior is testable via the same event stub mechanism used for all other events.
 

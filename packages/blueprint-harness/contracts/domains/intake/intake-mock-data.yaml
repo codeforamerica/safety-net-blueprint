@@ -147,3 +147,12 @@ IncomeVerificationExample2:
   frequency: biweekly
   createdAt: "2026-10-02T09:00:00Z"
   updatedAt: "2026-10-02T09:00:00Z"
+
+# The renewal's interview, on its interview date, not yet started.
+InterviewExample1:
+  id: 88888888-8888-4888-8888-888888888881
+  applicationId: 66666666-6666-4666-8666-666666666666
+  status: scheduled
+  scheduledFor: "2026-10-14"
+  createdAt: "2026-10-01T09:00:00Z"
+  updatedAt: "2026-10-01T09:00:00Z"

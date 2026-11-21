@@ -11,6 +11,13 @@
 import { withoutEngineFields } from './sla-engine.js';
 
 /**
+ * Where the event log is kept: the platform's `/events`, under its domain, as
+ * every collection is (collection-utils.js storageName), so `GET
+ * /platform/events` reads what is saved here.
+ */
+export const EVENTS_COLLECTION = 'platform/events';
+
+/**
  * Emit a pre-built CloudEvents 1.0 envelope directly to the event bus.
  * Used by POST /platform/events to inject externally-sourced domain events
  * (e.g., events from other domains during integration testing).
@@ -36,12 +43,10 @@ export function emitEventEnvelope(envelope, instance) {
     time: envelope.time || new Date().toISOString(),
     partitionkey: envelope.partitionkey ?? partitionKeyOf(envelope.type, envelope.subject, envelope.data, instance),
   });
-  // Infrastructure events (scheduling, etc.) are broadcast for stub interception
-  // but not persisted — they are not domain events observable via /platform/events.
-  const isInfrastructureEvent = record.type?.startsWith('platform.timer.');
-  if (!isInfrastructureEvent) {
-    saveEvent(store, record);
-  }
+  // Every event is logged, timer requests and cancellations too: they are the
+  // platform domain's events, and the log is every domain's
+  // (platform-events-openapi.yaml).
+  saveEvent(store, record);
   instance.bus.emit('domain-event', record);
   return record;
 }
@@ -53,8 +58,8 @@ export function emitEventEnvelope(envelope, instance) {
  * keep the timestamps it adds.
  */
 function saveEvent(store, record) {
-  if (typeof store.append === 'function') store.append('events', record);
-  else store.insertResource('events', record);
+  if (typeof store.append === 'function') store.append(EVENTS_COLLECTION, record);
+  else store.insertResource(EVENTS_COLLECTION, record);
 }
 
 // The optional CloudEvents attributes, which the events contract has an event

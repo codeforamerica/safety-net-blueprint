@@ -8,15 +8,15 @@ rpc_endpoints:
   method: POST
   description: |
     RPC endpoints trigger state transitions defined in the state machine
-    contract. They are registered at server startup from the operations:
-    array in each state machine YAML.
+    contract. Declare each one as an entry in a machine's actions: array; the
+    mock registers it at startup, and resolve documents it in the OpenAPI spec.
 
   request:
     headers:
       - name: X-Caller-Id
         required: true
         description: Identity of the caller; evaluated by guards that reference $caller.id
-    body: Optional. Defined per-trigger in the state machine requestBodies section.
+    body: Optional. Declare it on the action as schema.request.
 
   success_response:
     code: 200
@@ -48,7 +48,8 @@ rpc_endpoints:
 # Behavioral Contract Steps
 # =============================================================================
 # Steps appear in state machine actions (steps:), procedures (steps:), and a
-# machine's reactions to events (on[].steps:).
+# machine's reactions to events (on[].steps:). Write each step as one of the
+# types below; behavioral-contract-dsl.md is the full reference.
 #
 # Step types:
 #
@@ -63,23 +64,60 @@ rpc_endpoints:
 #       <key>: <value expression>   # $now, $object.field, $request.field, etc.
 #     Emits an event the machine declares under emits:, named {domain}.{resource}.{name} —
 #     the domain as declared, the resource's schema name in snake_case. With no data,
-#     write just `emit: <name>`.
+#     write just `emit: <name>`. To send an event another domain declares, such as
+#     platform.timer.requested, write `emit: {type: <full type>, data: {...}}`.
 #
-#   evaluate: <ruleId>
-#     Evaluates a named rule from the state machine's rules: section. The rule
-#     can produce set:, invoke:, or nested evaluate: steps.
+#   call: <procedureId>
+#     with:
+#       <param>: <value expression>
+#     Runs a procedure the machine, its file, or a file it extends declares.
 #
-#   invoke:
-#     # POST form — creates a resource or triggers an operation:
+#   call:
+#     # By method and path — the machine's own write, for its own domain's records:
 #     POST: <path>                  # e.g. workflow/tasks, intake/applications/$application.id/open
-#     body:
-#       <key>: <value expression>
+#     requestBody:
+#       payload:
+#         <key>: <value expression>
+#     PATCH: <path>                 # e.g. intake/applications/$this.subject
+#     requestBody:
+#       payload:
+#         <fieldName>: <value expression>   # or {$push: <value>} to append to an array field
+#     A POST to a collection creates a record there; a POST to an action runs
+#     it as the system, its from: and conditions still checked; a PATCH updates
+#     a record. A call that fails fails the action or reaction that made it,
+#     and nothing it did is saved. Call an action only on a record in a state
+#     it accepts: test the state with if: first.
 #
-#     # PATCH form — appends a value to an array field:
-#     PATCH: <path>                 # e.g. intake/applications/members/$this.data.memberId
-#     body:
-#       <fieldName>:
-#         $push: <value expression> # appended to the array; object or scalar
+#   call:
+#     # By operationId — the validated path; use it for another domain's records:
+#     operationId: <operationId>
+#     parameters:
+#       - {name: <name>, in: path, value: <value expression>}
+#     requestBody: {payload: {...}}
+#     runAs: system                 # or caller
+#     catch: {to: <state>, do: [<steps>]}   # optional: what to do when the call fails
+#     bind: $<name>                 # optional: keep what the call answered
+#
+#   evaluate: <rulesetName>
+#     inputs:
+#       <input>: <value expression>
+#     bind: $<name>
+#     Evaluates a ruleset the domain's *-rules.yaml declares, and binds its result.
+#
+#   if: <CEL condition>
+#     then: [<steps>]
+#     else: [<steps>]               # optional
+#
+#   match: <CEL expression>
+#     when:
+#       <value>: [<steps>]
+#
+#   forEach: {from: <domain/collection>, where: {<field>: <value expression>}, as: <alias>}
+#     do: [<steps>]
+#     Runs do: once per matching record, or once per record with no where:;
+#     forEach: {in: <value expression>, as: <alias>} runs it once per item of a list.
+#     Use a CEL where: string, as a context binding takes, for more than
+#     equality: where: 'item.applicationId == object.id && item.status != "closed"'
 #
 # Expressions (paths, body values, and set: value: all use the same syntax):
 #   $alias.field    — value from a context binding alias (e.g. $application.id, usable in paths and bodies)
@@ -97,12 +135,20 @@ rpc_endpoints:
 # is evaluated, so there are no operators; a missing value contributes nothing.
 #
 # Conditions are CEL, with no dialect: a guard's condition, if:, match:, a
-# context binding's where: string, a composition's filter:, and x-derived.
-# They are evaluated by a spec-compliant implementation (@bufbuild/cel), so an
-# expression that is not CEL is refused, not run some other way.
+# where: string in a context binding or forEach, a composition's filter:,
+# x-derived, a metric's filter: and an SLA type's conditions (autoAssignWhen,
+# pauseWhen and the rest). They are evaluated by a spec-compliant
+# implementation (@bufbuild/cel), so an expression that is not CEL is refused,
+# not run some other way. JSON Logic is refused by validation, which shows the
+# CEL to write instead.
 #   - Names are unprefixed: caller, object, request, params, this (the event),
 #     now, and each context binding by its alias. `$` is value-expression
 #     syntax, above, and not CEL.
+#   - In a where: string, item is the candidate record:
+#     item.status == "pending" && item.taskId == object.id
+#   - A metric's filter:, an SLA type's conditions and a composition's filter:
+#     read the record's own fields by name: type == "workflow.task.created",
+#     status in ["awaiting_client", "awaiting_verification"].
 #   - A field a record does not have is an error, not null: ask with has(),
 #     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
 #   - A binding that found no record is null; test the binding, not a field
@@ -114,11 +160,15 @@ behavioral_contract_steps:
   step_types:
     - set
     - emit
+    - call
     - evaluate
-    - invoke
-  invoke_methods:
-    - POST    # create a resource or trigger a state machine operation
-    - PATCH   # append a value to an array field via $push
+    - if
+    - match
+    - forEach
+  call_forms:
+    - procedure       # call: <procedureId>, with with: arguments
+    - method_and_path # call: {POST|PATCH: <path>, requestBody: {payload: ...}} — the machine's own domain
+    - operation       # call: {operationId: ..., parameters: ..., requestBody: ...} — any domain
 
 # =============================================================================
 # Sub-Resource Path Patterns
@@ -135,7 +185,7 @@ behavioral_contract_steps:
 
 behavioral_yaml:
   # Always use arrays for config item collections — never object-as-map.
-  # Each item carries an identity field (id or trigger) instead of being keyed
+  # Each item carries an identity field (id) instead of being keyed
   # by property name.
   #
   # Why: Arrays support overlay filter targeting (e.g., [?(@.id == 'foo')]).
@@ -143,7 +193,7 @@ behavioral_yaml:
   # Object-as-map is appropriate ONLY in OpenAPI schemas (properties:) where
   # merge-by-key semantics are intentional and well-understood.
   collection_format:
-    preferred: array with id/trigger field
+    preferred: array with id field
     avoid: object-as-map
     rationale: |
       Arrays allow overlay filter expressions to target individual items.
@@ -157,23 +207,23 @@ behavioral_yaml:
           slaClock: running
       guards:
         - id: callerIsAssignedWorker
-          field: assignedToId
-          operator: equals
-          value: $caller.id
-      requestBodies:
-        - trigger: complete
-          type: object
-          properties:
-            outcome:
-              type: string
-          required: [outcome]
+          condition: object.assignedToId == caller.id
+      actions:
+        - id: complete
+          schema:
+            request:
+              type: object
+              properties:
+                outcome:
+                  type: string
+              required: [outcome]
       # Incorrect — avoid
       states_avoid:
         pending:
           slaClock: running
       guards_avoid:
         callerIsAssignedWorker:
-          field: assignedToId
+          condition: object.assignedToId == caller.id
 
   # Identity field naming:
   # - Use id: for items that represent named concepts (states, guards, slaTypes, metrics)
@@ -183,5 +233,5 @@ behavioral_yaml:
     slaTypes: id
     metrics: id
 
-# RPC endpoints (POST with action verbs) are generated from state machine triggers.
+# RPC endpoints (POST with action verbs) are generated from state machine actions.
 # REST endpoints follow standard CRUD patterns below.

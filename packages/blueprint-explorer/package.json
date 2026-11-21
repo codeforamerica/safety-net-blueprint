@@ -8,11 +8,14 @@
   },
   "files": [
     "src/",
+    "dist/",
     "build.js",
     "schemas/",
     "authored/"
   ],
   "scripts": {
+    "build:browser": "node scripts/build-browser.js",
+    "prepare": "node scripts/build-browser.js",
     "test": "node --test",
     "test:unit": "node --test \"tests/unit/**/*.test.js\"",
     "test:integration": "node --test \"tests/integration/**/*.test.js\""
@@ -35,5 +38,9 @@
     "@codeforamerica/blueprint-rules-engine": "^0.2.1",
     "ajv": "^8.17.1",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@codeforamerica/blueprint-mock-server": "^0.5.0",
+    "esbuild": "^0.28.2"
   }
 }

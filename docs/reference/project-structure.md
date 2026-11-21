@@ -52,8 +52,7 @@ safety-net-blueprint/
 │   │   │   └── route-generator.js
 │   │   ├── cli/                    # Server startup scripts
 │   │   │   ├── server.js           # Main server process
-│   │   │   ├── generate-mock-data.js
-│   │   │   └── swagger/
+│   │   │   └── generate-mock-data.js
 │   │   └── tests/
 │   │       ├── unit/
 │   │       ├── integration/
@@ -97,7 +96,6 @@ safety-net-blueprint/
 │   │
 │   ├── safety-net-explorer/        # Built Explorer HTML output (committed)
 │   │   ├── api-reference/
-│   │   ├── client-reference/
 │   │   ├── data-dictionaries/
 │   │   └── state-machine-docs/
 │   │

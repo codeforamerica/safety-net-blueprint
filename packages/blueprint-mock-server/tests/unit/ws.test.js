@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { createMockServer, runScenario, operationIndex, controlOperations } from '../../src/server.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
-const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));
+const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url)), 'utf8'));
 const docs = extract(contracts, 'docs');
 const CHANNEL = 'communication-transcripts-relay-asyncapi.yaml#/channels/audio';
 const URL_ = 'ws://localhost/communication/transcripts-relay';

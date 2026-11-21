@@ -153,6 +153,6 @@ test('a created application\'s slaInfo, in its response and its created event, m
   assert.ok(matches(created.data.slaInfo), JSON.stringify(matches.errors));
 
   // Kept where the engine needs them, to pause and resume the clock.
-  const stored = mock.store.findById('applications', body.id);
+  const stored = mock.store.findById('intake/applications', body.id);
   assert.ok('_accumulatedPausedMs' in stored.slaInfo[0]);
 });

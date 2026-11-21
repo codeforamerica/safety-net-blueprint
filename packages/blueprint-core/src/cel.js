@@ -1,8 +1,9 @@
 /**
  * The blueprint's expression language: CEL, with no dialect.
  *
- * Guards, `if:` and `match:` steps, context-binding `where`s, composition
- * filters and `x-derived` fields are all CEL, evaluated here by
+ * Guards, `if:` and `match:` steps, the `where`s of context bindings and
+ * `forEach` steps, composition and metric filters, SLA type conditions and
+ * `x-derived` fields are all CEL, evaluated here by
  * `@bufbuild/cel`, a spec-compliant implementation with the official
  * conformance corpus. Core owns it so validation can parse an expression with
  * the same implementation the mock server evaluates it with — one notion of

@@ -44,9 +44,9 @@ function makeEvent(type, subject, data = null) {
 // =============================================================================
 
 test('machine onEvent — runs when guards pass', (t, done) => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   const APP_ID = 'app-guard-pass';
-  store.insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: true });
+  store.insertResource('intake/applications', { id: APP_ID, status: 'submitted', isUrgent: true });
 
   const machine = {
     object: 'Application',
@@ -73,16 +73,16 @@ test('machine onEvent — runs when guards pass', (t, done) => {
   ));
 
   setImmediate(() => {
-    const app = store.findById('applications', APP_ID);
+    const app = store.findById('intake/applications', APP_ID);
     assert.strictEqual(app.priority, 'high', 'the step should have run and persisted');
     done();
   });
 });
 
 test('machine onEvent — skipped when guards fail', (t, done) => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   const APP_ID = 'app-guard-fail';
-  store.insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: false });
+  store.insertResource('intake/applications', { id: APP_ID, status: 'submitted', isUrgent: false });
 
   let stepRan = false;
 
@@ -112,7 +112,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 
   setImmediate(() => {
     // guard fails — resource unchanged
-    const app = store.findById('applications', APP_ID);
+    const app = store.findById('intake/applications', APP_ID);
     assert.strictEqual(app.priority, undefined);
     done();
   });
@@ -123,9 +123,9 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 // =============================================================================
 
 test('machine onEvent — applies transition and persists resource mutations', (t, done) => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   const APP_ID = 'app-transition-1';
-  store.insertResource('applications', { id: APP_ID, status: 'submitted' });
+  store.insertResource('intake/applications', { id: APP_ID, status: 'submitted' });
 
   const machine = {
     object: 'Application',
@@ -150,7 +150,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
   ));
 
   setImmediate(() => {
-    const app = store.findById('applications', APP_ID);
+    const app = store.findById('intake/applications', APP_ID);
     assert.strictEqual(app.status, 'under_review');
     assert.ok(app.reviewedAt, 'reviewedAt was set');
     done();
@@ -158,7 +158,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
 });
 
 test('machine onEvent — skipped when resource not found', (t, done) => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
 
   const machine = {
     object: 'Application',
@@ -188,9 +188,9 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
 });
 
 test('machine onEvent — skipped when resource in wrong from state', (t, done) => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   const APP_ID = 'app-wrong-state';
-  store.insertResource('applications', { id: APP_ID, status: 'under_review' });
+  store.insertResource('intake/applications', { id: APP_ID, status: 'under_review' });
 
   const machine = {
     object: 'Application',
@@ -215,7 +215,7 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
   ));
 
   setImmediate(() => {
-    const app = store.findById('applications', APP_ID);
+    const app = store.findById('intake/applications', APP_ID);
     assert.strictEqual(app.status, 'under_review');
     assert.strictEqual(app.flag, undefined);
     done();
@@ -232,17 +232,17 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
   // envelope could not be recorded. The failure is caught and logged, so the
   // triggering transition still succeeded and the emitted event simply never
   // appeared — which is the hardest kind of missing to notice.
-  store.clearAll('applications');
-  store.clearAll('events');
+  store.clearAll('intake/applications');
+  store.clearAll('platform/events');
   const APP_ID = 'app-emitting';
-  store.insertResource('applications', { id: APP_ID, status: 'submitted' });
+  store.insertResource('intake/applications', { id: APP_ID, status: 'submitted' });
 
   const machine = {
     object: 'Application',
     on: [{
-      type: 'intake.review_reminder',
+      type: 'intake.application.review_reminder',
       transition: { from: 'submitted' },
-      steps: [{ emit: { type: 'intake.application.review-reminder' } }],
+      steps: [{ emit: { type: 'intake.application.review_overdue' } }],
     }],
   };
 
@@ -254,10 +254,10 @@ test('machine onEvent — an emit: step reaches the event log', (t, done) => {
   }];
 
   registerEventSubscriptions(smEntries, [], [], instance);
-  instance.bus.emit('domain-event', makeEvent('intake.review_reminder', APP_ID));
+  instance.bus.emit('domain-event', makeEvent('intake.application.review_reminder', APP_ID));
 
   setImmediate(() => {
-    const { items } = store.findAll('events', { type: 'intake.application.review-reminder' }, { limit: null });
+    const { items } = store.findAll('platform/events', { type: 'intake.application.review_overdue' }, { limit: null });
     assert.equal(items.length, 1, 'the emitted event should be in the log');
     assert.equal(items[0].subject, APP_ID, 'and should name the resource it was about');
     done();

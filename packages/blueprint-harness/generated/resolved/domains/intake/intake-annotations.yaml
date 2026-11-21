@@ -331,6 +331,6 @@ events:
       - snap-notice-of-eligibility
       - medicaid-notice-of-eligibility
       - snap-fair-hearing-rights
-  intake.application.review-reminder:
+  intake.application.review_overdue:
     patterns:
       - state-machine-timer

@@ -73,15 +73,17 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 - **`eligibility.determination.created`**
   - For each:
     - For each `$member.programsAppliedFor`:
-      - {"operationId":"createDecision","parameters":[{"name":"determinationId","in":"path","value":"$this.subject"}],"requestBody":{"payload":{"determinationId":"$this.subject","applicationId":"$this.data.applicationId","memberId":"$member.id","program":"$program","status":"pending"}}}
+      - `createDecision`
 - **`eligibility.decision.completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
 - **`eligibility.determination.completed`**
-  - If `false`:
-    - Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay
-  - Else:
-    - Close the application when all determinations are in and no supervisor approval is required
+  - Look up: application (from `event.subject`)
+  - If `application is not null and application.status is "under_review"`:
+    - If `false`:
+      - Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay
+    - Else:
+      - Close the application when all determinations are in and no supervisor approval is required
 - **`eligibility.determination.expedited`**
   - Set isExpedited on the application when eligibility screening confirms expedited criteria are met
 - **`client-management.person.match_resolved`**

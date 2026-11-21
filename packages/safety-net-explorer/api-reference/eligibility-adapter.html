@@ -73,6 +73,65 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
+  .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
+  .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
+  .content-item.op-delete { border-color: #AF121D !important; } .op-delete > details > summary { background: #F9C8CB88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #1a1a1a; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: #1a1a1a; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: #AF121D; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: #AF121D; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: #1a1a1a; border-bottom-color: #5650BE; }
+  .resp-tab.resp-ok.on { border-bottom-color: #006152; }
+  .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
+
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -97,1136 +156,1085 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-evaluate" class="nav-link">Evaluate <span class="nav-count">3</span></a>
+        <div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>evaluate</span>/<wbr><span>expedited-screening</span></div>
+    <a href="#op-post-evaluate-expedited-screening" class="nav-link nav-op" title="Evaluate expedited SNAP screening">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>evaluate</span>/<wbr><span>medicaid-ex-parte</span></div>
+    <a href="#op-post-evaluate-medicaid-ex-parte" class="nav-link nav-op" title="Evaluate Medicaid ex parte">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a>
+  </div><div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>evaluate</span>/<wbr><span>determination</span></div>
+    <a href="#op-post-evaluate-determination" class="nav-link nav-op" title="Evaluate final determination">
+      <span class="nav-method nav-method-post">POST</span>
+      <span class="nav-op-path"><span></span></span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
-      
-    <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
+      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
       <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Contracted interface for the state-provided eligibility evaluation adapter. The blueprint calls these endpoints to perform program eligibility evaluations. States implement this interface against whatever backend system they use — a rules engine, a legacy case management platform, or any other system. The blueprint treats the adapter as a black box.</p><p style="margin:0 0 6px;">Each call represents one evaluation for one application and one program. All request schemas extend AdapterRequest, which includes a metadata passthrough field the blueprint sets for correlation. Adapters must echo metadata back unchanged in the response. See docs/architecture/cross-cutting/adapters.md.</p></div></div>
-      <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://adapter.example.com</code></div>
-    </div>
-    <section id="section-evaluate" style="margin-bottom:2.5rem;">
+      
+    </div><section id="section-evaluate" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Evaluate</h2>
         <p style="font-size:12px;color:#666;">Eligibility evaluation endpoints.</p>
       </div>
-      <div id="op-post-evaluate-expedited-screening" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+      <div id="op-post-evaluate-expedited-screening" class="content-item op-post" data-try-op="evaluateExpeditedScreening" data-try-file="domains/eligibility/eligibility-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/evaluate/expedited-screening</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Evaluate expedited SNAP screening</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/evaluate/expedited-screening</code>
+        <span class="op-name">Evaluate expedited SNAP screening</span>
       </span>
+      <code class="op-id" title="operationId">evaluateExpeditedScreening</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-post-evaluate-expedited-screening" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines whether an application qualifies for expedited SNAP processing based on household-level financial criteria (7 CFR § 273.2(i)). Called at submission before caseworker assignment. Member-level data is not required for the baseline criteria; states may extend the request via overlay if their rules engine needs additional context.</p></div></div>
-      
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
-      Request body <span style="color:#AF121D;font-weight:700;">required</span>
-    </div>
-    <details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
-      <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-        <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ExpeditedScreeningRequest</span>
-      </summary>
-      <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines whether an application qualifies for expedited SNAP processing based on household-level financial criteria (7 CFR § 273.2(i)). Called at submission before caseworker assignment. Member-level data is not required for the baseline criteria; states may extend the request via overlay if their rules engine needs additional context.</p></div></div>
+        
+        
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      <span class="schema-name">ExpeditedScreeningRequest</span>
+      <span class="returns">→</span> <span class="schema-name">ExpeditedScreeningResponse</span>
+      <span class="pill">application/json</span>
+      <span class="pill pill-req">required</span>
+    </h4>
+    <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span class="ftype">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
-</span>
       </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
       
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">household</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Household</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">Household-level data used in SNAP expedited screening criteria.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">household</span>
+              <span class="ftype">Household</span>
+              <span class="fpreview">{ isSubsidizedHousing, receivedTanfInAnotherState, roomers, +1 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">Household-level data used in SNAP expedited screening criteria.</span>
           </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roomers</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Non-household members who share the living space and pay rent separately.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <div class="nested"><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roomers</span>
+              <span class="ftype">array[object]</span>
+              <span class="fpreview">{ amountPaidForRent, id, mealsIncludedWithRent, +1 }</span>
+              
+              
+            </span>
+            <span class="fdesc">Non-household members who share the living space and pay rent separately.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the roomer is a household member counted in another capacity or a non-member contact.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">member</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">contact</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">Whether the roomer is a household member counted in another capacity or a non-member contact.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">member</code><code class="value-chip">contact</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Identifier of the member or contact record.</span>
       </div>
+      <div class="fdesc">Identifier of the member or contact record.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amountPaidForRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span><span style="font-size:10px;color:#999;font-family:monospace;"> (float)</span>
+        <span class="ftype">number · float</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Amount the roomer pays for rent.</span>
       </div>
+      <div class="fdesc">Amount the roomer pays for rent.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">mealsIncludedWithRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether meals are included with the roomer's rent payment.</span>
       </div>
+      <div class="fdesc">Whether meals are included with the roomer's rent payment.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div></div>
+        </details>
+      </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">utilitiesIncludedInRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether utility costs are included in the rent payment.</span>
       </div>
+      <div class="fdesc">Whether utility costs are included in the rent payment.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">isSubsidizedHousing</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.</span>
       </div>
+      <div class="fdesc">Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">receivedTanfInAnotherState</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.</span>
       </div>
+      <div class="fdesc">Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.</div>
       
-    </div>
-    </div>
+    </div></div>
         </details>
       </div></div>
-    </details>
   </div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">Expedited screening result.</span>
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ExpeditedScreeningResponse</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Expedited screening result. <span class="schema-name">ExpeditedScreeningResponse</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
-</span>
       </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expedited</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">boolean</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the application qualifies for expedited SNAP processing.</span>
       </div>
+      <div class="fdesc">Whether the application qualifies for expedited SNAP processing.</div>
       
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
-        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The request is malformed or contains invalid parameters. <span class="schema-name">BadRequest</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
     </div>
   </details>
-</div><div id="op-post-evaluate-medicaid-ex-parte" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-post-evaluate-medicaid-ex-parte" class="content-item op-post" data-try-op="evaluateMedicaidExParte" data-try-file="domains/eligibility/eligibility-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/evaluate/medicaid-ex-parte</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Evaluate Medicaid ex parte</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/evaluate/medicaid-ex-parte</code>
+        <span class="op-name">Evaluate Medicaid ex parte</span>
       </span>
+      <code class="op-id" title="operationId">evaluateMedicaidExParte</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-post-evaluate-medicaid-ex-parte" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines Medicaid eligibility for one applicant using electronic data exchange results, without requiring applicant-provided documentation. Called once per applicant after all Medicaid electronic checks complete. Applications that can be fully determined ex parte are closed automatically without caseworker intervention (42 CFR § 435.916).</p></div></div>
-      
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
-      Request body <span style="color:#AF121D;font-weight:700;">required</span>
-    </div>
-    <details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
-      <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-        <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">MedicaidExParteRequest</span>
-      </summary>
-      <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Determines Medicaid eligibility for one applicant using electronic data exchange results, without requiring applicant-provided documentation. Called once per applicant after all Medicaid electronic checks complete. Applications that can be fully determined ex parte are closed automatically without caseworker intervention (42 CFR § 435.916).</p></div></div>
+        
+        
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
+      <span class="schema-name">MedicaidExParteRequest</span>
+      <span class="returns">→</span> <span class="schema-name">ProgramDecision</span>
+      <span class="pill">application/json</span>
+      <span class="pill pill-req">required</span>
+    </h4>
+    <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span class="ftype">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
-</span>
       </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The program being evaluated.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">member</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The applicant being evaluated.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">income</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Income records for this member.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expenses</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Expense records for this member.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">assets</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Asset records for this member.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employment</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Employment records for this member.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">healthCoverage</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Health coverage records for this member.</span>
-      </div>
-      
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div class="fdesc">The program being evaluated.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">snap</code><code class="value-chip">medicaid</code><code class="value-chip">chip</code><code class="value-chip">tanf</code><code class="value-chip">aca</code></div>
+    </div><div class="field">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[ElectronicCheckResult]</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">Results from FDSH FTI, FDSH Medicare/VCI, and other Medicaid data exchange calls for this applicant.
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">member</span>
+              <span class="ftype">object</span>
+              <span class="fpreview">{ assets, employment, expenses, +2 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The applicant being evaluated.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">income</span>
+        <span class="ftype">array[oneOf]</span>
+        
+        
+      </div>
+      <div class="fdesc">Income records for this member.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expenses</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Expense records for this member.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">assets</span>
+        <span class="ftype">array[oneOf]</span>
+        
+        
+      </div>
+      <div class="fdesc">Asset records for this member.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employment</span>
+        <span class="ftype">array[oneOf]</span>
+        
+        
+      </div>
+      <div class="fdesc">Employment records for this member.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">healthCoverage</span>
+        <span class="ftype">array[oneOf]</span>
+        
+        
+      </div>
+      <div class="fdesc">Health coverage records for this member.</div>
+      
+    </div></div>
+        </details>
+      </div><div style="padding:7px 0;">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
+              <span class="ftype">array[ElectronicCheckResult]</span>
+              <span class="fpreview">{ receivedAt, result, serviceResult, +1 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">Results from FDSH FTI, FDSH Medicare/VCI, and other Medicaid data exchange calls for this applicant.
 </span>
           </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span class="ftype">enum</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The data exchange service that performed the check.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_ssa</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vlp</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_fti</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_medicare</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">fdsh_vci</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ssa_ievs</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irs_ievs</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">swica</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">uib</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">save</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">enrollment_check</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">incarceration_check</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">The data exchange service that performed the check.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">fdsh_ssa</code><code class="value-chip">fdsh_vlp</code><code class="value-chip">fdsh_fti</code><code class="value-chip">fdsh_medicare</code><code class="value-chip">fdsh_vci</code><code class="value-chip">ssa_ievs</code><code class="value-chip">irs_ievs</code><code class="value-chip">swica</code><code class="value-chip">uib</code><code class="value-chip">save</code><code class="value-chip">enrollment_check</code><code class="value-chip">incarceration_check</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">result</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span class="ftype">enum</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">High-level outcome of the service call.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">conclusive</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">inconclusive</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">partial</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">error</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">High-level outcome of the service call.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">conclusive</code><code class="value-chip">inconclusive</code><code class="value-chip">partial</code><code class="value-chip">error</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">receivedAt</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span class="ftype">string · date-time</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">When the result was received.</span>
       </div>
+      <div class="fdesc">When the result was received.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceResult</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span class="ftype">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Service-type-specific result payload. Shape varies by serviceType — see data-exchange-adapter-openapi.yaml for the schema per service type.
-</span>
       </div>
+      <div class="fdesc">Service-type-specific result payload. Shape varies by serviceType — see data-exchange-adapter-openapi.yaml for the schema per service type.
+</div>
       
-    </div>
-    </div>
+    </div></div>
         </details>
       </div></div>
-    </details>
   </div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">Medicaid ex parte evaluation result.</span>
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ProgramDecision</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Medicaid ex parte evaluation result. <span class="schema-name">ProgramDecision</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
-</span>
       </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
       
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Program</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">The program this decision applies to.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
+              <span class="ftype">Program</span>
+              
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The program this decision applies to.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionStatus</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">The eligibility outcome.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+              <span class="ftype">DecisionStatus</span>
+              
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The eligibility outcome.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionPath</span>
-            
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">How the decision was reached.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+              <span class="ftype">DecisionPath</span>
+              
+              
+              
+            </span>
+            <span class="fdesc">How the decision was reached.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">denialReasonCode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span class="ftype">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable reason code when status is denied or ineligible.</span>
       </div>
+      <div class="fdesc">Machine-readable reason code when status is denied or ineligible.</div>
       
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
-        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The request is malformed or contains invalid parameters. <span class="schema-name">BadRequest</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
     </div>
   </details>
-</div><div id="op-post-evaluate-determination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-post-evaluate-determination" class="content-item op-post" data-try-op="evaluateDetermination" data-try-file="domains/eligibility/eligibility-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/evaluate/determination</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Evaluate final determination</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
+        <code class="op-path">/evaluate/determination</code>
+        <span class="op-name">Evaluate final determination</span>
       </span>
+      <code class="op-id" title="operationId">evaluateDetermination</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-post-evaluate-determination" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Runs final eligibility determination for one applicant (or household) and one program after caseworker review is complete. Called once per program with pending decisions after intake.application.review_completed fires.</p><p style="margin:0 0 6px;">Use IndividualDeterminationRequest for per-applicant programs (medicaid, chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs (snap).</p></div></div>
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Runs final eligibility determination for one applicant (or household) and one program after caseworker review is complete. Called once per program with pending decisions after intake.application.review_completed fires.</p><p style="margin:0 0 6px;">Use IndividualDeterminationRequest for per-applicant programs (medicaid, chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs (snap).</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">ProgramDecision</span></div>
+        
+        <div class="op-section request-body-section">
+    <h4 class="op-h">Body
       
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
-      Request body <span style="color:#AF121D;font-weight:700;">required</span>
-    </div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      
+      <span class="pill">application/json</span>
+      <span class="pill pill-req">required</span>
+    </h4>
+    <div class="body-fields"><div style="padding:7px 0;">
     <details>
       <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">(one of)</span>
         
       </summary>
-      <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><details style="border-top:1px solid #ede8f5;">
-      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 12px;background:rgba(124,92,191,0.03);">
+      <div class="nested"><details style="border-top:1px solid #ede8f5;">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 0px;background:rgba(124,92,191,0.03);">
         <span class="chevron" style="font-size:9px;color:#7c5cbf;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
         <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">Final determination request for per-applicant programs (medicaid</span>
       </summary>
-      <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span class="ftype">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
-</span>
       </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The program being evaluated.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">member</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The applicant being evaluated.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">The program being evaluated.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">snap</code><code class="value-chip">medicaid</code><code class="value-chip">chip</code><code class="value-chip">tanf</code><code class="value-chip">aca</code></div>
+    </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">member</span>
+              <span class="ftype">object</span>
+              <span class="fpreview">{ assets, employment, expenses, +2 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The applicant being evaluated.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">income</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Income records for this member.</span>
       </div>
+      <div class="fdesc">Income records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expenses</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span class="ftype">array[object]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Expense records for this member.</span>
       </div>
+      <div class="fdesc">Expense records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">assets</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Asset records for this member.</span>
       </div>
+      <div class="fdesc">Asset records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employment</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Employment records for this member.</span>
       </div>
+      <div class="fdesc">Employment records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">healthCoverage</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Health coverage records for this member.</span>
       </div>
+      <div class="fdesc">Health coverage records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">verificationSummary</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Status of verification obligations relevant to this applicant and program.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div></div>
+        </details>
+      </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">verificationSummary</span>
+              <span class="ftype">array[object]</span>
+              <span class="fpreview">{ category, memberId, status }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">Status of verification obligations relevant to this applicant and program.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">category</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span class="ftype">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The type of verification (e.g., income, identity, residency).</span>
       </div>
+      <div class="fdesc">The type of verification (e.g., income, identity, residency).</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span class="ftype">enum</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Current status of the verification obligation.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">inconclusive</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">satisfied</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">waived</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">cannot_verify</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">Current status of the verification obligation.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">pending</code><code class="value-chip">inconclusive</code><code class="value-chip">satisfied</code><code class="value-chip">waived</code><code class="value-chip">cannot_verify</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span class="ftype">string · uuid</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Identifier of the intake domain member this verification applies to. Passed through from intake for correlation — the adapter does not resolve this identifier.
-</span>
       </div>
+      <div class="fdesc">Identifier of the intake domain member this verification applies to. Passed through from intake for correlation — the adapter does not resolve this identifier.
+</div>
       
-    </div>
-    
+    </div></div>
+        </details>
+      </div>
     </details><details style="border-top:1px solid #ede8f5;">
-      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 12px;background:rgba(124,92,191,0.03);">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px 0px;background:rgba(124,92,191,0.03);">
         <span class="chevron" style="font-size:9px;color:#7c5cbf;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
         <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">Final determination request for per-household programs (snap)</span>
       </summary>
-      <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        <span class="ftype">object</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
-</span>
       </div>
+      <div class="fdesc">Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The program being evaluated.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">members</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">All members in the household benefit unit.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">The program being evaluated.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">snap</code><code class="value-chip">medicaid</code><code class="value-chip">chip</code><code class="value-chip">tanf</code><code class="value-chip">aca</code></div>
+    </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">members</span>
+              <span class="ftype">array[object]</span>
+              <span class="fpreview">{ assets, employment, expenses, +2 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">All members in the household benefit unit.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">income</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Income records for this member.</span>
       </div>
+      <div class="fdesc">Income records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expenses</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span class="ftype">array[object]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Expense records for this member.</span>
       </div>
+      <div class="fdesc">Expense records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">assets</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Asset records for this member.</span>
       </div>
+      <div class="fdesc">Asset records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employment</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Employment records for this member.</span>
       </div>
+      <div class="fdesc">Employment records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">healthCoverage</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[oneOf]</span>
+        <span class="ftype">array[oneOf]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Health coverage records for this member.</span>
       </div>
+      <div class="fdesc">Health coverage records for this member.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">household</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Household-level data used in benefit calculation.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roomers</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Non-household members who share the living space and pay rent separately.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div></div>
+        </details>
+      </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">household</span>
+              <span class="ftype">object</span>
+              <span class="fpreview">{ isSubsidizedHousing, receivedTanfInAnotherState, roomers, +1 }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">Household-level data used in benefit calculation.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">roomers</span>
+              <span class="ftype">array[object]</span>
+              <span class="fpreview">{ amountPaidForRent, id, mealsIncludedWithRent, +1 }</span>
+              
+              
+            </span>
+            <span class="fdesc">Non-household members who share the living space and pay rent separately.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the roomer is a household member counted in another capacity or a non-member contact.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">member</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">contact</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">Whether the roomer is a household member counted in another capacity or a non-member contact.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">member</code><code class="value-chip">contact</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string · uuid</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Identifier of the member or contact record.</span>
       </div>
+      <div class="fdesc">Identifier of the member or contact record.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amountPaidForRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span><span style="font-size:10px;color:#999;font-family:monospace;"> (float)</span>
+        <span class="ftype">number · float</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Amount the roomer pays for rent.</span>
       </div>
+      <div class="fdesc">Amount the roomer pays for rent.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">mealsIncludedWithRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether meals are included with the roomer's rent payment.</span>
       </div>
+      <div class="fdesc">Whether meals are included with the roomer's rent payment.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div></div>
+        </details>
+      </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">utilitiesIncludedInRent</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether utility costs are included in the rent payment.</span>
       </div>
+      <div class="fdesc">Whether utility costs are included in the rent payment.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">isSubsidizedHousing</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.</span>
       </div>
+      <div class="fdesc">Whether the household lives in subsidized or public housing. Affects the SNAP utility standard deduction.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">receivedTanfInAnotherState</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.</span>
       </div>
+      <div class="fdesc">Whether the household has received TANF benefits in another state. Required for multi-state TANF coordination.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">verificationSummary</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Status of verification obligations relevant to this household and program.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div></div>
+        </details>
+      </div><div class="field">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">verificationSummary</span>
+              <span class="ftype">array[object]</span>
+              <span class="fpreview">{ category, memberId, status }</span>
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">Status of verification obligations relevant to this household and program.</span>
+          </summary>
+          
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">category</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span class="ftype">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The type of verification (e.g., income, identity, residency).</span>
       </div>
+      <div class="fdesc">The type of verification (e.g., income, identity, residency).</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span class="ftype">enum</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Current status of the verification obligation.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">inconclusive</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">satisfied</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">waived</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">cannot_verify</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc">Current status of the verification obligation.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">pending</code><code class="value-chip">inconclusive</code><code class="value-chip">satisfied</code><code class="value-chip">waived</code><code class="value-chip">cannot_verify</code></div>
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span class="ftype">string · uuid</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Identifier of the intake domain member this verification applies to. Passed through from intake for correlation — the adapter does not resolve this identifier.
-</span>
       </div>
+      <div class="fdesc">Identifier of the intake domain member this verification applies to. Passed through from intake for correlation — the adapter does not resolve this identifier.
+</div>
       
-    </div>
-    
+    </div></div>
+        </details>
+      </div>
     </details></div>
     </details>
   </div></div>
   </div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">Final determination result.</span>
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">ProgramDecision</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">400</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Final determination result. <span class="schema-name">ProgramDecision</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">metadata</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">object</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
-</span>
       </div>
+      <div class="fdesc">Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+</div>
       
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Program</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">The program this decision applies to.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">program</span>
+              <span class="ftype">Program</span>
+              
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The program this decision applies to.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionStatus</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">The eligibility outcome.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+              <span class="ftype">DecisionStatus</span>
+              
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">The eligibility outcome.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionPath</span>
-            
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">How the decision was reached.</span>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+              <span class="ftype">DecisionPath</span>
+              
+              
+              
+            </span>
+            <span class="fdesc">How the decision was reached.</span>
           </summary>
-          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
         </details>
-      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">denialReasonCode</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span class="ftype">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable reason code when status is denied or ineligible.</span>
       </div>
+      <div class="fdesc">Machine-readable reason code when status is denied or ineligible.</div>
       
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
-        <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The request is malformed or contains invalid parameters. <span class="schema-name">BadRequest</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
     </div>
   </details>
 </div>
@@ -1268,10 +1276,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -1384,5 +1414,77 @@
     })();
     
   </script>
+<script>
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+</script>
+<script src="../mock/mock.js" defer></script>
+<script src="../mock/contracts.js" defer></script>
+<script type="module">
+if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
+  BlueprintMock.mountSendPanels({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+  });
+}
+</script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

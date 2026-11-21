@@ -10,7 +10,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { createMockServer } from '../../src/server.js';
 
-const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url), 'utf8'));
+const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 const APPLICATION = '11111111-1111-4111-8111-111111111111';
 const ROSA = '11111111-1111-4111-8111-100000000001';
 const SALARY = '11111111-1111-4111-8111-200000000004';

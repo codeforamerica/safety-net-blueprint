@@ -169,8 +169,8 @@ Runs as part of `npm run validate`. Each `schema:` key (e.g. `application.progra
 npm run validate:sla-metrics
 ```
 
-- `var:` field names in SLA type `pauseWhen` conditions exist on the target resource schema
-- `var:` field names in metric `filter` and `source.filter` expressions exist on the source resource schema
+- SLA type conditions (`autoAssignWhen`, `pauseWhen` and the rest) and metric `filter` expressions are CEL that parses, and the fields they read exist on the target resource schema
+- A JSON Logic expression in a metric filter, an SLA condition, or a `where:` is refused, with the CEL to write instead
 
 ---
 

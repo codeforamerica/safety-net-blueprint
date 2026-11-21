@@ -8,26 +8,17 @@ metrics:
     aggregate: count
     source:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.submitted
+      filter: type == "intake.application.submitted"
   - id: application_processing_time
     name: Application Processing Time
     description: Median time from submission to closure.
     aggregate: duration
     from:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.submitted
+      filter: type == "intake.application.submitted"
     to:
       collection: events
-      filter:
-        "==":
-          - var: type
-          - intake.application.closed
+      filter: type == "intake.application.closed"
     pairBy: subject
     targets:
       - stat: p50
@@ -40,19 +31,10 @@ metrics:
     aggregate: ratio
     source:
       collection: applications
-      filter:
-        "==":
-          - var: status
-          - withdrawn
+      filter: status == "withdrawn"
     total:
       collection: applications
-      filter:
-        in:
-          - var: status
-          - - submitted
-            - under_review
-            - withdrawn
-            - closed
+      filter: status in ["submitted", "under_review", "withdrawn", "closed"]
     targets:
       - stat: ratio
         operator: <
@@ -64,12 +46,7 @@ metrics:
     aggregate: ratio
     source:
       collection: applications
-      filter:
-        some:
-          - var: slaInfo
-          - "==":
-              - var: status
-              - breached
+      filter: slaInfo.exists(entry, entry.status == "breached")
     total:
       collection: applications
     targets:

@@ -133,6 +133,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: get-connection
   /transcription-sessions/{transcriptionSessionId}/renew-connection:
     parameters:
@@ -178,6 +179,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: renew-connection
   /transcription-sessions/{transcriptionSessionId}/connect:
     parameters:
@@ -222,6 +224,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: connect
   /transcription-sessions/{transcriptionSessionId}/disconnect:
     parameters:
@@ -256,6 +259,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: disconnect
   /transcription-sessions/{transcriptionSessionId}/update-line:
     parameters:
@@ -298,6 +302,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: update-line
   /transcription-sessions/{transcriptionSessionId}/add-line:
     parameters:
@@ -343,6 +348,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: add-line
   /transcription-sessions/{transcriptionSessionId}/pause:
     parameters:
@@ -388,6 +394,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: pause
   /transcription-sessions/{transcriptionSessionId}/resume:
     parameters:
@@ -433,6 +440,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: resume
   /transcription-sessions/{transcriptionSessionId}/stop:
     parameters:
@@ -475,6 +483,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: stop
   /transcription-sessions/{transcriptionSessionId}/close:
     parameters:
@@ -520,6 +529,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: close
   /transcription-sessions/{transcriptionSessionId}/fail:
     parameters:
@@ -554,6 +564,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: communication
+        resource: TranscriptionSession
         id: fail
 components:
   parameters:

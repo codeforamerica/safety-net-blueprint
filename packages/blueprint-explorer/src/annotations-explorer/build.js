@@ -108,6 +108,164 @@ function scanAnnotations(resolvedDir) {
   return byType;
 }
 
+/**
+ * What each domain's generated TypeScript client exports as `Annotations`:
+ * its annotation files merged, section by section (schema, operations,
+ * events, facts). The page runs its client calls on this.
+ *
+ * Returns: Record<domain, Record<section, Record<key, entry>>>
+ */
+function loadClientAnnotations(resolvedDir) {
+  const byDomain = {};
+  for (const file of discover(resolvedDir, 'annotations')) {
+    const doc = load(file).content;
+    if (!doc || typeof doc !== 'object') continue;
+    const merged = (byDomain[file.domain] ??= {});
+    for (const [sectionName, section] of Object.entries(doc)) {
+      if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;
+      if (!section || typeof section !== 'object' || Array.isArray(section)) continue;
+      Object.assign((merged[sectionName] ??= {}), section);
+    }
+  }
+  return byDomain;
+}
+
+// ── The client call beside each entry ──────────────────────────────────────────
+
+const CLIENT_STYLE = `
+  .ann-card { border-radius: 6px; margin-bottom: 0.4rem; background: #fff; }
+  .ann-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 1rem; cursor: pointer; list-style: none; }
+  .ann-row::-webkit-details-marker { display: none; }
+  .ann-row::before { content: '\\25B8'; font-size: 10px; color: #888; }
+  details[open] > .ann-row::before { content: '\\25BE'; }
+  details[open] > .ann-row { border-bottom: 1px solid #eee; }
+  .ann-entry { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0.75rem 1rem 0.9rem; }
+  @media (min-width: 1100px) { .ann-entry { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .ann-side { min-width: 0; font-size: 12px; }
+  .ann-side .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 600 12px monospace; color: #333; }
+  .ann-side select { font: 12px monospace; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; background: #fff; }
+  .try-code { border: 1px solid #e3e1f5; border-radius: 4px; overflow: hidden; }
+  .try-code .tabs { display: flex; align-items: center; gap: 2px; padding: 4px 6px; background: #f6f5fd; border-bottom: 1px solid #e3e1f5; font-size: 11px; }
+  .try-code .tabs .tab { font: 600 11px sans-serif; padding: 3px 10px; border-radius: 3px; background: #2B1A78; color: #fff; }
+  .try-code .tabs .target { margin-left: auto; color: #777; font: 11px monospace; }
+  .try-code .tabs button.copy { margin-left: 8px; font: 600 11px sans-serif; padding: 3px 10px; border: 1px solid #c7c4ea; border-radius: 3px; background: #fff; color: #555; cursor: pointer; }
+  .try-code pre { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; overflow: auto; white-space: pre; }
+  .try-code .foot { display: flex; justify-content: flex-end; padding: 6px 8px; background: #1e1b3a; border-top: 1px solid #2f2a5c; }
+  .try-code .run { font: 600 12px sans-serif; padding: 4px 16px; border-radius: 4px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; }
+  .ann-result { margin-top: 8px; }
+  .ann-result .label { font: 600 12px monospace; border-bottom: 2px solid ${COLORS.deepGreen ?? '#15803d'}; display: inline-block; padding: 2px 8px; }
+  .ann-result .note { color: #15803d; font-weight: 700; margin: 6px 0 0; }
+  .ann-result pre { margin: 6px 0 0; padding: 8px 10px; background: #fff; border: 1px solid #eee; border-radius: 4px; max-height: 22rem; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+`;
+
+// Runs in the page: writes each entry's client call for the chosen domain,
+// and Run works out what that call returns from the same merged annotations.
+const CLIENT_SCRIPT = `
+(() => {
+  const data = JSON.parse(document.getElementById('client-annotations').textContent);
+  const namespaceOf = (domain) => domain.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const prop = (name) => (/^[A-Za-z_$][\\w$]*$/.test(name) ? '.' + name : "['" + name + "']");
+  const has = (entry, type, id) => Array.isArray(entry && entry[type]) && entry[type].includes(id);
+
+  // The fields that carry an entry, and the call that finds them.
+  const findCall = (type, id, domain) => {
+    const all = data[domain] || {};
+    const sections = Object.keys(all).filter((s) => Object.values(all[s]).some((e) => has(e, type, id)));
+    const at = namespaceOf(domain) + '.Annotations';
+    const found = sections.flatMap((s) => Object.entries(all[s]).filter(([, e]) => has(e, type, id)).map(([key]) => [s, key]));
+    const code = sections.length === 1
+      ? ['// The ' + sections[0] + ' entries marked ' + id,
+         'const found = Object.entries(' + at + prop(sections[0]) + ')',
+         '  .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         '  .map(([key]) => key);']
+      : ['// Everything marked ' + id + ', as section.key',
+         'const found = Object.entries(' + at + ').flatMap(([section, entries]) =>',
+         '  Object.entries(entries)',
+         '    .filter(([, a]) => a' + prop(type) + "?.includes('" + id + "'))",
+         "    .map(([key]) => section + '.' + key));"];
+    const value = sections.length === 1 ? found.map(([, key]) => key) : found.map(([s, key]) => s + '.' + key);
+    return { code, value, first: found[0] };
+  };
+
+  // The call that reads everything annotated on one key.
+  const lookupCall = (domain, section, key, field) => {
+    const at = namespaceOf(domain) + '.Annotations' + prop(section) + "['" + key + "']";
+    const entry = ((data[domain] || {})[section] || {})[key];
+    return field
+      ? { code: ['const ' + field + ' = ' + at + prop(field) + ';'], value: entry ? entry[field] : undefined }
+      : { code: ['// Everything annotated on one of them', 'const annotations = ' + at + ';'], value: entry };
+  };
+
+  // An entry opens when the address or the sidebar goes to it, as an
+  // operation does on the API pages.
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target && target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-link[href^="#"]');
+    const target = link && document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    const details = target && target.querySelector(':scope > details');
+    if (!details) return;
+    event.preventDefault();
+    details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+
+  for (const side of document.querySelectorAll('.ann-side')) {
+    const { type, id, section, key, field } = side.dataset;
+    const domains = JSON.parse(side.dataset.domains);
+    const row = document.createElement('div');
+    row.className = 'row';
+    const pick = document.createElement('select');
+    for (const d of domains) pick.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+    row.append('Domain', pick);
+    if (domains.length < 2) pick.disabled = true;
+    const block = document.createElement('div');
+    block.className = 'try-code';
+    block.innerHTML = '<div class="tabs"><span class="tab">TypeScript (local)</span><span class="target">runs in your code</span><button type="button" class="copy">Copy</button></div><pre></pre><div class="foot"><button type="button" class="run">Run</button></div>';
+    const result = document.createElement('div');
+    result.className = 'ann-result';
+    side.append(row, block, result);
+    const pre = block.querySelector('pre');
+    let value;
+    const draw = () => {
+      const domain = pick.value;
+      const head = ["import { " + namespaceOf(domain) + " } from './generated'; // where you generated the client", ''];
+      let lines;
+      if (field) {
+        const read = lookupCall(domain, section, key, field);
+        lines = read.code;
+        value = read.value;
+      } else {
+        const find = findCall(type, id, domain);
+        const read = find.first ? lookupCall(domain, find.first[0], find.first[1]) : null;
+        lines = [...find.code, ...(read ? ['', ...read.code] : [])];
+        value = read ? { found: find.value, annotations: read.value } : { found: find.value };
+      }
+      pre.textContent = [...head, ...lines].join('\\n');
+      result.replaceChildren();
+    };
+    pick.onchange = draw;
+    block.querySelector('.copy').onclick = async (event) => {
+      try { await navigator.clipboard.writeText(pre.textContent); event.target.textContent = 'Copied'; } catch { event.target.textContent = 'Select and copy'; }
+      setTimeout(() => { event.target.textContent = 'Copy'; }, 1500);
+    };
+    block.querySelector('.run').onclick = () => {
+      result.innerHTML = '<span class="label">local</span><p class="note">Worked out in the page from the annotations the client is built from. Nothing was sent to a server.</p><pre></pre>';
+      result.querySelector('pre').textContent = JSON.stringify(value, null, 2);
+    };
+    draw();
+  }
+})();
+`;
+
+const clientDataTag = (clientData) =>
+  `<script type="application/json" id="client-annotations">${JSON.stringify(clientData).replace(/</g, '\\u003c')}</script>`;
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function slugify(str) {
@@ -123,9 +281,10 @@ function buildUsageHref(section, key, domain) {
     case 'schema':
       return dataDictFieldHref(domain, key);
     case 'operations': {
+      // Keyed object.action: application.submit.
       const dot = key.indexOf('.');
-      const actionId = dot >= 0 ? key.slice(dot + 1) : key;
-      return stateMachineDocsHref(domain, actionId);
+      if (dot < 0) return null;
+      return stateMachineDocsHref(domain, key.slice(0, dot), key.slice(dot + 1));
     }
     case 'events':
       return eventCatalogHref(key);
@@ -203,7 +362,7 @@ function generateIndexHtml(annotationTypes, registries, outputDir, hubHref, proj
 
 // ── Per-type page ──────────────────────────────────────────────────────────────
 
-function generateTypePage(type, typeData, registry, outputDir, hubHref, indexHref, projectName) {
+function generateTypePage(type, typeData, registry, outputDir, hubHref, indexHref, projectName, clientData = {}) {
   const { isArray, data } = typeData;
   const slug = slugify(type);
 
@@ -253,12 +412,23 @@ function generateTypePage(type, typeData, registry, outputDir, hubHref, indexHre
         ? `<div style="font-size:12px;color:#c0392b;font-style:italic;margin-top:0.5rem;">No usages found</div>`
         : `<div style="margin-top:0.25rem;">${domainRows}</div>`;
 
-      return `<div id="${entryAnchor(entryId)}" class="content-item" style="border:1px solid ${unused ? 'rgba(220,80,80,0.4)' : COLORS.sandDark};border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;${unused ? 'background:rgba(220,80,80,0.04);' : ''}">
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <code style="font-size:12px;font-weight:700;">${esc(entryId)}</code>
-          <span style="margin-left:auto;font-size:11px;color:${unused ? '#c0392b' : COLORS.midBlue};font-weight:600;">${totalUsages} usage${totalUsages === 1 ? '' : 's'}</span>
-        </div>
-        ${description}${usageSection}
+      // The client call that finds this entry's usages, in a domain whose
+      // client exports Annotations.
+      const clientDomains = [...domainMap.keys()].filter((d) => clientData[d]).sort();
+      const side = clientDomains.length
+        ? `<aside class="ann-side" data-type="${esc(type)}" data-id="${esc(entryId)}" data-domains='${esc(JSON.stringify(clientDomains))}'></aside>`
+        : '';
+
+      // Closed, a row like an operation's on the API pages; open, the
+      // entry's usages beside its client call.
+      return `<div id="${entryAnchor(entryId)}" class="content-item">
+        <details class="ann-card" style="border:1px solid ${unused ? 'rgba(220,80,80,0.4)' : COLORS.sandDark};${unused ? 'background:rgba(220,80,80,0.04);' : ''}">
+          <summary class="ann-row">
+            <code style="font-size:12px;font-weight:700;">${esc(entryId)}</code>
+            <span style="margin-left:auto;font-size:11px;color:${unused ? '#c0392b' : COLORS.midBlue};font-weight:600;">${totalUsages} usage${totalUsages === 1 ? '' : 's'}</span>
+          </summary>
+          <div class="ann-entry"><div>${description}${usageSection}</div>${side}</div>
+        </details>
       </div>`;
     }).join('');
 
@@ -286,14 +456,20 @@ function generateTypePage(type, typeData, registry, outputDir, hubHref, indexHre
       </div>`;
     }).join('\n');
 
-    const entryBlocks = allDomains.map(([, items]) =>
+    const entryBlocks = allDomains.map(([domain, items]) =>
       [...items].sort((a, b) => a.key.localeCompare(b.key)).map(({ section, key, value }) =>
-        `<div id="${entryAnchor(key)}" class="content-item" style="border:1px solid ${COLORS.sandDark};border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <span style="font-size:10px;font-weight:600;color:${COLORS.midBlue};background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid ${COLORS.sandDark};">${esc(section)}</span>
-            <code style="font-size:12px;font-weight:700;">${esc(key)}</code>
-          </div>
-          <div style="font-size:13px;color:${COLORS.text};margin-top:0.35rem;line-height:1.5;">${esc(value)}</div>
+        `<div id="${entryAnchor(key)}" class="content-item">
+          <details class="ann-card" style="border:1px solid ${COLORS.sandDark};">
+            <summary class="ann-row">
+              <span style="font-size:10px;font-weight:600;color:${COLORS.midBlue};background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid ${COLORS.sandDark};">${esc(section)}</span>
+              <code style="font-size:12px;font-weight:700;">${esc(key)}</code>
+            </summary>
+            <div class="ann-entry"><div>
+              <div style="font-size:13px;color:${COLORS.text};line-height:1.5;">${esc(value)}</div>
+            </div>${clientData[domain]
+              ? `<aside class="ann-side" data-section="${esc(section)}" data-key="${esc(key)}" data-field="${esc(type)}" data-domains='${esc(JSON.stringify([domain]))}'></aside>`
+              : ''}</div>
+          </details>
         </div>`
       ).join('')
     ).join('');
@@ -318,9 +494,11 @@ function generateTypePage(type, typeData, registry, outputDir, hubHref, indexHre
         <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
       </div>`,
     navHtml,
-    mainHtml,
+    mainHtml: mainHtml + clientDataTag(clientData),
     navSearch: true,
     navWidth: 260,
+    extraStyle: CLIENT_STYLE,
+    extraScript: CLIENT_SCRIPT,
   }));
 }
 
@@ -343,6 +521,7 @@ export function build({ contentDir, resolvedDir }) {
 
   const registries = loadRegistries(resolvedDir);
   const allAnnotationTypes = scanAnnotations(resolvedDir);
+  const clientData = loadClientAnnotations(resolvedDir);
 
   // Filter to allowed annotation types if configured
   const annotationTypes = allowedAnnotations
@@ -358,7 +537,7 @@ export function build({ contentDir, resolvedDir }) {
 
   for (const [type, typeData] of annotationTypes) {
     const registry = registries.get(type) ?? null;
-    generateTypePage(type, typeData, registry, outputDir, hubHref, indexHref, projectName);
+    generateTypePage(type, typeData, registry, outputDir, hubHref, indexHref, projectName, clientData);
   }
 
   console.log(`  annotations-explorer: ${annotationTypes.size} types`);

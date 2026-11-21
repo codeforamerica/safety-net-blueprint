@@ -111,7 +111,7 @@ x_extensions:
       main path — start, the normal use, stop — and other on each workflow for
       another situation, such as a rejection, a pause or a dropped connection.
       Leave it off a workflow that other workflows only run as a step. The
-      demo page lists a scenario's workflows under these two branches, walks
+      explorer's Scenarios page lists a scenario's workflows under these two branches, walks
       the main path first, and runs main or other on its own; the harness's
       scenario tests run every workflow that has one.
     location: Arazzo workflow
@@ -232,8 +232,10 @@ x_extensions:
         ruleset (operation generated from a rules contract ruleset),
         composition (operation generated from a compositions contract).
       resource: >
-        FK only. Name of the related schema (PascalCase, e.g., Queue). Required
-        when type is fk or absent.
+        For fk: name of the related schema (PascalCase, e.g., Queue). Required
+        when type is fk or absent. For state-machine-action: the resource whose
+        machine declares the action (e.g., Application), since two machines in
+        a domain can each have an action of the same name.
       domain: >
         Optional for fk; required for all other types. The blueprint domain that
         owns the referenced artifact (e.g., intake, workflow). For FK fields, omit
@@ -288,6 +290,7 @@ x_extensions:
         x-relationship:
           type: state-machine-action
           domain: intake
+          resource: Application
           id: submit
 
       # Operation — generated from a rules contract ruleset

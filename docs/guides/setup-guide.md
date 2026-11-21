@@ -15,7 +15,7 @@ The steps below cover the Safety Net Contracts path. See [Using the framework wi
 |---|---|---|
 | `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, state machines, overlays, and annotations | — |
 | `@codeforamerica/blueprint-cli` | Overlay resolution, validation, and artifact generation | `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, `blueprint-generate-postman-collection`, `blueprint-export-schemas` |
-| `@codeforamerica/blueprint-mock-server` | Mock API server and Swagger UI for development | `blueprint-mock`, `blueprint-swagger` |
+| `@codeforamerica/blueprint-mock-server` | Mock API server for development | `blueprint-mock` |
 
 Install these packages as dependencies and point the CLIs at your resolved specs.
 
@@ -61,7 +61,7 @@ resolved/
     "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src/overlays --overlay=./overlays --out=./resolved --env-target=production --env-variables=.env",
     "validate": "blueprint-validate --resolved=./resolved",
     "mock:start": "blueprint-mock --spec=./resolved",
-    "swagger": "blueprint-swagger --spec=./resolved",
+    "explorer": "blueprint-build-explorer --spec=./resolved --out=./explorer",
     "build": "npm run resolve && npm run validate"
   }
 }
@@ -140,12 +140,10 @@ The Explorer generates visual and reference documentation from your resolved spe
 
 ```bash
 node packages/explorer/build.js \
-  --resolved=./resolved \
-  --clients=./clients
+  --resolved=./resolved
 ```
 
 - `--resolved` — path to your resolved specs (output of `npm run resolve`). If omitted and the default location is empty, the build resolves automatically using the base contracts.
-- `--clients` — path to your generated TypeScript clients directory. Defaults to `packages/clients`.
 
 Build individual tools with `--only`:
 

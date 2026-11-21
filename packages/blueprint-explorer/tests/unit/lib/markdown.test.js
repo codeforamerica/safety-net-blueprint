@@ -6,6 +6,7 @@ describe('inlineMd', () => {
   it('renders bold', () => assert.match(inlineMd('**bold**'), /<strong>bold<\/strong>/));
   it('renders italic', () => assert.match(inlineMd('*italic*'), /<em>italic<\/em>/));
   it('renders inline code', () => assert.match(inlineMd('`code`'), /<code[^>]*>code<\/code>/));
+  it('shows asterisks in inline code as written', () => assert.match(inlineMd('`name:*smith*` and *it*'), /<code[^>]*>name:\*smith\*<\/code> and <em>it<\/em>/));
   it('escapes HTML entities', () => assert.match(inlineMd('<b>'), /&lt;b&gt;/));
   it('handles null', () => assert.equal(inlineMd(null), ''));
 });

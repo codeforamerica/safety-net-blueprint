@@ -60,7 +60,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -206,6 +206,18 @@ channels:
                                   type: string
                                   format: uri-reference
                                   description: Link to the related DocumentVersion resource.
+        examples:
+          - name: Example
+            summary: An example document-management.document.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /document-management
+              type: document-management.document.created
+              subject: 00000000-0000-4000-8000-000000000001
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data: {}
 operations:
   sendDocumentManagementDocumentCreated:
     action: send
@@ -264,7 +276,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -410,6 +422,18 @@ operations:
                                     type: string
                                     format: uri-reference
                                     description: Link to the related DocumentVersion resource.
+          examples:
+            - name: Example
+              summary: An example document-management.document.created event.
+              payload:
+                specversion: "1.0"
+                id: 00000000-0000-4000-8000-000000000000
+                source: /document-management
+                type: document-management.document.created
+                subject: 00000000-0000-4000-8000-000000000001
+                time: "2024-01-01T00:00:00Z"
+                datacontenttype: application/json
+                data: {}
     messages:
       - name: document-management.document.created
         summary: A Document was created. Carries the record as created.
@@ -462,7 +486,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -608,6 +632,18 @@ operations:
                                   type: string
                                   format: uri-reference
                                   description: Link to the related DocumentVersion resource.
+        examples:
+          - name: Example
+            summary: An example document-management.document.created event.
+            payload:
+              specversion: "1.0"
+              id: 00000000-0000-4000-8000-000000000000
+              source: /document-management
+              type: document-management.document.created
+              subject: 00000000-0000-4000-8000-000000000001
+              time: "2024-01-01T00:00:00Z"
+              datacontenttype: application/json
+              data: {}
 components:
   messages:
     DocumentManagementDocumentCreated:
@@ -662,7 +698,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -808,6 +844,18 @@ components:
                                 type: string
                                 format: uri-reference
                                 description: Link to the related DocumentVersion resource.
+      examples:
+        - name: Example
+          summary: An example document-management.document.created event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /document-management
+            type: document-management.document.created
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data: {}
   schemas:
     DocumentManagementDocumentCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
@@ -856,7 +904,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).

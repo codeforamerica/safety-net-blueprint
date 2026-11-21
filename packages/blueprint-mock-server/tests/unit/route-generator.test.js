@@ -21,6 +21,7 @@ import { tmpdir } from 'node:os';
 import yaml from 'js-yaml';
 import { generate, load, extract } from '@codeforamerica/blueprint-core';
 import { registerRoutes, registerAllRoutes, registerRulesRoutes } from '../../src/route-generator.js';
+import { apiSpecsFromDocs } from '../../src/spec-loader.js';
 
 /**
  * Compile a rules contract the way the server does at startup.
@@ -74,6 +75,49 @@ function listRoutes(table) {
     handler: entry.handler,
   }));
 }
+
+/** An operation answering with the named schema. */
+const op = (operationId, schema, status = 200) => ({
+  operationId,
+  responses: { [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } },
+});
+
+/**
+ * An API as the server loads it — through core's model of its document, which
+ * is what says whether a path is a collection, an item or a singleton.
+ *
+ * @param {object} paths - OpenAPI paths, relative to the server
+ * @param {{ domain?: string }} [options]
+ */
+function loadedApi(paths, { domain = 'intake' } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'route-generator-'));
+  try {
+    const path = join(dir, `${domain}-openapi.yaml`);
+    writeFileSync(path, yaml.dump({
+      openapi: '3.1.0',
+      info: { title: domain, version: '1', 'x-domain': domain },
+      servers: [{ url: `http://localhost:1080/${domain}` }],
+      paths,
+    }));
+    return apiSpecsFromDocs([load({ path, relativePath: basename(path) })])[0];
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** Intake's applications, with nested documents and an interview singleton. */
+const intakeApi = () => loadedApi({
+  '/applications': { get: op('listApplications', 'ApplicationList'), post: op('createApplication', 'Application', 201) },
+  '/applications/{applicationId}': { get: op('getApplication', 'Application') },
+  '/applications/{applicationId}/documents': { get: op('listDocuments', 'DocumentList'), post: op('createDocument', 'Document', 201) },
+  '/applications/{applicationId}/documents/{documentId}': {
+    get: op('getDocument', 'Document'), patch: op('updateDocument', 'Document'), delete: { operationId: 'deleteDocument', responses: { 204: {} } },
+  },
+  '/applications/{applicationId}/interview': { get: op('getInterview', 'Interview'), patch: op('updateInterview', 'Interview') },
+});
+
+/** What registerRoutes said it registered at a method and path. */
+const described = (registered, method, path) => registered.find((e) => e.method === method && e.path === path)?.description;
 
 // Sample API metadata for testing
 function createTestMetadata(endpoints) {
@@ -436,152 +480,102 @@ test('Route Generator Tests', async (t) => {
   // Sub-resource path routing
   // ==========================================================================
 
-  await t.test('registerRoutes - registers sub-collection GET as list sub-resources', () => {
+  // What each path is comes from core's model of the document: a nested
+  // collection, its items and a singleton are told apart by the document's
+  // structure, never by how the last word is spelled.
+  await t.test('registerRoutes - registers a nested collection\'s GET and POST as list and create sub-resource', () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered.length, 1);
-    assert.strictEqual(registered[0].description, 'List sub-resources');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents');
-    console.log('  ✓ Sub-collection GET registered as list sub-resources');
+    const registered = registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
+    assert.strictEqual(described(registered, 'GET', '/intake/applications/{applicationId}/documents'), 'List sub-resources');
+    assert.strictEqual(described(registered, 'POST', '/intake/applications/{applicationId}/documents'), 'Create sub-resource');
   });
 
-  await t.test('registerRoutes - registers sub-collection POST as create sub-resource', () => {
+  await t.test('registerRoutes - registers a nested item\'s GET, PATCH and DELETE as sub-resource handlers', () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered.length, 1);
-    assert.strictEqual(registered[0].description, 'Create sub-resource');
-    console.log('  ✓ Sub-collection POST registered as create sub-resource');
+    const registered = registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
+    const item = '/intake/applications/{applicationId}/documents/{documentId}';
+    assert.strictEqual(described(registered, 'GET', item), 'Get sub-resource by ID');
+    assert.strictEqual(described(registered, 'PATCH', item), 'Update sub-resource');
+    assert.strictEqual(described(registered, 'DELETE', item), 'Delete sub-resource');
   });
 
-  await t.test('registerRoutes - registers sub-item GET as get sub-resource by ID', () => {
+  await t.test('registerRoutes - registers a singleton\'s GET and PATCH as singleton sub-resource handlers', () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents/{documentId}', method: 'get', operationId: 'getDocument' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered.length, 1);
-    assert.strictEqual(registered[0].description, 'Get sub-resource by ID');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents/{documentId}');
-    console.log('  ✓ Sub-item GET registered as get sub-resource by ID');
+    const registered = registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
+    assert.strictEqual(described(registered, 'GET', '/intake/applications/{applicationId}/interview'), 'Get singleton sub-resource');
+    assert.strictEqual(described(registered, 'PATCH', '/intake/applications/{applicationId}/interview'), 'Update singleton sub-resource');
   });
 
-  await t.test('registerRoutes - registers sub-item PATCH as update sub-resource', () => {
+  // An irregular plural is a nested collection like any other: created,
+  // listed, read and updated.
+  await t.test('registerRoutes - a nested collection named people or children is served like any other', async () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents/{documentId}', method: 'patch', operationId: 'updateDocument' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered[0].description, 'Update sub-resource');
-    console.log('  ✓ Sub-item PATCH registered as update sub-resource');
+    const api = loadedApi({
+      '/households': { get: op('listHouseholds', 'HouseholdList'), post: op('createHousehold', 'Household', 201) },
+      '/households/{householdId}': { get: op('getHousehold', 'Household') },
+      '/households/{householdId}/people': { get: op('listPeople', 'PersonList'), post: op('addPerson', 'Person', 201) },
+      '/households/{householdId}/people/{personId}': { get: op('getPerson', 'Person'), patch: op('updatePerson', 'Person') },
+      '/households/{householdId}/children': { get: op('listChildren', 'ChildList'), post: op('addChild', 'Child', 201) },
+      '/households/{householdId}/children/{childId}': { get: op('getChild', 'Child') },
+    }, { domain: 'census' });
+    const registered = registerRoutes(table, api, 'http://localhost:1080', [], [], DEPS);
+    assert.strictEqual(described(registered, 'POST', '/census/households/{householdId}/people'), 'Create sub-resource');
+    assert.strictEqual(described(registered, 'GET', '/census/households/{householdId}/people'), 'List sub-resources');
+    assert.strictEqual(described(registered, 'POST', '/census/households/{householdId}/children'), 'Create sub-resource');
+
+    const handle = (method, key, path, params, body) => table.get(`${method} ${key}`).handler(
+      makeRequest(path, { method, ...(body ? { body } : {}) }), { params });
+    store.insertResource('census/households', { id: 'h1' });
+    const created = await readResponse(handle('POST', '/census/households/{householdId}/people', '/census/households/h1/people', { householdId: 'h1' }, { name: 'Ana' }));
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual(created.body.householdId, 'h1');
+    const listed = await readResponse(handle('GET', '/census/households/{householdId}/people', '/census/households/h1/people', { householdId: 'h1' }));
+    assert.deepStrictEqual(listed.body.items.map((p) => p.id), [created.body.id]);
+    const item = '/census/households/{householdId}/people/{personId}';
+    const read = await readResponse(handle('GET', item, `/census/households/h1/people/${created.body.id}`, { householdId: 'h1', personId: created.body.id }));
+    assert.strictEqual(read.body.name, 'Ana');
+    const updated = await readResponse(handle('PATCH', item, `/census/households/h1/people/${created.body.id}`, { householdId: 'h1', personId: created.body.id }, { name: 'Ana B' }));
+    assert.strictEqual(updated.status, 200);
+    assert.strictEqual(store.findById('census/households/people', created.body.id).name, 'Ana B');
   });
 
-  await t.test('registerRoutes - registers sub-item DELETE as delete sub-resource', () => {
+  await t.test('registerRoutes - a nested collection is kept under its domain and path', async () => {
+    // GET /applications/{applicationId}/documents → collection 'intake/applications/documents'.
+    // Verified by checking parent existence: a missing parent returns 404,
+    // confirming 'intake/applications' is the parent collection.
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents/{documentId}', method: 'delete', operationId: 'deleteDocument' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered[0].description, 'Delete sub-resource');
-    console.log('  ✓ Sub-item DELETE registered as delete sub-resource');
-  });
-
-  await t.test('registerRoutes - registers singleton GET as get singleton sub-resource', () => {
-    const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered.length, 1);
-    assert.strictEqual(registered[0].description, 'Get singleton sub-resource');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/interview');
-    console.log('  ✓ Singleton GET registered as get singleton sub-resource');
-  });
-
-  await t.test('registerRoutes - registers singleton PATCH as update singleton sub-resource', () => {
-    const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/interview', method: 'patch', operationId: 'updateInterview' }
-    ]);
-    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    assert.strictEqual(registered[0].description, 'Update singleton sub-resource');
-    console.log('  ✓ Singleton PATCH registered as update singleton sub-resource');
-  });
-
-  await t.test('registerRoutes - derives sub-collection name as parent-prefixed (not bare child)', async () => {
-    // GET /applications/{applicationId}/documents → collection 'application-documents', not 'documents'.
-    // Prefix prevents cross-domain DB collisions. Verified by checking parent existence:
-    // a missing parent returns 404, confirming "applications" is correctly the parent collection.
-    const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
-    ]);
-    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    const routes = listRoutes(table);
-    assert.strictEqual(routes.length, 1);
-    const { status } = await readResponse(
-      routes[0].handler(makeRequest('/applications/nonexistent-app/documents'), { params: { applicationId: 'nonexistent-app' } })
-    );
+    registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
+    const { status, body } = await readResponse(table.get('GET /intake/applications/{applicationId}/documents').handler(
+      makeRequest('/intake/applications/nonexistent-app/documents'), { params: { applicationId: 'nonexistent-app' } }));
     // Parent doesn't exist → 404 from parent collection check (not 500 from wrong collection)
     assert.strictEqual(status, 404);
-    console.log('  ✓ Sub-collection GET uses prefixed collection "application-documents"');
+    assert.strictEqual(body.message, 'Application not found');
   });
 
   await t.test('registerRoutes - singleton handler lazy-initializes when no record exists for parent', async () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
-    ]);
-    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    const routes = listRoutes(table);
+    registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
 
-    const { body: responseBody } = await readResponse(
-      routes[0].handler(makeRequest('/applications/nonexistent-app/interview'), { params: { applicationId: 'nonexistent-app' } })
-    );
+    const { body: responseBody } = await readResponse(table.get('GET /intake/applications/{applicationId}/interview').handler(
+      makeRequest('/intake/applications/nonexistent-app/interview'), { params: { applicationId: 'nonexistent-app' } }));
     assert.ok(responseBody, 'Singleton GET returns a body on first access');
     assert.ok(responseBody.id, 'Singleton GET returns a record with an id');
     assert.strictEqual(responseBody.applicationId, 'nonexistent-app', 'Singleton GET sets parent FK');
-    console.log('  ✓ Singleton GET lazy-initializes empty record on first access');
-  });
-
-  await t.test('registerRoutes - sub-collection GET returns 404 when parent does not exist', async () => {
-    // When the parent application doesn't exist, the sub-collection GET returns 404
-    // instead of an empty list. Filtering by parent ID is verified in integration tests.
-    const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
-    ]);
-    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    const routes = listRoutes(table);
-
-    const { status } = await readResponse(
-      routes[0].handler(makeRequest('/applications/nonexistent-app/documents'), { params: { applicationId: 'nonexistent-app' } })
-    );
-    assert.strictEqual(status, 404, 'Returns 404 when parent application does not exist');
-    console.log('  ✓ Sub-collection GET returns 404 when parent does not exist');
   });
 
   await t.test('registerRoutes - sub-collection GET searches with q, as a top-level list does', async () => {
     // A nested list declares `q` like any other, and the handler used to drop
     // it, answering every search with the whole list.
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
-    ]);
-    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    store.clearAll('applications');
-    store.clearAll('application-documents');
-    store.insertResource('applications', { id: 'app-q' });
-    store.insertResource('application-documents', { id: 'd1', applicationId: 'app-q', category: 'income', receivedAt: '2026-10-01T09:00:00.000Z' });
-    store.insertResource('application-documents', { id: 'd2', applicationId: 'app-q', category: 'identity', receivedAt: '2026-10-01T10:00:00.000Z' });
+    registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
+    store.clearAll('intake/applications');
+    store.clearAll('intake/applications/documents');
+    store.insertResource('intake/applications', { id: 'app-q' });
+    store.insertResource('intake/applications/documents', { id: 'd1', applicationId: 'app-q', category: 'income', receivedAt: '2026-10-01T09:00:00.000Z' });
+    store.insertResource('intake/applications/documents', { id: 'd2', applicationId: 'app-q', category: 'identity', receivedAt: '2026-10-01T10:00:00.000Z' });
 
-    const list = async (q) => (await readResponse(listRoutes(table)[0].handler(
-      makeRequest(`/applications/app-q/documents?q=${encodeURIComponent(q)}`), { params: { applicationId: 'app-q' } }
+    const list = async (q) => (await readResponse(table.get('GET /intake/applications/{applicationId}/documents').handler(
+      makeRequest(`/intake/applications/app-q/documents?q=${encodeURIComponent(q)}`), { params: { applicationId: 'app-q' } }
     ))).body;
 
     assert.deepStrictEqual((await list('category:income')).items.map(d => d.id), ['d1']);
@@ -592,25 +586,19 @@ test('Route Generator Tests', async (t) => {
 
   await t.test('registerRoutes - sub-collection POST injects parent ID into body', async () => {
     const table = new Map();
-    const metadata = createTestMetadata([
-      { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
-    ]);
-    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
-    const routes = listRoutes(table);
+    registerRoutes(table, intakeApi(), 'http://localhost:1080', [], [], DEPS);
 
     // A Request body cannot be reassigned, so the parent ID now rides through
     // ctx rather than by mutating req.body. Assert the outcome instead: the
     // created resource carries the parent FK.
-    store.clearAll('application-documents');
+    store.clearAll('intake/applications/documents');
     // The parent has to exist: nothing is created under one that isn't there.
-    if (!store.findById('applications', 'app-456')) store.insertResource('applications', { id: 'app-456' });
-    const request = makeRequest('/applications/app-456/documents', { method: 'POST', body: { category: 'income' } });
-    const { status, body: created } = await readResponse(
-      routes[0].handler(request, { params: { applicationId: 'app-456' } })
-    );
+    if (!store.findById('intake/applications', 'app-456')) store.insertResource('intake/applications', { id: 'app-456' });
+    const request = makeRequest('/intake/applications/app-456/documents', { method: 'POST', body: { category: 'income' } });
+    const { status, body: created } = await readResponse(table.get('POST /intake/applications/{applicationId}/documents').handler(
+      request, { params: { applicationId: 'app-456' } }));
     assert.strictEqual(status, 201, 'sub-collection POST returns 201');
     assert.strictEqual(created.applicationId, 'app-456', 'Parent ID injected into created resource');
-    console.log('  ✓ Sub-collection POST injects parent ID into body');
   });
 
   await t.test('registerRoutes - collection name excludes serverBasePath segment', async () => {

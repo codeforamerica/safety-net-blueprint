@@ -22,6 +22,10 @@ import pluralizeWord from 'pluralize';
 // $ref so that overlays propagate changes to Create/Update/List schemas.
 // Bundling (inlining $refs) is only for output — use resolve.js --bundle.
 
+// The framework's shared parameters and responses, as core's own contracts
+// reference them. --ref points at a local copy instead.
+const BASE_COMPONENTS = 'https://blueprint.codeforamerica.org/base/components';
+
 // =============================================================================
 // Argument Parsing
 // =============================================================================
@@ -38,6 +42,13 @@ function parseArgs() {
   };
 
   const positional = [];
+
+  // Accept --name=menu as well as --name menu, as the other blueprint tools do.
+  const expanded = args.flatMap((arg) => {
+    const match = arg.match(/^(--[a-z-]+)=(.*)$/);
+    return match ? [match[1], match[2]] : [arg];
+  });
+  args.splice(0, args.length, ...expanded);
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -130,7 +141,7 @@ function toCamelCase(str) {
 function toPascalCase(str) {
   return str
     .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join('');
 }
 
@@ -144,13 +155,15 @@ function pluralize(str) {
 // Template Generators
 // =============================================================================
 
-function generateApiSpec(name, resource, componentsPrefix = './components', domain = null) {
+function generateApiSpec(name, resource, componentsPrefix = BASE_COMPONENTS, domain = null) {
   const kebabName = toKebabCase(name);
   const resourcePlural = pluralize(resource);
-  const resourcePluralLower = resourcePlural.toLowerCase();
+  // Paths are kebab-case (naming.yaml): MenuItem is served at /menu-items.
+  const resourcePath = toKebabCase(resourcePlural);
+  const resourcePluralLower = resourcePath.replace(/-/g, ' ');
   const resourceIdParam = `${toCamelCase(resource)}Id`;
 
-  const resourceLower = resource.toLowerCase();
+  const resourceLower = toKebabCase(resource).replace(/-/g, ' ');
   const resourceKebab = toKebabCase(resource);
   const xDomain = domain ? toKebabCase(domain) : toKebabCase(name);
 
@@ -168,15 +181,15 @@ info:
     name: API Support
     email: support@example.com
 servers:
-- url: https://api.example.com
+- url: https://api.example.com/${xDomain}
   description: Production server
-- url: http://localhost:8080
-  description: Local development server
+- url: http://localhost:1080/${xDomain}
+  description: Local mock server
 tags:
 - name: ${resourcePlural}
   description: Manage ${resourcePluralLower}.
 paths:
-  "/${resourcePluralLower}":
+  "/${resourcePath}":
     get:
       summary: List ${resourcePluralLower}
       description: Retrieve a paginated list of ${resourcePluralLower}.
@@ -230,7 +243,7 @@ paths:
           "$ref": "${componentsPrefix}/responses.yaml#/UnprocessableEntity"
         '500':
           "$ref": "${componentsPrefix}/responses.yaml#/InternalError"
-  "/${resourcePluralLower}/{${resourceIdParam}}":
+  "/${resourcePath}/{${resourceIdParam}}":
     parameters:
     - "$ref": "#/components/parameters/${resource}IdParam"
     get:
@@ -458,7 +471,7 @@ async function main() {
 
   // Compute components prefix for $ref paths.
   // --ref points to the contracts package root; components live in {ref}/components.
-  let componentsPrefix = './components';
+  let componentsPrefix = BASE_COMPONENTS;
   if (options.ref) {
     const absComponents = resolve(options.ref, 'components');
     let rel = relative(outDir, absComponents);
@@ -488,7 +501,7 @@ Next steps:
 }
 
 // Export for testing
-export { parseArgs, toKebabCase, toCamelCase, toPascalCase, pluralize, generateApiSpec };
+export { parseArgs, toKebabCase, toCamelCase, toPascalCase, pluralize, generateApiSpec, BASE_COMPONENTS };
 
 // Run main when executed directly
 const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));

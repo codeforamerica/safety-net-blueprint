@@ -14,7 +14,7 @@
  */
 
 import { resolverFor } from './schema-refs.js';
-import { deriveCollectionName } from './collection-utils.js';
+import { storageName, eventDomainOf } from './collection-utils.js';
 
 /** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
 const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
@@ -79,9 +79,10 @@ export function extractMetadata(spec, resourceName, resolve = null) {
     title: spec.info?.title || resourceName,
     version: spec.info?.version || '1.0.0',
     serverBasePath,
-    baseResource: serverBasePath
-      ? `${serverBasePath}${Object.keys(paths).find(p => !p.includes('{') && !p.startsWith(serverBasePath)) || `/${resourceName}`}`
-      : (Object.keys(paths).find(p => !p.includes('{')) || `/${resourceName}`),
+    // OpenAPI writes paths relative to the server's URL, so the server's base
+    // goes before every one — even a path that starts with the same word, an
+    // `/orders` API's `/orders`.
+    baseResource: `${serverBasePath}${Object.keys(paths).find(p => !p.includes('{')) || `/${resourceName}`}`,
     endpoints: [],
     schemas: {},
     errorResponses: {},
@@ -144,7 +145,7 @@ export function extractMetadata(spec, resourceName, resolve = null) {
       const allParameters = [...pathParameters, ...operationParameters].map(follow);
       
       const endpoint = {
-        path: serverBasePath && !path.startsWith(serverBasePath) ? `${serverBasePath}${path}` : path,
+        path: `${serverBasePath}${path}`,
         method: method.toUpperCase(),
         operationId: operation.operationId,
         summary: operation.summary,
@@ -212,28 +213,43 @@ export function extractMetadata(spec, resourceName, resolve = null) {
  * @returns {object[]} One metadata object per OpenAPI document
  */
 /**
- * Give each create, update and delete the resource it acts on, and say which
- * POSTs are calls rather than creates — both read from core's model of the
- * document, never worked out here.
+ * Say what each endpoint's path is — a resource's collection, one of its
+ * items, a singleton, or the caller's own record at `/me` — give each the
+ * resource it acts on and where that resource's records are kept, and say
+ * which POSTs are calls rather than creates. All of it read from core's model
+ * of the document, never worked out from how a path is spelled.
  *
  * A create acts on a resource's collection, an update or a delete on its item.
  * A POST to a path that is no resource's collection — an adapter's evaluate
  * endpoint, with no list and no item — is a call: the mock keeps nothing for it
  * and emits no event. An operation on one key of a metadata map has no
- * resource either, and emits none.
+ * resource either, and emits none. A path the model has no resource for keeps
+ * its records under its own path.
  *
  * @param {object} metadata - From extractMetadata
  * @param {import('@codeforamerica/blueprint-core').Doc} doc
+ * @param {string} domain - The API's (eventDomainOf)
  */
-function markResources(metadata, doc) {
+function markResources(metadata, doc, domain) {
   const resources = doc.model?.()?.resources ?? [];
+  const singletons = resources.flatMap((r) => r.singletons);
   const base = metadata.serverBasePath ?? '';
   for (const endpoint of metadata.endpoints) {
-    const path = base && endpoint.path.startsWith(base) ? endpoint.path.slice(base.length) : endpoint.path;
-    const part = endpoint.method === 'POST' ? 'collection' : 'item';
-    const resource = resources.find((r) => r.path(part) === path);
-    if (!resource && endpoint.method === 'POST') { endpoint.isCall = true; continue; }
-    if (resource?.name) endpoint.resource = { name: resource.name, eventName: resource.eventName };
+    const path = endpoint.path.slice(base.length);
+    const singleton = singletons.find((r) => r.path('collection') === path);
+    const collection = resources.find((r) => r.path('collection') === path);
+    const item = resources.find((r) => r.path('item') === path);
+    const me = path.endsWith('/me') ? resources.find((r) => r.path('collection') === path.slice(0, -'/me'.length)) : null;
+    const [kind, resource] = singleton ? ['singleton', singleton]
+      : collection ? ['collection', collection]
+      : item ? ['item', item]
+      : me ? ['me', me]
+      : [null, null];
+    endpoint.kind = kind;
+    endpoint.modelResource = resource;
+    endpoint.collectionName = storageName(domain, resource ? resource.path('collection') : path);
+    if (endpoint.method === 'POST' && kind !== 'collection') { endpoint.isCall = true; continue; }
+    if (kind !== 'me' && resource?.name) endpoint.resource = { name: resource.name, eventName: resource.eventName };
   }
 }
 
@@ -249,8 +265,9 @@ export function apiSpecsFromDocs(docs) {
       // `doc` is the document itself, so core's answer to what something
       // attaches to (`extract`'s `api`) finds the API loaded from it.
       const metadata = extractMetadata(doc.content, name, resolve);
-      markResources(metadata, doc);
-      loaded.push({ ...metadata, resolve, relativePath: doc.relativePath, domain: doc.domain ?? null, doc });
+      const domain = doc.domain ?? null;
+      markResources(metadata, doc, eventDomainOf({ ...metadata, domain }));
+      loaded.push({ ...metadata, resolve, relativePath: doc.relativePath, domain, doc });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }
@@ -264,24 +281,49 @@ export function apiSpecsFromDocs(docs) {
  * resource's name without guessing at its collection — and where it is read,
  * so a link to one points at its own route, in its own API. Read from core's
  * model of the API documents, so a TranscriptionProfile served at /profiles is
- * found in `profiles`. Each mock keeps its own (instance.js).
+ * found in `communication/profiles`. Each mock keeps its own (instance.js).
+ *
+ * `aliases` are the other names a step may give a collection, each to the one
+ * it's kept under: the domain written as the API's server base, where the two
+ * differ, and the shorthand core's validator accepts for a nested collection —
+ * its parent's segment made singular, then its own: `intake/application-members`
+ * for `intake/applications/members` (core's buildCollectionIndex, indexes.js).
+ * The shorthand is core's naming, matched here so a contract it accepts runs;
+ * nothing is classified by it.
  *
  * @param {object[]} apiSpecs - From apiSpecsFromDocs
- * @returns {{ collections: Map<string, string>, itemPaths: Map<string, { path: string, parameter: string }> }}
+ * @returns {{ collections: Map<string, string>, itemPaths: Map<string, { path: string, parameter: string }>, aliases: Map<string, string> }}
  */
 export function resourceIndex(apiSpecs) {
   const collections = new Map();
   const itemPaths = new Map();
+  const aliases = new Map();
   for (const api of apiSpecs) {
-    for (const resource of api.doc?.model?.()?.resources ?? []) {
-      if (resource.name && !collections.has(resource.name)) {
-        collections.set(resource.name, deriveCollectionName(resource.path('collection'), ''));
-        const item = resource.path('item');
-        if (item) itemPaths.set(resource.name, { path: `${api.serverBasePath ?? ''}${item}`, parameter: resource.item.parameter });
+    const domain = eventDomainOf(api);
+    const base = (api.serverBasePath ?? '').replace(/^\//, '');
+    for (const top of api.doc?.model?.()?.resources ?? []) {
+      for (const resource of [top, ...top.singletons]) {
+        const path = resource.path('collection');
+        const collection = storageName(domain, path);
+        const segments = path.split('/').filter((s) => s && !s.startsWith('{'));
+        const shorthand = segments.length >= 2
+          ? [...segments.slice(0, -2), `${segments.at(-2).replace(/s$/, '')}-${segments.at(-1)}`].join('/')
+          : null;
+        for (const prefix of new Set([domain, base].filter(Boolean))) {
+          for (const name of [segments.join('/'), shorthand].filter(Boolean)) {
+            const alias = `${prefix}/${name}`;
+            if (alias !== collection && !aliases.has(alias)) aliases.set(alias, collection);
+          }
+        }
+        if (resource.name && !collections.has(resource.name)) {
+          collections.set(resource.name, collection);
+          const item = resource.path('item');
+          if (item) itemPaths.set(resource.name, { path: `${api.serverBasePath ?? ''}${item}`, parameter: resource.item.parameter });
+        }
       }
     }
   }
-  return { collections, itemPaths };
+  return { collections, itemPaths, aliases };
 }
 
 /**
@@ -295,13 +337,13 @@ export function resourceIndex(apiSpecs) {
 export function eventOwnersOf(apiSpecs) {
   const owners = new Map();
   for (const api of apiSpecs) {
-    const domain = (api.serverBasePath ?? '').replace(/^\//, '');
+    const domain = eventDomainOf(api);
     for (const resource of api.doc?.model?.()?.resources ?? []) {
       const collection = resource.path('collection');
       if (!resource.eventName || !collection) continue;
       const parent = resource.parent;
       owners.set(`${domain}.${resource.eventName}`, {
-        collection: deriveCollectionName(collection, ''),
+        collection: storageName(domain, collection),
         parent: parent?.eventName ? `${domain}.${parent.eventName}` : null,
         parentField: parent?.item?.parameter ?? null,
       });

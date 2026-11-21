@@ -21,11 +21,11 @@ events_endpoint:
       in: query
       description: |
         Filter by CloudEvents type. Supports prefix matching with a trailing
-        wildcard (e.g., org.codeforamerica.safety-net-blueprint.intake.*).
+        wildcard (e.g., intake.*).
         Matches the `type` field in the CloudEvents envelope.
       schema:
         type: string
-      example: "org.codeforamerica.safety-net-blueprint.intake.application.submitted"
+      example: "intake.application.submitted"
 
     - name: source
       in: query
@@ -140,7 +140,15 @@ event_catalog:
         value: "1.0"
         required: true
       - name: id
-        description: Unique event identifier (UUID)
+        description: |
+          Unique event identifier (UUID). The publisher sets it when it makes
+          the event, before sending it anywhere — whether that is a domain
+          emitting its own event or a service such as the timer service
+          publishing through POST /platform/events, which requires it. Keep
+          `source` plus `id` unique for each distinct event, and send the same
+          id again when retrying a publish, so the retry is the same event, not
+          a second one (CloudEvents 1.0, id). A subscriber may treat two events
+          with the same `source` and `id` as one.
         required: true
       - name: type
         description: Fully qualified event type, {domain}.{resource}.{event}
@@ -207,20 +215,35 @@ event_catalog:
     details: docs/architecture/inter-domain-communication.md (Event ordering)
 
   type_naming:
-    pattern: "org.codeforamerica.safety-net-blueprint.{domain}.{entity}.{verb}"
-    description: |
-      Self-contained and collision-safe in shared broker environments.
-      State partners may overlay the prefix to match their own namespace.
+    pattern: "{domain}.{resource}.{event}"
+    rule: |
+      Name every event {domain}.{resource}.{event}: the domain as it is
+      declared, the resource that sends it in snake_case, and what happened in
+      snake_case. A timer's callback is named the same way, for the resource
+      whose machine declares the timer. Validation refuses any other shape
+      (event-name-shape).
+    prefix: |
+      Leave the prefix out of the contracts. A state that shares a bus with
+      other systems sets its own reverse-DNS namespace once, as
+      x-event-type-prefix in its overlay config, and resolve puts it in front
+      of every event type: gov.ca.dss.intake.application.submitted. Don't
+      write a Code for America namespace into a type; the events a state sends
+      are the state's.
+    rationale: |
+      CloudEvents recommends a reverse-DNS prefix on type so types from
+      different producers don't collide. The producer is the state running
+      the system, so the state chooses it.
     examples:
-      - org.codeforamerica.safety-net-blueprint.intake.application.submitted
-      - org.codeforamerica.safety-net-blueprint.workflow.task.created
-      - org.codeforamerica.safety-net-blueprint.workflow.task.claimed
+      - intake.application.submitted
+      - workflow.task.created
+      - intake.application.review_reminder
+      - gov.ca.dss.intake.application.submitted   # with x-event-type-prefix: gov.ca.dss
 
   asyncapi_channel_naming:
     pattern: "{domain}.{entity}.{verb}"
     description: |
-      AsyncAPI channel names follow the same segments as the CloudEvents type
-      but without the reverse-DNS prefix. The domain matches the API's x-domain
+      AsyncAPI channel names are the event types, {domain}.{resource}.{event},
+      and carry the state's prefix too when it sets one. The domain matches the API's x-domain
       value; the entity is the resource's schema name in snake_case
       (application_member); the verb is the action.
     examples:
@@ -230,7 +253,6 @@ event_catalog:
       - workflow.task.claimed
     note: |
       Channel names are the canonical identifier for a stream in the broker.
-      State partners may overlay the prefix to match their own namespace.
 
   versioning:
     description: |
@@ -238,8 +260,8 @@ event_catalog:
       Breaking changes (removed or renamed fields) introduce a new type
       alongside the old one, published in parallel until all consumers migrate.
     example:
-      - org.codeforamerica.safety-net-blueprint.intake.application.submitted
-      - org.codeforamerica.safety-net-blueprint.intake.application.submitted.v2
+      - intake.application.submitted
+      - intake.application.submitted.v2
 
   auto_emit:
     description: |

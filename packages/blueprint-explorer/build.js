@@ -12,17 +12,14 @@
  *   node build.js --only=state-machine-docs
  *   node build.js --only=event-catalog
  *   node build.js --only=api-reference
- *   node build.js --only=client-reference
  *
  * State customization (overlay-aware build):
  *   node build.js --resolved=/path/to/state/resolved
- *                 --clients=/path/to/state/clients
  *
  *   --content   Path to the content package directory (safety-net-explorer or equivalent).
  *               Contains diagram configs and output HTML. Defaults to ../safety-net-explorer.
  *   --resolved  Path to a directory of resolved OpenAPI + state machine files
  *               (output of the contracts resolve pipeline with state overlays applied).
- *   --clients   Path to the generated clients directory (output of clients:generate).
  */
 
 import { resolve, dirname } from 'path';
@@ -36,7 +33,7 @@ import { build as buildStateMachineDocs } from './src/state-machine-docs/build.j
 import { build as buildRulesDocs }        from './src/rules-docs/build.js';
 import { build as buildEventCatalog }     from './src/event-catalog.js';
 import { build as buildApiReference }     from './src/api-reference.js';
-import { build as buildClientReference }  from './src/client-reference.js';
+import { build as buildTryIt }            from './src/try-it/build.js';
 import { build as buildHub }              from './src/hub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -46,16 +43,14 @@ const onlyArg     = args.find(a => a.startsWith('--only='));
 const only        = onlyArg ? onlyArg.slice('--only='.length) : null;
 const contentArg  = args.find(a => a.startsWith('--content='));
 const resolvedArg = args.find(a => a.startsWith('--resolved='));
-const clientsArg  = args.find(a => a.startsWith('--clients='));
 
 if (!contentArg || !resolvedArg) {
-  console.error('Usage: node build.js --content=<path> --resolved=<path> [--clients=<path>] [--only=<tool>]');
+  console.error('Usage: node build.js --content=<path> --resolved=<path> [--only=<tool>]');
   process.exit(1);
 }
 
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const resolvedDir = resolve(process.cwd(), resolvedArg.slice('--resolved='.length));
-const clientsDir  = clientsArg ? resolve(process.cwd(), clientsArg.slice('--clients='.length)) : null;
 
 // Validate config early — fails fast before any tools run.
 loadConfig(contentDir);
@@ -104,10 +99,10 @@ if (doBuild('api-reference')) {
   await buildApiReference({ contentDir, resolvedDir });
 }
 
-// ── Client reference ──────────────────────────────────────────────────────────
+// ── Scenarios ─────────────────────────────────────────────────────────────────
 
-if (doBuild('client-reference') && clientsDir) {
-  buildClientReference({ contentDir, resolvedDir, clientsDir });
+if (doBuild('scenarios')) {
+  buildTryIt({ contentDir, resolvedDir });
 }
 
 // Hub is always rebuilt last so it can scan all tool output directories

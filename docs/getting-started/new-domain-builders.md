@@ -102,6 +102,23 @@ During resolve, RPC endpoints are generated from the state machine and merged in
 
 See [Contract-Driven Architecture — State Machine](../architecture/contract-driven-architecture.md#state-machine) for the format and examples.
 
+### Roles
+
+A guard names who may run an action in `actors:`, and every role it names must be in `RoleType`. The framework's `RoleType` has `readonly`, `readwrite`, `admin` and `system`; add your own roles with an overlay that appends them to its `enum`:
+
+```yaml
+# overlays/roles.yaml
+overlay: 1.0.0
+info: {title: Permit roles, version: 1.0.0}
+actions:
+  - target: $.$defs.RoleType.enum
+    file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Add the roles the permit state machine names.
+    append: [inspector, permit_clerk]
+```
+
+Give the overlay to `blueprint-resolve` with `--overlay` (see [Resolving](#resolving)). Without it, validation reports each role a state machine names that `RoleType` doesn't have.
+
 ## Enriching Your Domain (optional)
 
 ### Annotations
@@ -189,13 +206,13 @@ The mock auto-discovers all `*-openapi.yaml` files in the resolved directory and
 
 Resources are held in SQLite by default — one `.db` file per collection, so data survives a restart and can be inspected with the `sqlite3` CLI. Pass `--store=memory` (or set `MOCK_STORE=memory`) to hold everything in memory instead: faster, nothing left on disk, and nothing kept after the process exits. Either way the server clears and reseeds every collection at startup, so the difference is rarely visible in normal use.
 
-To browse the API interactively, run the Swagger UI alongside the mock:
+To browse the API and try it, build the explorer:
 
 ```bash
-npx blueprint-swagger --spec ./resolved
+npx blueprint-build-explorer --spec=./resolved --out=./explorer
 ```
 
-Visit `http://localhost:3000` for interactive API docs.
+Open `explorer/index.html`. Its API reference sends each request to a mock running in the page, so it needs no server.
 
 ## Key Commands
 
@@ -209,7 +226,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | `blueprint-generate-postman-collection` | Generate a Postman collection |
 | `blueprint-mock` | Start the mock server (auto-discovers `*-openapi.yaml`) |
 | `blueprint-evaluate` | Evaluate a ruleset against inputs from the command line |
-| `blueprint-swagger` | Start Swagger UI at http://localhost:3000 |
+| `blueprint-build-explorer` | Build the explorer, with its API reference, from resolved specs |
 
 ## Next Steps
 

@@ -73,6 +73,65 @@
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
     
+  /* An operation's sections: plain headings and lists, one box only, the card. */
+  /* Closed, an operation is one line tinted by its method, as Swagger lists
+     them: method, path, name. Open, it's the two columns. */
+  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  .op-name { font-size: 13px; color: #555; }
+  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
+  .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
+  .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
+  .content-item.op-delete { border-color: #AF121D !important; } .op-delete > details > summary { background: #F9C8CB88; }
+  .content-item > details[open] > summary { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .op-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; padding: 2px 18px 16px; font-size: 12.5px; line-height: 1.45; }
+  /* The request and the responses beside the docs, where there's room. */
+  @media (min-width: 1100px) {
+    .op-body:has(.op-side:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .op-side { align-self: start; }
+  }
+  .op-side:empty { display: none; }
+  /* Evenly spaced, whatever is showing: hidden items take no room. */
+  .op-side { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  .op-side > * { margin-top: 0 !important; flex-shrink: 0; }
+  .op-section { margin-top: 12px; }
+  .op-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #1a1a1a; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid #ececec; }
+  .param, .field { padding: 5px 0; }
+  .field-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fname { font: 600 12.5px monospace; color: #1a1a1a; }
+  .ftype { font: 11.5px monospace; color: #777; }
+  .fpreview { font: 11.5px monospace; color: #999; }
+  .freq { font-size: 11.5px; color: #AF121D; }
+  .fdesc { display: block; color: #555; margin-top: 1px; }
+  .fdesc p { margin: 0; }
+  .values { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
+  .values-label { font-size: 11px; color: #888; margin-right: 4px; }
+  .value-chip { font: 11.5px monospace; border: 1px solid #ddd; border-radius: 4px; padding: 0 6px; background: #fff; }
+  .nested { margin: 0 0 2px 5px; padding-left: 12px; border-left: 2px solid #eeeaf8; }
+  .field-summary { list-style: none; cursor: pointer; display: block; padding: 0; background: none !important; }
+  .field-summary .chevron { font-size: 9px; color: #aaa; }
+  details.more > summary { list-style: none; cursor: pointer; font-size: 12px; color: #5650BE; background: none !important; }
+  details.more[open] > summary { margin-bottom: 4px; }
+  .schema-name { font: 600 12px monospace; color: #5650BE; }
+  .returns { color: #888; font-weight: 400; }
+  .op-returns { font-size: 13px; color: #555; margin: 0 0 12px; }
+  .pill { font: 400 11px sans-serif; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 0 8px; }
+  .pill-req { color: #AF121D; border-color: #f3c2c2; }
+  .resp-tabs { display: flex; gap: 2px; margin: 0 0 4px; border-bottom: 1px solid #ececec; }
+  .resp-tab { font: 600 12px monospace; padding: 3px 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: #888; cursor: pointer; margin-bottom: -1px; }
+  .resp-tab.on { color: #1a1a1a; border-bottom-color: #5650BE; }
+  .resp-tab.resp-ok.on { border-bottom-color: #006152; }
+  .resp-tab.resp-bad.on { border-bottom-color: #AF121D; }
+
+  .nav-section-label.nav-resource { font: 600 11px monospace; letter-spacing: 0; text-transform: none; color: rgba(255,255,255,0.6); }
+  #sidebar a.nav-op { flex-wrap: nowrap; align-items: flex-start; gap: 6px; padding: 4px 0.75rem 4px 1.1rem; line-height: 1.35; }
+  .nav-op-path { flex: 1; min-width: 0; font: 11px monospace; }
+  .nav-op-path > span, .nav-resource > span { white-space: nowrap; }
+  .nav-method { flex-shrink: 0; width: 3.2em; font: 700 9px monospace; letter-spacing: 0.04em; margin-top: 2px; }
+  .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
+  .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
+
   </style>
 </head>
 <body>
@@ -97,625 +156,562 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#section-registries" class="nav-link">Registries <span class="nav-count">3</span></a>
+        <div class="nav-section">
+    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>registry</span></div>
+    <a href="#op-get-registry" class="nav-link nav-op" title="List registry types">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span></span>
+    </a><a href="#op-get-registry-type" class="nav-link nav-op" title="List a registry's entries">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{type}</span></span>
+    </a><a href="#op-get-registry-type-entryId" class="nav-link nav-op" title="Get a registry entry">
+      <span class="nav-method nav-method-get">GET</span>
+      <span class="nav-op-path"><span></span>/<wbr><span>{type}</span>/<wbr><span>{entryId}</span></span>
+    </a>
+  </div>
       </div>
     </nav>
     <main id="content">
-      
-    <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
+      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
       <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Named, citable entries the contracts declare in registry files — regulatory policies, sources, design patterns — readable by type. Entries carry a description and whatever fields their type defines.</p></div></div>
-      <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://api.example.com/platform</code></div>
-    </div>
-    <section id="section-registries" style="margin-bottom:2.5rem;">
+      
+    </div><section id="section-registries" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Registries</h2>
         <p style="font-size:12px;color:#666;">Entries the contracts declare in registry files, by type.</p>
       </div>
-      <div id="op-get-registry" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+      <div id="op-get-registry" class="content-item op-get" data-try-op="listRegistryTypes" data-try-file="base/domains/platform/platform-registries-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/registry</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List registry types</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+        <code class="op-path">/registry</code>
+        <span class="op-name">List registry types</span>
       </span>
+      <code class="op-id" title="operationId">listRegistryTypes</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-get-registry" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Every registry type the contracts declare, with how many entries each has, in name order. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">q</code> matches a type's name.</p></div></div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
-      <thead><tr>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">In</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
-      </tr></thead>
-      <tbody><tr>
-          <td style="padding:5px 12px;white-space:nowrap;"><span role="button" tabindex="0" data-expand-id="exp-17" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>q</span></td>
-          <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-          <td style="padding:5px 12px;text-align:center;"></td>
-          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Search query using field:value syntax. Multiple conditions separated by</td>
-        </tr><tr id="exp-17" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Lists</h3><p style="margin:0 0 6px;">A condition on a list matches when any item matches. That holds for a list of values (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">programs:snap</code>) and for a list of objects anywhere along a dotted path (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo</code>, any member named Jo).</p><p style="margin:0 0 6px;">Each condition is checked on its own. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo members.age:&gt;60</code> matches when some member is named Jo and some member, not necessarily the same one, is over 60. There is no way to require the same item.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td></tr><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">limit</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">offset</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
-    </tr><tr>
-          <td style="padding:5px 12px;white-space:nowrap;"><span role="button" tabindex="0" data-expand-id="exp-18" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>sort</span></td>
-          <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-          <td style="padding:5px 12px;text-align:center;"></td>
-          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Comma-separated list of fields to sort the response by. Prefix a field</td>
-        </tr><tr id="exp-18" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td></tr></tbody>
-    </table>
-  </div>
-      
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">The registry types, in name order.</span>
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Every registry type the contracts declare, with how many entries each has, in name order. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">q</code> matches a type's name.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">RegistryTypeList</span></div>
+        <div class="op-section params-section">
+      <h4 class="op-h">Query parameters</h4>
+      <div class="param" data-param="q" data-in="query">
+      <div class="field-head">
+        <code class="fname">q</code>
+        <span class="ftype">string</span>
+        
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">RegistryTypeList</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p></div></div>
+      <details class="more"><summary>More</summary><div style="font-size:13px;color:#444;line-height:1.65;"><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*john*</code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:*smith*</code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:*john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Lists</h3><p style="margin:0 0 6px;">A condition on a list matches when any item matches. That holds for a list of values (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">programs:snap</code>) and for a list of objects anywhere along a dotted path (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo</code>, any member named Jo).</p><p style="margin:0 0 6px;">Each condition is checked on its own. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo members.age:&gt;60</code> matches when some member is named Jo and some member, not necessarily the same one, is over 60. There is no way to require the same item.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL encoding</h3><p style="margin:0 0 6px;">This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity. - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></details>
+      
+    </div><div class="param" data-param="limit" data-in="query">
+      <div class="field-head">
+        <code class="fname">limit</code>
+        <span class="ftype">integer</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></div>
+      
+      
+    </div><div class="param" data-param="offset" data-in="query">
+      <div class="field-head">
+        <code class="fname">offset</code>
+        <span class="ftype">integer</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></div>
+      
+      
+    </div><div class="param" data-param="sort" data-in="query">
+      <div class="field-head">
+        <code class="fname">sort</code>
+        <span class="ftype">string</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p></div></div>
+      <details class="more"><summary>More</summary><div style="font-size:13px;color:#444;line-height:1.65;"><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Allowed fields</h3><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL encoding</h3><p style="margin:0 0 6px;">This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples above show human-readable syntax for clarity.</p></div></details>
+      
+    </div>
+    </div>
+        
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">The registry types, in name order. <span class="schema-name">RegistryTypeList</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Total number of items available.</span>
       </div>
+      <div class="fdesc">Total number of items available.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">limit</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Maximum number of items requested.</span>
       </div>
+      <div class="fdesc">Maximum number of items requested.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">offset</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Number of items skipped before the current page.</span>
       </div>
+      <div class="fdesc">Number of items skipped before the current page.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">hasNext</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether more items are available beyond the current page.</span>
       </div>
+      <div class="fdesc">Whether more items are available beyond the current page.</div>
       
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[RegistryType]</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+              <span class="ftype">array[RegistryType]</span>
+              <span class="fpreview">{ total, type }</span>
+              <span class="freq">required</span>
+              
+            </span>
             
           </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The registry type, as its files declare it.</span>
       </div>
+      <div class="fdesc">The registry type, as its files declare it.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">How many entries it has, across every file of the type.</span>
       </div>
+      <div class="fdesc">How many entries it has, across every file of the type.</div>
       
-    </div>
-    </div>
+    </div></div>
         </details>
       </div></div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
       </div>
+      <div class="fdesc">Machine-readable error code.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
       </div>
+      <div class="fdesc">Human-readable error description.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span class="ftype">array[object]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
       </div>
+      <div class="fdesc">Additional error details.</div>
       
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div>
+  </div></aside>
     </div>
   </details>
-</div><div id="op-get-registry-type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-get-registry-type" class="content-item op-get" data-try-op="listRegistryEntries" data-try-file="base/domains/platform/platform-registries-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/registry/{type}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List a registry's entries</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+        <code class="op-path">/registry/{type}</code>
+        <span class="op-name">List a registry's entries</span>
       </span>
+      <code class="op-id" title="operationId">listRegistryEntries</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-get-registry-type" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Every entry of one registry type, from every file of that type, in id order. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">q</code> matches an entry's id or description.</p></div></div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
-      <thead><tr>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">In</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
-      </tr></thead>
-      <tbody><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A registry type the contracts declare, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">policies</code>.</p></div></td>
-    </tr><tr>
-          <td style="padding:5px 12px;white-space:nowrap;"><span role="button" tabindex="0" data-expand-id="exp-19" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>q</span></td>
-          <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-          <td style="padding:5px 12px;text-align:center;"></td>
-          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Search query using field:value syntax. Multiple conditions separated by</td>
-        </tr><tr id="exp-19" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Lists</h3><p style="margin:0 0 6px;">A condition on a list matches when any item matches. That holds for a list of values (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">programs:snap</code>) and for a list of objects anywhere along a dotted path (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo</code>, any member named Jo).</p><p style="margin:0 0 6px;">Each condition is checked on its own. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo members.age:&gt;60</code> matches when some member is named Jo and some member, not necessarily the same one, is over 60. There is no way to require the same item.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td></tr><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">limit</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">offset</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
-    </tr><tr>
-          <td style="padding:5px 12px;white-space:nowrap;"><span role="button" tabindex="0" data-expand-id="exp-20" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>sort</span></td>
-          <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-          <td style="padding:5px 12px;text-align:center;"></td>
-          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Comma-separated list of fields to sort the response by. Prefix a field</td>
-        </tr><tr id="exp-20" style="display:none"><td colspan="5" style="padding:4px 12px 10px;background:#fafafa;border-top:none;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td></tr></tbody>
-    </table>
-  </div>
-      
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">Paginated list of entries.</span>
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Every entry of one registry type, from every file of that type, in id order. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">q</code> matches an entry's id or description.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">RegistryEntryList</span></div>
+        <div class="op-section params-section">
+      <h4 class="op-h">Path parameters</h4>
+      <div class="param" data-param="type" data-in="path" data-required>
+      <div class="field-head">
+        <code class="fname">type</code>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">RegistryEntryList</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A registry type the contracts declare, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">policies</code>.</p></div></div>
+      
+      
+    </div>
+    </div><div class="op-section params-section">
+      <h4 class="op-h">Query parameters</h4>
+      <div class="param" data-param="q" data-in="query">
+      <div class="field-head">
+        <code class="fname">q</code>
+        <span class="ftype">string</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p></div></div>
+      <details class="more"><summary>More</summary><div style="font-size:13px;color:#444;line-height:1.65;"><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*john*</code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:*smith*</code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:*john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Lists</h3><p style="margin:0 0 6px;">A condition on a list matches when any item matches. That holds for a list of values (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">programs:snap</code>) and for a list of objects anywhere along a dotted path (<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo</code>, any member named Jo).</p><p style="margin:0 0 6px;">Each condition is checked on its own. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">members.firstName:Jo members.age:&gt;60</code> matches when some member is named Jo and some member, not necessarily the same one, is over 60. There is no way to require the same item.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL encoding</h3><p style="margin:0 0 6px;">This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity. - <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></details>
+      
+    </div><div class="param" data-param="limit" data-in="query">
+      <div class="field-head">
+        <code class="fname">limit</code>
+        <span class="ftype">integer</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></div>
+      
+      
+    </div><div class="param" data-param="offset" data-in="query">
+      <div class="field-head">
+        <code class="fname">offset</code>
+        <span class="ftype">integer</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></div>
+      
+      
+    </div><div class="param" data-param="sort" data-in="query">
+      <div class="field-head">
+        <code class="fname">sort</code>
+        <span class="ftype">string</span>
+        
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p></div></div>
+      <details class="more"><summary>More</summary><div style="font-size:13px;color:#444;line-height:1.65;"><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Allowed fields</h3><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL encoding</h3><p style="margin:0 0 6px;">This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples above show human-readable syntax for clarity.</p></div></details>
+      
+    </div>
+    </div>
+        
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">404</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">Paginated list of entries. <span class="schema-name">RegistryEntryList</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Total number of items available.</span>
       </div>
+      <div class="fdesc">Total number of items available.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">limit</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Maximum number of items requested.</span>
       </div>
+      <div class="fdesc">Maximum number of items requested.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">offset</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">integer</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Number of items skipped before the current page.</span>
       </div>
+      <div class="fdesc">Number of items skipped before the current page.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">hasNext</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether more items are available beyond the current page.</span>
       </div>
+      <div class="fdesc">Whether more items are available beyond the current page.</div>
       
-    </div>
-    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div><div style="padding:7px 0;">
         <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[RegistryEntry]</span>
-            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-            
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+              <span class="ftype">array[RegistryEntry]</span>
+              <span class="fpreview">{ deprecated, description, id }</span>
+              <span class="freq">required</span>
+              
+            </span>
             
           </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <div class="nested"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The entry's stable id.</span>
       </div>
+      <div class="fdesc">The entry's stable id.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">description</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable text for the entry.</span>
       </div>
+      <div class="fdesc">Human-readable text for the entry.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">deprecated</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">When true, the entry should not be newly referenced.</span>
       </div>
+      <div class="fdesc">When true, the entry should not be newly referenced.</div>
       
-    </div>
-    </div>
+    </div></div>
         </details>
       </div></div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
-        <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The requested resource was not found. <span class="schema-name">NotFound</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
       </div>
+      <div class="fdesc">Machine-readable error code.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
       </div>
+      <div class="fdesc">Human-readable error description.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span class="ftype">array[object]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
       </div>
+      <div class="fdesc">Additional error details.</div>
       
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
     </div>
   </details>
-</div><div id="op-get-registry-type-entryId" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-get-registry-type-entryId" class="content-item op-get" data-try-op="getRegistryEntry" data-try-file="base/domains/platform/platform-registries-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
-      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
-      <span style="flex:1;min-width:0;">
-        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/registry/{type}/{entryId}</code>
-        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get a registry entry</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
+        <code class="op-path">/registry/{type}/{entryId}</code>
+        <span class="op-name">Get a registry entry</span>
       </span>
+      <code class="op-id" title="operationId">getRegistryEntry</code>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         
         
         <a href="#op-get-registry-type-entryId" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
-    <div style="padding:12px 16px;">
-      <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">One entry of a registry type, by its id.</p></div></div>
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
-      <thead><tr>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Name</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Type</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">In</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Req</th>
-        <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
-      </tr></thead>
-      <tbody><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A registry type the contracts declare, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">policies</code>.</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">entryId</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The entry's stable id, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">snap-processing-clock</code>.</p></div></td>
-    </tr></tbody>
-    </table>
-  </div>
-      
-      <div style="margin-top:16px;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
-        <span style="font-size:11px;color:#555;">The entry.</span>
+    <div class="op-body">
+      <div class="op-docs">
+        <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">One entry of a registry type, by its id.</p></div></div>
+        <div class="op-returns">Returns <span class="schema-name">RegistryEntry</span></div>
+        <div class="op-section params-section">
+      <h4 class="op-h">Path parameters</h4>
+      <div class="param" data-param="type" data-in="path" data-required>
+      <div class="field-head">
+        <code class="fname">type</code>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
       </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">RegistryEntry</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A registry type the contracts declare, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">policies</code>.</p></div></div>
+      
+      
+    </div><div class="param" data-param="entryId" data-in="path" data-required>
+      <div class="field-head">
+        <code class="fname">entryId</code>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+      </div>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The entry's stable id, e.g. <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">snap-processing-clock</code>.</p></div></div>
+      
+      
+    </div>
+    </div>
+        
+      </div>
+      <aside class="op-side"><div class="op-section responses-section">
+    <h4 class="op-h">Responses</h4>
+    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">404</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
+    <div class="resp-panel" data-resp="0">
+      <div class="fdesc">The entry. <span class="schema-name">RegistryEntry</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The entry's stable id.</span>
       </div>
+      <div class="fdesc">The entry's stable id.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">description</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable text for the entry.</span>
       </div>
+      <div class="fdesc">Human-readable text for the entry.</div>
       
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">deprecated</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span class="ftype">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">When true, the entry should not be newly referenced.</span>
       </div>
+      <div class="fdesc">When true, the entry should not be newly referenced.</div>
       
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
-        <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
-    </div><div style="border-top:1px solid #eee;">
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
-        <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
-        <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
-      </div>
-      <details style="border-top:1px solid #f0f0f0;">
-        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
-          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
-          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
-        </summary>
-        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Machine-readable error code.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Human-readable error description.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Additional error details.</span>
-      </div>
-      
-    </div>
-    </div>
-      </details>
     </div></div>
-  </div>
+    </div><div class="resp-panel" data-resp="1" hidden>
+      <div class="fdesc">The requested resource was not found. <span class="schema-name">NotFound</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div><div class="resp-panel" data-resp="2" hidden>
+      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
+      <div class="body-fields"><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Machine-readable error code.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
+        <span class="ftype">string</span>
+        <span class="freq">required</span>
+        
+      </div>
+      <div class="fdesc">Human-readable error description.</div>
+      
+    </div><div class="field">
+      <div class="field-head">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
+        <span class="ftype">array[object]</span>
+        
+        
+      </div>
+      <div class="fdesc">Additional error details.</div>
+      
+    </div></div>
+    </div>
+  </div></aside>
     </div>
   </details>
 </div>
@@ -757,10 +753,32 @@
         .map(a => document.getElementById(a.getAttribute('href').slice(1)))
         .filter(Boolean);
       if (!sections.length) return;
-      const io = new IntersectionObserver(entries => {
-        const hit = entries.find(e => e.isIntersecting);
-        if (hit) setActive(hit.target.id);
-      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      // Opening or closing a row is choosing it: highlight it. Closing one also
+      // pulls the next row up into view, which the observer would otherwise
+      // take for scrolling to it, so the shift a toggle causes is ignored.
+      let toggledAt = 0;
+      document.addEventListener('toggle', (event) => {
+        const item = event.target.parentElement?.closest('.content-item[id]');
+        if (!item || event.target.parentElement !== item || !sections.includes(item)) return;
+        toggledAt = performance.now();
+        setActive(item.id);
+      }, true);
+      // The current section is the one at the top of the content area: the
+      // last whose top has scrolled up to it. The observer says when sections
+      // cross the top of the area, but several can cross at once after a jump,
+      // listed in no useful order, so it's worked out from where they are.
+      const content = document.getElementById('content');
+      const io = new IntersectionObserver(() => {
+        if (performance.now() - toggledAt < 400) return;
+        const line = content.getBoundingClientRect().top + 60;
+        // The sidebar's order needn't be the page's, so it's the lowest top above the line.
+        let current = null, best = -Infinity;
+        for (const s of sections) {
+          const top = s.getBoundingClientRect().top;
+          if (s.offsetParent && top <= line && top > best) { current = s; best = top; }
+        }
+        if (current) setActive(current.id);
+      }, { root: content, rootMargin: '0px 0px -70% 0px', threshold: 0 });
       sections.forEach(s => io.observe(s));
       setActive(sections[0].id);
     })();
@@ -873,5 +891,77 @@
     })();
     
   </script>
+<script>
+  document.addEventListener('click', (event) => {
+    const tab = event.target.closest('.resp-tab');
+    if (!tab) return;
+    const section = tab.closest('.responses-section');
+    for (const other of section.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
+    for (const panel of section.querySelectorAll('.resp-panel')) panel.hidden = panel.dataset.resp !== tab.dataset.resp;
+  });
+  const openTarget = () => {
+    const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    const details = target?.matches('.content-item') ? target.querySelector(':scope > details') : null;
+    if (details && !details.open) details.open = true;
+  };
+  addEventListener('hashchange', openTarget);
+  openTarget();
+  // The sidebar goes to an operation without putting it in the address, so a
+  // reload starts from the top; an operation's own # link is the one to share.
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('#sidebar a.nav-op');
+    if (!link) return;
+    const target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    const details = target.querySelector(':scope > details');
+    if (details && !details.open) details.open = true;
+    target.scrollIntoView({ block: 'start' });
+  });
+</script>
+<script src="../mock/mock.js" defer></script>
+<script src="../mock/contracts.js" defer></script>
+<script type="module">
+if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
+  BlueprintMock.mountSendPanels({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+  });
+}
+</script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

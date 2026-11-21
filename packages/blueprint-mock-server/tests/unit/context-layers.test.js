@@ -30,8 +30,8 @@ function makeBase() {
 }
 
 test('resolveContextLayers — resolves domain-level binding', () => {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   const domainContext = [{ snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' } } }];
   const entities = resolveContextLayers([domainContext, null, null], {}, makeBase(), store);
@@ -41,8 +41,8 @@ test('resolveContextLayers — resolves domain-level binding', () => {
 });
 
 test('resolveContextLayers — resolves machine-level binding', () => {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-gen', name: 'general-intake' });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-gen', name: 'general-intake' });
 
   const machineContext = [{ generalQueue: { from: 'workflow/queues', where: { name: 'general-intake' } } }];
   const entities = resolveContextLayers([null, machineContext, null], {}, makeBase(), store);
@@ -52,8 +52,8 @@ test('resolveContextLayers — resolves machine-level binding', () => {
 });
 
 test('resolveContextLayers — resolves trigger-level binding', () => {
-  store.clearAll('applications');
-  store.insertResource('applications', { id: 'app-1', status: 'submitted' });
+  store.clearAll('intake/applications');
+  store.insertResource('intake/applications', { id: 'app-1', status: 'submitted' });
 
   const triggerContext = [{ application: { from: 'intake/applications', where: { id: 'app-1' } } }];
   const entities = resolveContextLayers([null, null, triggerContext], {}, makeBase(), store);
@@ -63,10 +63,10 @@ test('resolveContextLayers — resolves trigger-level binding', () => {
 });
 
 test('resolveContextLayers — chains all three levels, inner bindings reference outer', () => {
-  store.clearAll('applications');
-  store.clearAll('queues');
-  store.insertResource('applications', { id: 'app-1', queueName: 'snap-intake' });
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('intake/applications');
+  store.clearAll('workflow/queues');
+  store.insertResource('intake/applications', { id: 'app-1', queueName: 'snap-intake' });
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   const domainContext = [{ application: { from: 'intake/applications', where: { id: 'app-1' } } }];
   const machineContext = [{ targetQueue: { from: 'workflow/queues', where: { name: '$application.queueName' } } }];
@@ -79,9 +79,9 @@ test('resolveContextLayers — chains all three levels, inner bindings reference
 });
 
 test('resolveContextLayers — inner scope wins on name conflict', () => {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-domain', name: 'domain-queue' });
-  store.insertResource('queues', { id: 'q-machine', name: 'machine-queue' });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-domain', name: 'domain-queue' });
+  store.insertResource('workflow/queues', { id: 'q-machine', name: 'machine-queue' });
 
   const domainContext = [{ queue: { from: 'workflow/queues', where: { name: 'domain-queue' } } }];
   const machineContext = [{ queue: { from: 'workflow/queues', where: { name: 'machine-queue' } } }];
@@ -93,11 +93,28 @@ test('resolveContextLayers — inner scope wins on name conflict', () => {
 });
 
 test('resolveContextLayers — binding that finds no record resolves to null', () => {
-  store.clearAll('queues');
+  store.clearAll('workflow/queues');
   const domainContext = [{ missing: { from: 'workflow/queues', where: { name: 'nonexistent' } } }];
   const result = resolveContextLayers([domainContext, null, null], {}, makeBase(), store);
   assert.ok(result !== null);
   assert.strictEqual(result.missing, null);
+});
+
+// With no where:, a binding is the first record in the collection — a
+// domain's one settings record, say (state-machine-schema.yaml, ContextBinding).
+test('resolveContextLayers — binding with no where resolves to the first record', () => {
+  store.clearAll('kitchen/store-settings');
+  store.insertResource('kitchen/store-settings', { id: 'settings-1', name: 'the one settings record' });
+  const machineContext = [{ settings: { from: 'kitchen/store-settings' } }];
+  const result = resolveContextLayers([null, machineContext, null], {}, makeBase(), store);
+  assert.strictEqual(result.settings?.name, 'the one settings record');
+});
+
+test('resolveContextLayers — binding with no where resolves to null in an empty collection', () => {
+  store.clearAll('kitchen/store-settings');
+  const machineContext = [{ settings: { from: 'kitchen/store-settings' } }];
+  const result = resolveContextLayers([null, machineContext, null], {}, makeBase(), store);
+  assert.strictEqual(result.settings, null);
 });
 
 test('resolveContextLayers — all null/empty layers returns empty entities', () => {
@@ -111,7 +128,7 @@ test('resolveContextLayers — all null/empty layers returns empty entities', ()
 
 test('createCreateHandler — emitted event subject is the created resource id, not the parent id', async () => {
   store.clearAll('testitems');
-  store.clearAll('events');
+  store.clearAll('platform/events');
 
   const apiMetadata = { serverBasePath: '/test' };
   const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
@@ -135,7 +152,7 @@ test('createCreateHandler — emitted event subject is the created resource id, 
   assert.ok(createdId, 'created resource must have an id');
   assert.notStrictEqual(createdId, parentId, 'created resource id must not equal the parent id');
 
-  const { items } = store.findAll('events', {});
+  const { items } = store.findAll('platform/events', {});
   const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.strictEqual(createdEvent.subject, createdId, 'event subject must be the child resource id, not the parent id');
@@ -143,7 +160,7 @@ test('createCreateHandler — emitted event subject is the created resource id, 
 
 test('createCreateHandler — emitted event includes authid and authtype from caller headers', async () => {
   store.clearAll('testitems');
-  store.clearAll('events');
+  store.clearAll('platform/events');
 
   const apiMetadata = { serverBasePath: '/test' };
   const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
@@ -158,7 +175,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
 
   await readResponse(handler(request, { params: {} }));
 
-  const { items } = store.findAll('events', {});
+  const { items } = store.findAll('platform/events', {});
   const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.strictEqual(createdEvent.authid, 'caseworker-42');
@@ -167,7 +184,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
 
 test('createCreateHandler — emitted event leaves out authid and authtype when no caller headers, and starts a trace', async () => {
   store.clearAll('testitems');
-  store.clearAll('events');
+  store.clearAll('platform/events');
 
   const apiMetadata = { serverBasePath: '/test' };
   const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
@@ -178,7 +195,7 @@ test('createCreateHandler — emitted event leaves out authid and authtype when 
 
   await readResponse(handler(request, { params: {} }));
 
-  const { items } = store.findAll('events', {});
+  const { items } = store.findAll('platform/events', {});
   const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.ok(!('authid' in createdEvent), 'no caller, no authid');

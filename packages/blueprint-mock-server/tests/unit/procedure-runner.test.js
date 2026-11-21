@@ -25,15 +25,15 @@ function makeContext(resource) {
   };
 }
 
-function makeInlineRule({ id = 'test-rule', evaluation = 'first-match-wins', context: ctx = [], conditions }) {
-  return [{ id, evaluation, context: ctx, conditions }];
+function makeInlineRule({ id = 'test-rule', context: ctx = [], steps }) {
+  return [{ id, context: ctx, steps }];
 }
 
 function seedQueues() {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
-  store.insertResource('queues', { id: 'q-general', name: 'general-intake' });
-  store.insertResource('queues', { id: 'q-alameda', name: 'alameda-intake' });
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
+  store.insertResource('workflow/queues', { id: 'q-general', name: 'general-intake' });
+  store.insertResource('workflow/queues', { id: 'q-alameda', name: 'alameda-intake' });
 }
 
 // =============================================================================
@@ -41,10 +41,10 @@ function seedQueues() {
 // =============================================================================
 
 test('executeProcedures — context binding resolves entity and makes fields available', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'] });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -52,9 +52,8 @@ test('executeProcedures — context binding resolves entity and makes fields ava
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
       { snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' }, optional: true } }
     ],
-    conditions: [{
-      id: 'snap-rule', order: 1,
-      condition: { in: ['snap', { var: '$application.programs' }] },
+    steps: [{
+      if: '"snap" in application.programs',
       then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
     }]
   });
@@ -68,7 +67,7 @@ test('executeProcedures — context binding resolves entity and makes fields ava
 // =============================================================================
 
 test('executeProcedures — entity not found skips rule set entirely', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -77,9 +76,8 @@ test('executeProcedures — entity not found skips rule set entirely', () => {
     context: [
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } }
     ],
-    conditions: [{
-      id: 'snap-rule', order: 1,
-      condition: { in: ['snap', { var: '$application.programs' }] },
+    steps: [{
+      if: '"snap" in application.programs',
       then: [{ set: { field: 'queueId', value: 'q-snap' } }]
     }]
   });
@@ -93,7 +91,7 @@ test('executeProcedures — entity not found skips rule set entirely', () => {
 // =============================================================================
 
 test('executeProcedures — missing from field value skips rule set entirely', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -102,9 +100,8 @@ test('executeProcedures — missing from field value skips rule set entirely', (
     context: [
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } }
     ],
-    conditions: [{
-      id: 'snap-rule', order: 1,
-      condition: { in: ['snap', { var: '$application.programs' }] },
+    steps: [{
+      if: '"snap" in application.programs',
       then: [{ set: { field: 'queueId', value: 'q-snap' } }]
     }]
   });
@@ -118,7 +115,7 @@ test('executeProcedures — missing from field value skips rule set entirely', (
 // =============================================================================
 
 test('executeProcedures — optional binding skipped when from field missing, rule set continues', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -127,27 +124,20 @@ test('executeProcedures — optional binding skipped when from field missing, ru
     context: [
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' }, optional: true } }
     ],
-    conditions: [
-      {
-        id: 'snap-rule', order: 1,
-        condition: { in: ['snap', { var: '$application.programs' }] },
-        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
-      },
-      {
-        id: 'catch-all', order: 2,
-        condition: true,
-        then: [{ set: { field: 'queueId', value: 'q-general' } }]
-      }
-    ]
+    steps: [{
+      if: 'application != null && "snap" in application.programs',
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }],
+      else: [{ set: { field: 'queueId', value: 'q-general' } }]
+    }]
   });
 
-  // binding skipped (optional) — snap condition fails (application null) — catch-all fires
+  // binding skipped (optional) — application is null, so the else branch runs
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-general');
 });
 
 test('executeProcedures — optional binding skipped when entity not found, rule set continues', () => {
-  store.clearAll('applications');
+  store.clearAll('intake/applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -156,21 +146,14 @@ test('executeProcedures — optional binding skipped when entity not found, rule
     context: [
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' }, optional: true } }
     ],
-    conditions: [
-      {
-        id: 'snap-rule', order: 1,
-        condition: { in: ['snap', { var: '$application.programs' }] },
-        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
-      },
-      {
-        id: 'catch-all', order: 2,
-        condition: true,
-        then: [{ set: { field: 'queueId', value: 'q-general' } }]
-      }
-    ]
+    steps: [{
+      if: 'application != null && "snap" in application.programs',
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }],
+      else: [{ set: { field: 'queueId', value: 'q-general' } }]
+    }]
   });
 
-  // binding skipped (optional) — snap condition fails (application null) — catch-all fires
+  // binding skipped (optional) — application is null, so the else branch runs
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-general');
 });
@@ -180,12 +163,12 @@ test('executeProcedures — optional binding skipped when entity not found, rule
 // =============================================================================
 
 test('executeProcedures — chained binding resolves entity via prior resolved entity field', () => {
-  store.clearAll('applications');
-  store.clearAll('cases');
+  store.clearAll('intake/applications');
+  store.clearAll('case-management/cases');
   seedQueues();
 
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
-  store.insertResource('cases', { id: 'case-99', county: 'alameda' });
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
+  store.insertResource('case-management/cases', { id: 'case-99', county: 'alameda' });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -193,9 +176,8 @@ test('executeProcedures — chained binding resolves entity via prior resolved e
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
       { linkedCase: { from: 'case-management/cases', where: { id: '$application.caseId' } } }
     ],
-    conditions: [{
-      id: 'alameda-rule', order: 1,
-      condition: { '==': [{ var: '$linkedCase.county' }, 'alameda'] },
+    steps: [{
+      if: 'linkedCase.county == "alameda"',
       then: [{ set: { field: 'queueId', value: 'q-alameda' } }]
     }]
   });
@@ -205,34 +187,27 @@ test('executeProcedures — chained binding resolves entity via prior resolved e
 });
 
 // =============================================================================
-// $object alias — calling resource fields accessible via $object.* in conditions
+// object — the calling resource's fields, read as object.* in conditions
 // =============================================================================
 
-test('executeProcedures — calling resource fields accessible as "$object.*" in conditions', () => {
+test('executeProcedures — calling resource fields readable as "object.*" in conditions', () => {
   const task = { id: 'task-1', isExpedited: false, queueId: null };
 
   const inlineRules = makeInlineRule({
-    conditions: [
-      {
-        id: 'expedited', order: 1,
-        condition: { '==': [{ var: '$object.isExpedited' }, true] },
-        then: [{ set: { field: 'queueId', value: 'q-snap' } }]
-      },
-      {
-        id: 'catch-all', order: 2,
-        condition: true,
-        then: [{ set: { field: 'queueId', value: 'q-general' } }]
-      }
-    ]
+    steps: [{
+      if: 'object.isExpedited == true',
+      then: [{ set: { field: 'queueId', value: 'q-snap' } }],
+      else: [{ set: { field: 'queueId', value: 'q-general' } }]
+    }]
   });
 
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  assert.strictEqual(task.queueId, 'q-general'); // isExpedited false → catch-all
+  assert.strictEqual(task.queueId, 'q-general'); // isExpedited false → else branch
 
   task.isExpedited = true;
   task.queueId = null;
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  assert.strictEqual(task.queueId, 'q-snap'); // isExpedited true → matches first condition
+  assert.strictEqual(task.queueId, 'q-snap'); // isExpedited true → then branch
 });
 
 // =============================================================================
@@ -248,11 +223,7 @@ test('executeProcedures — non-id where clause resolves entity by named field',
     context: [
       { snapQueue: { from: 'workflow/queues', where: { name: 'snap-intake' }, optional: true } }
     ],
-    conditions: [{
-      id: 'set-queue', order: 1,
-      condition: true,
-      then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
-    }]
+    steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
   });
 
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
@@ -260,81 +231,13 @@ test('executeProcedures — non-id where clause resolves entity by named field',
 });
 
 // =============================================================================
-// all-match evaluation — all matching conditions fire
+// Context binding — CEL where
 // =============================================================================
 
-test('executeProcedures — all-match fires all matching conditions', () => {
-  const task = { id: 'task-1', programs: ['snap', 'medicaid'], priority: null };
-
-  const inlineRules = makeInlineRule({
-    evaluation: 'all-match',
-    conditions: [
-      { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'expedited' } }] },
-      { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'high' } }] }
-    ]
-  });
-
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  // Both conditions fired: expedited then high → final value is 'high'
-  assert.strictEqual(task.priority, 'high');
-});
-
-test('executeProcedures — first-match-wins stops at first matching condition', () => {
-  const task = { id: 'task-1', programs: ['snap', 'medicaid'], priority: null };
-
-  const inlineRules = makeInlineRule({
-    evaluation: 'first-match-wins',
-    conditions: [
-      { id: 'snap-rule', order: 1, condition: { in: ['snap', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'expedited' } }] },
-      { id: 'medicaid-rule', order: 2, condition: { in: ['medicaid', { var: '$object.programs' }] }, then: [{ set: { field: 'priority', value: 'high' } }] }
-    ]
-  });
-
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  // Only snap-rule fired → 'expedited'
-  assert.strictEqual(task.priority, 'expedited');
-});
-
-// =============================================================================
-// RuleCondition.order — conditions evaluated in order, lower first
-// =============================================================================
-
-test('executeProcedures — conditions evaluated in declaration order without explicit order field', () => {
-  const task = { id: 'task-1', queueId: null };
-
-  const inlineRules = makeInlineRule({
-    conditions: [
-      { id: 'first', condition: true, then: [{ set: { field: 'queueId', value: 'q-first' } }] },
-      { id: 'second', condition: true, then: [{ set: { field: 'queueId', value: 'q-second' } }] }
-    ]
-  });
-
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  assert.strictEqual(task.queueId, 'q-first'); // first-match-wins stops after first match
-});
-
-test('executeProcedures — order field overrides declaration order', () => {
-  const task = { id: 'task-1', queueId: null };
-
-  const inlineRules = makeInlineRule({
-    conditions: [
-      { id: 'declared-first', order: 2, condition: true, then: [{ set: { field: 'queueId', value: 'q-second' } }] },
-      { id: 'declared-second', order: 1, condition: true, then: [{ set: { field: 'queueId', value: 'q-first' } }] }
-    ]
-  });
-
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
-  assert.strictEqual(task.queueId, 'q-first'); // order:1 runs first despite being declared second
-});
-
-// =============================================================================
-// Context binding — JSON Logic where
-// =============================================================================
-
-test('executeProcedures — JSON Logic where in context binding returns first match', () => {
-  store.clearAll('queues');
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
-  store.insertResource('queues', { id: 'q-general', name: 'general-intake', priority: 2 });
+test('executeProcedures — CEL where in context binding returns first match', () => {
+  store.clearAll('workflow/queues');
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
+  store.insertResource('workflow/queues', { id: 'q-general', name: 'general-intake', priority: 2 });
 
   const task = { id: 'task-1', queueId: null };
 
@@ -342,13 +245,10 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
     context: [{
       snapQueue: {
         from: 'workflow/queues',
-        where: { '==': [{ var: 'name' }, 'snap-intake'] }
+        where: 'item.name == "snap-intake"'
       }
     }],
-    conditions: [{
-      condition: true,
-      then: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
-    }]
+    steps: [{ set: { field: 'queueId', value: '$snapQueue.id' } }]
   });
 
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
@@ -360,10 +260,10 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
 // =============================================================================
 
 test('executeProcedures — rule-level context adds bindings not in caller scope', () => {
-  store.clearAll('applications');
-  store.clearAll('queues');
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('intake/applications');
+  store.clearAll('workflow/queues');
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   // Rule has its own context: (application binding) not provided by caller
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
@@ -371,8 +271,8 @@ test('executeProcedures — rule-level context adds bindings not in caller scope
     context: [{
       application: { from: 'intake/applications', where: { id: '$object.subjectId' } }
     }],
-    conditions: [{
-      condition: { in: ['snap', { var: '$application.programs' }] },
+    steps: [{
+      if: '"snap" in application.programs',
       then: [{ set: { field: 'queueId', value: 'q-snap' } }]
     }]
   });
@@ -383,10 +283,10 @@ test('executeProcedures — rule-level context adds bindings not in caller scope
 });
 
 test('executeProcedures — rule-level context can chain from caller-scope entities', () => {
-  store.clearAll('applications');
-  store.clearAll('queues');
-  store.insertResource('applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
-  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('intake/applications');
+  store.clearAll('workflow/queues');
+  store.insertResource('intake/applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
+  store.insertResource('workflow/queues', { id: 'q-snap', name: 'snap-intake' });
 
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
@@ -396,10 +296,7 @@ test('executeProcedures — rule-level context can chain from caller-scope entit
       { application: { from: 'intake/applications', where: { id: '$object.subjectId' } } },
       { targetQueue: { from: 'workflow/queues', where: { name: '$application.countyQueueName' } } }
     ],
-    conditions: [{
-      condition: true,
-      then: [{ set: { field: 'queueId', value: '$targetQueue.id' } }]
-    }]
+    steps: [{ set: { field: 'queueId', value: '$targetQueue.id' } }]
   });
 
   executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);

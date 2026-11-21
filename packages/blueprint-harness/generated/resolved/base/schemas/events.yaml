@@ -49,7 +49,7 @@ $defs:
           id:
             type: string
             format: uuid
-            description: Unique event identifier.
+            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
           source:
             type: string
             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -208,7 +208,7 @@ TimerRequestedEvent:
         event:
           type: string
           description: |
-            CloudEvents type of the domain-specific event to emit when the timer expires (e.g., workflow.creation_deadline). The timer service passes this through unchanged — it does not derive or modify the event name.
+            CloudEvents type of the domain-specific event to emit when the timer expires (e.g., workflow.task.creation_deadline). The timer service passes this through unchanged — it does not derive or modify the event name.
         data:
           type: object
           description: Payload to include in the callback event, passed through unchanged. The timer service adds timerId to this payload before delivery.
@@ -222,7 +222,7 @@ TimerCallbackEvent:
 
     The timer service adds nothing to the payload but timerId. The event name
     is the domain-specific name from callback.event in the original request
-    (e.g., workflow.creation_deadline), not a generic scheduler.timer.fired
+    (e.g., workflow.task.creation_deadline), not a generic scheduler.timer.fired
     event.
 
     The callback's envelope carries the timer request's subject, the record the
