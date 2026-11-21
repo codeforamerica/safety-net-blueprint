@@ -9,7 +9,7 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { COLORS } from '../lib/theme.js';
-import { titleCase, breadcrumb, apiReferenceLink, apiReferenceHref } from '../lib/html.js';
+import { esc, titleCase, breadcrumb, apiReferenceLink, apiEndpointSlug, actionAnchor, subscriptionAnchor, eventCatalogHref } from '../lib/html.js';
 import { singleColumnPage } from '../lib/layout.js';
 import { branchSteps, matchCases, forEachBody } from './walk.js';
 
@@ -114,7 +114,32 @@ function allProcedures(machine, sm) {
   return [...(machine.procedures || []), ...(sm.procedures || [])];
 }
 
+/**
+ * A call step without a description, said as what it does: the endpoint or
+ * operation it calls and the fields it sends.
+ * `{ POST: 'intake/applications/$object.id/entries', requestBody: { payload: { kind, startedAt } } }`
+ * → Call `POST intake/applications/$object.id/entries` with kind, startedAt.
+ */
+function describeCall(request) {
+  if (!request || typeof request !== 'object') return '';
+  const body = request.requestBody?.payload ?? request.requestBody;
+  const fields = body && typeof body === 'object' ? Object.keys(body) : [];
+  return `Call ${callLink(request)}${fields.length ? ` with ${fields.map(esc).join(', ')}` : ''}`;
+}
+
+/** The endpoint a call step calls, linked to it in the API reference when the set declares it. */
+let targetOf = () => null;
+function callLink(request) {
+  const target = targetOf(request);
+  if (target) return `<a href="${esc(target.href)}"><code style="color:${COLORS.midBlue};">${esc(target.label)}</code></a>`;
+  const method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].find((m) => request?.[m]);
+  return `<code>${esc(method ? `${method} ${request[method]}` : request?.operationId ?? String(request ?? ''))}</code>`;
+}
+
 // ── Step list renderer (HTML) ─────────────────────────────────────────────────
+
+/** An event type, linked to its entry in the event catalog. */
+const eventChip = (type) => `<a href="${eventCatalogHref(type)}" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${esc(type).replaceAll('.', '.<wbr>')}</a>`;
 
 function renderStepsHtml(steps, sm, machine, eventIndex, allStateMachines) {
   if (!steps?.length) return '';
@@ -134,7 +159,7 @@ function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
 
       case 'emit': {
         const desc = stripEmitPrefix(raw) || raw;
-        return `<li>Emit <a href="../event-catalog/index.html#event-${step.type}" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${step.type}</a>${desc ? ` — ${desc}` : ''}</li>`;
+        return `<li>Emit ${eventChip(step.type)}${desc ? ` — ${desc}` : ''}</li>`;
       }
 
       case 'call': {
@@ -142,10 +167,9 @@ function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
           const proc = allProcedures(machine, sm).find(p => p.id === step.procedure);
           return `<li>${proc?.description?.trim().replace(/\n\s*/g, ' ') || step.procedure}</li>`;
         }
-        const desc = raw
-          || step.request?.description?.trim().replace(/\n\s*/g, ' ')
-          || JSON.stringify(step.request);
-        return `<li>${desc}</li>`;
+        // What the call is for, then the call itself.
+        const said = raw || step.request?.description?.trim().replace(/\n\s*/g, ' ');
+        return `<li>${said ? `${said} ${callLink(step.request)}` : describeCall(step.request)}</li>`;
       }
 
       case 'if': {
@@ -183,7 +207,7 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
   const machineRows = allStateMachines.flatMap(sm =>
     sm.machines.map(machine => {
       const multiMachine = sm.machines.length > 1;
-      const anchor = multiMachine ? `#${machine.object.toLowerCase()}` : '';
+      const anchor = multiMachine ? `#machine-${machine.object.toLowerCase()}` : '';
       const actionCount = (machine.actions || []).length;
       const eventCount = (machine.on || []).length;
       const badges = (machine.states || []).map(s => stateBadge(s.id)).join(' ');
@@ -231,10 +255,15 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
  * @param {ReturnType<import('./walk.js').stateMachineView>[]} allStateMachines -
  *   Every domain, for the nav and cross-domain links
  * @param {string} hubHref
- * @param {Map<string, {path: string, method: string}>} [endpointIndex] - From
+ * @param {Map<string, {path: string, method: string, file: string|null}>} [endpointIndex] - From
  *   `extract(docs, 'relationships')`
+ * @param {ReturnType<import('../lib/event-senders.js').eventSenders>} [senderOf] - Who sends each event
+ * @param {(steps: object[], domain: string, object: string) => { type: string, via?: { label: string, href: string } }[]} [stepEmits] -
+ *   What steps publish: their own emits, and through `via`, the events of the endpoints they call
+ * @param {ReturnType<import('../lib/event-senders.js').callTargets>} [callTargetOf] - The endpoint a call step calls
  */
-export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHref = '../index.html', endpointIndex = null) {
+export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHref = '../index.html', endpointIndex = null, senderOf = () => null, stepEmits = () => [], callTargetOf = () => null) {
+  targetOf = callTargetOf;
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(s => s.domain);
 
@@ -276,12 +305,14 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
           : op.transition ? '<span style="color:#999;font-size:11px;">no state change</span>' : '';
         const steps = renderStepsHtml(op.steps, sm, machine, eventIndex, allStateMachines);
         let apiLinkHtml = '';
-        const endpointInfo = endpointIndex?.get(`state-machine-action:${sm.domain}:${op.id}`);
-        if (endpointInfo) {
-          const { path, method } = endpointInfo;
-          apiLinkHtml = ' ' + apiReferenceLink(apiReferenceHref(sm.domain, method, path), 'API →', '', 'View API endpoint');
+        const endpointInfo = endpointIndex?.get(`state-machine-action:${sm.domain}:${machine.object}:${op.id}`);
+        if (endpointInfo?.file) {
+          const { file, path, method } = endpointInfo;
+          // The API reference has a page per OpenAPI document, named for its file.
+          const page = file.split('/').pop().replace('-openapi.yaml', '');
+          apiLinkHtml = ' ' + apiReferenceLink(`../api-reference/${page}.html#${apiEndpointSlug(method, path)}`, 'API →', '', 'View API endpoint');
         }
-        return `<tr id="action-${op.id}">
+        return `<tr id="${actionAnchor(machine.object, op.id)}">
           <td><strong style="color:${COLORS.darkBlue};">${op.id}</strong>${apiLinkHtml}${desc ? `<br><span style="font-size:12px;color:${COLORS.textLight};">${desc}</span>` : ''}</td>
           <td style="white-space:nowrap;">${actors ? `<span style="font-size:12px;">${actors}</span>` : ''}</td>
           <td>${transition}</td>
@@ -302,14 +333,15 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
     // Events table
     const eventsHtml = (machine.on || []).length ? (() => {
       const rows = machine.on.map(sub => {
-        const emitter = eventIndex?.emitters[sub.type];
-        const emitterLink = emitter
-          ? `<a href="${emitter.domain}.html">${titleCase(emitter.domain)}/${emitter.object}</a>`
-          : '<span style="color:#999;font-size:11px;">unknown</span>';
+        const sender = senderOf(sub.type);
+        const senderHtml = sender?.href
+          ? `<span style="font-size:11px;color:${COLORS.textLight};">${sender.kind}:</span><br><a href="${esc(sender.href)}">${sender.label}</a>`
+          : sender ? `<span style="font-size:12px;">${sender.label}</span>`
+          : '<span style="color:#999;font-size:11px;">nothing in these contracts</span>';
         const steps = renderStepsHtml(sub.steps, sm, machine, eventIndex, allStateMachines);
-        return `<tr>
-          <td><code>${sub.type}</code></td>
-          <td>${emitterLink}</td>
+        return `<tr id="${subscriptionAnchor(machine.object, sub.type)}">
+          <td>${eventChip(sub.type)}</td>
+          <td>${senderHtml}</td>
           <td>${steps}</td>
         </tr>`;
       }).join('');
@@ -322,18 +354,45 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
               <col style="width:50%">
             </colgroup>
             <thead><tr>
-              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+              <th>Event</th><th>Published by</th><th>Handler steps</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>`;
     })() : '';
 
+    // Publishes: every event the machine's actions and subscriptions emit,
+    // each with what emits it, linked to that row.
+    const publishers = new Map();
+    const publishedBy = (steps, html) => {
+      const seen = new Set();
+      for (const { type, via } of stepEmits(steps, sm.domain, machine.object)) {
+        const entry = via ? `${html}, through <a href="${esc(via.href)}"><code style="color:${COLORS.midBlue};">${esc(via.label)}</code></a>` : html;
+        if (seen.has(type + entry)) continue;
+        seen.add(type + entry);
+        publishers.set(type, [...(publishers.get(type) ?? []), entry]);
+      }
+    };
+    for (const op of machine.actions || []) publishedBy(op.steps, `<a href="#${actionAnchor(machine.object, op.id)}">${esc(op.id)}</a>`);
+    for (const sub of machine.on || []) publishedBy(sub.steps, `<a href="#${subscriptionAnchor(machine.object, sub.type)}">on <code>${esc(sub.type)}</code></a>`);
+    const publishesHtml = publishers.size ? `<h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${COLORS.textLight};margin:1.5rem 0 0.625rem;">Publishes</h4>
+        <div style="background:${COLORS.white};border:1px solid ${COLORS.sandDark};border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup><col style="width:50%"><col style="width:50%"></colgroup>
+            <thead><tr><th>Event</th><th>Published by</th></tr></thead>
+            <tbody>${[...publishers.keys()].sort().map((type) => `<tr>
+              <td>${eventChip(type)}</td>
+              <td style="font-size:12px;">${publishers.get(type).join('<br>')}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>` : '';
+
     return `<section${anchor} style="margin-bottom:2.5rem;">
       <h2 style="font-size:1.125rem;font-weight:800;color:${COLORS.darkBlue};padding-bottom:0.5rem;border-bottom:2px solid ${COLORS.paleBlue};margin-bottom:1rem;">${machine.object}</h2>
       ${statesHtml}
       ${actionsHtml}
       ${eventsHtml}
+      ${publishesHtml}
     </section>`;
   }).join('');
 

@@ -60,12 +60,15 @@ export function buildSchemaIndex(docs) {
 /**
  * Index endpoints by the contract artifact they were generated from.
  *
- * Keyed `{type}:{domain}:{id}` from each operation's `x-relationship`, so the
- * explorer can link an artifact back to the endpoint it produced. Plain `fk`
- * relationships are field-level, not endpoint-level, and are skipped.
+ * Keyed `{type}:{domain}:{id}` from each operation's `x-relationship`, and
+ * `{type}:{domain}:{resource}:{id}` where it names a resource, as a state
+ * machine action's does: two machines in a domain can each have a `close`.
+ * So the explorer can link an artifact back to the endpoint it produced, and
+ * to the document that endpoint is in. Plain `fk` relationships are
+ * field-level, not endpoint-level, and are skipped.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { path: string, method: string }>}
+ * @returns {Map<string, { path: string, method: string, file: string|null }>}
  */
 export function buildRelationshipIndex(docs) {
   const index = new Map();
@@ -77,8 +80,8 @@ export function buildRelationshipIndex(docs) {
         if (!rel?.type || rel.type === 'fk') continue;
         if (!rel.domain || !rel.id) continue;
 
-        const key = `${rel.type}:${rel.domain}:${rel.id}`;
-        if (!index.has(key)) index.set(key, { path, method });
+        const key = [rel.type, rel.domain, rel.resource, rel.id].filter(Boolean).join(':');
+        if (!index.has(key)) index.set(key, { path, method, file: doc.relativePath ?? null });
       }
     }
   }

@@ -426,21 +426,6 @@ workflows:
     description: A transcript nobody adds anything to closes itself once its profile's time limit passes, so one left open by mistake doesn't stay open forever. The transcript asks the platform's scheduler to check back, and closes if nothing was added when the check comes.
     x-branch: other
     steps:
-      - stepId: schedulerStub
-        x-actors: [scheduler]
-        description: |
-          Sends each check back at once, instead of when it's due
-
-          - Nobody waits 30 minutes in a demo. This stub answers the next request for an idle check at once, as if the time had passed.
-        operationId: $sourceDescriptions.mock.registerEventStub
-        requestBody:
-          payload:
-            'on': platform.timer.requested
-            match:
-              data.callback.event: communication.idle_check
-        successCriteria:
-          - condition: $statusCode == 201
-
       - stepId: start
         x-actors: [client, transcript]
         description: |
@@ -460,6 +445,22 @@ workflows:
         outputs:
           id: $response.body#/id
 
+      - stepId: schedulerStub
+        x-actors: [scheduler]
+        description: |
+          Sends its check back now, instead of when it's due
+
+          - Nobody waits 30 minutes in a demo. Starting, the transcript asked the scheduler for a check after its time limit; this stub sends that check back now, as if the time had passed.
+          - It names this transcript's check by its timer id. Other transcripts' checks may be waiting too, and a stub matching any idle check could fire one of theirs.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            'on': platform.timer.requested
+            match:
+              data.timerId: communication.idle_check.{$steps.start.outputs.id}
+        successCriteria:
+          - condition: $statusCode == 201
+
       - stepId: idleCheck
         x-actors: [scheduler, transcript]
         description: |
@@ -467,7 +468,7 @@ workflows:
 
           - When it started, the transcript asked the scheduler for this reminder, due after its profile's time limit. The stub sent it back at once.
           - The reminder says when it was asked for. Nothing was added since, so the transcript closes.
-        operationId: $sourceDescriptions.transcriptEvents.receiveCommunicationIdleCheck
+        operationId: $sourceDescriptions.transcriptEvents.receiveCommunicationTranscriptIdleCheck
         action: receive
 
       - stepId: closed

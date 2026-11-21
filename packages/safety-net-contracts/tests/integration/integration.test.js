@@ -669,6 +669,8 @@ async function runTests() {
 
         const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${auditTaskId}`);
         const listData = await listResponse.json();
+        // The task's own events: the timers its machine asks for are logged about it too.
+        listData.items = listData.items?.filter((e) => e.type?.startsWith('workflow.task.'));
 
         if (listData.items && listData.items.length === 2) {
           const event = listData.items.find(e => e.type?.endsWith('.claimed'));
@@ -703,6 +705,8 @@ async function runTests() {
 
         const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${auditTaskId}`);
         const listData = await listResponse.json();
+        // The task's own events: the timers its machine asks for are logged about it too.
+        listData.items = listData.items?.filter((e) => e.type?.startsWith('workflow.task.'));
 
         if (listData.items && listData.items.length === 3) {
           const types = listData.items.map(e => e.type?.split('.').pop()).sort();
@@ -741,6 +745,8 @@ async function runTests() {
 
         const listResponse = await fetch(`${BASE_URL}/platform/events?subject=${auditTaskId}`);
         const listData = await listResponse.json();
+        // The task's own events: the timers its machine asks for are logged about it too.
+        listData.items = listData.items?.filter((e) => e.type?.startsWith('workflow.task.'));
 
         if (listData.items && listData.items.length === 5) {
           const types = listData.items.map(e => e.type?.split('.').pop()).sort();

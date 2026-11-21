@@ -1,10 +1,9 @@
 /**
  * try-it/build.js
  *
- * Builds the Try it out page into <contentDir>/try-it/: the mock server
- * running in the page, derived from the contract set. "Show me around" plays
- * the set's Arazzo scenarios a step at a time; "Let me explore" sends any
- * operation a request.
+ * Builds the Scenarios page into <contentDir>/scenarios/: the set's Arazzo
+ * scenarios, played a step at a time against the mock server running in the
+ * page, derived from the contract set.
  *
  * The mock itself goes in <contentDir>/mock/, for every page that runs it,
  * as two files each loaded with a classic <script>, so a page works both
@@ -18,7 +17,7 @@
  *                 `BlueprintContractsVersion`, so records saved against an
  *                 older build are not restored
  *
- * Beside the page goes tours.json, the scenarios Show me around offers, for
+ * Beside the page goes tours.json, the scenarios the page offers, for
  * the hub's card to link to each with `index.html#tour=<path>`.
  */
 
@@ -41,15 +40,13 @@ const BUNDLE = resolve(__dirname, '../../dist/try-it-mock.js');
  */
 export function build({ contentDir, resolvedDir }) {
   if (!existsSync(BUNDLE)) {
-    throw new Error(`Try it out: ${BUNDLE} is missing. Run \`npm run build:browser\` in blueprint-explorer.`);
+    throw new Error(`Scenarios: ${BUNDLE} is missing. Run \`npm run build:browser\` in blueprint-explorer.`);
   }
 
-  const outputDir = join(contentDir, 'try-it');
+  const outputDir = join(contentDir, 'scenarios');
   const mockDir = join(contentDir, 'mock');
-  for (const dir of [outputDir, mockDir]) {
-    rmSync(dir, { recursive: true, force: true });
-    mkdirSync(dir, { recursive: true });
-  }
+  for (const dir of [outputDir, mockDir]) rmSync(dir, { recursive: true, force: true });
+  mkdirSync(mockDir, { recursive: true });
 
   const docs = discover(resolvedDir).map(load);
   const artifact = generate(docs, 'artifact');
@@ -58,10 +55,15 @@ export function build({ contentDir, resolvedDir }) {
   writeFileSync(join(mockDir, 'contracts.js'),
     `globalThis.BlueprintContractsVersion = ${JSON.stringify(version)};\nglobalThis.BlueprintContracts = ${json};\n`);
   copyFileSync(BUNDLE, join(mockDir, 'mock.js'));
-  writeFileSync(join(outputDir, 'tours.json'), JSON.stringify(toursIn(docs)));
+  // The mock is for every page that runs it; the Scenarios page only for a set
+  // that has scenarios to play.
+  const tours = toursIn(docs);
+  if (!tours.length) return;
+  mkdirSync(outputDir, { recursive: true });
+  writeFileSync(join(outputDir, 'tours.json'), JSON.stringify(tours));
 
   // Where each step's contract file is browsable, from config.yaml's repo,
-  // and the scenario Show me around opens with.
+  // and the scenario the page opens with.
   const config = loadConfig(contentDir);
   const sourceUrl = buildSpecLink(config.repo, '')?.replace(/\/$/, '') ?? null;
   // The API reference pages built before this one, so a step can link to its
@@ -72,7 +74,7 @@ export function build({ contentDir, resolvedDir }) {
     : [];
   const pageConfig = JSON.stringify({ sourceUrl, firstTour: config.first_tour ?? null, apiPages });
   // The same way back to the explorer every other page has.
-  const crumbs = breadcrumb([{ label: 'Explorer', href: '../index.html' }, { label: 'Try it out' }]);
+  const crumbs = breadcrumb([{ label: 'Explorer', href: '../index.html' }, { label: 'Scenarios' }]);
   const page = readFileSync(join(__dirname, 'page.html'), 'utf8').replace('<body>', () => `<body>\n${crumbs}`).replace(
     '<script type="module">',
     () => `<script type="application/json" id="page-config">${pageConfig.replace(/</g, '\\u003c')}</script>\n` +
@@ -80,11 +82,11 @@ export function build({ contentDir, resolvedDir }) {
   );
   writeFileSync(join(outputDir, 'index.html'), page);
 
-  console.log(`Try it out: ${artifact.docs.length} documents → ${outputDir}`);
+  console.log(`Scenarios: ${artifact.docs.length} documents → ${outputDir}`);
 }
 
 /**
- * The scenarios Show me around offers, as the page finds them: every Arazzo
+ * The scenarios the page offers, as it finds them: every Arazzo
  * document but one that others name as a source of type arazzo, which holds
  * workflows they run inside their own steps.
  *

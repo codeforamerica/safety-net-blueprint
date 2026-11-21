@@ -30,7 +30,7 @@ function headerOf(req, name) {
 
 /**
  * Extract auth context from a request.
- * @param {import('express').Request|Request} req
+ * @param {{ headers?: Headers|Record<string,string> }} req
  * @returns {{ userId: string, sub?: string, roles?: Array } | null}
  */
 export function extractAuthContext(req) {
@@ -63,7 +63,7 @@ export function extractAuthContext(req) {
 
 /**
  * Extract the caller's roles from the X-Caller-Roles request header.
- * @param {import('express').Request|Request} req
+ * @param {{ headers?: Headers|Record<string,string> }} req
  * @returns {string[]}
  */
 export function extractCallerRoles(req) {
@@ -132,7 +132,7 @@ export function areSystemRoles(roles) {
 
 /**
  * Read a header from either request shape, for callers that want one directly.
- * @param {import('express').Request|Request} req
+ * @param {{ headers?: Headers|Record<string,string> }} req
  * @param {string} name - Lowercase header name
  * @returns {string|null}
  */
@@ -177,7 +177,7 @@ const startedTraces = new WeakMap();
  * service a request reaches does. Asking twice for one request gives the same
  * trace.
  *
- * @param {import('express').Request|Request} req
+ * @param {{ headers?: Headers|Record<string,string> }} req
  * @returns {string}
  */
 export function traceparentOf(req) {

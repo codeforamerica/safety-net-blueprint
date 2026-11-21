@@ -223,6 +223,9 @@ export function generateOverlay(stateMachine, endpointInfo) {
       pathsUpdate[rpcPath] = buildPathEntry(rpcPath, 'post', operation, paramIndex, {
         type: 'state-machine-action',
         domain: stateMachine.domain,
+        // Two machines in a domain can each have an action of the same
+        // name, so the action is named with its machine's resource.
+        resource: objectName,
         id: transition.id,
       });
     }

@@ -281,9 +281,10 @@ function buildUsageHref(section, key, domain) {
     case 'schema':
       return dataDictFieldHref(domain, key);
     case 'operations': {
+      // Keyed object.action: application.submit.
       const dot = key.indexOf('.');
-      const actionId = dot >= 0 ? key.slice(dot + 1) : key;
-      return stateMachineDocsHref(domain, actionId);
+      if (dot < 0) return null;
+      return stateMachineDocsHref(domain, key.slice(0, dot), key.slice(dot + 1));
     }
     case 'events':
       return eventCatalogHref(key);

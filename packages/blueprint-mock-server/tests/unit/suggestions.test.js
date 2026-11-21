@@ -238,7 +238,7 @@ test('a suggestion with no expiresAt expires a day out, and asks for a timer the
   const timer = await timerFor(created.id);
   assert.ok(timer, 'a timer is requested');
   assert.strictEqual(timer.data.fireAt, suggestion.expiresAt);
-  assert.strictEqual(timer.data.callback.event, 'decision-support.suggestion_expiry');
+  assert.strictEqual(timer.data.callback.event, 'decision-support.suggestion.suggestion_expiry');
 });
 
 test('a suggestion that says when it expires keeps that, and its timer fires then', async () => {
@@ -251,7 +251,7 @@ test('a suggestion that says when it expires keeps that, and its timer fires the
 test('the timer firing expires a suggestion nobody decided', async () => {
   await send('DELETE', '/mock/stubs/events');
   await send('POST', '/mock/stubs/events', {
-    on: 'platform.timer.requested', match: { 'data.callback.event': 'decision-support.suggestion_expiry' },
+    on: 'platform.timer.requested', match: { 'data.callback.event': 'decision-support.suggestion.suggestion_expiry' },
   });
   try {
     const { body: created } = await inform();
@@ -268,7 +268,7 @@ test('deciding a suggestion cancels its timer, and a late timer leaves it as dec
   assert.strictEqual((await send('POST', `/decision-support/suggestions/${created.id}/dismiss`, { reason: 'already fixed' })).status, 200);
   assert.strictEqual((await cancelledFor(created.id)).length, 1);
   const late = await send('POST', '/platform/events', {
-    specversion: '1.0', id: crypto.randomUUID(), source: '/scheduling', type: 'decision-support.suggestion_expiry',
+    specversion: '1.0', id: crypto.randomUUID(), source: '/scheduling', type: 'decision-support.suggestion.suggestion_expiry',
     subject: created.id, time: new Date().toISOString(), data: { timerId: `decision-support.suggestion_expiry.${created.id}` },
   });
   assert.ok(late.status < 300, JSON.stringify(late.body));

@@ -2,23 +2,69 @@
 /**
  * Event Catalog build
  *
- * Generates output/index.html — a cross-domain event catalog derived from
- * all *-state-machine.yaml files. Shows every event with its publisher and
- * subscribers, linking to the state machine docs for each domain.
+ * Generates event-catalog/index.html — a card per domain, listing the
+ * resources its events are about — and a page per domain, laid out like the
+ * API reference: each event is a row that opens to who publishes it and who
+ * subscribes to it, linked to the action, endpoint or subscription on its own
+ * page, beside its example. The catalog documents; an event is caused where it
+ * really is — by the call that publishes it, tried in the API reference, which shows what
+ * happened — or, for one only an outside party publishes, by a stub in the
+ * control panel.
+ *
+ * Events are read from the AsyncAPI documents, which carry each message's
+ * example; who publishes them and who subscribes, from the state machines. A WebSocket
+ * document (the transcript relay) is left out: its messages go over a
+ * connection, not the event bus.
  */
 
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
-import { dirname, join, resolve, relative } from 'path';
+import { readdirSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
-import { load } from 'js-yaml';
 import { buildEventIndex } from './contract-nav.js';
 import { discover, load as loadDoc } from '@codeforamerica/blueprint-core';
-import { COLORS, FONT } from './lib/theme.js';
-import { esc as h, titleCase, breadcrumb } from './lib/html.js';
-import { singleColumnPage } from './lib/layout.js';
+import { COLORS } from './lib/theme.js';
+import { esc as h, titleCase, subscriptionAnchor } from './lib/html.js';
+import { eventSenders, pathLabel } from './lib/event-senders.js';
+import { singleColumnPage, twoColumnPage } from './lib/layout.js';
 import { loadConfig } from './lib/config.js';
+import { OPERATION_STYLE, OPERATION_SCRIPT } from './lib/operation-page.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const SM_DOCS = '../state-machine-docs';
+
+/** Whether an AsyncAPI document's channels are a WebSocket's. */
+const overWebSocket = (content) => Object.values(content?.channels ?? {}).some((channel) => channel?.bindings?.ws);
+
+/**
+ * Every event the AsyncAPI documents define a message for, once each, with
+ * the domain whose document defines it and that document's example.
+ */
+function eventsOf(asyncDocs) {
+  const events = new Map();
+  for (const doc of asyncDocs) {
+    const content = doc.content ?? {};
+    if (overWebSocket(content)) continue;
+    const domain = content.info?.['x-domain'] ?? doc.domain;
+    for (const message of Object.values(content.components?.messages ?? {})) {
+      const type = message?.name;
+      if (!type || events.has(type)) continue;
+      events.set(type, {
+        type,
+        domain,
+        summary: message.summary ?? '',
+        example: message.examples?.[0]?.payload ?? null,
+        file: doc.relativePath,
+      });
+    }
+  }
+  return events;
+}
+
+const link = (href, label) => `<a href="${h(href)}">${label}</a>`;
+const labeled = (kind, html) => `<span class="who-kind">${kind}:</span> ${html}`;
+/** A machine subscribed to an event, linked to its subscription row. */
+const subscriberLink = (type) => (sub) => labeled('State machine',
+  link(`${SM_DOCS}/${sub.domain}.html#${subscriptionAnchor(sub.object, type)}`, pathLabel(titleCase(sub.domain), sub.object)));
+const none = '<span style="color:#999;font-size:11px;">none</span>';
 
 /**
  * @param {{ contentDir: string, resolvedDir: string }} opts
@@ -30,72 +76,149 @@ const { name: projectName } = loadConfig(contentDir);
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
-// ── Load state machines ───────────────────────────────────────────────────────
+// ── Load contracts ────────────────────────────────────────────────────────────
 
 const allStateMachines = discover(resolvedDir, 'state-machine')
   .map(loadDoc)
   .filter((doc) => doc.content?.domain && Array.isArray(doc.content.machines));
-
 const eventIndex = buildEventIndex(allStateMachines);
+const events = eventsOf(discover(resolvedDir, 'asyncapi').map(loadDoc));
 
-const SM_DOCS = '../state-machine-docs';
+const senderOf = eventSenders(eventIndex, discover(resolvedDir, 'openapi').map(loadDoc));
 
-// ── Build table rows ──────────────────────────────────────────────────────────
+const tryThere = '<p class="how">To see it published, try that call: what happened lists this event.</p>';
 
-const allEvents = new Set([
-  ...Object.keys(eventIndex.emitters),
-  ...Object.keys(eventIndex.subscribers),
-]);
-const sorted = [...allEvents].sort();
+/** Who publishes an event, linked to the action or endpoint that publishes it, and how to cause it. */
+const publishedBy = (type) => {
+  const sender = senderOf(type);
+  if (sender?.kind === 'timer') return sender.label;
+  if (sender) return labeled(sender.kind, link(sender.href, sender.label)) + tryThere;
+  if (type.startsWith('platform.timer.')) return 'A state machine asking for, or cancelling, a timer';
+  return null;
+};
+/** The machines subscribed to an event; a timer request or cancellation, the timer service. */
+const subscribersOf = (type) => (eventIndex.subscribers[type] ?? []).map(subscriberLink(type)).join('<br>')
+  || (/^platform\.timer\.(requested|cancelled)$/.test(type) ? 'The timer service' : none);
 
-const rows = sorted.map(event => {
-  const emitter = eventIndex.emitters[event];
-  const subs    = eventIndex.subscribers[event] || [];
-  const publisherCell = emitter
-    ? `<a href="${SM_DOCS}/${h(emitter.domain)}.html#machine-${h(emitter.object.toLowerCase())}">${h(titleCase(emitter.domain))} / ${h(emitter.object)}</a>`
-    : `<span style="color:#999;font-size:11px;">none</span>`;
-  const subsCell = subs.length
-    ? subs.map(s => `<a href="${SM_DOCS}/${h(s.domain)}.html#machine-${h(s.object.toLowerCase())}">${h(titleCase(s.domain))} / ${h(s.object)}</a>`).join('<br>')
-    : `<span style="color:#999;font-size:11px;">none</span>`;
-  const anchor = `event-${h(event)}`;
-  return `<tr id="${anchor}">
-    <td><code>${h(event)}</code> <a href="#${anchor}" class="permalink" title="Link to this event">#</a></td>
-    <td>${publisherCell}</td>
-    <td>${subsCell}</td>
-  </tr>`;
+// ── Index page: a card per domain, listing what publishes its events ───────────
+
+const allTypes = [...new Set([...events.keys(), ...Object.keys(eventIndex.emitters), ...Object.keys(eventIndex.subscribers)])].sort();
+const domains = [...new Set([...events.values()].map((event) => event.domain))].sort();
+// Grouped by what the event is about: intake.application.created → application.
+const groupOf = (type) => type.split('.').length > 2 ? type.split('.')[1] : 'other';
+const groupLabel = (group) => group.replace(/[_-]/g, ' ');
+
+const cardStyle = `background:${COLORS.white};border:1px solid ${COLORS.sandDark};border-radius:8px;padding:1.25rem 1.25rem 1rem;`;
+const cards = domains.map((domain) => {
+  const domainEvents = [...events.values()].filter((event) => event.domain === domain).sort((a, b) => a.type.localeCompare(b.type));
+  const groups = [...new Set(domainEvents.map((event) => groupOf(event.type)))].sort((a, b) => groupLabel(a).localeCompare(groupLabel(b)));
+  const links = groups.map((group) => {
+    const inGroup = domainEvents.filter((event) => groupOf(event.type) === group);
+    return `<a href="${h(domain)}.html#event-${h(inGroup[0].type)}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;text-decoration:none;color:${COLORS.text};" onmouseover="this.style.background='${COLORS.paleBlue}'" onmouseout="this.style.background=''">
+        <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};flex:1;">${h(groupLabel(group))}</span>
+        <span style="font-size:10px;color:#aaa;flex-shrink:0;">${inGroup.length} event${inGroup.length !== 1 ? 's' : ''}</span>
+      </a>`;
+  }).join('');
+  return `<div style="${cardStyle}">
+      <div style="margin-bottom:0.25rem;"><a href="${h(domain)}.html" style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};text-decoration:none;">${h(titleCase(domain))}</a></div>
+      <p style="font-size:12px;color:#666;margin-bottom:0.5rem;">${domainEvents.length} event${domainEvents.length !== 1 ? 's' : ''}</p>
+      <div style="border:1px solid ${COLORS.sandDark};border-radius:4px;overflow:hidden;">${links}</div>
+    </div>`;
 }).join('');
 
-const noPublisher = sorted.filter(e => !eventIndex.emitters[e]);
-const orphanSection = noPublisher.length ? `
-  <h2 style="font-size:1rem;font-weight:700;color:${COLORS.darkBlue};margin:2.5rem 0 0.5rem;">Subscribed but not emitted</h2>
-  <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
+const undefinedEvents = allTypes.filter((type) => !events.has(type) && !eventIndex.emitters[type]);
+const orphanSection = undefinedEvents.length ? `
+  <h2 style="font-size:1rem;font-weight:700;color:${COLORS.darkBlue};margin:2.5rem 0 0.5rem;">Subscribed to but never published</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">A state machine subscribes to these, but no document or state machine publishes them.</p>
   <ul style="font-size:13px;color:#666;padding-left:1.25rem;">
-    ${noPublisher.map(e => `<li><code>${h(e)}</code></li>`).join('')}
+    ${undefinedEvents.map((type) => `<li><code>${h(type)}</code></li>`).join('')}
   </ul>` : '';
 
-// ── HTML page ─────────────────────────────────────────────────────────────────
-
-const html = singleColumnPage({
-  title: `${projectName} \u2014 Event Catalog`,
+writeFileSync(join(outputDir, 'index.html'), singleColumnPage({
+  title: `${projectName} — Event Catalog`,
   breadcrumbs: [{ label: 'Explorer', href: hubHref }, { label: 'Event Catalog' }],
   bodyHtml: `
-  <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
-    <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">Event Catalog</h1>
-    <p style="color:#666;margin-bottom:2rem;font-size:13px;">Cross-domain event reference auto-generated from state machine <code>emit</code> and subscription declarations.</p>
-    <div style="background:white;border:1px solid ${COLORS.sandDark};border-radius:8px;overflow:hidden;">
-      <table>
-        <thead><tr>
-          <th>Event</th><th>Published by</th><th>Subscribers</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+  <div style="background:${COLORS.darkBlue};color:${COLORS.white};padding:1.25rem 1.5rem 1.125rem;">
+    <h2 style="font-size:1.25rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.2rem;">Event Catalog</h2>
+    <p style="font-size:0.8125rem;color:rgba(255,255,255,0.55);">The events each domain publishes, read from the AsyncAPI documents and the state machines. Open a domain to see what each event carries, who publishes it and who subscribes to it.</p>
+  </div>
+  <div style="max-width:1100px;margin:2rem auto;padding:0 1.5rem 4rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">
+      ${cards}
     </div>
     ${orphanSection}
   </div>`,
-});
-
-writeFileSync(join(outputDir, 'index.html'), html, 'utf8');
+}), 'utf8');
 console.log('  wrote event-catalog/index.html');
+
+// ── A page per domain: each event, and Try it ─────────────────────────────────
+
+for (const domain of domains) {
+  const domainEvents = [...events.values()].filter((event) => event.domain === domain).sort((a, b) => a.type.localeCompare(b.type));
+  const groups = [...new Set(domainEvents.map((event) => groupOf(event.type)))];
+
+  const navHtml = groups.map((group) => `<div class="nav-section">
+    <div class="nav-section-label">${h(groupLabel(group))}</div>
+    ${domainEvents.filter((event) => groupOf(event.type) === group).map((event) => `<a href="#event-${h(event.type)}" class="nav-link nav-op" title="${h(event.summary)}">
+      <span class="nav-op-path">${h(event.type.split('.').slice(groupOf(event.type) === 'other' ? 1 : 2).join('.'))}</span>
+    </a>`).join('')}
+  </div>`).join('');
+
+  const rowsHtml = domainEvents.map((event) => {
+    const sender = publishedBy(event.type);
+    return `<div id="event-${h(event.type)}" class="content-item op-post" style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">${h(event.type)}</code>
+        ${event.summary ? `<span class="op-name">${h(event.summary)}</span>` : ''}
+      </span>
+      <a href="#event-${h(event.type)}" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div>${sender ?? none}</div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div>${subscribersOf(event.type)}</div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">${h(event.file ?? '')}</code></div>
+      </div>
+      <aside class="op-side">${event.example ? `<h4 class="op-h">Example</h4><pre class="event-example">${h(JSON.stringify(event.example, null, 2))}</pre>` : ''}</aside>
+    </div>
+  </details>
+</div>`;
+  }).join('');
+
+  const headerHtml = `<div style="background:${COLORS.darkBlue};color:${COLORS.white};">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">${h(titleCase(domain))} events</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">${domainEvents.length} event${domainEvents.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div style="padding:0 1.25rem 0.6rem;font-size:11px;color:rgba(255,255,255,0.55);">What each event carries, who publishes it and who subscribes to it</div>
+  </div>`;
+
+  const page = twoColumnPage({
+    title: `${projectName} — ${titleCase(domain)} events`,
+    breadcrumbs: [
+      { label: 'Explorer', href: hubHref },
+      { label: 'Event Catalog', href: 'index.html' },
+      { label: `${titleCase(domain)} events` },
+    ],
+    headerHtml,
+    navHtml,
+    mainHtml: rowsHtml,
+    navWidth: 260,
+    navSearch: true,
+    extraStyle: `${OPERATION_STYLE}
+  .op-docs a { color: ${COLORS.midBlue}; text-decoration: none; }
+  .op-docs .who-kind { color: ${COLORS.textLight}; }
+  .op-docs .how { margin-top: 4px; font-size: 12px; color: ${COLORS.textLight}; }
+  .event-example { margin: 0; padding: 10px 12px; background: #1e1b3a; color: #e8e6ff; border-radius: 6px; font-size: 11.5px; overflow: auto; max-height: 28rem; }
+  .op-docs a:hover { text-decoration: underline; }`,
+  });
+  const withNav = page.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  writeFileSync(join(outputDir, `${domain}.html`), withNav, 'utf8');
+  console.log(`  wrote event-catalog/${domain}.html`);
+}
 } // end build()
 
 // CLI entry point

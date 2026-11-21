@@ -653,9 +653,28 @@ workflows:
   - workflowId: interviewEnds
     summary: The caseworker completes the interview
     description: |
-      - When the caseworker completes the interview, the server expires the suggestions nobody decided on, and stops reacting to Rosa's income changes for it.
-    dependsOn: [beforeInterview, answersChange]
+      - The caseworker stops recording, then completes the interview. The server expires the suggestions nobody decided on, and stops reacting to Rosa's income changes for it.
+    dependsOn: [beforeInterview, interviewStarts, answersChange]
     steps:
+      - stepId: stopRecording
+        x-actors: [caseworker, software]
+        description: |
+          Stop recording the interview
+
+          - When the caseworker stops recording, the interview software closes the transcript, at the time it stopped.
+          - The transcript's `status` is now `closed`, and nothing more can be added to it.
+        operationId: $sourceDescriptions.transcripts.closeTranscript
+        parameters:
+          - reference: $components.parameters.worker
+          - name: transcriptId
+            in: path
+            value: $workflows.interviewStarts.outputs.transcript
+        requestBody:
+          payload: {at: '2026-11-03T10:30:00Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+
       - stepId: completeInterview
         x-actors: [caseworker, server]
         description: |

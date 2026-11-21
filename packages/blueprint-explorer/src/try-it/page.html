@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not your average Mock Server</title>
+<title>Scenarios</title>
 <!--
   A playground over the browser mock, rather than a tour of it.
 
@@ -42,70 +42,8 @@
   #masthead {
     max-width: 86rem; margin: 0 auto; padding: 1.6rem 1.2rem 1.1rem;
     border-bottom: 1px solid var(--line);
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2rem; align-items: start;
-  }
-  /* Two cells, not four rows: as separate rows the left-hand items were
-     stretched to match whichever side was taller, which put a hand's width
-     of nothing between the title and the text under it. */
-  #masthead .intro { min-width: 0; }
-  #derived {
-    align-self: start;
-    border: 1px solid var(--line); border-radius: 6px; background: var(--card);
-    padding: .6rem .8rem; min-width: 17rem;
-  }
-  #derived .when {
-    margin: .45rem 0 0; padding-top: .4rem; border-top: 1px solid var(--line);
-    font-size: .66rem; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--faint); font-weight: 700;
-  }
-  #derived .stat {
-    display: flex; gap: .4rem; align-items: baseline;
-    font-size: .75rem; color: var(--muted); line-height: 1.45;
-  }
-  #derived .stat .n {
-    font-family: var(--mono); min-width: 1.4rem; text-align: right; color: var(--ink);
-  }
-  #derived .stat.lead { font-size: .92rem; color: var(--ink); font-weight: 600; line-height: 1.3; }
-  #derived .stat.lead .n { color: var(--accent); min-width: 1.9rem; }
-  #derived .breakdown {
-    display: grid; grid-template-columns: 1fr 1fr; column-gap: .9rem;
-    margin-top: .45rem; padding-top: .4rem; border-top: 1px solid var(--line);
-  }
-  #derived .headline { margin-top: 0; padding-top: 0; border-top: 0; }
-  @media (max-width: 60rem) {
-    #masthead { grid-template-columns: 1fr; }
-    #derived { grid-column: 1; grid-row: auto; }
   }
   .lede { color: var(--muted); margin: .4rem 0 0; max-width: 44rem; font-size: .95rem; }
-
-  /* Throwing the whole thing away and deriving it again, which is the
-     headline claim and takes about as long as a keystroke. */
-  #controls { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin: .9rem 0 0; }
-  #controls .sep { border-left: 1px solid var(--line); height: 1.4rem; margin: 0 .2rem; }
-  #controls button:not(.primary) {
-    font: inherit; font-size: .85rem; cursor: pointer; padding: .4rem 1rem;
-    border-radius: 4px; border: 1px solid var(--line); background: var(--card); color: var(--ink);
-  }
-  #controls button:disabled { opacity: .4; cursor: not-allowed; }
-  /* Who the reference calls as. Every request carries it, the way a real
-     client's sign-in would, and the events it causes record it. */
-  .caller { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin: 0 0 .6rem; font-size: .85rem; color: var(--muted); }
-  .caller input, .caller select { width: auto; }
-  .caller .caller-id { width: 9rem; }
-  .caller input.caller-roles { width: 15rem; }
-  details.caller-roles { position: relative; }
-  details.caller-roles summary {
-    cursor: pointer; font-family: var(--mono); font-size: .8rem; padding: .4rem .5rem; min-width: 12rem;
-    border: 1px solid var(--line); border-radius: 4px; background: #fcfcfc; color: var(--ink);
-  }
-  details.caller-roles .menu {
-    position: absolute; z-index: 5; margin-top: .2rem; padding: .3rem .5rem; min-width: 100%;
-    border: 1px solid var(--line); border-radius: 4px; background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  }
-  details.caller-roles .menu label { display: flex; gap: .4rem; align-items: center; padding: .15rem 0; font-family: var(--mono); font-size: .8rem; color: var(--ink); white-space: nowrap; }
-  details.caller-roles .menu input { width: auto; }
-  .caller .caller-id:disabled { opacity: .4; }
-
 
   #shell {
     display: grid; grid-template-columns: 17rem minmax(0, 1fr);
@@ -116,19 +54,6 @@
     max-height: calc(100vh - 2rem); overflow: auto;
     border-right: 1px solid var(--line); padding-right: .8rem;
   }
-  .group > summary {
-    cursor: pointer; list-style: none; padding: .45rem .3rem;
-    font-size: .76rem; letter-spacing: .06em; text-transform: uppercase;
-    font-weight: 700; color: var(--ink);
-  }
-  .group > summary::-webkit-details-marker { display: none; }
-  .group > summary::before { content: '▸ '; color: var(--faint); }
-  .group[open] > summary::before { content: '▾ '; }
-  .kind {
-    margin: .5rem 0 .1rem .3rem; font-size: .68rem; letter-spacing: .05em;
-    text-transform: uppercase; color: var(--faint); font-weight: 700;
-  }
-  .ops { list-style: none; margin: 0 0 .5rem; padding: 0; }
   .op {
     display: block; width: 100%; text-align: left; border: 0; background: none;
     font: inherit; font-size: .8rem; cursor: pointer; color: var(--muted);
@@ -299,11 +224,6 @@
   .pager .next-step { margin-left: auto; }
   /* The steps either side's titles, however long, wrap inside their buttons. */
   .pager button { max-width: 48%; text-align: left; line-height: 1.35; }
-  .op .verb {
-    font-family: var(--mono); font-size: .68rem; font-weight: 700;
-    display: inline-block; min-width: 3.4rem; color: var(--faint);
-  }
-  .op.here .verb { color: var(--accent); }
 
   #stage { min-width: 0; }
   .panel {
@@ -401,21 +321,12 @@
 <body>
 <header id="masthead">
   <div class="intro">
-    <h1>Not your average Mock Server</h1>
+    <h1>Scenarios</h1>
     <p class="lede">
-      An entire server, generated from a set of contracts, running in this tab.
-      <b>No custom code.</b> Everything is derived on the fly when the server
-      boots, so what you see here is what these contracts say, and nothing
-      else.
+      Each step runs live against the mock server in your browser, built from
+      the contracts.
     </p>
-    <div id="controls">
-      <button id="mode" class="primary">Let me explore</button>
-      <span class="sep"></span>
-      <button id="reseed">Restart with data</button>
-      <button id="empty">Start empty</button>
-    </div>
   </div>
-  <div id="derived">starting…</div>
 </header>
 
 <div id="shell">
@@ -425,7 +336,7 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { createMockServer, extract, generate, startScenario, operationIndex, controlOperations, restoreRecords, saveRecords } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged } =
   globalThis.BlueprintMock;
 
 // Where this explorer keeps the mock's records between its pages: under the
@@ -451,9 +362,8 @@ const pageConfig = (() => {
 
 let docs;          // every document in the set
 let mock;          // the server derived from them
-let seeded = true; // whether the last derive loaded the shipped records
-let showAll = false;  // the walk-through, or the whole reference
-// What Show me around is showing: the application walk-through, or one of the
+let session;       // how it was started, and how to save it for the next page
+// What the page is showing: the application walk-through, or one of the
 // contract set's Arazzo scenarios by path — which step of it, and what its
 // last run answered, by workflow and step.
 let tour = null;
@@ -467,156 +377,11 @@ let tourBranch = 'main';
 let tourScope = null;           // the workflows the run covers, when it started partway in
 let tourLast = null;            // the last step this run ran, by workflow/step
 let branchClosed = false;       // the branch being walked, closed in the list down the side
-const made = new Map();  // collection → the id the walk created there
-const built = new Map(); // schema name → the id the walk created of that shape
-const answers = new Map(); // step → what it answered, so going back shows it
-let selected = null;
-// The reference's domain groups the reader has opened. The navigation is
-// rebuilt on every click, and rebuilding from scratch used to collapse every
-// group but the first — so picking an operation closed the one you were in.
-let openDomains = null;
-// What the reader picked for each path parameter, by operation and name, so a
-// panel redrawn after a pick keeps it — and the parameters after it list the
-// records under what was picked.
-const chosen = new Map();
 
 /** The contract set, which contracts.js beside the page defines. */
 const loadContracts = async () => {
   if (!globalThis.BlueprintContracts) throw new Error('contracts.js did not load');
   return globalThis.BlueprintContracts;
-};
-
-// Who the reference calls as, chosen above each request. The walk always
-// calls as itself, so a choice made while exploring cannot break a step.
-const WALK_CALLER = 'the-explorer';
-const caller = { id: WALK_CALLER, type: 'user', roles: [] };
-
-/**
- * The caller headers a request carries.
- *
- * The mock reads the kind of actor from the roles, so a kind other than
- * `user` goes in as one; an unauthenticated caller sends no identity at all.
- * A real deployment takes all of this from the sign-in token instead.
- */
-const callerHeaders = () => {
-  if (!showAll) return { 'X-Caller-Id': WALK_CALLER };
-  const id = caller.id.trim();
-  if (caller.type === 'unauthenticated' || !id) return {};
-  const roles = caller.roles.filter((role) => role !== caller.type);
-  if (caller.type !== 'user') roles.unshift(caller.type);
-  return { 'X-Caller-Id': id, ...(roles.length ? { 'X-Caller-Roles': roles.join(',') } : {}) };
-};
-
-/** The kinds of actor an event can record, as the events contract lists them. */
-const actorTypes = () => {
-  const schema = docs.find((doc) => doc.type === 'schema' && doc.content?.$defs?.Event);
-  const parts = schema?.content.$defs.Event.allOf ?? [];
-  const authtype = parts.map((part) => part.properties?.authtype).find(Boolean);
-  return (authtype?.enum ?? ['user']).filter((value) => value !== null);
-};
-
-/**
- * The roles a caller can hold: the set's RoleType, which its guards are
- * validated against. Empty when the set declares none.
- */
-const roleTypes = () => {
-  const schema = docs.find((doc) => Array.isArray(doc.content?.$defs?.RoleType?.enum));
-  return schema?.content.$defs.RoleType.enum ?? [];
-};
-
-/**
- * Whether an operation takes an Idempotency-Key header — the shared
- * IdempotencyKeyParam, which an operation lists to require one per create.
- */
-const takesIdempotencyKey = (op) => (op.operation?.parameters ?? [])
-  .map((parameter) => deref(parameter, op.doc))
-  .some((p) => p?.in === 'header' && typeof p.name === 'string' && p.name.toLowerCase() === 'idempotency-key');
-
-/** The headers a step sends besides the caller's: a fresh key, where the operation takes one. */
-const keyHeaders = (op, key = crypto.randomUUID()) =>
-  takesIdempotencyKey(op) ? { 'Idempotency-Key': key } : {};
-
-/**
- * The Idempotency-Key row: a fresh key each time the panel opens, which the
- * reader can type over — `12345` twice is how to see a retry answered with
- * the same entry, and `12345` with a different body how to see it refused.
- */
-const idempotencyRow = () => {
-  const row = el('div', '', 'caller');
-  const box = el('input', '', 'caller-id');
-  box.type = 'text';
-  box.value = crypto.randomUUID();
-  box.setAttribute('aria-label', 'Idempotency-Key');
-  row.append(document.createTextNode('Idempotency-Key'), box);
-  return { row, value: () => box.value.trim() };
-};
-
-/** The "Calling as" row: an id, a kind of actor, and roles. */
-const callerRow = () => {
-  const row = el('div', '', 'caller');
-  const id = el('input', '', 'caller-id');
-  id.type = 'text';
-  id.value = caller.id;
-  id.setAttribute('aria-label', 'Caller id');
-  id.oninput = () => { caller.id = id.value; };
-
-  const type = el('select', '', 'caller-type');
-  type.setAttribute('aria-label', 'Caller type');
-  type.append(...actorTypes().map((kind) => el('option', kind)));
-  type.value = caller.type;
-  id.disabled = caller.type === 'unauthenticated';
-  type.onchange = () => { caller.type = type.value; id.disabled = type.value === 'unauthenticated'; };
-
-  // A dropdown of the declared roles, any number checked; a box to type them
-  // into for a set that declares none.
-  let roles;
-  const declared = roleTypes();
-  if (declared.length > 0) {
-    roles = el('details', '', 'caller-roles');
-    const summary = el('summary');
-    const label = () => { summary.textContent = caller.roles.length ? caller.roles.join(', ') : 'no roles'; };
-    roles.append(summary);
-    const list = el('div', '', 'menu');
-    for (const role of declared) {
-      const option = el('label');
-      const box = el('input');
-      box.type = 'checkbox';
-      box.checked = caller.roles.includes(role);
-      box.onchange = () => {
-        caller.roles = declared.filter((name) => name === role ? box.checked : caller.roles.includes(name));
-        label();
-      };
-      option.append(box, document.createTextNode(role));
-      list.append(option);
-    }
-    roles.append(list);
-    label();
-  } else {
-    roles = el('input', '', 'caller-roles');
-    roles.type = 'text';
-    roles.value = caller.roles.join(', ');
-    roles.placeholder = 'roles, comma-separated';
-    roles.oninput = () => { caller.roles = roles.value.split(',').map((role) => role.trim()).filter(Boolean); };
-  }
-  roles.setAttribute('aria-label', 'Caller roles');
-
-  row.append(document.createTextNode('Calling as'), id, type, roles);
-  return row;
-};
-
-const call = async (method, path, body, headers = {}) => {
-  const init = { method, headers: { ...callerHeaders(), ...headers } };
-  if (body instanceof FormData) {
-    init.body = body;
-  } else if (body !== undefined) {
-    init.headers['content-type'] = 'application/json';
-    init.body = typeof body === 'string' ? body : JSON.stringify(body);
-  }
-  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
-  const text = await response.text();
-  let parsed;
-  try { parsed = JSON.parse(text); } catch { parsed = text; }
-  return { status: response.status, statusText: response.statusText, body: parsed };
 };
 
 // ── Reading the contracts ───────────────────────────────────────────────────
@@ -804,118 +569,6 @@ const deref = (node, doc, seen = 0) => {
 };
 
 /**
- * A body worth pressing Execute on.
- *
- * In descending order of how much a reader learns from it: a record the
- * contract set already ships as mock data, with the server's own fields
- * stripped; then the schema's declared example; then something built from
- * the schema, which at least gets the enums right. Typing a correct body
- * from scratch is the thing that makes an unfamiliar API exhausting.
- */
-const exampleBody = (op) => {
-  // An edit worth watching: add to the list a derived field counts, so the
-  // count moves on the next read. A `PATCH` that changes nothing visible
-  // teaches nothing.
-  if (op.kind === 'edit') {
-    const counted = countedArray(op);
-    if (counted) return attaching(op, { [counted.field]: counted.allowed.slice(0, 2) });
-  }
-
-  // A ruleset's inputs are nested and nobody can type them from memory. The
-  // contract set ships described examples for exactly this reason.
-  if (op.kind === 'rules') {
-    const [first] = op.ruleset?.examples ?? [];
-    if (first?.inputs) return first.inputs;
-    const inputs = op.ruleset?.ruleset?.inputs ?? {};
-    return Object.fromEntries(
-      Object.entries(inputs).map(([name, declared]) => [name, fromSchema(declared, op.doc)])
-    );
-  }
-
-  const schema = requestSchema(op);
-  if (!schema) return null;
-
-  const managed = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
-  const writable = new Set(Object.keys(collectProperties(schema, op.doc)));
-
-  for (const data of docs.filter((d) => d.type === 'mock-data' && d.domain === op.doc.domain)) {
-    for (const record of Object.values(data.content ?? {})) {
-      if (!record || typeof record !== 'object') continue;
-      const body = Object.fromEntries(
-        Object.entries(record).filter(([key]) => writable.has(key) && !managed.has(key))
-      );
-      if (Object.keys(body).length > 0) return attaching(op, body);
-    }
-  }
-
-  if (op.operation.requestBody?.content?.['application/json']?.example) {
-    return op.operation.requestBody.content['application/json'].example;
-  }
-  return attaching(op, fromSchema(schema, op.doc));
-};
-
-/**
- * Fill in a foreign key the walk can already satisfy.
- *
- * A field the contract says points at something, where the walk has made
- * one of those: send its id. This is what makes a relationship visible
- * rather than described — the request carries the id of the document
- * uploaded a step ago, and the record comes back with the document in it.
- */
-const attaching = (op, body) => {
-  const schema = requestSchema(op);
-  if (!schema) return body;
-  for (const [name, property] of Object.entries(collectProperties(schema, op.doc))) {
-    const relationship = property['x-relationship'];
-    if (relationship?.type !== 'fk') continue;
-    const id = built.get(relationship.resource);
-    if (id) body[name] = id;
-  }
-  return body;
-};
-
-/**
- * The parts of a body that is not JSON.
- *
- * One operation in the set declares `multipart/form-data`, and a textarea
- * full of JSON is the wrong affordance for it entirely. The parts and their
- * values come off the contract the same way a JSON body does; the bytes are
- * the one thing that cannot, because no contract can carry a file and
- * nothing in a shipped artifact should.
- */
-const SENT_BYTES = 'Hashed on the way in, and then thrown away.\n';
-
-const uploadParts = (op) => {
-  const declared = op.operation?.requestBody?.content?.['multipart/form-data']?.schema;
-  if (!declared) return null;
-  const properties = collectProperties(deref(declared, op.doc), op.doc);
-
-  const parts = [];
-  for (const [name, property] of Object.entries(properties)) {
-    const resolved = deref(property, op.doc);
-    if (resolved?.format === 'binary') { parts.push({ name, bytes: true }); continue; }
-    parts.push({ name, value: String(resolved?.example ?? valueFor(resolved, op.doc) ?? '') });
-  }
-
-  // Named after what it is, which the contract already says: a part called
-  // `title` holding "April pay stub" makes april-pay-stub.txt.
-  const titled = parts.find((part) => /title|name/i.test(part.name))?.value;
-  const fileName = `${(titled || 'upload').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.txt`;
-  for (const part of parts) if (part.bytes) part.fileName = fileName;
-  return parts;
-};
-
-/** What `uploadParts` describes, as something `fetch` can send. */
-const asFormData = (parts) => {
-  const form = new FormData();
-  for (const part of parts) {
-    if (part.bytes) form.append(part.name, part.file ?? new File([SENT_BYTES], part.fileName, { type: 'text/plain' }));
-    else form.append(part.name, part.value);
-  }
-  return form;
-};
-
-/**
  * Every property on a schema, following allOf, and oneOf and anyOf: a
  * suggestion is one of two kinds, and `status` is a field of both.
  */
@@ -1000,15 +653,6 @@ const valueFor = (declared, doc) => {
 
 // ── Records, for the pickers ────────────────────────────────────────────────
 
-/** The collection an item or transition path hangs off. */
-const collectionOf = (op) => op.path.slice(0, op.path.indexOf('/{'));
-
-/** What the server is holding in a collection, for a picker to offer. */
-const recordsIn = async (path) => {
-  const answered = await call('GET', `${path}?limit=50`);
-  return Array.isArray(answered.body?.items) ? answered.body.items : [];
-};
-
 // ── Boot ────────────────────────────────────────────────────────────────────
 
 /**
@@ -1019,80 +663,18 @@ const recordsIn = async (path) => {
  * the contract set, and the time it takes is printed because it is the
  * claim: an entire backend, in about as long as a keystroke.
  */
-const derive = async ({ seed = true, artifact } = {}) => {
-  $('derived').textContent = 'deriving…';
-  const started = performance.now();
-
+const derive = async ({ seed = true, artifact, restore = false } = {}) => {
   const set = artifact ?? contracts;
   docs = extract(set, 'docs');
-  mock = await createMockServer({ contracts: set, basePath, seed });
-  seeded = seed;
-
-  const ms = Math.round(performance.now() - started);
-
-  // What went in, named by kind.
-  //
-  // A raw file count is a vague answer and a third of it is shared schema
-  // fragments that exist to be $ref'd. Those are not contracts and are not
-  // worth a reader's attention, so they are not counted here: every number
-  // below is something that declares behavior.
-  const kinds = new Map();
-  for (const doc of docs) kinds.set(doc.type, (kinds.get(doc.type) ?? 0) + 1);
-  const CONTRACTS = [
-    ['openapi', 'API', 'APIs'],
-    ['state-machine', 'state machine', 'state machines'],
-    ['rules', 'ruleset', 'rulesets'],
-    ['compositions', 'composition', 'compositions'],
-    ['asyncapi', 'event catalog', 'event catalogs'],
-    ['annotations', 'annotation set', 'annotation sets'],
-    ['registry', 'registry', 'registries'],
-    ['sla-types', 'SLA definition', 'SLA definitions'],
-  ];
-  const counted = CONTRACTS
-    .filter(([type]) => kinds.get(type))
-    .map(([type, one, many]) => `${kinds.get(type)} ${kinds.get(type) === 1 ? one : many}`);
-  const total = CONTRACTS.reduce((n, [type]) => n + (kinds.get(type) ?? 0), 0);
-
-  // What seeding actually put there: example records the contract set
-  // declares and validates against its own schemas, not production data.
-  const examples = docs
-    .filter((doc) => doc.type === 'mock-data')
-    .reduce((n, doc) => n + Object.keys(doc.content ?? {}).length, 0);
-
-  // Stacked, beside the title rather than under it. As a sentence this ran
-  // to two wrapped lines of the one thing on the page nobody needs to read
-  // twice; as a column it is scannable and costs no vertical space at all.
-  const stat = (count, label, className = '') => {
-    const row = el('div', '', `stat ${className}`.trim());
-    row.append(el('span', String(count), 'n'), el('span', label));
-    return row;
-  };
-
-  // Two columns for the breakdown. One per line was eleven rows deep and
-  // made the masthead taller than it had been as a sentence, which is the
-  // opposite of the point.
-  const breakdown = el('div', '', 'breakdown');
-  for (const [type, one, many] of CONTRACTS) {
-    const count = kinds.get(type);
-    if (count) breakdown.append(stat(count, count === 1 ? one : many));
-  }
-
-  // Side by side, on the same grid as the breakdown under them: what went
-  // in and what came out, read left to right.
-  const headline = el('div', '', 'breakdown headline');
-  headline.append(stat(total, 'contracts', 'lead'), stat(mock.routes.size, 'routes', 'lead'));
-
-  $('derived').replaceChildren(
-    headline,
-    breakdown,
-    el('p', `derived in ${ms} ms · ${seed ? `${examples} examples seeded` : 'started empty'}`, 'when')
-  );
+  // Restored, with what an earlier page left; this page leaves what it holds for the next.
+  session = await startMock({ contracts: set, ...records, seed, restore, basePath });
+  mock = session.mock;
+  // The control panel shows this mock, and starts it over.
+  hostMock({ ...session, mock: () => mock, restart: derive });
 
   // The system is new, so nothing the walk did to the old one still holds:
   // the records it made are gone with the store that held them.
-  selected = null;
   resetTour();
-  answers.clear();
   renderGroups();
   renderStage();
 };
@@ -1151,16 +733,6 @@ const GROUPS = [
 
 
 /**
- * What identifies a step, for remembering it has been run.
- *
- * The walk visits one operation twice — the event log whole, then narrowed
- * — so the method and path alone do not tell two steps apart. The variant
- * does, and unlike the query string it does not change as the walk fills
- * in the record it is following.
- */
-const keyOf = (op) => `${op.method} ${op.path}${op.variant ? ` (${op.variant})` : ''}`;
-
-/**
  * Print a contract node the way it was authored.
  *
  * The artifact is parsed data, so there is no original text to quote — this
@@ -1209,43 +781,6 @@ const essential = (node) => {
   );
 };
 
-/** A path with its parameters filled in, or left as written where they are not. */
-const withParams = (path, params) => Object.entries(params).reduce(
-  (at, [name, value]) => (value ? at.replace(`{${name}}`, encodeURIComponent(value)) : at),
-  path
-);
-
-
-
-
-
-
-
-/**
- * The array a derived field counts, and the values its contract allows.
- *
- * `programCount` is `$this.programsAppliedFor.size()`, so the way to show
- * that it is computed rather than stored is to change the list and read the
- * count back. Which list, and what may go in it, both come out of the
- * contract rather than being named here.
- */
-const countedArray = (op) => {
-  const schema = responseSchema(op);
-  if (!schema) return null;
-  const props = collectProperties(schema, op.doc);
-  for (const [name, declared] of Object.entries(props)) {
-    const expression = deref(declared, op.doc)?.['x-derived'];
-    const counts = typeof expression === 'string' && expression.match(/\$this\.(\w+)\.size\(\)/);
-    if (!counts) continue;
-    const field = deref(props[counts[1]], op.doc);
-    const allowed = deref(field?.items, op.doc)?.enum;
-    if (Array.isArray(allowed) && allowed.length > 1) {
-      return { derived: name, field: counts[1], allowed, expression };
-    }
-  }
-  return null;
-};
-
 /** The schema an operation answers with, dereferenced. */
 const responseSchema = (op) => {
   const answers = op.operation.responses ?? {};
@@ -1263,95 +798,9 @@ const refName = (node) => (typeof node?.$ref === 'string' ? node.$ref.split('/')
 
 
 
-/**
- * A deadline a move asks somebody else to keep.
- *
- * An action that calls a procedure with a `callback` is asking for a timer:
- * wake me in N hours and send this event. Nothing in the contract set
- * implements a scheduler, which is the whole point — in a deployment one
- * answers, and here a stub does, which is what makes a 72-hour deadline
- * something you can watch happen.
- */
-const timerRequest = () => {
-  const procedures = new Map();
-  for (const doc of docs.filter((d) => d.type === 'state-machine')) {
-    for (const procedure of doc.content?.procedures ?? []) procedures.set(procedure.id, procedure);
-  }
-  for (const doc of docs.filter((d) => d.type === 'state-machine')) {
-    for (const machine of doc.content?.machines ?? []) {
-      for (const action of machine.actions ?? []) {
-        for (const step of action.steps ?? []) {
-          const asks = step.call && step.with?.callback;
-          if (!asks) continue;
-          const emits = procedures.get(step.call)?.emit?.type;
-          if (!emits) continue;
-          const after = step.with.fireAfter;
-          return {
-            on: emits,
-            action: action.id,
-            callback: step.with.callback.event ?? step.with.callback,
-            after: after ? `${after.amount} ${after.unit}` : null,
-          };
-        }
-      }
-    }
-  }
-  return null;
-};
-
-/** Registering the stand-in that answers it, as a step. */
-const stubStep = () => {
-  const timer = timerRequest();
-  if (!timer || !mock.routes.has('POST /mock/stubs/events')) return [];
-  return [{
-    method: 'POST',
-    path: '/mock/stubs/events',
-    template: '/mock/stubs/events',
-    operation: {},
-    domain: 'the mock itself',
-    kind: 'stub',
-    timer,
-    step: 'Stand in for the scheduler',
-    summary: 'Register an event stub',
-    body: { on: timer.on },
-  }];
-};
-
-/**
- * The mock's own controls, as steps.
- *
- * They are endpoints like any other and a reader will want to know they
- * exist, but they are not derived from anything: the distinction between
- * the system and the harness around it is worth drawing rather than hiding.
- */
-const controlSteps = () => [
-  {
-    path: '/mock/reset',
-    step: 'Empty the store',
-    summary: 'Reset',
-    says: 'It clears records, never contracts — afterwards the API is exactly the API it was.',
-  },
-  {
-    path: '/mock/reseed',
-    step: 'Put the data back',
-    summary: 'Reseed',
-    says: 'The records come from the contract set\'s own `*-mock-data.yaml`, and are checked '
-      + 'against the same schemas as anything you send.',
-  },
-]
-  .filter((entry) => mock.routes.has(`POST ${entry.path}`))
-  .map((entry) => ({
-    ...entry,
-    method: 'POST',
-    template: entry.path,
-    operation: {},
-    domain: 'the mock itself',
-    kind: 'control',
-  }));
-
 // ── Tours ───────────────────────────────────────────────────────────────────
 //
-// Show me around is a choice of tours, and every tour is one of the contract
+// The page is a choice of tours, and every tour is one of the contract
 // set's Arazzo scenarios — the application walk-through included. Each step
 // is drawn the same way: what it sends, which schemas say so, what came back,
 // and what to notice, revealed as it is run.
@@ -1374,7 +823,7 @@ const scenarios = () => {
   return all.filter((doc) => !runIn.has(fileNameOf(doc.relativePath)));
 };
 
-/** The tour Show me around is on: the one picked, else the one the page was built to open with, else the first. */
+/** The tour the page is on: the one picked, else the one the page was built to open with, else the first. */
 const currentScenario = () => {
   const all = scenarios();
   return all.find((doc) => doc.relativePath === tour)
@@ -1777,7 +1226,7 @@ const runWorkflow = async (doc, workflow, say) => {
   document.getElementById(`tour-section-${workflow.workflowId}`)?.scrollIntoView({ block: 'start' });
 };
 
-/** Show me around's choice of tour. */
+/** The choice of tour. */
 const tourPicker = () => {
   const field = el('label', '', 'tour-picker');
   field.append(el('span', 'Scenario'));
@@ -1993,15 +1442,8 @@ const situationsList = (doc, heading) => {
 /** A tour's opening panel. */
 const tourIntro = (doc) => {
   const panel = el('div', '', 'panel');
-  // Counted, not written down: a contract set with more in it should say so
-  // without anybody remembering to come back here.
-  const total = operations().map((candidate) => ({ ...candidate, ...classify(candidate) }))
-    .filter((candidate) => candidate.kind !== 'stream').length + stubStep().length + controlSteps().length;
   panel.append(el('h2', doc.content.info?.title ?? 'Start at step one'));
   panel.append(...introOf(doc));
-  panel.append(el('p',
-    `Or press Let me explore for all ${total} operations, with nothing held back `
-    + 'and everything editable.', 'note'));
   const starting = startingWorkflow(doc);
   if (!starting) return panel;
   // What the list down the side holds, said once.
@@ -2049,8 +1491,7 @@ const citedLine = (op) => {
 /**
  * Key points as a list, where each backticked name the page can find in the
  * step's operation carries its declaration underneath: hovering shows the
- * lines, and the file is a link inside them. Shared by every tour and by
- * Let me explore.
+ * lines, and the file is a link inside them. Shared by every tour.
  */
 const noticeList = (points, op) => {
   const list = el('ul');
@@ -2155,7 +1596,6 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     box.value = JSON.stringify(sending.body, null, 2);
     box.readOnly = true;
     box.className = 'fixed';
-    box.title = 'Switch to Let me explore to change it';
     field.append(box);
     panel.append(field);
   }
@@ -2246,8 +1686,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
     end.hidden = !result?.passed;
     pager.append(end);
   } else {
-    const end = el('p', isBranched(doc) ? "That's every situation. Switch to Let me explore and poke at the rest."
-      : 'That is the whole walk. Switch to Let me explore and poke at the rest.', 'to-come');
+    const end = el('p', isBranched(doc) ? "That's every situation." : 'That is the whole walk.', 'to-come');
     end.hidden = !result?.passed;
     pager.append(end);
   }
@@ -2266,7 +1705,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   return panel;
 };
 
-/** Show me around: a tour's opening, the step in view, or all of it at once. */
+/** A tour's opening, the step in view, or all of it at once. */
 const renderTourStage = (stage, doc) => {
   const entries = scenarioSteps(doc);
   if (tourWhole) {
@@ -2315,61 +1754,10 @@ const renderGroups = () => {
   nav.replaceChildren();
   requestAnimationFrame(() => { nav.scrollTop = scrolled; });
 
-  const everything = operations()
-    .map((op) => ({ ...op, ...classify(op) }))
-    .filter((op) => op.kind !== 'stream');
-
-  // Walking through and looking something up are different jobs. The walk is
-  // one numbered list in the order you would do them, because the order is
-  // the content; the reference is by domain, because then you can find
-  // things. Same operations, same panel, two ways in.
-  // Show me around is a tour, a step at a time; Let me explore is the
-  // reference, by domain. Same operations, two ways in.
-  if (!showAll) {
-    nav.append(tourPicker());
-    const doc = currentScenario();
-    if (doc) renderTourNav(nav, doc);
-    else nav.append(el('p', 'This contract set has no scenarios to tour.', 'note'));
-    return;
-  }
-
-  const classified = [...everything, ...stubStep(), ...controlSteps()];
-  const domains = [...new Set(classified.map((op) => op.domain))].sort();
-  // The first group starts open; after that, whatever the reader opened stays
-  // open, and the group holding the selected operation always is.
-  openDomains ??= new Set(domains.slice(0, 1));
-  if (selected?.domain) openDomains.add(selected.domain);
-
-  for (const domain of domains) {
-    const mine = classified.filter((op) => op.domain === domain);
-    const box = el('details', '', 'group');
-    box.open = openDomains.has(domain);
-    box.addEventListener('toggle', () => {
-      if (box.open) openDomains.add(domain); else openDomains.delete(domain);
-    });
-    box.append(el('summary', `${domain}  (${mine.length})`));
-
-    for (const group of GROUPS) {
-      const ofKind = mine.filter((op) => group.holds(op.kind));
-      if (ofKind.length === 0) continue;
-      box.append(el('p', group.title, 'kind'));
-
-      const list = el('ul', '', 'ops');
-      for (const op of ofKind) {
-        const item = el('li');
-        const button = el('button', '', 'op');
-        button.append(el('span', op.method, 'verb'), el('span', op.summary));
-        if (selected && selected.method === op.method && selected.path === op.path) {
-          button.classList.add('here');
-        }
-        button.onclick = () => { selected = op; renderGroups(); renderStage(); };
-        item.append(button);
-        list.append(item);
-      }
-      box.append(list);
-    }
-    nav.append(box);
-  }
+  nav.append(tourPicker());
+  const doc = currentScenario();
+  if (doc) renderTourNav(nav, doc);
+  else nav.append(el('p', 'This contract set has no scenarios to tour.', 'note'));
 };
 
 // ── Showing a contract ──────────────────────────────────────────────────────
@@ -2631,7 +2019,7 @@ const locate = (token, op) => {
 
   // The move this operation is, in the document that declares it: the action
   // by name, the states it joins, or whichever of its steps mentions the
-  // token — which is how `intake.review_reminder` leads to the `timerId` it
+  // token — which is how `intake.application.review_reminder` leads to the `timerId` it
   // was assembled from rather than to nothing at all.
   const move = op.action ?? (op.timer ? { id: op.timer.action } : null);
   if (move) {
@@ -2834,402 +2222,34 @@ const locate = (token, op) => {
 
 // ── The stage ───────────────────────────────────────────────────────────────
 
-
-/**
- * Where a step sends and what it sends.
- *
- * Shared, because running the whole walk has to build exactly the requests
- * the panels would have built one at a time — two versions of this would
- * drift, and the transcript would stop being a record of what happened.
- */
-const requestFor = async (op) => {
-  const names = [...op.template.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
-  const collection = names.length > 0 ? collectionOf(op) : null;
-
-  // Each parameter is a record in its own collection — the path up to it,
-  // with the parameters before it filled in. `{entryId}` in
-  // /platform/registry/{type}/{entryId} is an entry of the type picked for
-  // `{type}`, not another type. A record answers for a parameter with the
-  // field of that name when it has one (`type`), and with its id otherwise.
-  const params = {};
-  const pickers = [];
-  for (const [index, name] of names.entries()) {
-    const under = withParams(op.path.slice(0, op.path.indexOf(`/{${name}}`)), params);
-    const held = await recordsIn(under);
-    const valueOf = (record) => record?.[name] ?? record?.id;
-    const walked = index === 0 ? made.get(collection) : undefined;
-    // A pick whose record has since gone — deleted, or the store reset — is
-    // dropped rather than sent. A value typed in is kept whether or not a
-    // record has it, so asking for one that isn't there shows the 404.
-    const picked = chosen.get(`${keyOf(op)}:${name}`);
-    const stillThere = picked !== undefined && (picked.typed || held.some((record) => valueOf(record) === picked.value));
-    const value = (stillThere ? picked.value : undefined) ?? walked ?? valueOf(held[0]);
-    if (value) params[name] = value;
-    pickers.push({ name, records: held, value, valueOf });
-  }
-  const records = pickers[0]?.records ?? [];
-  const target = pickers[0]?.value ?? null;
-
-  // A control step carries its own body: no contract declares these, so
-  // there is no schema to read one off. A read carries none at all, and
-  // `fetch` will not let one be attached to a GET.
-  const carries = op.method !== 'GET' && op.method !== 'DELETE';
-  const parts = carries ? uploadParts(op) : null;
-  const example = carries && !parts ? (op.body ?? exampleBody(op)) : null;
-
-  return {
-    names,
-    collection,
-    records,
-    target,
-    pickers,
-    params,
-    parts,
-    path: withParams(op.path, params) + (op.query ? `?${op.query}` : ''),
-    body: parts ? asFormData(parts) : (example === null ? undefined : example),
-  };
-};
-
-/**
- * What a step produced.
- *
- * The walk follows one record, so remembering what each step made is what
- * lets the next eight act on it without asking which — by collection, for
- * the path parameters, and by the shape it answered with, for a foreign key
- * in some other domain that points at it.
- */
-const remember = (op, result, sent) => {
-  if (result.status === 201 && result.body?.id) {
-    made.set(op.path, result.body.id);
-    const shape = refName(op.operation?.responses?.['201']?.content?.['application/json']?.schema);
-    if (shape) built.set(shape, result.body.id);
-  }
-  // What was sent, as well as what came back. A body is worked out from
-  // what the walk has made so far, so recomputing one to redraw a step
-  // shows the body that step *would* send now — and step one came out
-  // carrying an id for a document uploaded after it ran.
-  answers.set(keyOf(op), { result, sent });
-};
-
-
 const renderStage = async () => {
   const stage = $('stage');
   stage.replaceChildren();
-
-  if (!showAll) {
-    const doc = currentScenario();
-    if (doc) renderTourStage(stage, doc);
-    return;
-  }
-
-  if (!selected) {
-    const panel = el('div', '', 'panel');
-    panel.append(el('h2', 'Pick an operation'));
-    panel.append(el('p',
-      'Every operation on the left came out of a contract, grouped by the domain '
-      + 'that declares it, and then by what kind of thing it is.', 'note'));
-    stage.append(panel);
-    return;
-  }
-
-  stage.append(await stepPanel(selected));
-};
-
-/**
- * One step: what it sends, what it answered, and what to notice about it.
- *
- * Built rather than rendered, because the same panel is both the thing you
- * press Execute on and one entry in a transcript of all fourteen.
- */
-const stepPanel = async (op, { live = true, number = null } = {}) => {
-  const group = GROUPS.find((candidate) => candidate.holds(op.kind));
-  const panel = el('div', '', 'panel');
-
-  // Everything the request needs, worked out before any of it is drawn.
-  // The path line used to render above this and printed `{applicationId}`,
-  // because the values it was interpolating did not exist yet.
-  const { names, records, target, pickers, params: resolved, parts, body: fresh } = await requestFor(op);
-
-  // Once a step has run, the pair on screen is the pair that happened. A
-  // body is derived from what the walk has made, so rebuilding one to
-  // redraw a finished step answers "what would this send now", which is a
-  // different question and sometimes a different body.
-  const already = answers.get(keyOf(op));
-  const example = already && !showAll ? already.sent : fresh;
-  const params = {};
-
-  // On the walk there is nothing to choose: it is the record step one made.
-  // Offering a dropdown of everything in the store, labeled with a uuid
-  // and a status, asks a reader to decide something the walk decided for
-  // them — and the reference is where deciding belongs.
-  const fixed = showAll ? null : target;
-  Object.assign(params, resolved);
-
-  if (group) panel.append(el('p', group.title, 'kindline'));
-  panel.append(el('h2', number ? `${String(number).padStart(2, '0')} · ${op.step}` : (op.step ?? op.summary)));
-  const sending = withParams(op.path, params) + (op.query ? `?${op.query}` : '');
-  if (showAll && live) panel.append(callerRow());
-  const keyRow = showAll && live && takesIdempotencyKey(op) ? idempotencyRow() : null;
-  if (keyRow) panel.append(keyRow.row);
-  panel.append(el('p', `${op.method} ${sending}`, 'path'));
-
-  const bodyRef = op.operation.requestBody?.content?.['application/json']?.schema?.$ref;
-  const cited = [
-    op.action && { name: `${op.action.object} lifecycle`, path: op.action.doc },
-    op.ruleset && { name: op.ruleset.name, path: op.ruleset.doc },
-    op.composition && { name: op.composition.name, path: op.composition.doc },
-  ].filter((entry) => entry && entry.path);
-
-  if (cited.length > 0) {
-    const line = el('p', '', 'cited');
-    for (const [index, entry] of cited.entries()) {
-      if (index > 0) line.append(el('span', '  ·  '));
-      if (entry.name) line.append(el('code', entry.name), el('span', ' — '));
-      if (pageConfig.sourceUrl) {
-        const link = el('a', entry.path);
-        link.href = `${pageConfig.sourceUrl}/${entry.path}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        line.append(link);
-      } else {
-        line.append(el('span', entry.path));
-      }
-    }
-    panel.append(line);
-  }
-
-  // Nothing above the request on the walk: the step title says what you are
-  // doing, and everything worth saying is about what came back.
-  if (showAll && group) panel.append(el('p', group.about, 'about'));
-  if (showAll && op.operation.description) panel.append(el('p', op.operation.description, 'note'));
-
-  // Path parameters suggest the records the server actually holds, rather
-  // than leave a UUID to paste in; anything else can be typed, such as an id
-  // that isn't there.
-  if (!fixed) {
-    for (const { name, records: held, value, valueOf } of pickers) {
-      const field = el('label', '', 'field');
-      field.append(el('span', name));
-      if (held.length > 0) {
-        const picker = el('input');
-        picker.type = 'text';
-        const suggestions = el('datalist');
-        suggestions.id = `held-${keyOf(op)}-${name}`.replace(/[^\w-]/g, '-');
-        for (const record of held) {
-          // Just what is sent: the id, or the field the parameter is named for.
-          const choice = el('option');
-          choice.value = valueOf(record);
-          suggestions.append(choice);
-        }
-        picker.setAttribute('list', suggestions.id);
-        picker.value = value ?? '';
-        // Redrawn once a value is chosen or typed: the path line shows it, and
-        // any parameter after this one lists what is under it.
-        picker.onchange = () => {
-          const typed = !held.some((record) => valueOf(record) === picker.value);
-          chosen.set(`${keyOf(op)}:${name}`, { value: picker.value, typed });
-          renderStage();
-        };
-        field.append(picker, suggestions);
-      } else {
-        const box = el('input');
-        box.type = 'text';
-        box.placeholder = 'no records yet — create one first';
-        box.oninput = () => { params[name] = box.value; };
-        field.append(box);
-      }
-      panel.append(field);
-    }
-  }
-
-  // A body that is not JSON, shown as the parts it is actually made of. A
-  // textarea of JSON here would misdescribe the request entirely, which is
-  // the whole reason this step is in the walk.
-  if (parts) {
-    const declared = op.operation.requestBody.content['multipart/form-data'].schema;
-    panel.append(shapeLine('multipart/form-data', op.doc.relativePath, 'shape',
-      flattened(deref(declared, op.doc), op.doc)));
-
-    const sized = new TextEncoder().encode(SENT_BYTES).length;
-    if (showAll) {
-      for (const part of parts) {
-        const row = el('label', '', 'field');
-        row.append(el('span', part.name));
-        if (part.bytes) {
-          const picker = el('input');
-          picker.type = 'file';
-          picker.onchange = () => { part.file = picker.files?.[0] ?? null; };
-          row.append(picker);
-          row.append(el('p', `Nothing chosen sends ${part.fileName} — ${sized} bytes of filler, `
-            + 'because the point is what happens to the bytes, not what is in them.', 'note'));
-        } else {
-          const box = el('input');
-          box.type = 'text';
-          box.value = part.value;
-          box.oninput = () => { part.value = box.value; };
-          row.append(box);
-        }
-        panel.append(row);
-      }
-    } else {
-      const listing = el('pre', '', 'parts');
-      listing.append(document.createTextNode(parts.map((part) => (part.bytes
-        ? `${part.name.padEnd(16)}${part.fileName}  ·  text/plain  ·  ${sized} bytes`
-        : `${part.name.padEnd(16)}${part.value}`)).join('\n')));
-      panel.append(listing);
-    }
-  }
-
-  // A body, prefilled, so nobody has to guess the shape.
-  let bodyBox = null;
-  if (!parts && example !== undefined) {
-    const field = el('label', '', 'field');
-
-    const requestShape = typeof bodyRef === 'string' ? bodyRef.split('/').pop() : null;
-    if (requestShape && op.doc?.relativePath) {
-      field.append(shapeLine(requestShape, op.doc.relativePath, 'shape',
-        flattened(op.doc.content?.components?.schemas?.[requestShape], op.doc)));
-    }
-
-    // On the walk the body is fixed: the step is about what the server does
-    // with it, and an editable box invites a reader to debug their typing.
-    bodyBox = el('textarea');
-    bodyBox.value = JSON.stringify(example, null, 2);
-    bodyBox.readOnly = !showAll;
-    if (!showAll) {
-      bodyBox.className = 'fixed';
-      bodyBox.title = 'Switch to Let me explore to change it';
-    }
-    field.append(bodyBox);
-    panel.append(field);
-  }
-
-  // Nothing to press in a transcript: every one of these has already run,
-  // and a button offering to run it again is a lie about what you are
-  // reading.
-  const send = el('button', 'Execute', 'primary');
-  if (live) panel.append(send);
-
-  // Named before the block it describes, the same as the request is.
-  const shapeAbove = el('div');
-  shapeAbove.hidden = true;
-  const answer = el('pre');
-  answer.hidden = true;
-  panel.append(shapeAbove, answer);
-
-  /**
-   * Put an answer on screen.
-   *
-   * Used when one arrives and again when a reader walks back to a step they
-   * have already run. Going back used to rebuild the step blank, which made
-   * Previous feel like it had undone something.
-   */
-  const present = (result) => {
-    answer.className = result.status >= 400 ? 'bad' : '';
-
-    // Which shape came back depends on the status: a 201 and a 409 are
-    // different objects, both declared. Named here rather than up with the
-    // request because this is where a reader is looking when they wonder
-    // what they are reading.
-    shapeAbove.replaceChildren();
-    const named = responseShape(op, result.status);
-    if (named) {
-      shapeAbove.append(shapeLine(named.name, named.path, 'shape', named.node));
-    }
-    shapeAbove.hidden = !named;
-
-    answer.replaceChildren(
-      el('span', `${result.status} ${result.statusText}`.trim(), 'label'),
-      document.createTextNode(JSON.stringify(result.body, null, 2))
-    );
-    answer.hidden = false;
-    watch.hidden = false;
-    if (onward && (result.status < 400 || result.status === op.expects)) onward.hidden = false;
-  };
-
-  // Kept for present(): exploring shows no notes and no pager.
-  const watch = el('div', '', 'watch');
-  watch.hidden = true;
-  const onward = null;
-
-  send.onclick = async () => {
-    send.disabled = true;
-    send.textContent = 'Working…';
-    let body;
-    if (parts) body = asFormData(parts);
-    else if (bodyBox) {
-      try {
-        body = JSON.parse(bodyBox.value);
-      } catch (error) {
-        answer.className = 'bad';
-        answer.replaceChildren(el('span', 'that body is not JSON', 'label'),
-          document.createTextNode(error.message));
-        answer.hidden = false;
-        send.disabled = false;
-        send.textContent = 'Execute';
-        return;
-      }
-    }
-
-    // From the parameters as they are now: a value typed into a box after the
-    // panel was drawn has to reach the request.
-    const headers = keyRow ? (keyRow.value() ? { 'Idempotency-Key': keyRow.value() } : {}) : keyHeaders(op);
-    const result = await call(op.method, withParams(op.path, params) + (op.query ? `?${op.query}` : ''), body, headers);
-    remember(op, result, body);
-    present(result);
-
-    send.disabled = false;
-    send.textContent = 'Execute again';
-  };
-
-  return panel;
+  const doc = currentScenario();
+  if (doc) renderTourStage(stage, doc);
+  // A step run changes what the mock holds: the next page gets it, and the control panel shows it.
+  session?.keep();
+  mockChanged();
 };
 
 let contracts;
 
 const boot = async () => {
   contracts = await loadContracts();
-  // One button, naming where it takes you rather than where you are.
-  //
-  // The walk ends by emptying the store and filling it again, as two of its
-  // steps. Leaving the same two things in the header as buttons offers them
-  // twice and lets you pull the floor out from under step six on the way
-  // past, so they are only live once you are off the walk and poking about.
-  const mode = (wanted) => {
-    showAll = wanted;
-    $('mode').textContent = wanted ? 'Show me around' : 'Let me explore';
-    for (const id of ['reseed', 'empty']) {
-      $(id).disabled = !wanted;
-      $(id).title = wanted ? '' : 'The walk does this itself, at the end';
-    }
-    selected = null;
-    if (!mock) return;
-    renderGroups();
-    renderStage();
-  };
-  $('mode').onclick = () => mode(!showAll);
-  $('reseed').onclick = () => derive({ seed: true });
-  $('empty').onclick = () => derive({ seed: false });
-
-  // Where a link into the page asks to start: `#tour=<path>` opens Show me
-  // around on that scenario, and `#explore` opens Let me explore.
+  // Where a link into the page asks to start: `#tour=<path>` opens that scenario.
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.has('tour')) tour = hash.get('tour');
-  if (hash.has('explore')) showAll = true;
 
-  await derive({ seed: true });
-  // What an earlier page left, carried here; and what this page leaves, for
-  // the next. Restarting with data, or empty, replaces them, as it should.
-  restoreRecords(mock, records);
-  addEventListener('pagehide', () => saveRecords(mock, records));
+  await derive({ seed: true, restore: true });
   // After the first derive, never before: this renders, and there is
   // nothing to render until the server exists.
-  mode(showAll);
+  renderGroups();
+  renderStage();
   window.mock = mock;
 };
 
 boot().catch((error) => {
-  $('derived').textContent = `failed to start — ${error.message}`;
+  $('stage').textContent = `The mock failed to start: ${error.message}`;
   console.error(error);
 });
 </script>

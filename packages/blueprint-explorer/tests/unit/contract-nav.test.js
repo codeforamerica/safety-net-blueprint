@@ -52,6 +52,7 @@ test('buildEventIndex', async (t) => {
     assert.deepStrictEqual(emitters['intake.application.submitted'], {
       domain: 'intake',
       object: 'Application',
+      action: 'submit',
     });
   });
 

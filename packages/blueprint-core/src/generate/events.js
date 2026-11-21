@@ -11,8 +11,8 @@
  *   deleted   the shared empty payload, ResourceDeletedEvent
  *   emitted   the data schema its machine declares, if any
  *   timer     the shared TimerCallbackEvent, for each timer a machine declares:
- *             the timer service sends `{domain}.{id}` when it fires, and the
- *             machine reacts to it
+ *             the timer service sends `{domain}.{resource}.{id}` when it
+ *             fires, and the machine reacts to it
  *
  * Every event is named `{domain}.{resource}.{event}` (event-names.js). A
  * resource whose schema is the shared CloudEvents `Event` is an event itself —
@@ -196,8 +196,8 @@ function eventsOf(api, machines) {
     }
     for (const timer of entry.machine.timers ?? []) {
       events.push({
-        type: `${entry.domain}.${timer.id}`,
-        summary: `${timer.description ?? `The ${timer.id} timer fired.`} Sent by the timer service when the timer fires; the subject is the record the timer is for.`,
+        type: eventType(entry.domain, entry.object, timer.id),
+        summary: `${timer.description ?? `The ${timer.id} timer fired.`} Published by the timer service when the timer fires; the subject is the record the timer is for.`,
         data: { $ref: `${BASE_EVENTS}#/TimerCallbackEvent` },
         // The timer service sends it, not this API; the machine receives it.
         timer: true,
@@ -282,6 +282,11 @@ export function buildEventCatalogs(positioned) {
     const apiSchemas = api.content?.components?.schemas ?? {};
     for (const { type, summary, data, timer, example } of events) {
       const name = pascal(type);
+      // Two events whose names differ only in their separators would share a
+      // message, and the second would replace the first without a word.
+      if (messages[name] && messages[name].name !== type) {
+        throw new Error(`${api.relativePath}: events "${messages[name].name}" and "${type}" would both be documented as ${name}. Rename one.`);
+      }
       const record = samples[example.object]?.[0]?.data ?? null;
       const payload = exampleEvent({ type, ...example }, {
         domain, record, properties: propertiesOf({ $ref: `#/components/schemas/${example.object}` }, apiSchemas),

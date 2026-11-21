@@ -18,6 +18,7 @@ For the design philosophies that shape every decision here, start with [Architec
 | [Inter-Domain Communication](inter-domain-communication.md) | How domains communicate without direct coupling |
 | [X-Extensions](x-extensions.md) | Blueprint-specific OpenAPI extensions (`x-domain`, `x-relationship`, etc.) |
 | [Contracts Pipeline](contracts-pipeline.md) | The full contracts build pipeline: validation, lint, resolve, and artifact generation |
+| [Ideas](ideas.md) | Possibilities for the mock server and the explorer that nobody is working on yet |
 
 ## Domain docs
 

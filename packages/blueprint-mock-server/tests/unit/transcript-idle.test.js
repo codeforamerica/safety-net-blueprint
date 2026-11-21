@@ -3,9 +3,10 @@
  * an idleTimeout — run against the harness's contracts, with the mock's timer
  * stub standing in for the scheduler.
  *
- * A timer stub fires the moment its timer is requested, so the check comes
- * before anything else can arrive. That is the case of a transcript the
- * software abandoned straight away.
+ * A timer stub registered first fires the moment its timer is requested, so
+ * the check comes before anything else can arrive. That is the case of a
+ * transcript the software abandoned straight away. One registered later fires
+ * the check already waiting.
  */
 
 import { test, beforeEach } from 'node:test';
@@ -36,7 +37,7 @@ const start = (profileId) => send('POST', '/communication/transcripts', {
   profileId, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z',
 });
 const stubIdleCheck = () => send('POST', '/mock/stubs/events', {
-  on: 'platform.timer.requested', match: { 'data.callback.event': 'communication.idle_check' },
+  on: 'platform.timer.requested', match: { 'data.callback.event': 'communication.transcript.idle_check' },
 });
 
 test('a transcript whose profile sets an idleTimeout closes when the check finds it quiet', async () => {
@@ -69,8 +70,9 @@ test('a resumed transcript asks again, and closes at when it was last heard from
   const add = (body, key) => send('POST', `/communication/transcripts/${transcript.id}/entries`, body, { 'idempotency-key': key });
   await add({ kind: 'line', startedAt: '2026-10-12T10:00:05Z', endedAt: '2026-10-12T10:00:07Z', text: 'Hello.', speaker: 'staff' }, 'k1');
   await send('POST', `/communication/transcripts/${transcript.id}/pause`, { at: '2026-10-12T10:00:10Z' });
-  await stubIdleCheck();
   await send('POST', `/communication/transcripts/${transcript.id}/resume`, { at: '2026-10-12T10:00:20Z' });
+  // Resuming asks again under the same timer id, so the check waiting is resume's.
+  await send('POST', '/mock/stubs/events', { on: 'platform.timer.requested', match: { 'data.timerId': `communication.idle_check.${transcript.id}` } });
   const { body: after } = await send('GET', `/communication/transcripts/${transcript.id}`);
   assert.strictEqual(after.status, 'closed');
   assert.strictEqual(after.closedAt, '2026-10-12T10:00:07Z');

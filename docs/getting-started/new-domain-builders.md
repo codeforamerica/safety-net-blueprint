@@ -206,13 +206,13 @@ The mock auto-discovers all `*-openapi.yaml` files in the resolved directory and
 
 Resources are held in SQLite by default — one `.db` file per collection, so data survives a restart and can be inspected with the `sqlite3` CLI. Pass `--store=memory` (or set `MOCK_STORE=memory`) to hold everything in memory instead: faster, nothing left on disk, and nothing kept after the process exits. Either way the server clears and reseeds every collection at startup, so the difference is rarely visible in normal use.
 
-To browse the API interactively, run the Swagger UI alongside the mock:
+To browse the API and try it, build the explorer:
 
 ```bash
-npx blueprint-swagger --spec ./resolved
+npx blueprint-build-explorer --spec=./resolved --out=./explorer
 ```
 
-Visit `http://localhost:3000` for interactive API docs.
+Open `explorer/index.html`. Its API reference sends each request to a mock running in the page, so it needs no server.
 
 ## Key Commands
 
@@ -226,7 +226,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | `blueprint-generate-postman-collection` | Generate a Postman collection |
 | `blueprint-mock` | Start the mock server (auto-discovers `*-openapi.yaml`) |
 | `blueprint-evaluate` | Evaluate a ruleset against inputs from the command line |
-| `blueprint-swagger` | Start Swagger UI at http://localhost:3000 |
+| `blueprint-build-explorer` | Build the explorer, with its API reference, from resolved specs |
 
 ## Next Steps
 

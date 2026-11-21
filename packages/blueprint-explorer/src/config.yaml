@@ -312,7 +312,7 @@ events:
     status: implemented
     subscribers: []
 
-  - name: task.de-escalated
+  - name: task.de_escalated
     publisher: workflow
     status: implemented
     subscribers: []

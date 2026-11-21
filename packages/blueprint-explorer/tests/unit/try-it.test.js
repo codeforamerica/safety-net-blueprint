@@ -1,5 +1,5 @@
 /**
- * The Try it out page: three files, each loaded with a classic <script>, so
+ * The Scenarios page: three files, each loaded with a classic <script>, so
  * the page works served over http(s) and opened from disk (`file://`), where
  * it cannot fetch or import a file beside it.
  *
@@ -37,7 +37,7 @@ const built = await (async () => {
     '  spec_path: contracts',
   ].join('\n'));
   build({ contentDir, resolvedDir });
-  const dir = join(contentDir, 'try-it');
+  const dir = join(contentDir, 'scenarios');
   return { dir, mockDir: join(contentDir, 'mock'), html: readFileSync(join(dir, 'index.html'), 'utf8') };
 })();
 
@@ -81,7 +81,7 @@ test('the page knows which API reference pages were built, for steps to link to'
   mkdirSync(join(contentDir, 'api-reference'));
   for (const name of ['index.html', 'intake.html', 'intake-rules.html']) writeFileSync(join(contentDir, 'api-reference', name), '');
   build({ contentDir, resolvedDir });
-  const { apiPages } = configOf(readFileSync(join(contentDir, 'try-it', 'index.html'), 'utf8'));
+  const { apiPages } = configOf(readFileSync(join(contentDir, 'scenarios', 'index.html'), 'utf8'));
   assert.deepEqual(apiPages.sort(), ['intake', 'intake-rules'], 'every page but the index');
 });
 
