@@ -99,7 +99,7 @@ components:
                   after: example
     EligibilityDeterminationComplete:
       name: eligibility.determination.complete
-      summary: TODO — describe when this event is emitted and who consumes it.
+      summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:

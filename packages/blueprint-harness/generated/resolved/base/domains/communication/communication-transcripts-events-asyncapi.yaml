@@ -56,11 +56,11 @@ channels:
     messages:
       CommunicationTranscriptClosed:
         $ref: "#/components/messages/CommunicationTranscriptClosed"
-  communication.idle_check:
-    address: communication.idle_check
+  communication.transcript.idle_check:
+    address: communication.transcript.idle_check
     messages:
-      CommunicationIdleCheck:
-        $ref: "#/components/messages/CommunicationIdleCheck"
+      CommunicationTranscriptIdleCheck:
+        $ref: "#/components/messages/CommunicationTranscriptIdleCheck"
 operations:
   sendCommunicationTranscriptCreated:
     action: send
@@ -134,12 +134,12 @@ operations:
       $ref: "#/channels/communication.transcript_entry.created"
     messages:
       - $ref: "#/channels/communication.transcript_entry.created/messages/CommunicationTranscriptEntryCreated"
-  receiveCommunicationIdleCheck:
+  receiveCommunicationTranscriptIdleCheck:
     action: receive
     channel:
-      $ref: "#/channels/communication.idle_check"
+      $ref: "#/channels/communication.transcript.idle_check"
     messages:
-      - $ref: "#/channels/communication.idle_check/messages/CommunicationIdleCheck"
+      - $ref: "#/channels/communication.transcript.idle_check/messages/CommunicationTranscriptIdleCheck"
 components:
   messages:
     CommunicationTranscriptCreated:
@@ -359,21 +359,21 @@ components:
             subject: 7a1e0c2d-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
-    CommunicationIdleCheck:
-      name: communication.idle_check
-      summary: Whether a recording transcript has gone quiet for its profile's idleTimeout. Sent by the timer service when the timer fires; the subject is the record the timer is for.
+    CommunicationTranscriptIdleCheck:
+      name: communication.transcript.idle_check
+      summary: Whether a recording transcript has gone quiet for its profile's idleTimeout. Published by the timer service when the timer fires; the subject is the record the timer is for.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
-          $ref: "#/components/schemas/CommunicationIdleCheckEvent"
+          $ref: "#/components/schemas/CommunicationTranscriptIdleCheckEvent"
       examples:
         - name: Example
-          summary: An example communication.idle_check event.
+          summary: An example communication.transcript.idle_check event.
           payload:
             specversion: "1.0"
             id: 00000000-0000-4000-8000-000000000000
             source: /communication
-            type: communication.idle_check
+            type: communication.transcript.idle_check
             subject: 7a1e0c2d-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
@@ -494,7 +494,7 @@ components:
               type:
                 type: string
                 const: communication.transcript.closed
-    CommunicationIdleCheckEvent:
+    CommunicationTranscriptIdleCheckEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
       schema:
         allOf:
@@ -503,6 +503,6 @@ components:
             properties:
               type:
                 type: string
-                const: communication.idle_check
+                const: communication.transcript.idle_check
               data:
                 $ref: ../../schemas/events.yaml#/TimerCallbackEvent

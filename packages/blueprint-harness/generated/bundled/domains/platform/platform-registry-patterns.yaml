@@ -68,7 +68,7 @@ entries:
       Named boolean condition (CEL expression) attached to a state machine action. The action can only be triggered when all guard conditions pass. Exercises guard evaluation, actor role checking, and guard composition (any/all).
   state-machine-timer:
     description: |
-      Timer declaration on a state machine. The scheduling service emits a callback event ({domain}.{id}) when the timer fires; the machine subscribes to react. Exercises timer declaration rendering and the timer → event subscription link.
+      Timer declaration on a state machine. The scheduling service emits a callback event ({domain}.{resource}.{id}) when the timer fires; the machine subscribes to react. Exercises timer declaration rendering and the timer → event subscription link.
   state-machine-subscription:
     description: |
       State machine subscribing to a domain event emitted by a different domain. The handler runs steps (create, emit, call) automatically when the event arrives. Exercises cross-domain event subscription and handler rendering.

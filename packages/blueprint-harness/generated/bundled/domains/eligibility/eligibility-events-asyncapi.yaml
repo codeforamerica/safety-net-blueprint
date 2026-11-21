@@ -60,7 +60,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -259,7 +259,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -377,7 +377,7 @@ channels:
     messages:
       EligibilityDeterminationComplete:
         name: eligibility.determination.complete
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -427,7 +427,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -508,7 +508,7 @@ channels:
     messages:
       IntakeApplicationSubmitted:
         name: intake.application.submitted
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -558,7 +558,7 @@ channels:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -706,7 +706,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -902,7 +902,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1103,7 +1103,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1268,7 +1268,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1388,7 +1388,7 @@ operations:
       messages:
         EligibilityDeterminationComplete:
           name: eligibility.determination.complete
-          summary: TODO — describe when this event is emitted and who consumes it.
+          summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
           payload:
             schemaFormat: application/vnd.oai.openapi;version=3.1.0
             schema:
@@ -1438,7 +1438,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1516,7 +1516,7 @@ operations:
                 datacontenttype: application/json
     messages:
       - name: eligibility.determination.complete
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -1566,7 +1566,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1649,7 +1649,7 @@ operations:
       messages:
         IntakeApplicationSubmitted:
           name: intake.application.submitted
-          summary: TODO — describe when this event is emitted and who consumes it.
+          summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
           payload:
             schemaFormat: application/vnd.oai.openapi;version=3.1.0
             schema:
@@ -1699,7 +1699,7 @@ operations:
                           id:
                             type: string
                             format: uuid
-                            description: Unique event identifier.
+                            description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                           source:
                             type: string
                             description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1791,7 +1791,7 @@ operations:
                     - snap
     messages:
       - name: intake.application.submitted
-        summary: TODO — describe when this event is emitted and who consumes it.
+        summary: Published when an application is submitted for review. Eligibility creates a pending determination for it.
         payload:
           schemaFormat: application/vnd.oai.openapi;version=3.1.0
           schema:
@@ -1841,7 +1841,7 @@ operations:
                         id:
                           type: string
                           format: uuid
-                          description: Unique event identifier.
+                          description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                         source:
                           type: string
                           description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -1985,7 +1985,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2181,7 +2181,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2296,7 +2296,7 @@ components:
                   after: example
     EligibilityDeterminationComplete:
       name: eligibility.determination.complete
-      summary: TODO — describe when this event is emitted and who consumes it.
+      summary: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -2346,7 +2346,7 @@ components:
                       id:
                         type: string
                         format: uuid
-                        description: Unique event identifier.
+                        description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                       source:
                         type: string
                         description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2470,7 +2470,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2643,7 +2643,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).
@@ -2787,7 +2787,7 @@ components:
                   id:
                     type: string
                     format: uuid
-                    description: Unique event identifier.
+                    description: Unique event identifier, set by the publisher when it makes the event. `source` plus `id` is unique for each distinct event; a publish retried sends the same id, so subscribers may treat events with the same `source` and `id` as one (CloudEvents 1.0).
                   source:
                     type: string
                     description: Domain base path that produced the event (e.g., /intake, /workflow).

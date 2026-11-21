@@ -1402,5 +1402,20 @@
     navigate('s1');
     window.addEventListener('resize', fitDiagram);
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
 </body>
 </html>

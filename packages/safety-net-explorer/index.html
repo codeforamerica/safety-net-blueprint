@@ -304,26 +304,7 @@
 
     <div class="card-grid">
 
-      <div class="card">
-        <div class="card-accent accent-blue"></div>
-        <div class="card-body">
-          <div class="card-icon icon-blue">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="10" cy="10" r="8" fill="#5650BE"/>
-              <path d="M8 6.5 L14 10 L8 13.5 Z" fill="white"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            <h4><a href="try-it/index.html" class="card-link">Try it out</a></h4>
-          </div>
-          <p>The mock server running in your browser, built from the contracts. Play the scenarios a step at a time, or send any operation a request.</p>
-          <div class="card-outputs">
-            <a href="try-it/index.html#explore" class="output-tag">
-              <span class="dot dot-grey"></span>Let me explore
-            </a>
-          </div>
-        </div>
-      </div>
+      
 
       <div class="card">
         <div class="card-accent accent-green"></div>
@@ -428,28 +409,7 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-accent accent-blue"></div>
-        <div class="card-body">
-          <div class="card-icon icon-blue">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="4"  cy="4"  r="2.5" fill="#2B1A78"/>
-              <circle cx="16" cy="4"  r="2.5" fill="#5650BE"/>
-              <circle cx="4"  cy="16" r="2.5" fill="#5650BE"/>
-              <circle cx="16" cy="16" r="2.5" fill="#5650BE"/>
-              <circle cx="10" cy="10" r="2.5" fill="#2B1A78"/>
-              <line x1="6" y1="5"  x2="8.5"  y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="14" y1="5"  x2="11.5" y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="6"  y1="15" x2="8.5"  y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
-              <line x1="14" y1="15" x2="11.5" y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <div class="card-header-row">
-            <h4><span class="card-link card-link--absent" title="Not generated for this contract set">Rules Docs</span></h4>
-          </div>
-          <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>
-        </div>
-      </div>
+      
 
       <div class="card">
         <div class="card-accent accent-blue"></div>
@@ -472,6 +432,23 @@
             <h4><a href="event-catalog/index.html" class="card-link">Event Catalog</a></h4>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
+          <div class="card-outputs">
+            <a href="event-catalog/case-management.html" class="output-tag">
+              <span class="dot dot-blue"></span>Case Management
+            </a>
+            <a href="event-catalog/client-management.html" class="output-tag">
+              <span class="dot dot-blue"></span>Client Management
+            </a>
+            <a href="event-catalog/communication.html" class="output-tag">
+              <span class="dot dot-blue"></span>Communication
+            </a>
+            <a href="event-catalog/data-exchange.html" class="output-tag">
+              <span class="dot dot-blue"></span>Data Exchange
+            </a>
+            <a href="event-catalog/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 11 domains
+            </a>
+          </div>
         </div>
       </div>
 
@@ -493,6 +470,23 @@
             <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
           </div>
           <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
+          <div class="card-outputs">
+            <a href="annotations-explorer/dataclassification.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Data Classification
+            </a>
+            <a href="annotations-explorer/modeling.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Modeling
+            </a>
+            <a href="annotations-explorer/policies.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Policies
+            </a>
+            <a href="annotations-explorer/programs.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Programs
+            </a>
+            <a href="annotations-explorer/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 5 registries
+            </a>
+          </div>
         </div>
       </div>
 
@@ -547,5 +541,40 @@
     Code for America
   </footer>
 
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

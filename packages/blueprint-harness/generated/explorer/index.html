@@ -309,27 +309,24 @@
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="try-it/index.html" class="card-link">Try it out</a></h4>
+            <h4><a href="scenarios/index.html" class="card-link">Scenarios</a></h4>
           </div>
-          <p>The mock server running in your browser, built from the contracts. Play the scenarios a step at a time, or send any operation a request.</p>
+          <p>Play the scenarios a step at a time. Each step runs live against the mock server in your browser, built from the contracts.</p>
           <div class="card-outputs">
-            <a href="try-it/index.html#tour=scenarios%2Fframework-features.arazzo.yaml" class="output-tag">
+            <a href="scenarios/index.html#tour=scenarios%2Fframework-features.arazzo.yaml" class="output-tag">
               <span class="dot dot-blue"></span>The framework's core features
             </a>
-            <a href="try-it/index.html#tour=scenarios%2Fsuggestion-lifecycle.arazzo.yaml" class="output-tag">
+            <a href="scenarios/index.html#tour=scenarios%2Fsuggestion-lifecycle.arazzo.yaml" class="output-tag">
               <span class="dot dot-blue"></span>A suggestion, from proposal to decision
             </a>
-            <a href="try-it/index.html#tour=scenarios%2Ftranscription-chat.arazzo.yaml" class="output-tag">
+            <a href="scenarios/index.html#tour=scenarios%2Ftranscription-chat.arazzo.yaml" class="output-tag">
               <span class="dot dot-blue"></span>Transcribing a typed conversation (a chat)
             </a>
-            <a href="try-it/index.html#tour=scenarios%2Ftranscription-relay.arazzo.yaml" class="output-tag">
+            <a href="scenarios/index.html#tour=scenarios%2Ftranscription-relay.arazzo.yaml" class="output-tag">
               <span class="dot dot-blue"></span>Transcribing a spoken conversation through a relay
             </a>
-            <a href="try-it/index.html" class="output-tag">
+            <a href="scenarios/index.html" class="output-tag">
               <span class="dot dot-grey"></span>All 5 scenarios
-            </a>
-            <a href="try-it/index.html#explore" class="output-tag">
-              <span class="dot dot-grey"></span>Let me explore
             </a>
           </div>
         </div>
@@ -493,6 +490,23 @@
             <h4><a href="event-catalog/index.html" class="card-link">Event Catalog</a></h4>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
+          <div class="card-outputs">
+            <a href="event-catalog/communication.html" class="output-tag">
+              <span class="dot dot-blue"></span>Communication
+            </a>
+            <a href="event-catalog/decision-support.html" class="output-tag">
+              <span class="dot dot-blue"></span>Decision Support
+            </a>
+            <a href="event-catalog/document-management.html" class="output-tag">
+              <span class="dot dot-blue"></span>Document Management
+            </a>
+            <a href="event-catalog/eligibility.html" class="output-tag">
+              <span class="dot dot-blue"></span>Eligibility
+            </a>
+            <a href="event-catalog/index.html" class="output-tag">
+              <span class="dot dot-grey"></span>All 6 domains
+            </a>
+          </div>
         </div>
       </div>
 
@@ -514,6 +528,20 @@
             <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
           </div>
           <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
+          <div class="card-outputs">
+            <a href="annotations-explorer/patterns.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Patterns
+            </a>
+            <a href="annotations-explorer/policies.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Policies
+            </a>
+            <a href="annotations-explorer/probequestions.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Probe Questions
+            </a>
+            <a href="annotations-explorer/reason.html" class="output-tag">
+              <span class="dot dot-yellow"></span>Reason
+            </a>
+          </div>
         </div>
       </div>
 
@@ -568,5 +596,40 @@
     Code for America
   </footer>
 
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>

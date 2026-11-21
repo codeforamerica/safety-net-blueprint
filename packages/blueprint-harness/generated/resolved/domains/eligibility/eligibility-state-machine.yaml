@@ -16,7 +16,7 @@ machines:
         condition: determination.decisions.all(d, d.status != 'pending')
     emits:
       - id: complete
-        description: TODO — describe when this event is emitted and who consumes it.
+        description: Published when a determination is complete, every program's result resolved. Eligibility's metrics count it.
     actions:
       - id: complete
         description: Marks the determination as complete once all program results are resolved.

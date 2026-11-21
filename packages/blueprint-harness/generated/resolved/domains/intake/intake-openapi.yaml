@@ -547,6 +547,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Application
         id: submit
   /applications/{applicationId}/open:
     parameters:
@@ -581,6 +582,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Application
         id: open
   /applications/{applicationId}/close:
     parameters:
@@ -623,6 +625,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Application
         id: close
   /applications/{applicationId}/withdraw:
     parameters:
@@ -657,6 +660,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Application
         id: withdraw
   /applications/{applicationId}/interviews/{interviewId}/start:
     parameters:
@@ -696,6 +700,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Interview
         id: start
   /applications/{applicationId}/interviews/{interviewId}/process-suggestions:
     parameters:
@@ -736,6 +741,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Interview
         id: process-suggestions
   /applications/{applicationId}/interviews/{interviewId}/complete:
     parameters:
@@ -775,6 +781,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: intake
+        resource: Interview
         id: complete
   /applications/{applicationId}/summary:
     parameters:

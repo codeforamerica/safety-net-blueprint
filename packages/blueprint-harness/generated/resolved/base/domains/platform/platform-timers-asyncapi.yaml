@@ -36,13 +36,13 @@ components:
           payload:
             specversion: "1.0"
             id: 00000000-0000-4000-8000-000000000002
-            source: /workflow
+            source: /decision-support
             type: platform.timer.cancelled
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
             data:
-              timerId: workflow.creation_deadline.00000000-0000-4000-8000-000000000001
+              timerId: decision-support.suggestion_expiry.00000000-0000-4000-8000-000000000001
     TimerRequestedMessage:
       name: platform.timer.requested
       summary: Asks for a timer; the scheduler registers it and publishes the callback event when it fires.
@@ -50,22 +50,21 @@ components:
         $ref: "#/components/schemas/TimerRequestedEvent"
       examples:
         - name: Example
-          summary: Asks for workflow.creation_deadline to be sent about a task three days from now.
+          summary: Asks for decision-support.suggestion.suggestion_expiry to be sent about a suggestion when it expires.
           payload:
             specversion: "1.0"
             id: 00000000-0000-4000-8000-000000000000
-            source: /workflow
+            source: /decision-support
             type: platform.timer.requested
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
             data:
-              timerId: workflow.creation_deadline.00000000-0000-4000-8000-000000000001
-              fireAfter: PT72H
+              timerId: decision-support.suggestion_expiry.00000000-0000-4000-8000-000000000001
+              fireAt: "2024-01-02T00:00:00Z"
               callback:
-                event: workflow.creation_deadline
-                data:
-                  taskId: 00000000-0000-4000-8000-000000000001
+                event: decision-support.suggestion.suggestion_expiry
+                data: {}
   schemas:
     TimerCancelledEvent:
       allOf:

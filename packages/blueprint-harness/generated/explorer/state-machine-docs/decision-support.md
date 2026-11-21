@@ -33,5 +33,5 @@ Domain: `decision-support` | API: [decision-support-suggestions-openapi.yaml](..
   - If `!has(object.expiresAt)`:
     - sets `expiresAt`
   - Emits `platform.timer.requested`
-- **`decision-support.suggestion_expiry`**
+- **`decision-support.suggestion.suggestion_expiry`**
   - `POST decision-support/suggestions/$object.id/expire`

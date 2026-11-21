@@ -31,11 +31,11 @@ channels:
     messages:
       DecisionSupportSuggestionExpired:
         $ref: "#/components/messages/DecisionSupportSuggestionExpired"
-  decision-support.suggestion_expiry:
-    address: decision-support.suggestion_expiry
+  decision-support.suggestion.suggestion_expiry:
+    address: decision-support.suggestion.suggestion_expiry
     messages:
-      DecisionSupportSuggestionExpiry:
-        $ref: "#/components/messages/DecisionSupportSuggestionExpiry"
+      DecisionSupportSuggestionSuggestionExpiry:
+        $ref: "#/components/messages/DecisionSupportSuggestionSuggestionExpiry"
 operations:
   sendDecisionSupportSuggestionCreated:
     action: send
@@ -73,12 +73,12 @@ operations:
       $ref: "#/channels/decision-support.suggestion.created"
     messages:
       - $ref: "#/channels/decision-support.suggestion.created/messages/DecisionSupportSuggestionCreated"
-  receiveDecisionSupportSuggestionExpiry:
+  receiveDecisionSupportSuggestionSuggestionExpiry:
     action: receive
     channel:
-      $ref: "#/channels/decision-support.suggestion_expiry"
+      $ref: "#/channels/decision-support.suggestion.suggestion_expiry"
     messages:
-      - $ref: "#/channels/decision-support.suggestion_expiry/messages/DecisionSupportSuggestionExpiry"
+      - $ref: "#/channels/decision-support.suggestion.suggestion_expiry/messages/DecisionSupportSuggestionSuggestionExpiry"
 components:
   messages:
     DecisionSupportSuggestionCreated:
@@ -175,21 +175,21 @@ components:
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
-    DecisionSupportSuggestionExpiry:
-      name: decision-support.suggestion_expiry
-      summary: Expires a suggestion nobody decided by its expiresAt. Sent by the timer service when the timer fires; the subject is the record the timer is for.
+    DecisionSupportSuggestionSuggestionExpiry:
+      name: decision-support.suggestion.suggestion_expiry
+      summary: Expires a suggestion nobody decided by its expiresAt. Published by the timer service when the timer fires; the subject is the record the timer is for.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
-          $ref: "#/components/schemas/DecisionSupportSuggestionExpiryEvent"
+          $ref: "#/components/schemas/DecisionSupportSuggestionSuggestionExpiryEvent"
       examples:
         - name: Example
-          summary: An example decision-support.suggestion_expiry event.
+          summary: An example decision-support.suggestion.suggestion_expiry event.
           payload:
             specversion: "1.0"
             id: 00000000-0000-4000-8000-000000000000
             source: /decision-support
-            type: decision-support.suggestion_expiry
+            type: decision-support.suggestion.suggestion_expiry
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
@@ -259,7 +259,7 @@ components:
               type:
                 type: string
                 const: decision-support.suggestion.expired
-    DecisionSupportSuggestionExpiryEvent:
+    DecisionSupportSuggestionSuggestionExpiryEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
       schema:
         allOf:
@@ -268,6 +268,6 @@ components:
             properties:
               type:
                 type: string
-                const: decision-support.suggestion_expiry
+                const: decision-support.suggestion.suggestion_expiry
               data:
                 $ref: ../../schemas/events.yaml#/TimerCallbackEvent

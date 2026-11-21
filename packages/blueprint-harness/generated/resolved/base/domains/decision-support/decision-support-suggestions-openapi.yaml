@@ -189,6 +189,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: decision-support
+        resource: Suggestion
         id: accept
   /suggestions/{suggestionId}/dismiss:
     parameters:
@@ -231,6 +232,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: decision-support
+        resource: Suggestion
         id: dismiss
   /suggestions/{suggestionId}/expire:
     parameters:
@@ -265,6 +267,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: decision-support
+        resource: Suggestion
         id: expire
 components:
   parameters:

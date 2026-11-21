@@ -1501,6 +1501,7 @@ paths:
       x-relationship:
         type: state-machine-action
         domain: eligibility
+        resource: Determination
         id: complete
 components:
   parameters:

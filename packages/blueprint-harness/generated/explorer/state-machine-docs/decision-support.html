@@ -41,7 +41,7 @@
 <body>
   <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Decision Support</a></div>
   <div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
-  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="decision-support.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="communication.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Communication</a><a href="decision-support.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Decision Support</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Intake</a></nav>
 </div><div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
     <div style="margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Decision Support State Machine</h1>
@@ -84,21 +84,21 @@
             <thead><tr>
               <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
             </tr></thead>
-            <tbody><tr id="action-accept">
-          <td><strong style="color:#2B1A78;">accept</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-accept" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.</span></td>
+            <tbody><tr id="action-suggestion-accept">
+          <td><strong style="color:#2B1A78;">accept</strong> <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-accept" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say yes. For an operation suggestion, make its call — or the corrected one sent — as the person accepting.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">accepted</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>object.kind is "operation" and has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li>"$request.call"</li><li><code>sets performed</code></li></ul></li><li>If <code>object.kind is "operation" and !has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li>"$object.call"</li></ul></li><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.accepted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.accepted</a></li></ul></td>
-        </tr><tr id="action-dismiss">
-          <td><strong style="color:#2B1A78;">dismiss</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-dismiss" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say no, with a reason.</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>object.kind is "operation" and has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li></li><li><code>sets performed</code></li></ul></li><li>If <code>object.kind is "operation" and !has(request.call)</code>:<ul style="margin:2px 0 0 14px;"><li></li></ul></li><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/decision-support.html#event-decision-support.suggestion.accepted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>accepted</a></li></ul></td>
+        </tr><tr id="action-suggestion-dismiss">
+          <td><strong style="color:#2B1A78;">dismiss</strong> <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-dismiss" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Say no, with a reason.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">dismissed</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets reason</code></li><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.dismissed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.dismissed</a></li></ul></td>
-        </tr><tr id="action-expire">
-          <td><strong style="color:#2B1A78;">expire</strong> <a href="../api-reference/decision-support.html#op-post-suggestions-suggestionId-expire" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Close a suggestion that no longer applies, before anyone decided.</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li><code>sets reason</code></li><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/decision-support.html#event-decision-support.suggestion.dismissed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>dismissed</a></li></ul></td>
+        </tr><tr id="action-suggestion-expire">
+          <td><strong style="color:#2B1A78;">expire</strong> <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-expire" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Close a suggestion that no longer applies, before anyone decided.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">proposed</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">refused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">expired</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/index.html#event-decision-support.suggestion.expired" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.suggestion.expired</a></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Cancel the expiry timer of a suggestion that was decided or expired by hand.</li><li>Emit <a href="../event-catalog/decision-support.html#event-decision-support.suggestion.expired" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>expired</a></li></ul></td>
         </tr></tbody>
           </table>
         </div>
@@ -111,17 +111,43 @@
               <col style="width:50%">
             </colgroup>
             <thead><tr>
-              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+              <th>Event</th><th>Published by</th><th>Handler steps</th>
             </tr></thead>
-            <tbody><tr>
-          <td><code>decision-support.suggestion.created</code></td>
-          <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>!has(object.expiresAt)</code>:<ul style="margin:2px 0 0 14px;"><li><code>sets expiresAt</code></li></ul></li><li>Emit <a href="../event-catalog/index.html#event-platform.timer.requested" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.timer.requested</a></li></ul></td>
-        </tr><tr>
-          <td><code>decision-support.suggestion_expiry</code></td>
-          <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"POST":"decision-support/suggestions/$object.id/expire"}</li></ul></td>
+            <tbody><tr id="on-suggestion-decision-support.suggestion.created">
+          <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.created" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>created</a></td>
+          <td><span style="font-size:11px;color:#666;">Endpoint:</span><br><a href="../api-reference/decision-support-suggestions.html#op-post-suggestions">Decision Support › POST /suggestions</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>!has(object.expiresAt)</code>:<ul style="margin:2px 0 0 14px;"><li><code>sets expiresAt</code></li></ul></li><li>Emit <a href="../event-catalog/platform.html#event-platform.timer.requested" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>requested</a></li></ul></td>
+        </tr><tr id="on-suggestion-decision-support.suggestion.suggestion_expiry">
+          <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.suggestion_expiry" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>suggestion_expiry</a></td>
+          <td><span style="font-size:12px;">The timer service, when the timer fires</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Call <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-expire"><code style="color:#5650BE;">POST /decision-support/suggestions/{suggestionId}/expire</code></a></li></ul></td>
         </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Publishes</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup><col style="width:50%"><col style="width:50%"></colgroup>
+            <thead><tr><th>Event</th><th>Published by</th></tr></thead>
+            <tbody><tr>
+              <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.accepted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>accepted</a></td>
+              <td style="font-size:12px;"><a href="#action-suggestion-accept">accept</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.dismissed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>dismissed</a></td>
+              <td style="font-size:12px;"><a href="#action-suggestion-dismiss">dismiss</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.expired" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>expired</a></td>
+              <td style="font-size:12px;"><a href="#action-suggestion-expire">expire</a><br><a href="#on-suggestion-decision-support.suggestion.suggestion_expiry">on <code>decision-support.suggestion.suggestion_expiry</code></a>, through <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-expire"><code style="color:#5650BE;">POST /decision-support/suggestions/{suggestionId}/expire</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/decision-support.html#event-decision-support.suggestion.refused" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">decision-support.<wbr>suggestion.<wbr>refused</a></td>
+              <td style="font-size:12px;"><a href="#action-suggestion-accept">accept</a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.cancelled" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>cancelled</a></td>
+              <td style="font-size:12px;"><a href="#action-suggestion-accept">accept</a><br><a href="#action-suggestion-dismiss">dismiss</a><br><a href="#action-suggestion-expire">expire</a><br><a href="#on-suggestion-decision-support.suggestion.suggestion_expiry">on <code>decision-support.suggestion.suggestion_expiry</code></a>, through <a href="../api-reference/decision-support-suggestions.html#op-post-suggestions-suggestionId-expire"><code style="color:#5650BE;">POST /decision-support/suggestions/{suggestionId}/expire</code></a></td>
+            </tr><tr>
+              <td><a href="../event-catalog/platform.html#event-platform.timer.requested" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">platform.<wbr>timer.<wbr>requested</a></td>
+              <td style="font-size:12px;"><a href="#on-suggestion-decision-support.suggestion.created">on <code>decision-support.suggestion.created</code></a></td>
+            </tr></tbody>
           </table>
         </div>
     </section></div>
@@ -138,5 +164,40 @@
     });
     
   </script>
+<!-- the mock: control panel -->
+<script>
+(() => {
+  let reloaded = false;
+  try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
+  if (!reloaded) return;
+  const scope = new URL('../mock/', location.href).href;
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+    }
+  } catch { /* nothing saved */ }
+})();
+</script>
+<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
+  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<script>
+(() => {
+  const root = new URL('../', location.href);
+  const load = (src) => new Promise((resolve, reject) => document.head.append(
+    Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
+  // A page that runs the mock has it loading already; any other loads it now.
+  const ready = () => {
+    if (globalThis.BlueprintMock && globalThis.BlueprintContracts) return Promise.resolve();
+    if (document.querySelector('script[src$="mock/mock.js"]')) {
+      return new Promise((resolve) => (document.readyState === 'complete' ? resolve() : addEventListener('load', resolve)));
+    }
+    return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
+  };
+  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
+  }));
+})();
+</script>
 </body>
 </html>
