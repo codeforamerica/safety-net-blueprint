@@ -65,7 +65,9 @@ export function domainsFromContracts(docs, overrides) {
     if (found.has(id)) continue;
     throw new Error(
       `config.yaml names a domain "${id}" that the contract set does not declare. `
-      + `Domains present: ${[...found.keys()].sort().join(', ')}.`
+      + `Domains present: ${[...found.keys()].sort().join(', ')}. `
+      // A config written for the whole set meets a folder narrowed to part of it.
+      + 'If the contracts were resolved with --domain or --capability, give this build a config.yaml of its own.'
     );
   }
 
