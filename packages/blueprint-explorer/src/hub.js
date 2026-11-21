@@ -21,6 +21,7 @@ import { loadConfig } from './lib/config.js';
 import { esc } from './lib/html.js';
 import { build as buildAuthored } from './authored.js';
 import { addControlPanel } from './lib/control-panel.js';
+import { addSiteScript } from './lib/site-script.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -640,8 +641,10 @@ const html = `<!DOCTYPE html>
 writeFileSync(join(contentDir, 'index.html'), html, 'utf8');
 console.log(`  wrote ${join(contentDir, 'index.html')}`);
 
-// Built last, the hub puts the control panel's button on every page, its own too.
+// Built last, the hub puts the control panel's button on every page, its own
+// too, and the site's own script, if config.yaml names one.
 addControlPanel(contentDir);
+addSiteScript(contentDir);
 } // end build()
 
 // CLI entry point

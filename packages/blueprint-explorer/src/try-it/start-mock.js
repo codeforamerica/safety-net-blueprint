@@ -3,6 +3,10 @@
  * reference's, the Scenarios page's, and the control panel's own on a page
  * that runs none.
  *
+ * Its routing is the site's own: what the site's script sets on
+ * BlueprintExplorer.routing (lib/site-script.js), in the mock's routing format,
+ * or none, so every call stays in the page.
+ *
  * Restored, it puts back what the last page left (records.js): the records,
  * with the event log, and the stubs. Started over, it forgets the stubs the
  * last mock had. Either way, what it holds is left for the next page when
@@ -31,7 +35,8 @@ let saving = false;
 export async function startMock({ contracts, scope, version, seed = true, restore = false, basePath = '' }) {
   const where = { scope, version };
   const started = performance.now();
-  const mock = await createMockServer({ contracts, seed, basePath });
+  const routing = globalThis.BlueprintExplorer?.routing ?? [];
+  const mock = await createMockServer({ contracts, seed, basePath, routing });
   // Only to read and register stubs, through the mock's own routes.
   const send = (method, path, { body } = {}) => mock.fetch(new Request(ORIGIN + basePath + path, {
     method, body, headers: body ? { 'Content-Type': 'application/json' } : {},
