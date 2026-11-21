@@ -81,7 +81,8 @@ Everything built from the folder afterward — the explorer, the bundle, the moc
 
 - **What the chosen documents reference** comes along: everything they `$ref`, and the state machines they extend.
 - **The parts of platform they use** come along, since nothing references them: the events API when anything publishes or hears events or sets timers, the timers document when a state machine sets one, and the registries API when a registry is kept.
-- **A scenario is kept** when every document it calls is kept. It never brings in more.
+- **The contract of an API a chosen one calls** comes along, but not its behavior. A state machine step that calls another API's operation (`call: { operationId: createSuggestion }`) brings that API's OpenAPI document, with each operation marked `x-relationship: { type: external }`: the mock answers it only with an HTTP stub or by routing it, and the explorer shows it as external.
+- **A scenario is kept** when every document it calls is kept, and not only as a called contract. It never brings in more.
 - **A type whose resource was left out is external.** A transcript's `subjectType: interview` names intake's Interview; without intake, resolve maps `interview` to `External` in the transcript's `discriminator.mapping`, so the folder validates.
 
 A name no document declares is an error that lists the ones the set has.

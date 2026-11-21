@@ -1039,6 +1039,23 @@ test('Pattern Validator Tests', async (t) => {
     console.log('  ✓ Ignores fk-type x-relationship on operations');
   });
 
+  await t.test('validateOperationRelationships - external takes only its type', () => {
+    const check = (relationship) => {
+      const errors = [];
+      validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': relationship, responses: {} } } } }, errors);
+      return errors;
+    };
+    assert.strictEqual(check({ type: 'external' }).length, 0);
+    const extra = check({ type: 'external', domain: 'communication', id: 'x' });
+    assert.ok(extra.some((e) => e.rule === 'operation-x-relationship-external-fields' && /remove domain, id/.test(e.message)));
+  });
+
+  await t.test('validateOperationRelationships - error for a type no operation takes', () => {
+    const errors = [];
+    validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': { type: 'extrenal' }, responses: {} } } } }, errors);
+    assert.ok(errors.some((e) => e.rule === 'operation-x-relationship-unknown-type' && /"extrenal"/.test(e.message)));
+  });
+
   await t.test('validateOperationRelationships - no error when no paths', () => {
     const errors = [];
     validateOperationRelationships({}, errors);

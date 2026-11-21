@@ -152,7 +152,8 @@ try {
         const op = pathItem?.[method];
         const rel = op?.['x-relationship'];
         if (!rel?.type || rel.type === 'fk') continue;
-        if (!rel.domain || !rel.id) continue;
+        // Answered outside the contracts: it names no artifact, so it has no id.
+        if (rel.type !== 'external' && (!rel.domain || !rel.id)) continue;
         relIndex.set(`${method}:${path}`, rel);
       }
     }
@@ -742,6 +743,9 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     }
     if (rel.type === 'ruleset') {
       return rulesLink(rulesDocsHref(rel.domain, rel.id), `Rules: ${rel.id}`);
+    }
+    if (rel.type === 'external') {
+      return `<span style="${compStyle}background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>`;
     }
     if (rel.type === 'composition') {
       return `<span style="${compStyle}background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: ${esc(rel.id)}">Composition</span>`;

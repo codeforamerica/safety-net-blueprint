@@ -24,7 +24,11 @@ import { filterEnvironment } from './resolve/environment.js';
 import { substituteVariables, substituteConfig } from './resolve/variables.js';
 import { overlayConfig } from './overlay/config.js';
 import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import yaml from 'js-yaml';
 import { selectDocs } from './select.js';
+import { schemasDir } from './paths.js';
 
 /**
  * @param {import('../types.js').Doc[]} docs
@@ -129,7 +133,29 @@ function addGenerated(docs) {
  */
 function choose(docs, { domains, capabilities }) {
   if (!domains.length && !capabilities.length) return { docs, warnings: [], applied: [] };
-  const kept = selectDocs(docs, { domains, capabilities });
+  const kept = selectDocs(docs, { domains, capabilities, schemaRefs: blueprintSchemaRefs });
   const named = [...domains.map((d) => `domain ${d}`), ...capabilities.map((c) => `capability ${c}`)].join(', ');
   return { docs: kept, warnings: [], applied: [`Kept ${kept.length} of ${docs.length} documents: ${named}, with what they need`] };
+}
+
+const schemaRefCache = new Map();
+
+/** The `$ref`s a blueprint schema makes, by its file name; none for one core doesn't ship. */
+function blueprintSchemaRefs(name) {
+  if (!schemaRefCache.has(name)) {
+    let refs = [];
+    try {
+      const text = readFileSync(join(schemasDir, name), 'utf8');
+      const walk = (node) => {
+        if (!node || typeof node !== 'object') return;
+        if (typeof node.$ref === 'string') refs.push(node.$ref);
+        for (const value of Object.values(node)) walk(value);
+      };
+      walk(yaml.load(text));
+    } catch {
+      refs = [];
+    }
+    schemaRefCache.set(name, refs);
+  }
+  return schemaRefCache.get(name);
 }

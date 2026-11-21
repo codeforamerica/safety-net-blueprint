@@ -118,6 +118,35 @@ describe('selectDocs', () => {
   });
 });
 
+describe('selectDocs, an API a kept one calls', () => {
+  const calling = set({
+    ...TREE,
+    'domains/intake/intake-state-machine.yaml': {
+      $schema: 'state-machine-schema.yaml', domain: 'intake',
+      machines: [{ object: 'Interview', states: [], procedures: [{ id: 'flag', steps: [{ call: { operationId: 'getTranscript' } }, { call: 'notify' }] }] }],
+    },
+  });
+
+  test('brings its contract with every operation answered outside, and none of its behavior', () => {
+    const part = selectDocs(calling, { domains: ['intake'] });
+    const transcripts = part.find((doc) => doc.api === 'communication-transcripts');
+    assert.ok(transcripts, 'the called API comes along');
+    for (const pathItem of Object.values(transcripts.content.paths)) {
+      assert.deepEqual(pathItem.get['x-relationship'], { type: 'external' });
+    }
+    assert.ok(!part.some((doc) => doc.type === 'state-machine' && doc.domain === 'communication'), 'not its state machine');
+  });
+
+  test('leaves the API as it is when it was chosen too', () => {
+    const transcripts = selectDocs(calling, { domains: ['intake'], capabilities: ['transcripts'] }).find((doc) => doc.api === 'communication-transcripts');
+    assert.equal(Object.values(transcripts.content.paths)[0].get['x-relationship'], undefined);
+  });
+
+  test('keeps no scenario that calls it, which would only meet 501s', () => {
+    assert.ok(!paths(selectDocs(calling, { domains: ['intake'] })).includes('scenarios/transcription.arazzo.yaml'));
+  });
+});
+
 describe('resolve, choosing', () => {
   const docs = set(TREE);
 

@@ -530,6 +530,21 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       continue;
     }
 
+    // An operation something outside the contracts answers (x-relationship
+    // type external), such as a state's adapter's: the mock doesn't answer it
+    // itself. A stub stands in, or routing sends the call to the real one.
+    if (endpoint.external) {
+      handler = (request) => {
+        const { pathname } = new URL(request.url);
+        const httpStub = instance.stubs.matchAndPopHttp(request.method, pathname);
+        if (httpStub) return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
+        return Response.json({
+          code: 'NOT_IMPLEMENTED',
+          message: `${request.method} ${pathname} is answered outside the contracts (x-relationship type external), so the mock cannot answer it itself. Register an HTTP stub for it: POST /mock/stubs/http with match { method: "${request.method}", url: "${pathname}" }, or route the API to the real service.`,
+        }, { status: 501 });
+      };
+    }
+
     // An operation that declares the Idempotency-Key header honors it. Outermost,
     // so a repeat is answered from what was stored without running anything.
     const idempotency = idempotencyOf(endpoint);

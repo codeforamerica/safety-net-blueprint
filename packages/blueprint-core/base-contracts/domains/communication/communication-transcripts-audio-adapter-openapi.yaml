@@ -51,6 +51,8 @@ paths:
         Asked again, it issues a fresh credential: that is how software
         renews one, and how it reconnects.
       operationId: issueTranscriptConnection
+      x-relationship:
+        type: external
       tags:
         - Connections
       requestBody:
@@ -100,6 +102,8 @@ paths:
         signs no tokens, because no service it issues for sits behind a
         relay, answers 404.
       operationId: getTranscriptConnectionKeys
+      x-relationship:
+        type: external
       tags:
         - Keys
       responses:

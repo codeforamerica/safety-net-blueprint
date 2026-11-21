@@ -383,7 +383,8 @@ function operationsIn(docs, records) {
           operationId: operation.operationId,
           apiName: doc.api,
           domain: doc.domain,
-          callsOut: method === 'post' && callsOut(doc, path, rulePaths),
+          // Answered outside the contracts (x-relationship type external), or a call the mock can't work out.
+          callsOut: operation['x-relationship']?.type === 'external' || (method === 'post' && callsOut(doc, path, rulePaths)),
           api: content.info?.title ?? doc.relativePath,
           method: method.toUpperCase(),
           template,
