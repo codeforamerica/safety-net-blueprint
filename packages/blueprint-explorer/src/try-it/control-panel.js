@@ -21,6 +21,7 @@ import { startMock } from './start-mock.js';
 import { trailFor, eventLines, waitingTimers, waitingLines, HAPPENED_STYLE } from './event-trail.js';
 import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
+import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -69,6 +70,16 @@ const STYLE = `
     border: 1px solid #2B1A78; background: #fff; color: #2B1A78; cursor: pointer; }
   #mock-panel .mp-remove { margin-left: .3rem; font: 600 11px system-ui, sans-serif; padding: 1px 10px; border-radius: 3px;
     border: 1px solid #b42318; background: #fff; color: #b42318; cursor: pointer; }
+  #mock-panel .mp-route { padding: .35rem 0; border-bottom: 1px solid #f0eefb; font-size: .85rem; }
+  #mock-panel .mp-route:last-child { border-bottom: 0; }
+  #mock-panel .mp-route-head { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  #mock-panel .mp-route-head code { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; flex: 1; min-width: 0; }
+  #mock-panel .mp-route-to { color: #666; overflow-wrap: anywhere; margin: .15rem 0 0; }
+  #mock-panel .mp-switch { display: inline-flex; flex: none; border: 1px solid #2B1A78; border-radius: 4px; overflow: hidden; }
+  #mock-panel .mp-switch button { font: 600 11px system-ui, sans-serif; padding: 2px 8px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; white-space: nowrap; }
+  #mock-panel .mp-switch button[aria-pressed="true"] { background: #2B1A78; color: #fff; cursor: default; }
+  #mock-panel .mp-route .mp-note { margin-top: .3rem; }
+  #mock-panel .mp-route .mp-edit { margin: .3rem 0 0; }
 `;
 
 // How many events the log shows: the mock's list hands back at most this many at once.
@@ -102,7 +113,8 @@ const CONTRACTS = [
 /**
  * The mock the drawer shows: the page's, once it hands it over, else its own.
  * @type {{ mock: () => object, restart: (options: { seed: boolean }) => Promise<void>,
- *   seeded: boolean, ms: number, keep: () => Promise<void>, changed?: () => Promise<unknown> } | null}
+ *   reroute: () => Promise<void>, seeded: boolean, ms: number, keep: () => Promise<void>,
+ *   changed?: () => Promise<unknown> } | null}
  */
 let host = null;
 let own = null;
@@ -119,9 +131,11 @@ export function mockChanged() {
 /**
  * Hand the drawer the page's mock, each time the page starts it.
  *
- * @param {{ mock: () => object, restart: (options: { seed: boolean }) => Promise<void>, seeded: boolean, ms: number,
+ * @param {{ mock: () => object, restart: (options: { seed: boolean }) => Promise<void>,
+ *   reroute: () => Promise<void>, seeded: boolean, ms: number,
  *   keep: () => Promise<void>, changed?: () => Promise<unknown> }} given - The
- *   mock as it is now; how to start it over; whether it started with the
+ *   mock as it is now; how to start it over; how to start it again, records
+ *   and stubs kept, when its routing changes; whether it started with the
  *   sample records, and how long it took to build (start-mock.js); how to save
  *   it for the next page; and what the page does when the drawer changes it
  */
@@ -137,6 +151,7 @@ async function startOwn({ seed, restore }) {
     ...session,
     mock: () => session.mock,
     restart: ({ seed: again }) => startOwn({ seed: again, restore: false }),
+    reroute: () => startOwn({ seed: session.seeded, restore: true }),
   };
 }
 
@@ -158,6 +173,53 @@ const keep = async (running) => {
   await running.keep();
   await running.changed?.();
 };
+
+/**
+ * Where the mock's calls go: the site's routing, each entry with a switch
+ * between the real service and the mock in this page. A switch restarts the
+ * mock without the entry, records and stubs kept. A call the mock can't answer
+ * itself, such as an adapter's, then needs a stub, so the HTTP stub form is
+ * offered for it, started on that call.
+ */
+function routingSection(running, events) {
+  const entries = siteRouting();
+  if (!entries.length) return [el('p', 'Every call is answered by the mock in this page.', 'mp-none')];
+  const callsOut = stubChoices(extract(options.contracts, 'docs')).operations;
+  const box = el('div');
+  for (const entry of entries) {
+    const local = inPage(options, entry);
+    const row = el('div', '', 'mp-route');
+    const head = el('div', '', 'mp-route-head');
+    const toggle = el('span', '', 'mp-switch');
+    toggle.setAttribute('role', 'group');
+    toggle.setAttribute('aria-label', `Where ${entryName(entry)} goes`);
+    for (const [label, toPage] of [['Real service', false], ['Mock in this page', true]]) {
+      const button = Object.assign(el('button', label), { type: 'button' });
+      button.setAttribute('aria-pressed', String(local === toPage));
+      button.onclick = async () => {
+        if (local === toPage) return;
+        for (const other of toggle.querySelectorAll('button')) other.disabled = true;
+        await running.keep();
+        switchEntry(options, entry, toPage);
+        await running.reroute();
+        render();
+      };
+      toggle.append(button);
+    }
+    head.append(el('code', entryName(entry) === '*' ? '* (every domain)' : entryName(entry)), toggle);
+    row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
+    if (local) {
+      for (const operation of callsOut.filter((o) => entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain }))) {
+        row.append(el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'));
+        const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
+        add.onclick = () => openEditor(running, 'http', events, null, operation.key);
+        row.append(add);
+      }
+    }
+    box.append(row);
+  }
+  return [box];
+}
 
 /** The timers waiting, each with Fire. */
 async function timersSection(running, events) {
@@ -193,7 +255,7 @@ async function register(running, kind, stub) {
 }
 
 /** The form for a stub of a kind, new or replacing one. */
-function openEditor(running, kind, events, stub = null) {
+function openEditor(running, kind, events, stub = null, preset = null) {
   editing = {
     kind,
     id: stub?.id ?? null,
@@ -204,6 +266,7 @@ function openEditor(running, kind, events, stub = null) {
       })(),
       waiting: waitingTimers(events),
       stub,
+      preset,
       // Registered first, so a refused edit leaves the one it would replace.
       save: async (value) => {
         const { refused } = await register(running, kind, value);
@@ -313,6 +376,7 @@ async function render() {
   const listed = await json(await send(running, 'GET', `/platform/events?sort=time&offset=${Math.max(0, logged - LOG_SIZE)}&limit=${LOG_SIZE}`));
   const events = listed?.items ?? [];
   const sections = [
+    el('h3', 'Where calls go'), ...routingSection(running, events),
     el('h3', 'Timers waiting'), ...await timersSection(running, events),
     el('h3', 'Event history'), ...eventsSection(events, listed?.total ?? events.length),
     el('h3', 'Stubs'), ...await stubsSection(running, events),

@@ -663,14 +663,23 @@ const valueFor = (declared, doc) => {
  * the contract set, and the time it takes is printed because it is the
  * claim: an entire backend, in about as long as a keystroke.
  */
-const derive = async ({ seed = true, artifact, restore = false } = {}) => {
+let derivedFrom;   // the contract set the server was derived from
+const derive = async ({ seed = true, artifact, restore = false, keepWalk = false } = {}) => {
   const set = artifact ?? contracts;
+  derivedFrom = set;
   docs = extract(set, 'docs');
   // Restored, with what an earlier page left; this page leaves what it holds for the next.
   session = await startMock({ contracts: set, ...records, seed, restore, basePath });
   mock = session.mock;
   // The control panel shows this mock, and starts it over.
-  hostMock({ ...session, mock: () => mock, restart: derive });
+  hostMock({
+    ...session,
+    mock: () => mock,
+    restart: derive,
+    // Routing changed: the same records and stubs, and the walk carries on.
+    reroute: () => derive({ seed: session.seeded, artifact: derivedFrom, restore: true, keepWalk: true }),
+  });
+  if (keepWalk) return;
 
   // The system is new, so nothing the walk did to the old one still holds:
   // the records it made are gone with the store that held them.

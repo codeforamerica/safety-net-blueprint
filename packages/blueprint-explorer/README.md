@@ -59,6 +59,8 @@ BlueprintExplorer.routing = [{
 }];
 ```
 
+The control panel lists the routing under "Where calls go", and each entry has a switch between the real service and the mock in the page, for the browser tab: the mock restarts without that entry, keeping records and stubs. A call the mock can't answer itself, such as an adapter's, then needs a stub, and the panel offers the HTTP stub form for it. On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
+
 The mock server guide's [routing section](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#answering-in-a-page) shows a handler that forwards a call. A real service has to accept requests from the site's address (CORS).
 
 Output is written to the `--content` directory as static HTML files. The API reference, state machine docs, event catalog, and data dictionaries update automatically as contracts change — rebuild after each resolve step.
