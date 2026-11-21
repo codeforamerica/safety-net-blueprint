@@ -792,12 +792,13 @@ async function testWorkflowTimerBehavior() {
   // creation_deadline fires on task creation → sla-escalate(deadline_exceeded) → escalated
   await test('creation_deadline: task auto-escalates on creation when stub fires', async () => {
     await clearStubs();
+    // Creating the task asks for its timer; a stub naming it fires it, as it
+    // waits. Named by its id: earlier tests' timers may be waiting too.
+    const id = await createTask();
     await registerStub({
       on: 'platform.timer.requested',
-      match: { 'data.callback.event': 'workflow.task.creation_deadline' },
+      match: { 'data.timerId': `workflow.creation_deadline.${id}` },
     });
-
-    const id = await createTask();
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be auto-escalated after creation_deadline fires');
@@ -816,11 +817,11 @@ async function testWorkflowTimerBehavior() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
 
+    await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
     await registerStub({
       on: 'platform.timer.requested',
-      match: { 'data.callback.event': 'workflow.task.client_timeout' },
+      match: { 'data.timerId': `workflow.client_timeout.${id}` },
     });
-    await fetch(`${BASE_URL}${TASK}/${id}/await-client`, { method: 'POST', headers: CASEWORKER });
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'cancelled', 'task should be auto-cancelled after client_timeout fires');
@@ -839,11 +840,11 @@ async function testWorkflowTimerBehavior() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
 
+    await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
     await registerStub({
       on: 'platform.timer.requested',
-      match: { 'data.callback.event': 'workflow.task.verification_timeout' },
+      match: { 'data.timerId': `workflow.verification_timeout.${id}` },
     });
-    await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'in_progress', 'task should be auto-resumed after verification_timeout fires');
@@ -859,13 +860,13 @@ async function testWorkflowTimerBehavior() {
   // sla_warning fires once a task's SLA clock sets slaDeadline → sla-escalate(approaching)
   await test('sla_warning: a task created with an SLA type auto-escalates with approaching reason', async () => {
     await clearStubs();
+    // Its SLA clock sets slaDeadline when it's created, and creating it
+    // schedules the timer, which a stub naming it then fires.
+    const id = await createTaskWithSla();
     await registerStub({
       on: 'platform.timer.requested',
-      match: { 'data.callback.event': 'workflow.task.sla_warning' },
+      match: { 'data.timerId': `workflow.sla_warning.${id}` },
     });
-    // Its SLA clock sets slaDeadline when it's created, and creating it
-    // schedules the timer, which the stub fires.
-    const id = await createTaskWithSla();
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_warning');
@@ -880,13 +881,13 @@ async function testWorkflowTimerBehavior() {
   // sla_breach fires once a task's SLA clock sets slaDeadline → sla-escalate(exceeded) → sla_breached
   await test('sla_breach: a task created with an SLA type escalates and emits sla_breached', async () => {
     await clearStubs();
+    // Its SLA clock sets slaDeadline when it's created, and creating it
+    // schedules the timer, which a stub naming it then fires.
+    const id = await createTaskWithSla();
     await registerStub({
       on: 'platform.timer.requested',
-      match: { 'data.callback.event': 'workflow.task.sla_breach' },
+      match: { 'data.timerId': `workflow.sla_breach.${id}` },
     });
-    // Its SLA clock sets slaDeadline when it's created, and creating it
-    // schedules the timer, which the stub fires.
-    const id = await createTaskWithSla();
 
     const task = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     assert.strictEqual(task.status, 'escalated', 'task should be escalated on sla_breach');
