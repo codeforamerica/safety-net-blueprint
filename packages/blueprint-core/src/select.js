@@ -17,17 +17,20 @@
  *   because of what the kept documents do. Events travel through the platform
  *   events API, timers through the platform timers document, and registries
  *   are served by the platform registries API. Without the events API, a
- *   scenario can't hear an event at all. Annotations name entries in
- *   registries by the registry's type (`patterns: [read-only-field]`), so a
- *   registry of a type kept annotations use comes along too. These rules are
+ *   scenario can't hear an event at all. Registries are named by their type:
+ *   by annotations' entries (`patterns: [read-only-field]`) and by a field's
+ *   `x-enum-source: { registry: … }`, so a registry of a type a kept document
+ *   names comes along too. These rules are
  *   the blueprint's own.
- * - **The contract of an API a kept one calls.** A state machine step can
- *   call another API's operation (`call: { operationId: createSuggestion }`).
- *   That API's OpenAPI document comes along, but not its behavior: each of its
- *   operations is marked `x-relationship: { type: external }`, so the mock
- *   answers none of them itself and a stub or routing stands in, and the
- *   explorer shows them as answered outside the contracts. Its own state
- *   machines, sample records and the rest stay out.
+ * - **The contract of an API a kept one calls or references.** A state
+ *   machine step can call another API's operation (`call: { operationId:
+ *   createSuggestion }`), and a schema can `$ref` one in another API's
+ *   document. That API's OpenAPI document comes along, but not its behavior:
+ *   each of its operations is marked `x-relationship: { type: external }`, so
+ *   the mock answers none of them itself and a stub or routing stands in, and
+ *   the explorer shows them as answered outside the contracts. Its own state
+ *   machines, sample records and the rest stay out. Platform's APIs a kept
+ *   document uses are the exception: they're used, so the mock answers them.
  * - **Scenarios that fit.** A scenario is kept when every document it calls is
  *   kept, and not only as a called contract, whatever domain it declares. It
  *   never brings one in: it shows the part chosen, it doesn't widen it.
@@ -47,6 +50,7 @@ import { followRef, indexByRelativePath, isRemoteRef } from './ref-lookup.js';
 import { extendedDocOf } from './contract-readers.js';
 import { buildSchemaIndex } from './indexes.js';
 import { RESERVED_RESOURCES } from './contract-types.js';
+import { apiPart, apiNames } from './select-api.js';
 
 /**
  * Where a canonical ref to the framework's base contracts points within a set
@@ -109,6 +113,19 @@ function close(keep, positioned, byRelativePath, machineDocs, schemaRefs) {
       }
     }
   }
+}
+
+/** The registry types a document's fields take their values from: x-enum-source.registry. */
+function enumRegistriesNamed(doc) {
+  const types = new Set();
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    const registry = node['x-enum-source']?.registry;
+    if (typeof registry === 'string') types.add(registry);
+    for (const value of Object.values(node)) walk(value);
+  };
+  walk(doc.content);
+  return types;
 }
 
 /** The registry types an annotations document names entries of: the keys whose values are lists of names. */
@@ -229,6 +246,7 @@ function withExternalTypes(doc, kept, inSet, keptSchemas, setSchemas) {
  */
 export function choosable(docs) {
   return {
+    apis: apiNames(docs),
     domains: [...new Set(docs.map((doc) => doc.domain).filter(Boolean))].sort(),
     capabilities: [...new Set(docs.map((doc) => doc.capability).filter(Boolean))].sort(),
   };
@@ -239,22 +257,31 @@ export function choosable(docs) {
  * stand on their own.
  *
  * @param {import('../types.js').Doc[]} docs - The whole set, after overlays
- * @param {{ domains?: string[], capabilities?: string[], schemaRefs?: (schema: string) => string[] }} choice -
- *   Each of domains and capabilities adds to the other; a document is chosen
- *   when it declares one. `schemaRefs` gives the refs a blueprint schema
+ * @param {{ apis?: string[], domains?: string[], capabilities?: string[], schemaRefs?: (schema: string) => string[] }} choice -
+ *   Each adds to the others. A document is chosen when it declares one of the
+ *   domains or capabilities; an API brings its documents and the parts of
+ *   others about its resources (select-api.js). `schemaRefs` gives the refs a blueprint schema
  *   makes, by its file name (resolve.js reads them from core's schemas)
  * @returns {import('../types.js').Doc[]} The part, in the set's order, with
  *   left-out types mapped to External
  * @throws {Error} When a name is none the set declares, listing the ones it does
  */
-export function selectDocs(docs, { domains = [], capabilities = [], schemaRefs = () => [] } = {}) {
-  const known = choosable(docs);
-  for (const [kind, names, flag] of [['domain', domains, 'domains'], ['capability', capabilities, 'capabilities']]) {
+export function selectDocs(given, { apis = [], domains = [], capabilities = [], schemaRefs = () => [] } = {}) {
+  const known = choosable(given);
+  for (const [kind, names, flag] of [['API', apis, 'apis'], ['domain', domains, 'domains'], ['capability', capabilities, 'capabilities']]) {
     const unknown = names.filter((name) => !known[flag].includes(name));
     if (unknown.length) {
-      throw new Error(`No document declares the ${kind} ${unknown.join(', ')}. The set's ${flag}: ${known[flag].join(', ') || 'none'}`);
+      throw new Error(`No document declares the ${kind} ${unknown.join(', ')}. The set's ${flag === 'apis' ? 'APIs' : flag}: ${known[flag].join(', ') || 'none'}`);
     }
   }
+
+  // An API's documents, and the documents beside it cut to its resources
+  // (select-api.js), stand in for those documents from here on.
+  // A document a domain or capability chooses whole stays whole.
+  const whole = (doc) => domains.includes(doc.domain) || capabilities.includes(doc.capability);
+  const ofApis = apis.length ? apiPart(given, apis) : [];
+  const cutTo = new Map(ofApis.map((doc) => [doc.relativePath, doc]));
+  const docs = given.map((doc) => (whole(doc) ? doc : cutTo.get(doc.relativePath) ?? doc));
 
   const positioned = new Map(docs.filter((doc) => doc.relativePath).map((doc) => [doc.relativePath, doc]));
   const byRelativePath = indexByRelativePath(docs);
@@ -263,8 +290,10 @@ export function selectDocs(docs, { domains = [], capabilities = [], schemaRefs =
 
   const keep = new Set(docs
     .filter((doc) => doc.relativePath && !scenario(doc))
-    .filter((doc) => domains.includes(doc.domain) || capabilities.includes(doc.capability))
+    .filter((doc) => whole(doc) || cutTo.has(doc.relativePath))
     .map((doc) => doc.relativePath));
+  // The APIs chosen, which the mock answers; any other comes as its contract.
+  const chosenApis = new Set([...keep].filter((path) => positioned.get(path)?.type === 'openapi'));
   close(keep, positioned, byRelativePath, machineDocs, schemaRefs);
 
   // Platform, by what the kept documents do.
@@ -274,7 +303,12 @@ export function selectDocs(docs, { domains = [], capabilities = [], schemaRefs =
   if (kept().some(usesEvents)) needed.push(platformApi(PLATFORM.events));
   if (kept().some(usesTimers)) needed.push(platformApi(PLATFORM.timers));
   if (kept().some((doc) => doc.type === 'registry')) needed.push(platformApi(PLATFORM.registries));
-  const named = new Set(kept().filter((doc) => doc.type === 'annotations').flatMap((doc) => [...registryTypesNamed(doc)]));
+  // Registries named by type: by annotations' entries, and by a field's
+  // x-enum-source: { registry: transcription-services }.
+  const named = new Set([
+    ...kept().filter((doc) => doc.type === 'annotations').flatMap((doc) => [...registryTypesNamed(doc)]),
+    ...kept().flatMap((doc) => [...enumRegistriesNamed(doc)]),
+  ]);
   const registries = docs.filter((doc) => doc.type === 'registry' && named.has(doc.content?.type));
   needed.push(...registries);
   if (registries.length) needed.push(platformApi(PLATFORM.registries));
@@ -302,6 +336,14 @@ export function selectDocs(docs, { domains = [], capabilities = [], schemaRefs =
     }
   }
   close(keep, positioned, byRelativePath, machineDocs, schemaRefs);
+
+  // An API reached only because a kept document references it, for a schema
+  // say, is there for its contract too: neither chosen nor used, so nothing
+  // of its behavior is, and the mock mustn't answer it as if it were.
+  const used = new Set(needed.filter(Boolean).map((doc) => doc.relativePath));
+  for (const path of keep) {
+    if (positioned.get(path)?.type === 'openapi' && !chosenApis.has(path) && !used.has(path)) external.add(path);
+  }
 
   // Scenarios whose every document is kept, and what they reference.
   for (const doc of docs.filter(scenario)) {

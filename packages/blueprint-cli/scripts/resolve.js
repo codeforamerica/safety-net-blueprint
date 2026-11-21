@@ -55,6 +55,7 @@ function parseArgs() {
     out: null,
     envTarget: null,
     envVariables: null,
+    apis: [],
     domains: [],
     capabilities: [],
     bundle: false,
@@ -90,6 +91,8 @@ function parseArgs() {
       options.envTarget = arg.split('=')[1];
     } else if (arg.startsWith('--env-variables=')) {
       options.envVariables = arg.split('=')[1];
+    } else if (arg.startsWith('--api=')) {
+      options.apis.push(arg.slice('--api='.length));
     } else if (arg.startsWith('--domain=')) {
       options.domains.push(arg.slice('--domain='.length));
     } else if (arg.startsWith('--capability=')) {
@@ -122,8 +125,10 @@ Flags:
   --resolve          Run relationship resolution even without an overlay
   --env-target=<env>      Environment to filter x-environments down to (optional)
   --env-variables=<file>  File of key=value pairs for \${VAR} substitution (optional)
-  --domain=<name>    Keep only this domain, with what it needs to stand on its
-                     own. Repeatable, and adds to --capability.
+  --api=<name>       Keep only this API (its file name without -openapi.yaml),
+                     with what it needs to stand on its own. Repeatable, and
+                     adds to --domain and --capability.
+  --domain=<name>    Keep only this domain, likewise
   --capability=<name>  Keep only this capability (x-capability), likewise
   --verbose          Print a per-schema relationship-resolution summary
   -h, --help         Show this help message
@@ -136,7 +141,7 @@ Without --overlay, base specs are copied to --out unchanged (unless --resolve is
 With --bundle, every $ref is dereferenced inline, within a file as well as across files.
 With --env-target, nodes whose x-environments array doesn't include it are removed.
 With --env-variables, \${VAR} placeholders are substituted (process.env overrides file values).
-With --domain or --capability, only what's chosen is written: the documents
+With --api, --domain or --capability, only what's chosen is written: the documents
 declaring it, everything they $ref or extend, the parts of platform they use
 (events, timers, registries), and the scenarios whose every document is kept.
 A type whose resource is left out, such as a transcript's interview, is mapped
@@ -396,7 +401,7 @@ async function main() {
   const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
   const hasRules = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-rules.yaml'));
 
-  if (options.overlays.length === 0 && !options.envTarget && !options.envVariables && !options.domains.length && !options.capabilities.length && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
+  if (options.overlays.length === 0 && !options.envTarget && !options.envVariables && !options.apis.length && !options.domains.length && !options.capabilities.length && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -490,6 +495,7 @@ async function main() {
     overlays: authoredOverlays,
     envTarget: options.envTarget,
     envVariables: options.envVariables ? readEnvVariables(options.envVariables) : {},
+    apis: options.apis,
     domains: options.domains,
     capabilities: options.capabilities,
   });

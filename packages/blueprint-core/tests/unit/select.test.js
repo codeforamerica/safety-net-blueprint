@@ -147,6 +147,67 @@ describe('selectDocs, an API a kept one calls', () => {
   });
 });
 
+describe('selectDocs, an API', () => {
+  // Two APIs in one domain, sharing its machine, annotations, sample records,
+  // configuration and metrics files.
+  const shared = set({
+    'domains/case/case-openapi.yaml': openapi('case', { Case: { type: 'object', properties: { id: { type: 'string' } } } }),
+    'domains/case/case-notes-openapi.yaml': openapi('case', { Note: { type: 'object', properties: { id: { type: 'string' } } } }),
+    'domains/case/case-state-machine.yaml': {
+      $schema: 'state-machine-schema.yaml', domain: 'case',
+      machines: [
+        { object: 'Case', states: [], procedures: [{ id: 'score', steps: [{ evaluate: 'priority' }] }] },
+        { object: 'Note', states: [] },
+      ],
+    },
+    'domains/case/case-rules.yaml': { $schema: 'rules-schema.yaml', domain: 'case', rulesets: { priority: {}, tone: {} } },
+    'domains/case/case-annotations.yaml': {
+      $schema: 'annotations-schema.yaml', version: '1.0', domain: 'case',
+      schema: { 'case.id': { reason: 'a' }, 'note.id': { reason: 'b' } },
+      operations: { 'case.close': { reason: 'c' }, 'note.pin': { reason: 'd' } },
+      events: { 'case.case.closed': { reason: 'e' }, 'case.note.pinned': { reason: 'f' } },
+      facts: { 'priority.level': { reason: 'g' }, 'tone.mood': { reason: 'h' } },
+    },
+    'domains/case/case-mock-data.yaml': { domain: 'case', CaseExample1: { id: 'c1' }, NoteExample1: { id: 'n1' } },
+    'domains/case/case-config.yaml': {
+      $schema: 'config-schema.yaml', domain: 'case',
+      caseTypes: { resource: 'Case', entries: [] },
+      noteKinds: { resource: 'Note', entries: [] },
+    },
+    'domains/case/case-metrics.yaml': {
+      $schema: 'metrics-schema.yaml', domain: 'case',
+      metrics: [{ id: 'open', source: { collection: 'cases' } }, { id: 'pinned', source: { collection: 'notes' } }],
+    },
+  });
+  const part = selectDocs(shared, { apis: ['case'] });
+  const at = (name) => part.find((doc) => doc.relativePath === `domains/case/case-${name}.yaml`)?.content;
+
+  test('keeps its own document, not the other API\'s', () => {
+    assert.ok(at('openapi'));
+    assert.ok(!at('notes-openapi'));
+  });
+
+  test('cuts the files it shares to its resources\' entries', () => {
+    assert.deepEqual(at('state-machine').machines.map((machine) => machine.object), ['Case']);
+    assert.deepEqual(Object.keys(at('rules').rulesets), ['priority'], 'the ruleset its machine evaluates');
+    const annotations = at('annotations');
+    assert.deepEqual([annotations.schema, annotations.operations, annotations.events, annotations.facts].map(Object.keys),
+      [['case.id'], ['case.close'], ['case.case.closed'], ['priority.level']]);
+    assert.deepEqual(Object.keys(at('mock-data')), ['domain', 'CaseExample1']);
+    assert.deepEqual(Object.keys(at('config')).filter((key) => !key.startsWith('$') && key !== 'domain'), ['caseTypes']);
+    assert.deepEqual(at('metrics').metrics.map((metric) => metric.id), ['open']);
+  });
+
+  test('a document chosen whole as well stays whole', () => {
+    const both = selectDocs(shared, { apis: ['case'], domains: ['case'] });
+    assert.equal(both.find((doc) => doc.relativePath === 'domains/case/case-state-machine.yaml').content.machines.length, 2);
+  });
+
+  test('an unknown API is an error listing the set\'s', () => {
+    assert.throws(() => selectDocs(shared, { apis: ['cases'] }), /No document declares the API cases\. The set's APIs: case, case-notes/);
+  });
+});
+
 describe('resolve, choosing', () => {
   const docs = set(TREE);
 

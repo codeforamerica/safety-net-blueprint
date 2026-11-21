@@ -271,6 +271,15 @@ export interface ResolveOptions {
   domains?: string[];
   /** Keep only documents declaring these capabilities (`x-capability`), likewise. */
   capabilities?: string[];
+  /**
+   * Keep only these APIs (`doc.api`), likewise: each one's OpenAPI and events
+   * documents, and the parts of the documents beside them about its
+   * resources, followed by name — the state machines of its resources, the
+   * rulesets and compositions they use, and the annotations, sample records,
+   * metrics and SLA types about them. A document covering other resources too
+   * is cut to the entries about these.
+   */
+  apis?: string[];
 }
 
 export interface ResolveResult {
