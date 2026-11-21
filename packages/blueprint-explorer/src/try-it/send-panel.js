@@ -48,9 +48,8 @@ const serverOf = (doc) => {
   return ((servers.find((s) => /localhost|127\.0\.0\.1/.test(s.url)) ?? servers[0])?.url ?? '').replace(/\/$/, '');
 };
 
-/** The namespace the generated client exports a document's operations under: intake-openapi.yaml → intake. */
-const namespaceOf = (doc) => (doc.relativePath ?? '').split('/').pop().replace(/-openapi\.yaml$/, '')
-  .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+/** The namespace the generated client exports a document's operations under: its API's name, camelCased. */
+const namespaceOf = (doc) => (doc.api ?? '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
 /** TypeScript to write as it is, not as a value: a variable's name. */
 class Code { constructor(code) { this.code = code; } }

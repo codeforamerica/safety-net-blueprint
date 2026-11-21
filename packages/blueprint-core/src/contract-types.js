@@ -331,3 +331,21 @@ export function fileNameOf(path, suffix) {
   if (suffix && name.endsWith(suffix)) return name.slice(0, -suffix.length);
   return name;
 }
+
+/**
+ * The name an API goes by: its OpenAPI document's file name without
+ * `-openapi.yaml`, which the events AsyncAPI generated beside it shares
+ * (`domains/workflow/workflow-events-asyncapi.yaml` → `workflow`), or a
+ * hand-written AsyncAPI document's without `-asyncapi.yaml`.
+ *
+ * The one place that works it out, read as `doc.api` everywhere else: the
+ * mock's routing, `$apis.<api>.<id>` references, the explorer's pages. An API
+ * declares no name of its own yet; when it does, only this changes.
+ *
+ * @param {string|null} relativePath - The document's path, or just its file name
+ * @returns {string}
+ */
+export function apiNameOf(relativePath) {
+  const file = (relativePath ?? '').split('/').pop();
+  return file.replace(/-events-asyncapi\.yaml$|-openapi\.yaml$|-asyncapi\.yaml$/, '');
+}

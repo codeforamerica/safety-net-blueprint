@@ -25,15 +25,11 @@
  */
 
 import { generatedOverlays, rulesApis, eventsAsyncapis } from './generate.js';
+import { apiNameOf } from './contract-types.js';
 
 const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
 const QUALIFIED = /^\$(apis|sourceDescriptions)\.([^.]+)\.(.+)$/;
 
-/** `domains/workflow/workflow-events-asyncapi.yaml` → `workflow`. */
-export function apiNameOf(relativePath) {
-  const file = (relativePath ?? '').split('/').pop();
-  return file.replace(/-events-asyncapi\.yaml$|-openapi\.yaml$|-asyncapi\.yaml$/, '');
-}
 
 /**
  * @typedef {object} Operation

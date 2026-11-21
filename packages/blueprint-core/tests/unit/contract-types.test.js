@@ -26,7 +26,9 @@ import {
   siblingPath,
   isAuthored,
   isDeprecated,
+  apiNameOf,
 } from '../../src/contract-types.js';
+import { toDoc } from '../../src/doc.js';
 
 describe('fileNameOf', () => {
 
@@ -264,5 +266,23 @@ describe('isAuthored and isDeprecated', () => {
     assert.equal(isDeprecated({ info: { 'x-status': 'active' } }), false);
     assert.equal(isDeprecated({}), false);
     assert.equal(isDeprecated(undefined), false);
+  });
+});
+
+describe('apiNameOf', () => {
+  test('an OpenAPI document is named for its file, without -openapi.yaml', () => {
+    assert.equal(apiNameOf('domains/communication/communication-transcripts-openapi.yaml'), 'communication-transcripts');
+  });
+  test('an events AsyncAPI document shares its API\'s name', () => {
+    assert.equal(apiNameOf('domains/workflow/workflow-events-asyncapi.yaml'), 'workflow');
+  });
+  test('a hand-written AsyncAPI document is named without -asyncapi.yaml', () => {
+    assert.equal(apiNameOf('base/domains/communication/communication-transcripts-relay-asyncapi.yaml'), 'communication-transcripts-relay');
+  });
+  test('a Doc carries it as api, and only an OpenAPI or AsyncAPI document', () => {
+    const api = toDoc({ relativePath: 'domains/intake/intake-openapi.yaml', type: 'openapi', content: { info: { 'x-domain': 'intake' } } });
+    const machine = toDoc({ relativePath: 'domains/intake/intake-state-machine.yaml', type: 'state-machine', content: { domain: 'intake' } });
+    assert.equal(api.api, 'intake');
+    assert.equal(machine.api, null);
   });
 });

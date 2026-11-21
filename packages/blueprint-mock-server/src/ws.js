@@ -42,9 +42,6 @@ import schema from '../schemas/stubs-schema.json' with { type: 'json' };
 
 const fileName = (path) => String(path ?? '').split('/').pop();
 
-/** An API's name, as core gives it: the document's file name without its suffix. */
-const apiName = (path) => fileName(path).replace(/-asyncapi\.ya?ml$/, '');
-
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
@@ -88,7 +85,7 @@ export function createWs(docs = []) {
       }
       for (const reply of operation.reply) channelOf(reply.channel).sends.push(reply);
     }
-    const document = { relativePath: doc.relativePath, api: apiName(doc.relativePath), channels, paths: [] };
+    const document = { relativePath: doc.relativePath, api: doc.api, channels, paths: [] };
     documents.set(fileName(doc.relativePath), document);
     for (const [name, path] of served) {
       if (!channels.has(name)) continue;
