@@ -182,41 +182,31 @@ The response envelope is built by merging: an entity ID derived from the trigger
 
 Timer stubs are a variant for `platform.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
 
-```bash
-# Register a stub for creation_deadline timers
-curl -X POST http://localhost:1080/mock/stubs/events \
-  -H "Content-Type: application/json" \
-  -d '{
-    "on": "platform.timer.requested",
-    "match": { "data.callback.event": "workflow.task.creation_deadline" }
-  }'
+A timer stub fires one timer and is used up. Registering it fires the oldest matching timer that's already waiting — asked for, not fired, not cancelled — at once; with none waiting, it fires the next one asked for.
 
-# Create a task — task creation schedules the timer, stub fires it immediately
+Name the timer you mean by its `timerId`, `{domain}.{timerType}.{objectId}`: do what asks for the timer, then register a stub for it.
+
+```bash
+# Create a task — creating it asks for its creation_deadline timer
 curl -X POST http://localhost:1080/workflow/tasks \
   -H "Content-Type: application/json" \
   -H "X-Caller-Id: 00000002-0000-0000-0000-000000000001" -H "X-Caller-Roles: caseworker" \
   -d '{"name":"Test","taskType":"application_review","subjectType":"application","subjectId":"00000000-0000-0000-0000-000000000001"}'
 
-# Task should now be escalated
-curl http://localhost:1080/workflow/tasks/<id> | jq .status
-# → "escalated"
-```
-
-Match on `data.callback.event` — the event type embedded in the scheduling request. Omit `match` to match any timer request regardless of type.
-
-A timer stub also fires a timer that was asked for before the stub was registered and is still waiting — not fired, not cancelled. Registering it fires the oldest waiting timer it matches, at once; only with none waiting does it wait for the next request. Either way it fires one timer and is used up. To fire one particular timer, match its `timerId`:
-
-```bash
-# The task above was created before any stub; its deadline timer is waiting
+# Fire that task's timer — it's waiting, so the stub fires it now
 curl -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
     "on": "platform.timer.requested",
     "match": { "data.timerId": "workflow.creation_deadline.<task-id>" }
   }'
+
+# Task should now be escalated
+curl http://localhost:1080/workflow/tasks/<task-id> | jq .status
+# → "escalated"
 ```
 
-When other timers of the same kind may be waiting, as when one mock runs several flows, a stub matching only `data.callback.event` fires whichever is oldest. Match the `timerId` to fire the one you mean.
+Match only `data.callback.event`, the event the timer sends, when nothing else of that kind can be waiting. Where one mock runs several flows, as a test suite or a set of scenarios does, an earlier flow's timer may still be waiting, and the stub fires that one instead. Omit `match` to fire any timer.
 
 ### Managing event stubs
 
