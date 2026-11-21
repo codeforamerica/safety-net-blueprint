@@ -43,6 +43,26 @@ node build.js --only=event-catalog --resolved=./resolved
 node build.js --only=data-dictionaries --resolved=./resolved
 ```
 
+### A site's own script
+
+Name a JavaScript file in `config.yaml`, relative to it, and every page loads it before the mock starts:
+
+```yaml
+script: portal.js
+```
+
+The script can send some APIs to real services by setting `BlueprintExplorer.routing`, in the mock server's routing format: a URL with `to`, or a `handler` function, such as one that adds the visitor's sign-in token. Every mock the explorer starts takes it, and with none, every call stays in the page.
+
+```js
+// portal.js
+BlueprintExplorer.routing = [{
+  api: 'communication-transcripts-audio-adapter',
+  handler: async (request) => { /* add the token, then forward the call */ },
+}];
+```
+
+The mock server guide's [routing section](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#answering-in-a-page) shows a handler that forwards a call. A real service has to accept requests from the site's address (CORS).
+
 Output is written to the `--content` directory as static HTML files. The API reference, state machine docs, event catalog, and data dictionaries update automatically as contracts change — rebuild after each resolve step.
 
 ## Changelog

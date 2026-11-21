@@ -78,6 +78,9 @@ $defs:
         items:
           $ref: "#/$defs/StreamProtocol"
         description: The protocols the software can connect over. The adapter picks one of them.
+    example:
+      audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}
+      protocols: [websocket]
 
   StreamConnection:
     description: How the software connects, and nothing else.

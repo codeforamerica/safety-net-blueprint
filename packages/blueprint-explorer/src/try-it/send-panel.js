@@ -210,6 +210,12 @@ const propertiesOf = (doc, schema, seen = new Set()) => {
   return Object.assign({}, ...(node.allOf ?? []).map((part) => propertiesOf(doc, part, seen)), node.properties ?? {});
 };
 
+/** A `$ref`, followed into another document of the set when it points there. */
+const followed = (doc, node, docs) => {
+  const at = local(doc, node);
+  return typeof at?.$ref === 'string' ? doc.resolveRef(at.$ref, docs) : at;
+};
+
 /** A same-document `$ref`, followed; anything else as it is. */
 const local = (doc, node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
   ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content) : node);
@@ -264,7 +270,8 @@ const mediaTypeOf = (op) => Object.keys(op.operation.requestBody?.content ?? {})
  * The bodies a request can start with: the operation's own examples, then
  * each sample record of the resource it writes — from the mock data, or the
  * config catalog the mock is loaded from — kept to the fields the
- * request accepts, then an empty object. An update with no examples of its
+ * request accepts, then the request schema's own example, then an empty
+ * object. An update with no examples of its
  * own starts from the record its path names instead, fetched when it is
  * picked (`fromRecord`). A JSON Patch starts as an empty list of changes.
  */
@@ -293,7 +300,12 @@ const startingBodies = (docs, examples, op) => {
     ...(examples.config[resource] ?? []).map((entry) => ({ name: entry.name ?? entry.id, value: entry })),
   ].map((sample) => ({ ...sample, value: trimmed(sample.value, fields) }))
     .filter((sample) => Object.keys(sample.value).length > 0);
-  return samples.length ? samples : [{ name: 'Empty', value: {} }];
+  if (samples.length) return samples;
+  // An action's request, such as get-connection's, has no records to start
+  // from; its schema may give an example.
+  const schema = followed(op.doc, json.schema, docs);
+  if (schema?.example !== undefined) return [{ name: 'Example', value: schema.example }];
+  return [{ name: 'Empty', value: {} }];
 };
 
 

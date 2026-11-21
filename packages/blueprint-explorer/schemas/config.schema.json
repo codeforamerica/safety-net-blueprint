@@ -40,6 +40,11 @@
         }
       }
     },
+    "script": {
+      "description": "A JavaScript file of the site's own, relative to config.yaml (e.g. portal.js). The build copies it into the site and loads it on every page, before the mock starts, for what only code can do, such as setting BlueprintExplorer.routing.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.).+\\.js$"
+    },
     "first_tour": {
       "description": "The scenario the Scenarios page opens with, by its path in the contract set (e.g. scenarios/framework-features.arazzo.yaml). Defaults to the first.",
       "type": "string"

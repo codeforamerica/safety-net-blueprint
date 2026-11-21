@@ -419,6 +419,20 @@ const mock = await createMockServer({
 
 A test answers it with an [HTTP stub](#http-stubs) on `POST /issue-connection` instead, as the harness's transcript scenario does.
 
+A handler can also forward the call to a real service, adding what only the page has, such as the visitor's sign-in token. Read the body before sending it on: passed along as the request's own stream, Chrome sends it only to a server that speaks HTTP/2, and any other refuses the call.
+
+```js
+handler: async (request) => {
+  const url = new URL(request.url);
+  const headers = new Headers(request.headers);
+  headers.set('Authorization', `Bearer ${await idTokenFromSignIn()}`);
+  const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text();
+  return fetch(`https://adapter.example.gov${url.pathname}${url.search}`, { method: request.method, headers, body });
+},
+```
+
+A built explorer takes its routing from a script of the site's own: see the explorer's README.
+
 What a handler answers is checked against the operation's response schema. One the schema doesn't allow is answered `502`, naming what is wrong, and logged, so a broken handler shows at once.
 
 ### Events a routed domain receives

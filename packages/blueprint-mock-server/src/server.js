@@ -39,7 +39,6 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  *   for a page served from a subdirectory. On GitHub Pages this is the project
  *   path: `basePath: location.pathname.replace(/\/[^/]*$/, '')`
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
- * @param {boolean} [options.verifyHash] - Check the payload against its hash
  * @param {Array} [options.routing] - Domains, APIs and operations something
  *   else answers — a service at a URL, or a `handler` function this page
  *   passes — as `schemas/routing-schema.json` describes the entries.
