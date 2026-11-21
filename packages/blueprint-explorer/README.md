@@ -43,6 +43,31 @@ node build.js --only=event-catalog --resolved=./resolved
 node build.js --only=data-dictionaries --resolved=./resolved
 ```
 
+### A site's own content
+
+A site built from the explorer, such as a developer portal, says what it is and who publishes it in `config.yaml`. Files it names are relative to `config.yaml`, and the build copies them into the site:
+
+```yaml
+name: AI Services
+title: AI Services Developer Portal   # on the home page; "<name> Explorer" when omitted
+tagline: APIs for the services Code for America runs for state benefits programs. **Try them in your browser.**
+logo: logo.svg                 # in the header, in place of the Blueprint mark
+organization:                  # in the footer; Code for America when omitted
+  name: Code for America
+  url: https://codeforamerica.org
+pages: pages                   # a folder of the site's own pages
+featured_links:                # under the tagline
+  - label: Getting started
+    href: pages/getting-started.html
+  - label: Live transcription demo
+    href: https://example.org/live-transcription
+```
+
+- **`tagline`** is a sentence or two of Markdown under the site's title. Without one, it's "Reference and tools for the *name* contracts."
+- **`pages`** is a folder. Each Markdown page in it becomes an HTML page of the same name in the explorer's layout, titled by its first heading: links, code blocks and tables included. Anything else, an HTML page or an image, is used as it is. Link a page from `featured_links`.
+- **`featured_heading`** puts a label before the featured links, such as "For state leadership". There's none by default.
+- **`blueprint_pages: true`** adds the Blueprint's own pages for state leadership (executive summary, adoption model, architecture principles) under `authored/`. A site gets none of them otherwise.
+
 ### A site's own script
 
 Name a JavaScript file in `config.yaml`, relative to it, and every page loads it before the mock starts:

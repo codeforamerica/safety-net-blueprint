@@ -61,15 +61,17 @@ if (configDir !== outDir) {
   mkdirSync(outDir, { recursive: true });
   if (existsSync(join(configDir, 'config.yaml'))) {
     cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
-    // The site's own script, which config.yaml names relative to itself.
-    const { script } = yaml.load(readFileSync(join(configDir, 'config.yaml'), 'utf8')) ?? {};
-    if (typeof script === 'string') {
-      if (!existsSync(join(configDir, script))) {
-        console.error(`config.yaml names script: ${script}, but ${join(configDir, script)} doesn't exist.`);
+    // The site's own script, logo and pages, which config.yaml names relative to itself.
+    const config = yaml.load(readFileSync(join(configDir, 'config.yaml'), 'utf8')) ?? {};
+    for (const key of ['script', 'logo', 'pages']) {
+      const named = config[key];
+      if (typeof named !== 'string') continue;
+      if (!existsSync(join(configDir, named))) {
+        console.error(`config.yaml names ${key}: ${named}, but ${join(configDir, named)} doesn't exist.`);
         process.exit(1);
       }
-      mkdirSync(dirname(join(outDir, script)), { recursive: true });
-      cpSync(join(configDir, script), join(outDir, script));
+      mkdirSync(dirname(join(outDir, named)), { recursive: true });
+      cpSync(join(configDir, named), join(outDir, named), { recursive: true });
     }
   }
   const cmConfig  = join(configDir, 'context-map', 'config');

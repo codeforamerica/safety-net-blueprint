@@ -64,7 +64,7 @@ export async function build({ contentDir, resolvedDir }) {
 const docs = discover(resolvedDir).map(load);
 const outDir = resolve(contentDir, 'api-reference');
 const hubHref = relative(outDir, join(contentDir, 'index.html'));
-const { name: projectName, repo } = loadConfig(contentDir);
+const { name: projectName, repo, organization } = loadConfig(contentDir);
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
@@ -1289,7 +1289,7 @@ function buildIndexPage(entries) {
 
   <footer style="border-top:1px solid ${COLORS.sandDark};background:${COLORS.white};padding:1.5rem 2rem;text-align:center;font-size:12px;color:${COLORS.textLight};">
     <a href="${repo?.url ?? '#'}" style="color:${COLORS.midBlue};text-decoration:none;">${projectName}</a>
-    &nbsp;·&nbsp; Code for America
+    &nbsp;·&nbsp; ${esc(organization?.name ?? 'Code for America')}
   </footer>
 
 </body>
