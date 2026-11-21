@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { toDoc } from '../../src/doc.js';
 import { detectType } from '../../src/contract-types.js';
 import { selectDocs } from '../../src/select.js';
+import { resolve } from '../../src/resolve.js';
 import { polymorphicReferenceErrors } from '../../src/validator/polymorphic-validator.js';
 
 const set = (tree) => Object.entries(tree).map(([relativePath, content]) => toDoc({ relativePath, type: detectType(relativePath, content), content }));
@@ -114,5 +115,30 @@ describe('selectDocs', () => {
   test('a name the set doesn\'t declare is an error listing the ones it does', () => {
     assert.throws(() => selectDocs(docs, { capabilities: ['transcript'] }), /No document declares the capability transcript\. The set's capabilities: transcripts/);
     assert.throws(() => selectDocs(docs, { domains: ['intkae'] }), /No document declares the domain intkae\. The set's domains: communication, intake, platform/);
+  });
+});
+
+describe('resolve, choosing', () => {
+  const docs = set(TREE);
+
+  test('keeps only what was chosen, as its last pass, and says so', () => {
+    const result = resolve(docs, { capabilities: ['transcripts'] });
+    assert.ok(result.docs.some((doc) => doc.api === 'communication-transcripts'));
+    assert.ok(!result.docs.some((doc) => doc.domain === 'intake'));
+    assert.ok(result.applied.some((line) => /^Kept \d+ of \d+ documents: capability transcripts/.test(line)));
+  });
+
+  test('keeps the whole set when nothing is chosen', () => {
+    assert.equal(resolve(docs).docs.length, resolve(docs, { domains: [], capabilities: [] }).docs.length);
+    assert.ok(resolve(docs).docs.some((doc) => doc.domain === 'intake'));
+  });
+
+  test('follows a canonical ref to the framework\'s base contracts, which resolve places under base/', () => {
+    const canonical = set({
+      'domains/intake/intake-openapi.yaml': openapi('intake', { Interview: { type: 'object', properties: { kind: { $ref: 'https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Kind' } } } }),
+      'base/schemas/enums.yaml': { $defs: { Kind: { type: 'string' } } },
+      'base/schemas/unused.yaml': { $defs: {} },
+    });
+    assert.deepEqual(paths(selectDocs(canonical, { domains: ['intake'] })), ['base/schemas/enums.yaml', 'domains/intake/intake-openapi.yaml']);
   });
 });

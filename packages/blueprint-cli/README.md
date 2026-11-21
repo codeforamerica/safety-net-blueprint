@@ -71,6 +71,21 @@ npx blueprint-resolve \
 
 Overlays let you customize base contracts without forking them — add fields, change descriptions, restrict visibility, or set domain-specific defaults. See the [Overlay Guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md).
 
+To write only part of the set, name it with `--domain` or `--capability` (a document's `x-capability`). Each is repeatable, and they add together:
+
+```bash
+npx blueprint-resolve --spec=./src --overlay=./overlays --capability=transcripts --out=./resolved
+```
+
+Everything built from the folder afterward — the explorer, the bundle, the mock server, clients — then covers only that part, with no flags of its own. Resolve chooses after applying overlays and generating endpoints, and the part stands on its own:
+
+- **What the chosen documents reference** comes along: everything they `$ref`, and the state machines they extend.
+- **The parts of platform they use** come along, since nothing references them: the events API when anything publishes or hears events or sets timers, the timers document when a state machine sets one, and the registries API when a registry is kept.
+- **A scenario is kept** when every document it calls is kept. It never brings in more.
+- **A type whose resource was left out is external.** A transcript's `subjectType: interview` names intake's Interview; without intake, resolve maps `interview` to `External` in the transcript's `discriminator.mapping`, so the folder validates.
+
+A name no document declares is an error that lists the ones the set has.
+
 ### `blueprint-validate`
 
 Runs all validators against a resolved contracts directory in sequence:

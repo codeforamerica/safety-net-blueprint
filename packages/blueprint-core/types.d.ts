@@ -261,6 +261,16 @@ export interface ResolveOptions {
   envTarget?: string | null;
   /** Values for `${VAR}` placeholders. Unresolved ones are left literal. */
   envVariables?: Record<string, string>;
+  /**
+   * Keep only documents declaring these domains, with what they need to stand
+   * on their own: what they `$ref` or extend, the parts of platform they use,
+   * and the scenarios whose every source is kept. A polymorphic type whose
+   * resource is left out is mapped to `External`. Adds to `capabilities`;
+   * omit both for the whole set. A name no document declares throws.
+   */
+  domains?: string[];
+  /** Keep only documents declaring these capabilities (`x-capability`), likewise. */
+  capabilities?: string[];
 }
 
 export interface ResolveResult {

@@ -29,6 +29,13 @@ import { toDoc } from './doc.js';
 import { followRef, indexByRelativePath, isRemoteRef } from './ref-lookup.js';
 import { extendedDocOf } from './contract-readers.js';
 
+/**
+ * Where a canonical ref to the framework's base contracts points within a set
+ * resolve builds, which places them under `base/` (blueprint-resolve). Ahead
+ * of the write, refs are still canonical, and the closure has to follow them.
+ */
+const BASE_URI = 'https://blueprint.codeforamerica.org/base/';
+
 /** The parts of platform, by the API name each goes by (doc.api). */
 const PLATFORM = {
   events: 'platform-events',
@@ -65,8 +72,10 @@ function close(keep, positioned, byRelativePath, machineDocs) {
       const doc = positioned.get(relativePath);
       if (!doc) continue;
       const found = [...doc.refs().values()]
-        .filter((ref) => ref.external && ref.file && !isRemoteRef(ref.file))
-        .map((ref) => followRef(ref.file, byRelativePath, relativePath));
+        .filter((ref) => ref.external && ref.file)
+        .map((ref) => (ref.file.startsWith(BASE_URI)
+          ? positioned.get(`base/${ref.file.slice(BASE_URI.length)}`)
+          : isRemoteRef(ref.file) ? null : followRef(ref.file, byRelativePath, relativePath)));
       if (doc.type === 'state-machine') found.push(extendedDocOf(doc.content, relativePath, machineDocs));
       for (const reached of found) {
         if (reached?.relativePath && !keep.has(reached.relativePath)) {
