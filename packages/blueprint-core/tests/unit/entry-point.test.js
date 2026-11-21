@@ -360,6 +360,7 @@ describe('extract', () => {
         path: '/applications/{id}/submit',
         method: 'post',
         file: 'intake-openapi.yaml',
+        api: 'intake',
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });

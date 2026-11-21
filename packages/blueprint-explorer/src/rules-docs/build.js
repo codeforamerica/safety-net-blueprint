@@ -121,13 +121,13 @@ for (const af of annotationFiles) {
 const openapiDocs = discover(resolvedDir, 'openapi').map(loadDoc);
 const endpointIndex = extract(openapiDocs, 'relationships');
 
-// The API reference has a page per OpenAPI document, and a ruleset's endpoint
-// is in the rules API's document ({domain}-rules-openapi.yaml), not the
-// domain's own — so the page is found, not assumed from the domain.
+// The API reference has a page per API, and a ruleset's endpoint is in the
+// rules API, not the domain's own — so the page is found, not assumed from
+// the domain.
 const apiPageFor = (domain, { path, method }) => {
   const doc = openapiDocs.find((d) =>
     d.content?.info?.['x-domain'] === domain && d.content?.paths?.[path]?.[method]);
-  return doc ? basename(doc.path).replace('-openapi.yaml', '') : domain;
+  return doc ? doc.api : domain;
 };
 const registryTypes = registryAnnotationTypes(contractFileMap(resolvedDir));
 

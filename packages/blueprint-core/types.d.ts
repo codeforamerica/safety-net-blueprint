@@ -97,6 +97,13 @@ export interface Doc {
    * file a contract set writes itself.
    */
   capability: string | null;
+  /**
+   * The name of the API an OpenAPI or AsyncAPI document describes, which the
+   * mock's routing and `$apis.<api>.<id>` references use: `intake`,
+   * `communication-transcripts`. An events AsyncAPI document shares its API's
+   * name. Null for every other type.
+   */
+  api: string | null;
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;

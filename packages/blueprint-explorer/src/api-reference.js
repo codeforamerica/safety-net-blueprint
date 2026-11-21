@@ -95,7 +95,8 @@ const specs = (
       .sort((a, b) => a.path.localeCompare(b.path))
       .map(async (doc) => {
         const absPath = doc.path;
-        const slug = basename(absPath).replace('-openapi.yaml', '');
+        // A page per API, named for it.
+        const slug = doc.api;
         try {
           const raw  = doc.content;
           const spec = await $RefParser.dereference(absPath);
