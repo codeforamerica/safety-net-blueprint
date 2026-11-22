@@ -288,19 +288,23 @@ async function testTimerStubCausationid() {
   console.log('\n--- Timer callback carries causationid ---');
   await clearStubs();
 
-  await fetch(`${BASE_URL}/mock/stubs/events`, {
-    method: 'POST',
-    body: { on: 'platform.timer.requested', match: { 'data.callback.event': 'workflow.task.creation_deadline' } }
-  });
-
+  // The timer first, then a stub naming it: a stub fires the oldest matching
+  // timer waiting as soon as it's registered, and one an earlier test left
+  // would be fired instead.
   const subjectId = 'task-timer-causation-1';
+  const timerId = `workflow.creation_deadline.${subjectId}`;
   const injectRes = await injectEvent(
     'platform.timer.requested',
-    { timerId: `workflow.creation_deadline.${subjectId}`, callback: { event: 'workflow.task.creation_deadline', data: {} } },
+    { timerId, callback: { event: 'workflow.task.creation_deadline', data: {} } },
     subjectId
   );
   assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
   const trigger = await injectRes.json();
+
+  await fetch(`${BASE_URL}/mock/stubs/events`, {
+    method: 'POST',
+    body: { on: 'platform.timer.requested', match: { 'data.timerId': timerId } }
+  });
 
   const eventsRes = await fetch(`${BASE_URL}/platform/events?causationid=${trigger.id}`);
   const events = await eventsRes.json();

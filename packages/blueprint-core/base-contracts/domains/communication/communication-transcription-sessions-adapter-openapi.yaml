@@ -53,6 +53,10 @@ paths:
       operationId: requestCredentials
       x-relationship:
         type: external
+      # A credential spends the state's account with the service, so only a
+      # signed-in caller gets one.
+      security:
+        - bearerAuth: []
       tags:
         - Credentials
       requestBody:
@@ -106,6 +110,8 @@ paths:
       operationId: getCredentialKeys
       x-relationship:
         type: external
+      # Public: relays and JWT libraries read a key set without signing in.
+      security: []
       tags:
         - Keys
       responses:
@@ -130,12 +136,15 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: "https://blueprint.codeforamerica.org/base/components/security-schemes.yaml#/bearerAuth"
   schemas:
     CredentialsRequest:
       description: >
         What the service needs to issue a credential: the service and its
-        languages, from the session's profile; the model, from the session;
-        and the audio and protocols, from the software.
+        languages, from the transcript's profile; the model, from the
+        transcript; and the audio and protocols, from the software.
       allOf:
         - $ref: "https://blueprint.codeforamerica.org/base/components/adapter.yaml#/AdapterRequest"
         - type: object
