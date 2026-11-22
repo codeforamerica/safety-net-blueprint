@@ -7,7 +7,12 @@
  * call is answered in the page. A switch holds for the browser tab, every page
  * of it, and a reload forgets it (lib/control-panel.js), as it does the
  * records: the default is always what the site says.
+ *
+ * An API the explorer has an implementation of (implementations.js) can be
+ * switched to that instead, which takes the API's place in the routing.
  */
+
+import { IMPLEMENTATIONS } from './implementations.js';
 
 /** The site's routing entries, as its script set them. */
 export const siteRouting = () => globalThis.BlueprintExplorer?.routing ?? [];
@@ -45,10 +50,58 @@ export const inPage = (where, entry) => switched(where).has(entryKey(entry));
  * @param {boolean} toPage
  */
 export function switchEntry(where, entry, toPage) {
-  const keys = switched(where);
-  if (toPage) keys.add(entryKey(entry)); else keys.delete(entryKey(entry));
-  try { sessionStorage.setItem(keyFor(where.scope), JSON.stringify([...keys])); } catch { /* the switch lasts this page only */ }
+  setSwitch(where, entryKey(entry), toPage);
 }
+
+const setSwitch = (where, key, on) => {
+  const keys = switched(where);
+  if (on) keys.add(key); else keys.delete(key);
+  try { sessionStorage.setItem(keyFor(where.scope), JSON.stringify([...keys])); } catch { /* the switch lasts this page only */ }
+};
+
+// ── Implementations in the page ──────────────────────────────────────────────
+
+/** Marks an entry an implementation in the page added, with its name. */
+const IMPLEMENTED = Symbol('implementation in the page');
+
+const implementationKey = (api) => `implementation:${api}`;
+
+/**
+ * The implementations in the page of the contract set's APIs.
+ *
+ * @param {object[]} docs
+ * @returns {typeof IMPLEMENTATIONS}
+ */
+export const implementationsFor = (docs) => IMPLEMENTATIONS.filter((implementation) => docs.some((doc) => doc.api === implementation.api));
+
+/** Whether an API was switched to its implementation in the page. */
+export const usesImplementation = (where, api) => switched(where).has(implementationKey(api));
+
+/**
+ * Switch an API to its implementation in the page, or off it. The mock takes
+ * it when it next starts.
+ */
+export function useImplementation(where, api, on) {
+  setSwitch(where, implementationKey(api), on);
+}
+
+/** The name of the implementation in the page an entry is, or null. */
+export const implementationOf = (entry) => entry?.[IMPLEMENTED] ?? null;
+
+/** The routing with each API switched to its implementation sent there, in place of any entry for it. */
+const withImplementations = (where, routing) => {
+  const chosen = IMPLEMENTATIONS.filter((implementation) => usesImplementation(where, implementation.api));
+  if (!chosen.length) return routing;
+  const apis = new Set(chosen.map((implementation) => implementation.api));
+  return [
+    ...routing.filter((entry) => !apis.has(entry.api)),
+    ...chosen.map((implementation) => {
+      const entry = { api: implementation.api, handler: implementation.handler };
+      entry[IMPLEMENTED] = implementation.name;
+      return entry;
+    }),
+  ];
+};
 
 // ── A server chosen in the page ──────────────────────────────────────────────
 //
@@ -179,13 +232,21 @@ const toServer = ({ server, localBase, headers: declared }, variables) => async 
 
 /**
  * The routing the mock takes: the site's, less what was switched to the
- * page, and what the server chosen in the page adds.
+ * page, and what the server chosen in the page adds; and the APIs switched
+ * to an implementation in the page, sent there whatever else says.
  *
  * @param {{ scope: string }} where
- * @param {object[]} [docs] - The contract set, which a chosen server needs
+ * @param {object[]} [docs] - The contract set, which a chosen server and an implementation need
  * @returns {object[]}
  */
 export function routingInUse(where, docs = []) {
+  const apis = new Set(docs.map((doc) => doc.api));
+  return withImplementations(where, routingWithServer(where, docs))
+    .filter((entry) => !implementationOf(entry) || apis.has(entry.api));
+}
+
+/** The site's routing, less what was switched to the page, and what the server chosen in the page adds. */
+function routingWithServer(where, docs) {
   const site = siteRouting();
   const kept = site.filter((entry) => !inPage(where, entry));
   const choice = chosenServer(where);
@@ -234,7 +295,7 @@ export function entryFor(routing, { operationId, api, domain }) {
 }
 
 /** Where an entry sends its calls, in words. */
-export const destinationOf = (entry) => entry[CHOSEN] ?? (entry.to ? entry.to : 'a handler in this site\'s script');
+export const destinationOf = (entry) => entry[CHOSEN] ?? entry[IMPLEMENTED] ?? (entry.to ? entry.to : 'a handler in this site\'s script');
 
 /** Whether an entry is one the server chosen in the page added. */
 export const fromChosenServer = (entry) => Boolean(entry?.[CHOSEN]);

@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { entryFor, entryName, routingInUse, chooseServer, switchEntry, environmentsOf, destinationOf, awayFrom } from '../../src/try-it/routing.js';
+import { entryFor, entryName, routingInUse, chooseServer, switchEntry, environmentsOf, destinationOf, awayFrom,
+  implementationsFor, useImplementation, usesImplementation, implementationOf } from '../../src/try-it/routing.js';
+import { InPageRelay } from '../../src/try-it/in-page-relay.js';
 
 const adapter = { operationId: 'requestCredentials', api: 'communication-transcription-sessions-adapter', domain: 'communication' };
 const transcripts = { operationId: 'createTranscript', api: 'communication-transcripts', domain: 'communication' };
@@ -134,3 +136,33 @@ describe('a server chosen in the page', () => {
       [['Production server', 2, ['state']], ['Local development server', 2, []]]);
   });
 });
+
+describe('an implementation in the page', () => {
+  const stored = new Map();
+  globalThis.sessionStorage = { getItem: (k) => stored.get(k) ?? null, setItem: (k, v) => stored.set(k, v), removeItem: (k) => stored.delete(k) };
+  const where = { scope: 'test-implementations' };
+  const relay = { type: 'asyncapi', api: 'communication-transcripts-relay', domain: 'communication', protocols: ['ws'], content: {} };
+  const reset = () => { stored.clear(); globalThis.BlueprintExplorer = { routing: [] }; };
+
+  it('is offered only for an API the contract set has', () => {
+    assert.deepEqual(implementationsFor([relay]).map((i) => i.api), ['communication-transcripts-relay']);
+    assert.deepEqual(implementationsFor([]), []);
+  });
+
+  it('takes the API\'s place in the routing once chosen, the site\'s entry for it included, and gives it back', () => {
+    reset();
+    const site = { api: 'communication-transcripts-relay', to: 'wss://relay.example.org' };
+    globalThis.BlueprintExplorer.routing = [site];
+    assert.deepEqual(routingInUse(where, [relay]), [site]);
+    useImplementation(where, relay.api, true);
+    assert.equal(usesImplementation(where, relay.api), true);
+    const [entry, ...rest] = routingInUse(where, [relay]);
+    assert.deepEqual(rest, []);
+    assert.equal(entry.handler, InPageRelay);
+    assert.equal(implementationOf(entry), 'Relay in this page');
+    assert.equal(destinationOf(entry), 'Relay in this page');
+    useImplementation(where, relay.api, false);
+    assert.deepEqual(routingInUse(where, [relay]), [site]);
+  });
+});
+

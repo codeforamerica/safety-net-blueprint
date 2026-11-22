@@ -25,7 +25,8 @@ import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPEN
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
-import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer } from './routing.js';
+import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer,
+  implementationsFor, usesImplementation, useImplementation } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -292,31 +293,43 @@ function serverChooser(running) {
 }
 
 /**
- * One row of "Where calls go": what it covers, with a switch between the real
- * service and the mock in this page when the site routes it, and, answered
- * here, a stub form for each call the mock can't answer itself.
+ * One row of "Where calls go": what it covers, and a switch between where it
+ * can go. The real service, when the site routes it (`entry`); an
+ * implementation running in the page, when the explorer has one
+ * (`implementation`, implementations.js); and the mock in the page, which
+ * offers a stub form for each call it can't answer itself.
  *
  * @param {object} running
  * @param {object[]} events
- * @param {{ entry?: object, label: HTMLElement, covers: (o: object) => boolean, callsOut: object[] }} row
+ * @param {{ entry?: object, implementation?: object, label: HTMLElement,
+ *   covers: (o: object) => boolean, callsOut: object[] }} row
  */
-function routeRow(running, events, { entry = null, label, covers, callsOut }) {
-  const local = !entry || inPage(options, entry);
+function routeRow(running, events, { entry = null, implementation = null, label, covers, callsOut }) {
+  const name = entry ? entryName(entry) : implementation?.api ?? '';
+  const api = entry?.api ?? implementation?.api;
+  const now = implementation && usesImplementation(options, api) ? 'implementation' : !entry || inPage(options, entry) ? 'mock' : 'real';
+  const choices = [
+    ...(entry ? [['real', 'Real service']] : []),
+    ...(implementation ? [['implementation', implementation.name]] : []),
+    ['mock', 'Mock in this page'],
+  ];
   const row = el('div', '', 'mp-route');
   const head = el('div', '', 'mp-route-head');
   head.append(label);
-  if (entry) {
+  // A switch only when there's somewhere else to send it.
+  if (choices.length > 1) {
     const toggle = el('span', '', 'mp-switch');
     toggle.setAttribute('role', 'group');
-    toggle.setAttribute('aria-label', `Where ${entryName(entry)} goes`);
-    for (const [text, toPage] of [['Real service', false], ['Mock in this page', true]]) {
+    toggle.setAttribute('aria-label', `Where ${name} goes`);
+    for (const [choice, text] of choices) {
       const button = Object.assign(el('button', text), { type: 'button' });
-      button.setAttribute('aria-pressed', String(local === toPage));
+      button.setAttribute('aria-pressed', String(now === choice));
       button.onclick = async () => {
-        if (local === toPage) return;
+        if (now === choice) return;
         for (const other of toggle.querySelectorAll('button')) other.disabled = true;
         await running.keep();
-        switchEntry(options, entry, toPage);
+        if (entry) switchEntry(options, entry, choice !== 'real');
+        if (implementation) useImplementation(options, api, choice === 'implementation');
         await running.reroute();
         render();
       };
@@ -324,8 +337,14 @@ function routeRow(running, events, { entry = null, label, covers, callsOut }) {
     }
     head.append(toggle);
   }
-  row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
-  if (local) {
+  const said = {
+    real: () => `Sent to ${entry && destinationOf(entry)}.`,
+    implementation: () => `Answered by the ${implementation.name.charAt(0).toLowerCase()}${implementation.name.slice(1)}, as a real service would. The mock checks what it sends against the contract, and a stub still comes first.`,
+    mock: () => 'Answered by the mock in this page.',
+  }[now]();
+  row.append(head, el('p', said, 'mp-route-to'));
+  if (now === 'implementation' && implementation.note) row.append(el('p', implementation.note, 'mp-note'));
+  if (now === 'mock') {
     for (const operation of callsOut.filter(covers)) {
       row.append(el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'));
       const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
@@ -338,12 +357,14 @@ function routeRow(running, events, { entry = null, label, covers, callsOut }) {
 
 /**
  * Where calls go: the server picked in the page; the adapters, the services
- * the contracts call but don't answer, each answered here by stubs or, where
- * the site routes it, by the real service; and the site's other routing.
+ * the contracts call but don't answer, each answered here by stubs, by an
+ * implementation running in the page where the explorer has one, or by the
+ * real service where the site routes it; and the site's other routing.
  */
 function routingSection(running, events) {
   const docs = extract(options.contracts, 'docs');
   const entries = siteRouting();
+  const implementations = implementationsFor(docs);
   const chooser = serverChooser(running);
   const callsOut = stubChoices(docs).operations;
   const adapters = docs.filter((doc) => doc.adapter);
@@ -354,19 +375,19 @@ function routingSection(running, events) {
     for (const adapter of adapters) {
       // An adapter's contract, on its API reference page, for whoever implements it.
       const label = el('span', '', 'mp-adapter');
-      const title = Object.assign(el('a', adapter.content?.info?.title ?? adapter.api), {
+      label.append(Object.assign(el('a', adapter.content?.info?.title ?? adapter.api), {
         href: new URL(`../api-reference/${adapter.api}.html`, options.scope).href,
         title: 'Its contract',
-      });
-      label.append(title);
+      }));
       box.append(routeRow(running, events, {
         entry: entries.find((entry) => entry.api === adapter.api) ?? null,
+        implementation: implementations.find((i) => i.api === adapter.api) ?? null,
         label,
         covers: (o) => o.apiName === adapter.api,
         callsOut,
       }));
     }
-    parts.push(el('p', 'Adapters: services the contracts call but don\'t answer. Each is answered here by stubs, or by the real service where this site routes it.', 'mp-note'), box);
+    parts.push(el('p', 'Adapters: services the contracts call but don\'t answer. Each is answered here by stubs, by one running in this page, or by the real service where this site routes it.', 'mp-note'), box);
   }
 
   const others = entries.filter((entry) => !adapters.some((adapter) => adapter.api === entry.api));
@@ -376,6 +397,7 @@ function routingSection(running, events) {
       const name = entryName(entry);
       box.append(routeRow(running, events, {
         entry,
+        implementation: implementations.find((i) => i.api === entry.api) ?? null,
         label: el('code', name === '*' ? '* (every domain)' : name),
         covers: (o) => Boolean(entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain })),
         callsOut,
@@ -423,6 +445,40 @@ function requestLine(request) {
   row.append(summary);
   if (request.body) row.append(el('div', 'Request', 'happened-heading'), el('pre', request.body, 'happened-body'));
   if (request.shown) row.append(el('div', 'Response', 'happened-heading'), el('pre', request.shown, 'happened-body'));
+  return row;
+}
+
+/**
+ * A connection Try it opened, opening to its messages in order, as a
+ * browser's developer tools show one: ↑ sent, ↓ received, each opening to
+ * its payload, and how it closed.
+ */
+function connectionLine(connection) {
+  const row = el('details', '', 'happened-event');
+  row.dataset.request = connection.time;
+  const state = connection.close
+    ? `closed ${connection.close.code}${connection.close.reason ? `: ${connection.close.reason}` : ''}`
+    : 'open';
+  const normal = !connection.close || connection.close.code === 1000;
+  const summary = el('summary');
+  summary.append(el('span', `WS ${connection.path}`, 'happened-type'),
+    el('span', `  → ${state} · ${connection.messages.length} message${connection.messages.length === 1 ? '' : 's'}`, normal ? 'happened-subject' : 'happened-bad'));
+  row.append(summary);
+  if (connection.protocols?.length) row.append(el('div', `Subprotocols: ${connection.protocols.join(', ')}`, 'happened-subscribers'));
+  const messages = el('div', '', 'happened-under');
+  for (const message of connection.messages) {
+    const arrow = message.sent ? '↑' : '↓';
+    if (message.payload === undefined) {
+      messages.append(el('div', `${arrow} ${message.said ?? message.name}`, 'happened-event'));
+      continue;
+    }
+    const line = el('details', '', 'happened-event');
+    const head = el('summary');
+    head.append(el('span', `${arrow} ${message.name}`, 'happened-type'));
+    line.append(head, el('pre', JSON.stringify(message.payload, null, 2), 'happened-body'));
+    messages.append(line);
+  }
+  if (connection.messages.length) row.append(messages);
   return row;
 }
 
@@ -475,7 +531,7 @@ function activitySection(running, events) {
         box.append(...eventLines(item.events, { trail }));
         continue;
       }
-      box.append(requestLine(item.request));
+      box.append(item.request.kind === 'socket' ? connectionLine(item.request) : requestLine(item.request));
       if (shownKinds === 'all' && item.events.length) {
         const under = el('div', '', 'happened-under');
         under.append(...eventLines(item.events, { trail }));
@@ -522,6 +578,35 @@ function openEditor(running, kind, events, stub = null, preset = null) {
     }),
   };
   render();
+}
+
+/** A stub another part of the page asked to add, waiting for the drawer to open. */
+let asked = null;
+
+/** Open the asked-for stub's form, scrolled to. */
+async function openAsked() {
+  const running = host ?? own;
+  if (!asked || !running) return;
+  const { kind, preset } = asked;
+  asked = null;
+  openEditor(running, kind, [], null, preset);
+  await render();
+  editing?.form.scrollIntoView({ block: 'nearest' });
+}
+
+/**
+ * Open the drawer on a new stub's form, started on what the page names, as
+ * the Try it panel does when the mock closes a connection for want of a stub.
+ *
+ * @param {string} kind - 'events', 'http' or 'ws'
+ * @param {object} preset - What the form starts on: an operation's key for
+ *   'http'; `{ channel, on }` for 'ws'
+ */
+export function addStub(kind, preset) {
+  asked = { kind, preset };
+  if (panel?.classList.contains('open')) openAsked();
+  // The page's button opens it, with the contracts the page loaded.
+  else document.getElementById('mock-panel-toggle')?.click();
 }
 
 /** The stubs registered, each said in words, with Edit and Remove; and adding one. */
@@ -673,4 +758,5 @@ export async function setTryIt(on, given) {
     await startOwn({ seed: true, restore: true });
     render();
   }
+  await openAsked();
 }

@@ -7,11 +7,16 @@
  * ws.js), so the mock checks every message both ways against the contract,
  * answers with the WebSocket stubs the control panel registers, and, where the
  * site's routing sends the API to a real service, passes the connection on.
- * One panel per page, beside the API's servers; the Send panels' module mounts
- * it (send-panel.js), so it shares their mock and control panel.
+ * Its controls go in the page's cards, one per thing that can be sent, shown
+ * with Try it on; what goes each way is in the control panel's activity log
+ * (activity.js). The Send panels' module mounts it (send-panel.js), so it
+ * shares their mock and control panel.
  */
 
 import { decodeRecording, streamRecording, WRITABLE } from './audio.js';
+import { addStub, mockChanged } from './control-panel.js';
+import { logConnection, logMessage, logClose } from './activity.js';
+import { tryView } from './try-view.js';
 
 const el = (tag, text = '', className = '') => {
   const node = document.createElement(tag);
@@ -21,28 +26,16 @@ const el = (tag, text = '', className = '') => {
 };
 
 export const SOCKET_STYLE = `
-  .try-socket { border: 1px solid #e3e1f5; border-radius: 6px; padding: 10px 14px; background: #fff; font-size: 12px; }
-  .try-socket h3 { font: 700 13px sans-serif; color: #2B1A78; margin: 0 0 8px; }
-  .try-socket .row { display: grid; grid-template-columns: 7rem 1fr; gap: 8px; align-items: center; padding: 3px 0; }
-  .try-socket .row > label { font: 600 12px sans-serif; color: #333; }
-  .try-socket input[type=text], .try-socket select, .try-socket textarea { font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; width: 100%; box-sizing: border-box; background: #fff; }
-  .try-socket textarea { min-height: 6rem; resize: vertical; margin-top: 4px; }
-  .try-socket .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .try-socket button { font: 600 12px sans-serif; padding: 4px 14px; border-radius: 4px; border: 0; background: #2B1A78; color: #fff; cursor: pointer; white-space: nowrap; }
-  .try-socket button:disabled { opacity: .45; cursor: default; }
-  .try-socket button.quiet { background: #fff; color: #2B1A78; border: 1px solid #c7c4ea; }
-  .try-socket .real { font: 600 11px system-ui, sans-serif; color: #fff; background: #b45309; padding: 2px 8px; border-radius: 3px; }
-  .try-socket .state { color: #666; }
-  .try-socket .state.open { color: #15803d; font-weight: 600; }
-  .try-socket .note { color: #666; margin-top: 4px; }
-  .try-socket .note.bad { color: #b42318; }
-  .try-socket .log { margin-top: 10px; background: #1e1b3a; color: #e6e4f5; font: 11.5px/1.5 monospace; border-radius: 4px; padding: 8px 10px; max-height: 22rem; overflow: auto; }
-  .try-socket .log:empty { display: none; }
-  .try-socket .log div { white-space: pre-wrap; word-break: break-all; }
-  .try-socket .log .t { color: #8b86b8; }
-  .try-socket .log .out { color: #a5b4fc; }
-  .try-socket .log .in { color: #86efac; }
-  .try-socket .log .shut { color: #fca5a5; }
+  html:not([data-try-it="on"]) .socket-send { display: none; }
+  .socket-send { margin-top: 12px; }
+  .socket-send .try-params { margin-bottom: 6px; }
+  .socket-send .note { font-size: 11.5px; color: #666; margin-top: 4px; }
+  .socket-send .note.bad { color: #b42318; }
+  .socket-send .note button { margin-left: 8px; font: 600 11px system-ui, sans-serif; padding: 1px 10px; border-radius: 3px; border: 1px solid #2B1A78; background: #fff; color: #2B1A78; cursor: pointer; }
+  .socket-send .try-code pre { white-space: pre-wrap; }
+  .socket-send .try-code .foot .state { color: #c7c4ea; font: 12px system-ui, sans-serif; margin-right: auto; }
+  .socket-send .try-code .foot .state.open { color: #86efac; font-weight: 600; }
+  .socket-send .try-code .send.quiet { background: transparent; color: #fff; border: 1px solid #8b86b8; }
 `;
 
 /** A node with its same-document `$ref`s followed. */
@@ -141,181 +134,273 @@ export function declaredFormat(payload) {
 }
 
 /**
- * Mount the panel in its holder.
- *
- * @param {HTMLElement} holder - Marked `data-try-socket` with the document's relativePath
- * @param {{ docs: object[], mock: () => object, realTag: (tag: HTMLElement, doc: object) => void }} context -
- *   The contract set's documents; the page's mock, as it is now; and where to
- *   register the tag shown when the site's routing sends the API to a real service
+ * The WebSocket stub the mock needs when it closes with 1011: the channel the
+ * message is on, in the stub editor's terms, and the message, which the
+ * close's reason names first (blueprint-mock-server's ws.js).
  */
-export function mountSocketPanel(holder, { docs, mock, realTag }) {
+export function stubNeeded(doc, reason) {
+  const on = /^(\S+) is answered with /.exec(reason ?? '')?.[1];
+  if (!on) return null;
+  const key = Object.entries(doc.content?.channels ?? {}).find(([, channel]) => channel?.messages?.[on])?.[0];
+  if (!key) return null;
+  return { channel: `${String(doc.relativePath ?? '').split('/').pop()}#/channels/${key}`, on };
+}
+
+/**
+ * Try it on a WebSocket API's page: each card it can send from gets its
+ * controls, styled as Send's are on an operation (send-panel.js), shown with
+ * Try it on, the card's docs folded under its description (try-view.js).
+ * The connection and every message each way go in the control panel's
+ * activity log; a message the mock had no answer for offers, on its card,
+ * the WebSocket stub that gives one.
+ *
+ * @param {HTMLElement} holder - Around the page's cards, marked `data-try-socket` with the document's relativePath
+ * @param {{ docs: object[], mock: () => object, realTag: (tag: HTMLElement, doc: object) => void, where: { scope: string } }} context -
+ *   The contract set's documents; the page's mock, as it is now; where to
+ *   register the tag shown when the site's routing sends the API to a real
+ *   service; and where the tab keeps its activity log
+ */
+export function mountSocketPanel(holder, { docs, mock, realTag, where }) {
   const doc = docs.find((d) => d.relativePath === holder.dataset.trySocket);
   if (!doc) return;
   const messages = messagesToSend(doc, docs);
-  const json = messages.filter((m) => !m.binary);
-  const takesAudio = messages.some((m) => m.binary);
 
-  const box = el('div', '', 'try-socket');
-  box.append(el('h3', 'Try it'));
-
-  // ── Connecting ───────────────────────────────────────────────────────────
-  const url = Object.assign(el('input'), { type: 'text', value: localUrl(doc) ?? '', autocomplete: 'off' });
-  url.setAttribute('aria-label', 'URL');
-  const protocols = Object.assign(el('input'), { type: 'text', placeholder: 'Comma-separated, as the API asks for them', autocomplete: 'off' });
-  protocols.setAttribute('aria-label', 'Subprotocols');
-  const row = (label, ...content) => {
-    const line = el('div', '', 'row');
-    const holderCell = el('div', '', 'acts');
-    holderCell.append(...content);
-    // A field fills the row; buttons keep their size.
-    line.append(el('label', label), content.length === 1 && content[0].tagName !== 'BUTTON' ? content[0] : holderCell);
-    return line;
-  };
-  const connect = el('button', 'Connect');
-  const state = el('span', 'Not connected', 'state');
-  const real = el('span', 'Real service', 'real');
-  real.hidden = true;
-  realTag(real, doc);
-  box.append(row('URL', url), row('Subprotocols', protocols), row('', connect, real, state));
-
-  // ── Sending ──────────────────────────────────────────────────────────────
-  const pick = el('select');
-  pick.setAttribute('aria-label', 'Message');
-  for (const message of json) pick.append(Object.assign(el('option', message.summary ? `${message.name} — ${message.summary}` : message.name), { value: message.name }));
-  const body = el('textarea');
-  body.setAttribute('aria-label', 'Message body');
-  body.spellcheck = false;
-  const fill = () => { body.value = JSON.stringify(json.find((m) => m.name === pick.value)?.start ?? {}, null, 2); };
-  pick.addEventListener('change', fill);
-  fill();
-  const sendButton = el('button', 'Send message');
-  const sendNote = el('div', '', 'note');
-  const messageCell = el('div');
-  messageCell.append(pick, body);
-  if (json.length) box.append(row('Message', messageCell), row('', sendButton), sendNote);
-
-  const file = Object.assign(el('input'), { type: 'file', accept: 'audio/*' });
-  file.setAttribute('aria-label', 'Recording');
-  const streamButton = el('button', 'Stream audio');
-  const stopButton = Object.assign(el('button', 'Stop', 'quiet'), { hidden: true });
-  const audioNote = el('div', '', 'note');
-  if (takesAudio) box.append(row('Audio', file, streamButton, stopButton), audioNote);
-
-  const log = el('div', '', 'log');
-  box.append(log);
-  holder.replaceChildren(box);
-
-  // ── The connection ───────────────────────────────────────────────────────
   let socket = null;
-  let opened = 0;
+  let connection = null;
   let format = null;
   let streaming = null;
-  const stamp = () => `+${((performance.now() - opened) / 1000).toFixed(3)}s`;
-  const write = (kind, text) => {
-    const line = el('div');
-    line.append(el('span', `${stamp()} `, 't'), el('span', text, kind));
-    log.append(line);
-    log.scrollTop = log.scrollHeight;
-    return line;
-  };
   const isOpen = () => socket?.readyState === 1;
-  const refresh = () => {
-    connect.textContent = socket ? 'Disconnect' : 'Connect';
-    sendButton.disabled = !isOpen();
-    streamButton.disabled = !isOpen() || !file.files?.length || Boolean(streaming);
-    stopButton.hidden = !streaming;
-    url.disabled = protocols.disabled = Boolean(socket);
-    state.textContent = isOpen() ? 'Connected' : socket ? 'Connecting…' : 'Not connected';
-    state.className = `state${isOpen() ? ' open' : ''}`;
+  const refreshers = [];
+  const refresh = () => { for (const step of refreshers) step(); };
+  // Each card's note, by the message it sends, for a stub it needs.
+  const notes = new Map();
+  /** Something to log, and the control panel shown again. */
+  const logged = (step) => { step(); mockChanged(); };
+
+  /** A dark block as Send's: what's sent, and the buttons under it. */
+  const codeBlock = (content, ...footer) => {
+    const code = el('div', '', 'try-code');
+    const pre = el('pre');
+    pre.append(content);
+    const foot = el('div', '', 'foot');
+    foot.append(...footer);
+    code.append(pre, foot);
+    return code;
+  };
+  const sendButton = (text, quiet = false) => Object.assign(el('button', text, `send${quiet ? ' quiet' : ''}`), { type: 'button' });
+  const field = (label, input) => {
+    const row = el('div', '', 'row');
+    row.append(el('label', label), input);
+    return row;
+  };
+  /** Controls in a card, which with Try it on shows them and folds its docs. */
+  const mount = (place, wrap) => {
+    place.replaceChildren(wrap);
+    const card = place.closest('.content-item');
+    if (card) tryView(card);
   };
 
-  connect.addEventListener('click', () => {
-    if (socket) { socket.close(1000, 'Closed from Try it'); return; }
-    const offered = protocols.value.split(',').map((p) => p.trim()).filter(Boolean);
-    log.replaceChildren();
-    opened = performance.now();
+  // Connect: the URL and subprotocols, and the request they make.
+  for (const place of holder.querySelectorAll('[data-socket-connect]')) {
+    const wrap = el('div', '', 'socket-send');
+    const url = Object.assign(el('input'), { type: 'text', value: localUrl(doc) ?? '', autocomplete: 'off' });
+    const protocols = Object.assign(el('input'), { type: 'text', placeholder: 'comma-separated, as the API asks for them', autocomplete: 'off' });
+    const params = el('div', '', 'try-params');
+    params.append(field('URL', url), field('Subprotocols', protocols));
+    const request = el('span');
+    const button = sendButton('Connect');
+    const state = el('span', 'Not connected', 'state');
+    const real = Object.assign(el('span', 'Real service', 'real'), { hidden: true });
+    realTag(real, doc);
+    const note = el('div', '', 'note');
+    const offered = () => protocols.value.split(',').map((p) => p.trim()).filter(Boolean);
+    const shown = () => {
+      const at = (() => { try { return new URL(url.value.trim()); } catch { return null; } })();
+      request.textContent = `GET ${at ? `${at.pathname}${at.search}` : url.value.trim()} HTTP/1.1\nHost: ${at?.host ?? ''}\nUpgrade: websocket\nConnection: Upgrade${offered().length ? `\nSec-WebSocket-Protocol: ${offered().join(', ')}` : ''}`;
+    };
+    url.addEventListener('input', shown);
+    protocols.addEventListener('input', shown);
+    shown();
+    button.addEventListener('click', () => connect(url.value.trim(), offered(), note));
+    refreshers.push(() => {
+      button.disabled = Boolean(socket);
+      url.disabled = protocols.disabled = Boolean(socket);
+      state.textContent = isOpen() ? 'Connected' : socket ? 'Connecting…' : 'Not connected';
+      state.className = `state${isOpen() ? ' open' : ''}`;
+    });
+    wrap.append(params, codeBlock(request, state, real, button), note);
+    mount(place, wrap);
+  }
+
+  // Each message the server receives: its body, or for audio, a recording.
+  for (const place of holder.querySelectorAll('[data-socket-send]')) {
+    const message = messages.find((m) => m.name === place.dataset.socketSend);
+    if (!message) continue;
+    const wrap = el('div', '', 'socket-send');
+    const note = el('div', '', 'note');
+    notes.set(message.name, note);
+    if (message.binary) {
+      const file = Object.assign(el('input'), { type: 'file', accept: 'audio/*' });
+      const params = el('div', '', 'try-params');
+      params.append(field('Recording', file));
+      const stream = sendButton('Stream');
+      const stop = Object.assign(sendButton('Stop', true), { hidden: true });
+      const said = el('span', 'Frames of the recording, in the format the message that declared one gave, at the pace it was spoken.');
+      file.addEventListener('change', () => { note.textContent = ''; refresh(); });
+      stream.addEventListener('click', () => streamFile(message.name, file.files[0], note));
+      stop.addEventListener('click', () => streaming?.stop());
+      refreshers.push(() => { stream.disabled = !isOpen() || !file.files?.length || Boolean(streaming); stop.hidden = !streaming; });
+      wrap.append(params, codeBlock(said, stop, stream), note);
+    } else {
+      // Edited where it's shown, as Send's body is.
+      const body = el('span', '', 'body-edit');
+      body.contentEditable = 'plaintext-only';
+      body.spellcheck = false;
+      body.textContent = JSON.stringify(message.start ?? {}, null, 2);
+      const button = sendButton('Send');
+      button.addEventListener('click', () => sendJson(message.name, body.textContent, note));
+      refreshers.push(() => { button.disabled = !isOpen(); });
+      wrap.append(codeBlock(body, button), note);
+    }
+    mount(place, wrap);
+  }
+
+  // Disconnect: the close frame's code and reason.
+  for (const place of holder.querySelectorAll('[data-socket-close]')) {
+    const wrap = el('div', '', 'socket-send');
+    const code = Object.assign(el('input'), { type: 'text', value: '1000', autocomplete: 'off' });
+    const reason = Object.assign(el('input'), { type: 'text', value: 'Closed from Try it', autocomplete: 'off' });
+    const params = el('div', '', 'try-params');
+    params.append(field('Code', code), field('Reason', reason));
+    const frame = el('span');
+    const shown = () => { frame.textContent = `close ${code.value.trim()}${reason.value.trim() ? ` "${reason.value.trim()}"` : ''}`; };
+    code.addEventListener('input', shown);
+    reason.addEventListener('input', shown);
+    shown();
+    const note = el('div', '', 'note');
+    const button = sendButton('Disconnect');
+    button.addEventListener('click', () => {
+      note.textContent = '';
+      try {
+        socket?.close(Number(code.value.trim()), reason.value.trim());
+      } catch (error) {
+        note.textContent = `Not closed: ${error.message}`;
+        note.className = 'note bad';
+      }
+    });
+    refreshers.push(() => { button.disabled = !socket; });
+    wrap.append(params, codeBlock(frame, button), note);
+    mount(place, wrap);
+  }
+
+  // ── The connection ───────────────────────────────────────────────────────
+  function connect(url, offered, note) {
+    if (socket) return;
+    note.textContent = '';
+    note.className = 'note';
+    for (const each of notes.values()) each.replaceChildren();
     format = null;
     try {
-      socket = new (mock().WebSocket)(url.value.trim(), offered);
+      socket = new (mock().WebSocket)(url, offered);
     } catch (error) {
-      write('shut', `Not connected: ${error.message}`);
+      note.textContent = `Not connected: ${error.message}`;
+      note.className = 'note bad';
       socket = null;
       refresh();
       return;
     }
     const mine = socket;
     socket.binaryType = 'arraybuffer';
-    write('t', `Connecting to ${url.value.trim()}${offered.length ? `, offering ${offered.join(', ')}` : ''}`);
-    socket.addEventListener('open', () => { write('t', `Connected${mine.protocol ? `, speaking ${mine.protocol}` : ''}`); refresh(); });
+    logged(() => { connection = logConnection(where, { url, protocols: offered }); });
+    const at = connection;
+    socket.addEventListener('open', refresh);
     socket.addEventListener('message', (event) => {
-      write('in', typeof event.data === 'string' ? `← ${event.data}` : `← binary, ${event.data.byteLength} bytes`);
+      if (typeof event.data !== 'string') {
+        logged(() => logMessage(where, at, { sent: false, name: 'binary', said: `binary, ${event.data.byteLength} bytes` }));
+        return;
+      }
+      let payload;
+      try { payload = JSON.parse(event.data); } catch { payload = event.data; }
+      logged(() => logMessage(where, at, { sent: false, name: payload?.type ?? 'message', payload }));
     });
     socket.addEventListener('close', (event) => {
-      write('shut', `Closed ${event.code}${event.reason ? `: ${event.reason}` : ''}`);
+      logged(() => logClose(where, at, { code: event.code, reason: event.reason }));
+      // The mock had no answer: the card of the message it didn't answer offers the stub that gives one.
+      const needed = event.code === 1011 ? stubNeeded(doc, event.reason) : null;
+      const card = needed ? notes.get(needed.on) : null;
+      if (card) {
+        card.className = 'note bad';
+        card.replaceChildren(`The mock closed the connection (1011): nothing answers ${needed.on} without a WebSocket stub.`);
+        const add = Object.assign(el('button', 'Add a WebSocket stub for it'), { type: 'button' });
+        add.addEventListener('click', () => addStub('ws', needed));
+        card.append(add);
+      }
       streaming?.stop();
       if (socket === mine) socket = null;
       refresh();
     });
     refresh();
-  });
+  }
 
-  sendButton.addEventListener('click', () => {
-    sendNote.textContent = '';
-    sendNote.className = 'note';
+  function sendJson(name, text, note) {
+    note.textContent = '';
+    note.className = 'note';
     let payload;
     try {
-      payload = JSON.parse(body.value);
+      payload = JSON.parse(text);
     } catch (error) {
-      sendNote.textContent = `Not JSON: ${error.message}`;
-      sendNote.className = 'note bad';
+      note.textContent = `Not JSON: ${error.message}`;
+      note.className = 'note bad';
       return;
     }
-    const text = JSON.stringify(payload);
-    socket.send(text);
-    write('out', `→ ${text}`);
+    socket.send(JSON.stringify(payload));
+    logged(() => logMessage(where, connection, { sent: true, name, payload }));
     format = declaredFormat(payload) ?? format;
-  });
+  }
 
-  file.addEventListener('change', () => { audioNote.textContent = ''; refresh(); });
-
-  streamButton.addEventListener('click', async () => {
-    audioNote.className = 'note';
+  async function streamFile(name, file, note) {
+    note.className = 'note';
     if (!format) {
-      audioNote.textContent = 'Send the message that declares the audio\'s format first, such as start: the audio goes in that format.';
-      audioNote.className = 'note bad';
+      note.textContent = 'Send the message that declares the audio\'s format first, such as start: the audio goes in that format.';
+      note.className = 'note bad';
       return;
     }
     if (!WRITABLE.includes(format.encoding)) {
-      audioNote.textContent = `Try it sends ${WRITABLE.join(' or ')} audio, and the format sent declares ${format.encoding}. Declare ${WRITABLE[0]} to send a recording.`;
-      audioNote.className = 'note bad';
+      note.textContent = `Try it sends ${WRITABLE.join(' or ')} audio, and the format sent declares ${format.encoding}. Declare ${WRITABLE[0]} to send a recording.`;
+      note.className = 'note bad';
       return;
     }
-    audioNote.textContent = 'Decoding…';
+    note.textContent = 'Decoding…';
     let recording;
     try {
-      recording = await decodeRecording(await file.files[0].arrayBuffer(), format);
+      recording = await decodeRecording(await file.arrayBuffer(), format);
     } catch (error) {
-      audioNote.textContent = error.message;
-      audioNote.className = 'note bad';
+      note.textContent = error.message;
+      note.className = 'note bad';
       return;
     }
     if (!isOpen()) return;
     const total = recording.seconds.toFixed(1);
-    audioNote.textContent = `${file.files[0].name}: ${total}s, as ${format.encoding} at ${format.sampleRateHertz} Hz, ${format.channelCount} channel${format.channelCount === 1 ? '' : 's'}, in frames sent as it would be spoken.`;
-    const line = write('out', `→ audio, 0.0 of ${total}s`);
+    const describe = (sent) => `${file.name}: ${sent.toFixed(1)} of ${total}s sent, as ${format.encoding} at ${format.sampleRateHertz} Hz, ${format.channelCount} channel${format.channelCount === 1 ? '' : 's'}.`;
+    note.textContent = describe(0);
     const sending = socket;
+    const at = connection;
+    let frames = 0;
+    let sentSeconds = 0;
     streaming = streamRecording(recording, format.sampleRateHertz, (frame) => {
       if (sending.readyState !== 1) return false;
       sending.send(frame);
+      frames += 1;
       return true;
-    }, (sent) => { line.lastChild.textContent = `→ audio, ${sent.toFixed(1)} of ${total}s`; });
+    }, (sent) => { sentSeconds = sent; note.textContent = describe(sent); });
     refresh();
     const how = await streaming.done;
-    if (how === 'stopped') line.lastChild.textContent += ', stopped';
+    // The stream, as one line: its frames would be dozens a second.
+    logged(() => logMessage(where, at, { sent: true, name, said: `${name}: ${sentSeconds.toFixed(1)}s of ${file.name} in ${frames} frames${how === 'stopped' ? ', stopped' : ''}` }));
+    if (how === 'stopped') note.textContent += ' Stopped.';
     streaming = null;
     refresh();
-  });
+  }
 
-  stopButton.addEventListener('click', () => streaming?.stop());
   refresh();
 }

@@ -576,10 +576,14 @@ function channelsIn(docs) {
       const named = (ref) => (typeof ref?.$ref === 'string' ? ref.$ref.split('/').pop() : null);
       const receives = new Set();
       const sends = new Set();
+      const replies = new Map();
       for (const operation of Object.values(content.operations ?? {})) {
         if (operation?.channel?.$ref !== `#/channels/${key}`) continue;
         for (const message of operation.messages ?? []) (operation.action === 'receive' ? receives : sends).add(named(message));
         for (const message of operation.reply?.messages ?? []) sends.add(named(message));
+        if (operation.action === 'receive' && operation.reply) {
+          for (const message of operation.messages ?? []) replies.set(named(message), (operation.reply.messages ?? []).map(named).filter(Boolean));
+        }
       }
       const payloadOf = (name) => local(channel.messages?.[name], content)?.payload;
       channels.push({
@@ -587,6 +591,7 @@ function channelsIn(docs) {
         label: `${content.info?.title ?? file} › ${key}`,
         receives: [...receives].filter(Boolean),
         sends: [...sends].filter(Boolean),
+        repliesTo: (name) => replies.get(name) ?? [],
         summaryOf: (name) => local(channel.messages?.[name], content)?.summary ?? '',
         fieldsOf: (name) => Object.keys(local(payloadOf(name), content)?.properties ?? {}).filter((field) => field !== 'type'),
         exampleOf: (name) => skeleton(payloadOf(name), content),
@@ -601,16 +606,25 @@ const CLOSES = [['', 'Leave it open'], ['1006', 'Drop it (1006)'], ['1008', 'Ref
 /**
  * The form for one WebSocket stub.
  *
- * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, save: (stub: object) => Promise<string|null>, cancel: () => void }} options
+ * Started on a message the Try it panel names (`preset`), it sends back the
+ * first reply the contract gives that message, such as `started` for `start`.
+ *
+ * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, preset?: { channel: string, on: string },
+ *   save: (stub: object) => Promise<string|null>, cancel: () => void }} options
  * @returns {HTMLElement}
  */
-export function wsStubForm({ choices, stub = null, save, cancel }) {
+export function wsStubForm({ choices, stub = null, preset = null, save, cancel }) {
   const { channels } = choices;
+  const presetChannel = !stub && preset ? channels.find((channel) => channel.value === preset.channel) : null;
+  const presetOn = presetChannel?.receives.includes(preset.on) ? preset.on : '';
+  const presetReply = presetOn ? presetChannel.repliesTo(presetOn)[0] : null;
   const state = {
-    channel: stub?.channel ?? '',
-    on: stub?.on ?? '',
+    channel: stub?.channel ?? presetChannel?.value ?? '',
+    on: stub?.on ?? presetOn,
     match: Object.entries(stub?.match ?? {}).map(([path, value]) => [path, typeof value === 'string' ? value : JSON.stringify(value)]),
-    send: (stub?.send ?? []).map((message, i) => ({ name: message?.type ?? '', body: pretty(message), at: stub?.atMs?.[i] ?? '' })),
+    send: stub
+      ? (stub.send ?? []).map((message, i) => ({ name: message?.type ?? '', body: pretty(message), at: stub.atMs?.[i] ?? '' }))
+      : presetReply ? [{ name: presetReply, body: pretty(presetChannel.exampleOf(presetReply)), at: '' }] : [],
     close: stub?.close ? String(stub.close.code) : '',
   };
   const chosen = () => channels.find((channel) => channel.value === state.channel);

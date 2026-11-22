@@ -22,10 +22,11 @@ import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { loadResults, saveResults } from './records.js';
 import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
+import { tryView } from './try-view.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { mountSocketPanel, SOCKET_STYLE } from './socket-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
-import { routingInUse, entryFor, destinationOf } from './routing.js';
+import { routingInUse, entryFor, destinationOf, implementationOf } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -439,8 +440,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const routing = routingInUse(records, docs);
     for (const { tag, op } of realTags) {
       const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
-      tag.hidden = !entry;
-      if (entry) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
+      // An implementation in the page isn't a real service.
+      tag.hidden = !entry || Boolean(implementationOf(entry));
+      if (!tag.hidden) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
     }
   };
   const start = async ({ seed, restore }) => {
@@ -523,16 +525,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     };
     if (!op || !body) continue;
     // With Try it on, the Try it view, its docs folded under the description.
-    holder.classList.add('trying');
-    const fold = Object.assign(el('button', '▸ Docs', 'try-docs'), { type: 'button' });
-    fold.setAttribute('aria-expanded', 'false');
-    fold.onclick = () => {
-      const open = holder.classList.toggle('docs-open');
-      fold.textContent = open ? '▾ Docs' : '▸ Docs';
-      fold.setAttribute('aria-expanded', String(open));
-    };
-    const description = holder.querySelector('.op-docs > .op-desc');
-    if (description) description.after(fold); else holder.querySelector('.op-docs')?.prepend(fold);
+    tryView(holder);
 
 
     // The parameters whose values the client exports as a constant.
@@ -852,6 +845,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
       mock: () => mock,
       // A connection goes where the whole API is routed: no operation narrows it.
       realTag: (tag, doc) => realTags.push({ tag, op: { operation: { operationId: null }, doc } }),
+      where: records,
     });
   }
   refreshAll();
