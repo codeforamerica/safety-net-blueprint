@@ -22,9 +22,9 @@ info:
     the adapter echoes metadata back unchanged.
 servers:
   - url: https://adapter.example.com
-    description: State-configured adapter server
-  - url: http://localhost:9090
-    description: Local stub server
+    description: Production server
+  - url: http://localhost:1080
+    description: Local development server
 tags:
   - name: Connections
     description: Issuing what transcription software connects with.
@@ -45,6 +45,8 @@ paths:
         Asked again, it issues a fresh credential: that is how software
         renews one, and how it reconnects.
       operationId: issueTranscriptConnection
+      x-relationship:
+        type: external
       tags:
         - Connections
       requestBody:
@@ -95,6 +97,8 @@ paths:
         signs no tokens, because no service it issues for sits behind a
         relay, answers 404.
       operationId: getTranscriptConnectionKeys
+      x-relationship:
+        type: external
       tags:
         - Keys
       responses:

@@ -418,7 +418,7 @@
         
       </div>
       <div class="fdesc">CloudEvents specification version.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">1.0</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
@@ -463,7 +463,7 @@
         
       </div>
       <div class="fdesc">Media type of the event payload.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">application/json</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.traceparent" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">traceparent</a>
@@ -674,7 +674,7 @@
         
       </div>
       <div class="fdesc">CloudEvents specification version.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">1.0</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
@@ -719,7 +719,7 @@
         
       </div>
       <div class="fdesc">Media type of the event payload.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">application/json</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.traceparent" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">traceparent</a>
@@ -843,7 +843,7 @@
         
       </div>
       <div class="fdesc">CloudEvents specification version.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">1.0</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
@@ -888,7 +888,7 @@
         
       </div>
       <div class="fdesc">Media type of the event payload.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">application/json</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.traceparent" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">traceparent</a>
@@ -1169,7 +1169,7 @@
         
       </div>
       <div class="fdesc">CloudEvents specification version.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">1.0</code></div>
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
@@ -1214,7 +1214,7 @@
         
       </div>
       <div class="fdesc">Media type of the event payload.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">application/json</code></div>
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">traceparent</span>
@@ -1435,7 +1435,7 @@
         
       </div>
       <div class="fdesc">CloudEvents specification version.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">1.0</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
@@ -1480,7 +1480,7 @@
         
       </div>
       <div class="fdesc">Media type of the event payload.</div>
-      
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">application/json</code></div>
     </div><div class="field">
       <div class="field-head">
         <a href="../data-dictionaries/platform.html#field-event.traceparent" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">traceparent</a>
@@ -1828,7 +1828,7 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const scope = new URL('../mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
         || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }

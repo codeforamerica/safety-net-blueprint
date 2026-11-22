@@ -143,3 +143,11 @@ InterviewExample1:
   scheduledFor: "2026-10-14"
   createdAt: "2026-10-01T09:00:00Z"
   updatedAt: "2026-10-01T09:00:00Z"
+InterviewExample2:
+  id: 7a1e0c2d-0000-4000-8000-0000000000a1
+  applicationId: 66666666-6666-4666-8666-666666666666
+  status: in_progress
+  scheduledFor: "2026-10-11"
+  startedAt: "2026-10-11T14:00:00Z"
+  createdAt: "2026-10-01T09:00:00Z"
+  updatedAt: "2026-10-11T14:00:00Z"

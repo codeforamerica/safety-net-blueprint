@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Safety Net Blueprint — Explorer</title>
+  <title>Safety Net Blueprint Explorer</title>
   <style>
     :root {
       --dark-blue:    #2B1A78;
@@ -51,7 +51,7 @@
       gap: 0.75rem;
     }
 
-    .wordmark svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .wordmark svg, .wordmark img { width: auto; height: 22px; flex-shrink: 0; }
 
     header h1 {
       font-size: 14px;
@@ -355,7 +355,7 @@
           <div class="card-header-row">
             <h4><a href="data-dictionaries/index.html" class="card-link">Data Dictionary</a></h4>
           </div>
-          <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>
+          <p>Field-level reference for the data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>
           <div class="card-outputs">
             <a href="data-dictionaries/case-management.html" class="output-tag">
               <span class="dot dot-green"></span>Case Management
@@ -391,7 +391,7 @@
           <div class="card-header-row">
             <h4><a href="state-machine-docs/index.html" class="card-link">State Machine Docs</a></h4>
           </div>
-          <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>
+          <p>Generated reference for the state machines defined in the contracts — states, transitions, actions, and event subscriptions.</p>
           <div class="card-outputs">
             <a href="state-machine-docs/eligibility.html" class="output-tag">
               <span class="dot dot-blue"></span>Eligibility
@@ -510,7 +510,7 @@
           <div class="card-header-row">
             <h4><a href="context-map/domains.html" class="card-link">Context Map</a></h4>
           </div>
-          <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>
+          <p>Visual map of the bounded contexts, systems, and integration relationships across the domains.</p>
           <div class="card-outputs">
             <a href="context-map/domain_case_management.html" class="output-tag">
               <span class="dot dot-blue"></span>Case Management
@@ -538,7 +538,7 @@
   <footer>
     <a href="https://github.com/codeforamerica/safety-net-blueprint">Safety Net Blueprint</a>
     &nbsp;·&nbsp;
-    Code for America
+    <a href="https://codeforamerica.org">Code for America</a>
   </footer>
 
 <!-- the mock: control panel -->
@@ -550,7 +550,7 @@
   const scope = new URL('mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-routing:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
         || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
