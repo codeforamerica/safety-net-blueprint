@@ -5,7 +5,7 @@ info:
   x-domain: communication
   x-capability: transcripts
   description: |
-    A staff member transcribes a conversation as it's spoken. The client in their browser sends the audio straight to a transcription service and tells the session what happens; the session keeps the transcript on the server; the state's transcript audio adapter gives the credential the client connects with.
+    A staff member transcribes a conversation as it's spoken. The client in their browser sends the audio straight to a transcription service and tells the session what happens; the session keeps the transcript on the server; the state's session adapter gives the credential the client connects with.
 
     The main path starts, transcribes one line and stops. The other situations each start their own session.
   # Who acts in the scenario. A step lists them in x-actors in the order they
@@ -29,7 +29,7 @@ info:
       description: Turns the audio into text. In this demo, a fake the mock stands in for with stubs.
     - id: adapter
       name: Adapter
-      description: The state's transcript audio adapter, which holds the service's secret and gives the client a short-lived credential. In this demo, the mock stands in for it with stubs.
+      description: The state's session adapter, on the server, which holds the service's secret and gives the client a short-lived credential. In this demo, the mock stands in for it with stubs.
     - id: supervisor
       name: Supervisor
       description: Someone else with access to the transcript.
@@ -104,12 +104,12 @@ workflows:
         description: |
           Gives a credential for the service
 
-          - The adapter holds the service's secret and gives the client a credential that lasts minutes. The mock can't do that itself: without a stub it answers `POST /issue-connection` with `501`.
-          - This stub answers the next `POST /issue-connection` as the adapter would: where to connect, and a token good for five minutes.
+          - The adapter holds the service's secret and gives the client a credential that lasts minutes. The mock can't do that itself: without a stub it answers `POST /credentials` with `501`.
+          - This stub answers the next `POST /credentials` as the adapter would: where to connect, and a token good for five minutes.
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body:
@@ -130,7 +130,7 @@ workflows:
 
           - The session has no transcript yet, so it starts one, under the profile it was created with, then asks the transcript how to connect. The transcript asks the adapter, and the stub above answers.
           - The answer says where to connect, which messages the connection uses (`subprotocol`), and the credential. The audio goes straight to the service; it never passes through the server.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -529,7 +529,7 @@ workflows:
 
           - Asking how to connect starts the transcript, and the transcript rejects it: under a profile that uses a transcription service, a transcript has to say which model turns speech into text.
           - The transcript's `409` comes back as the session's answer, and the session stays in `created`.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -677,7 +677,7 @@ workflows:
           Try to ask how to connect: rejected (409)
 
           - Off the record, the session gives no credential and doesn't ask the adapter for one.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -784,7 +784,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token-2, tokenType: Bearer, expiresIn: 300}
@@ -797,7 +797,7 @@ workflows:
           Get a new credential, keeping the connection
 
           - The session stays `connected`. The connection isn't closed, and no event is sent.
-        operationId: $sourceDescriptions.sessions.renewConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.renewCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -1087,7 +1087,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
@@ -1100,7 +1100,7 @@ workflows:
           Ask how to connect
 
           - The session already has its transcript, so it only gets a new credential.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -1222,7 +1222,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
@@ -1235,7 +1235,7 @@ workflows:
           Ask how to connect
 
           - The session already names a transcript, so no new one is started.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -1415,7 +1415,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
@@ -1428,7 +1428,7 @@ workflows:
           Ask how to connect
 
           - The session already has its transcript, so it only gets a new credential.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId

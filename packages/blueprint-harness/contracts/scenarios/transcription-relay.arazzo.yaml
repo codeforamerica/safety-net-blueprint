@@ -5,7 +5,7 @@ info:
   x-domain: communication
   x-capability: transcripts
   description: |
-    A staff member transcribes a conversation as it's spoken, using a service the browser can't reach, such as Google Cloud Speech-to-Text. The client in their browser sends the audio to the state's relay instead, which passes it on to the service; the session keeps the transcript on the server; the state's transcript audio adapter gives the client a token for the relay.
+    A staff member transcribes a conversation as it's spoken, using a service the browser can't reach, such as Google Cloud Speech-to-Text. The client in their browser sends the audio to the state's relay instead, which passes it on to the service; the session keeps the transcript on the server; the state's session adapter gives the client a token for the relay.
 
     The main path starts, transcribes one line and stops. The other situations are the ones where the relay does something of its own. The rest run the same as without a relay, with the relay where the service is.
   # Who acts in the scenario. A step lists them in x-actors in the order they
@@ -29,7 +29,7 @@ info:
       description: The state's server in front of a service the browser can't reach. It speaks the blueprint's relay contract to the client and the service's own API to the service. In this demo, the mock stands in for it with stubs.
     - id: adapter
       name: Adapter
-      description: The state's transcript audio adapter, which signs a short-lived token for the relay. In this demo, the mock stands in for it with stubs.
+      description: The state's session adapter, on the server, which signs a short-lived token for the relay. In this demo, the mock stands in for it with stubs.
 sourceDescriptions:
   # Relative to the resolved contract set, where the framework's documents sit
   # under base/.
@@ -99,7 +99,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body:
@@ -119,7 +119,7 @@ workflows:
           Ask how to connect
 
           - The same request as without a relay, with the same shape of answer. `subprotocol` tells the client the connection uses the relay contract.
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -467,7 +467,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: google-cloud-speech, protocol: websocket, url: 'wss://relay.example/transcribe', subprotocol: blueprint.transcripts.relay.v1, accessToken: a-new-token, tokenType: Bearer, expiresIn: 60}
@@ -477,7 +477,7 @@ workflows:
       - stepId: getConnection
         x-actors: [client, session]
         description: Ask how to connect
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId
@@ -662,7 +662,7 @@ workflows:
         operationId: $sourceDescriptions.mock.registerHttpStub
         requestBody:
           payload:
-            match: {method: POST, url: /issue-connection}
+            match: {method: POST, url: /credentials}
             response:
               status: 200
               body: {provider: google-cloud-speech, protocol: websocket, url: 'wss://relay.example/transcribe', subprotocol: blueprint.transcripts.relay.v1, accessToken: a-new-token, tokenType: Bearer, expiresIn: 60}
@@ -672,7 +672,7 @@ workflows:
       - stepId: getConnection
         x-actors: [client, session]
         description: Ask how to connect
-        operationId: $sourceDescriptions.sessions.getConnectionTranscriptionSession
+        operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
           - name: transcriptionSessionId

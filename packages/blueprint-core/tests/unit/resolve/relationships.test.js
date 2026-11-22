@@ -134,7 +134,7 @@ describe('resolveRelationshipAnnotations', () => {
   test('an example shown for an expanded schema gets the documented related record', () => {
     const { examples } = content(resolveRelationshipAnnotations([withExamples()], 'expand')).components;
 
-    assert.deepEqual(examples.ApplicationExample1.value, { id: 'a1', member });
+    assert.deepEqual(examples.ApplicationExample1.value, { id: 'a1', memberId: MEMBER_ID, member });
   });
 
   test('a request example for a schema that keeps the key is left alone', () => {

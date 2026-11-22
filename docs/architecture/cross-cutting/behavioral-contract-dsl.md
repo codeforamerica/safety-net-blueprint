@@ -56,20 +56,20 @@ platform-state-machine.yaml          domain-state-machine.yaml
 
 **Actions** — actor- or system-triggered state changes. Each action is an operation a caller can explicitly request — it becomes a `POST /{domain}/{resource}/{id}/{actionId}` endpoint. An action declares a human-readable `description:` for the generated endpoint, an optional `schema:` with a `request:` schema for the POST body, who can call it (`guards:`), what state the entity must currently be in (`from:`), what state it moves to (`to:`), and what steps run. Actions without a `to:` are in-place operations that don't change the entity's state. Request body fields are available in steps as `$request.fieldName`.
 
-An action answers with the record as its steps leave it. One that answers with something else says what, in `response:`: the `schema` the endpoint's 200 response declares, and the `payload` that fills it — value expressions, as a call's `requestBody.payload` takes, read after the steps run. A transcript's `get-connection` answers with what its call to the server adapter bound, leaving out the adapter's `metadata`:
+An action answers with the record as its steps leave it. One that answers with something else says what, in `response:`: the `schema` the endpoint's 200 response declares, and the `payload` that fills it — value expressions, as a call's `requestBody.payload` takes, read after the steps run. A transcription session's `request-credentials` answers with what its call to its adapter bound, leaving out the adapter's `metadata`:
 
 ```yaml
-- id: get-connection
-  transition: { from: recording }
+- id: request-credentials
+  transition: { from: created, to: connecting }
   steps:
-    - call: { operationId: issueTranscriptConnection, requestBody: { payload: { audio: $request.audio } } }
-      bind: $connection
+    - call: { operationId: requestCredentials, requestBody: { payload: { audio: $request.audio } } }
+      bind: $credentials
   response:
     schema: { $ref: "#/$defs/StreamConnection" }
     payload:
-      url: $connection.url
-      accessToken: $connection.accessToken
-      expiresIn: $connection.expiresIn
+      url: $credentials.url
+      accessToken: $credentials.accessToken
+      expiresIn: $credentials.expiresIn
 ```
 
 The two go together, so a schema can't promise what nothing gives: `schema.response`, which declared a response no action produced, is deprecated, and validation warns where it remains.

@@ -1042,7 +1042,7 @@ test('Pattern Validator Tests', async (t) => {
   await t.test('validateOperationRelationships - external takes only its type', () => {
     const check = (relationship) => {
       const errors = [];
-      validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': relationship, responses: {} } } } }, errors);
+      validateOperationRelationships({ paths: { '/credentials': { post: { 'x-relationship': relationship, responses: {} } } } }, errors);
       return errors;
     };
     assert.strictEqual(check({ type: 'external' }).length, 0);
@@ -1052,7 +1052,7 @@ test('Pattern Validator Tests', async (t) => {
 
   await t.test('validateOperationRelationships - error for a type no operation takes', () => {
     const errors = [];
-    validateOperationRelationships({ paths: { '/issue-connection': { post: { 'x-relationship': { type: 'extrenal' }, responses: {} } } } }, errors);
+    validateOperationRelationships({ paths: { '/credentials': { post: { 'x-relationship': { type: 'extrenal' }, responses: {} } } } }, errors);
     assert.ok(errors.some((e) => e.rule === 'operation-x-relationship-unknown-type' && /"extrenal"/.test(e.message)));
   });
 

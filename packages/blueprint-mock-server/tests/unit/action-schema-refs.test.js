@@ -2,7 +2,7 @@
  * Schemas whose refs lead into other files are checked, not skipped: an
  * action's request schema, declared in a state machine, and what a routed
  * handler answers. Run against the harness's transcription session, whose
- * get-connection request is a ref to a ref into the transcripts schema file,
+ * request-credentials request is a ref to a ref into the transcripts schema file,
  * and whose add-line request refers to the transcripts API's Speaker.
  */
 
@@ -28,7 +28,7 @@ beforeEach(async () => {
   mock = await createMockServer({
     contracts,
     routing: [{
-      operation: 'issueTranscriptConnection',
+      operation: 'requestCredentials',
       // Echoes metadata, as every adapter does.
       handler: async (request) => Response.json({ metadata: (await request.json()).metadata, ...answer() }),
     }],
@@ -56,8 +56,8 @@ const act = (s, action, body) => send('POST', `/communication/transcription-sess
 
 test('an action\'s request is checked against a schema in another file', async () => {
   const s = await session();
-  const refused = await act(s, 'get-connection', { audio: { ...AUDIO, encoding: 'wav' }, protocols: ['websocket'] });
-  const accepted = await act(s, 'get-connection', { audio: AUDIO, protocols: ['websocket'] });
+  const refused = await act(s, 'request-credentials', { audio: { ...AUDIO, encoding: 'wav' }, protocols: ['websocket'] });
+  const accepted = await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
   assert.strictEqual(refused.status, 422);
   assert.strictEqual(accepted.status, 200);
   assert.deepStrictEqual(warnings.filter((w) => w.includes('no validator')), []);
@@ -65,7 +65,7 @@ test('an action\'s request is checked against a schema in another file', async (
 
 test('an inline action schema\'s ref into another file is checked', async () => {
   const s = await session();
-  await act(s, 'get-connection', { audio: AUDIO, protocols: ['websocket'] });
+  await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
   await act(s, 'connect', {});
   const line = { key: 'l1', startedAt: '2026-10-12T10:00:01Z', endedAt: '2026-10-12T10:00:02Z', text: 'Hello.' };
   const refused = await act(s, 'add-line', { ...line, speaker: 'narrator' });
@@ -78,7 +78,7 @@ test('an inline action schema\'s ref into another file is checked', async () => 
 test('a routed handler\'s answer is checked against a response schema with refs into other files', async () => {
   answer = () => ({ provider: 'aws-transcribe', protocol: 'carrier-pigeon', url: 'wss://transcribe.example/stream', expiresIn: 300 });
   const s = await session();
-  const { status } = await act(s, 'get-connection', { audio: AUDIO, protocols: ['websocket'] });
+  const { status } = await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
   assert.notStrictEqual(status, 200);
   assert.deepStrictEqual(warnings.filter((w) => w.includes('no validator')), []);
 });

@@ -132,7 +132,7 @@ naming:
     rules:
       - >-
         Name an action for what happens, as an imperative verb, in kebab-case
-        (action_ids): pause, get-connection, add-line.
+        (action_ids): pause, request-credentials, add-line.
       - >-
         An action that changes the state leads to the state of the same word,
         and sends the event named for the state it enters: pause leads to
@@ -150,7 +150,7 @@ naming:
         A resource's created event is generated and always named created, so
         name a machine's initial state created when nothing else fits better.
     example: >-
-      The transcription session: get-connection → connecting, connect →
+      The transcription session: request-credentials → connecting, connect →
       connected, pause → paused, stop → stopping, close → closed; update-line
       sends line_updated.
 

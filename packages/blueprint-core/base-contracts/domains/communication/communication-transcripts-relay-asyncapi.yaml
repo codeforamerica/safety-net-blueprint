@@ -19,7 +19,7 @@ info:
   description: |
     One WebSocket connection per stream, speaking the subprotocol
     `blueprint.transcripts.relay.v1`. The software gets the relay's URL and a
-    token from the transcript's get-connection action, and opens the connection
+    token from the session's request-credentials action, and opens the connection
     asking for the subprotocol and presenting the token beside it, in the
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
     6750). The relay answers with the subprotocol's name only, never the token.
@@ -41,10 +41,10 @@ servers:
   relay:
     host: "{relayHost}"
     protocol: wss
-    description: The relay a state runs. Its URL comes from the transcript's get-connection action.
+    description: The relay a state runs. Its URL comes from the session's request-credentials action.
     variables:
       relayHost:
-        description: The relay's host, as get-connection answers with it.
+        description: The relay's host, as request-credentials answers with it.
     security:
       - $ref: "#/components/securitySchemes/relayToken"
   local:
@@ -58,7 +58,7 @@ channels:
   audio:
     address: null
     description: >
-      The connection, at the URL get-connection answers with. Everything for one stream
+      The connection, at the URL request-credentials answers with. Everything for one stream
       travels on it, both ways.
     messages:
       start: {$ref: "#/components/messages/start"}
@@ -120,10 +120,10 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >
-        A short-lived JWT (RFC 7519, following RFC 8725) the transcript audio
-        adapter signs, naming the relay as its audience and expiring within a
+        A short-lived JWT (RFC 7519, following RFC 8725) the session adapter's
+        server signs, naming the relay as its audience and expiring within a
         minute. The relay checks the signature, audience and expiry against the
-        public keys the adapter publishes (its getTranscriptConnectionKeys,
+        public keys the adapter publishes (its getCredentialKeys,
         `GET /.well-known/jwks.json`), so it can check tokens but never make
         them. A browser can't set the Authorization header on a WebSocket, so
         the software presents it in `Sec-WebSocket-Protocol`, after the
@@ -144,10 +144,10 @@ components:
             minItems: 1
             items:
               $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
-            description: The languages the conversation may be in, as get-connection's connectionParameters gave them. Absent, the service detects the language, if it can.
+            description: The languages the conversation may be in, as request-credentials' connectionParameters gave them. Absent, the service detects the language, if it can.
           model:
             type: string
-            description: The service's model, as get-connection's connectionParameters gave it.
+            description: The service's model, as request-credentials' connectionParameters gave it.
           interimResults:
             type: boolean
             default: true

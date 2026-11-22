@@ -26,7 +26,7 @@ before(async () => {
     server = await createMockServer({
       contracts,
       routing: [{
-        operation: 'issueTranscriptConnection',
+        operation: 'requestCredentials',
         handler: async (request) => Response.json({ metadata: (await request.json()).metadata, provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://transcribe.example', expiresIn: 300 }),
       }],
     });
@@ -57,7 +57,7 @@ test('a reaction arriving during an action on its record waits for it, and finds
   const profile = (await send(server, 'POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] })).body;
   const session = (await send(client, 'POST', '/communication/transcription-sessions', { profileId: profile.id, model: 'standard', client: 'test/1', startedAt: at })).body;
   const path = `/communication/transcription-sessions/${session.id}`;
-  assert.strictEqual((await send(client, 'POST', `${path}/get-connection`, { audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'] })).status, 200);
+  assert.strictEqual((await send(client, 'POST', `${path}/request-credentials`, { audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'] })).status, 200);
   assert.strictEqual((await send(client, 'POST', `${path}/connect`, {})).status, 200);
   assert.strictEqual((await send(client, 'POST', `${path}/stop`, { at })).status, 200);
 

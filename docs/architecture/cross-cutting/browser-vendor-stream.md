@@ -104,5 +104,5 @@ every vendor; keeping a quiet connection open is done differently by each.
 ## Where it's used
 
 - **Transcription**, in the communication domain: the transcription session,
-  the transcript, the transcript audio adapter and the relay contract. Its decisions
+  the transcription session, the transcript, the transcription session adapter and the relay contract. Its decisions
   are [Decisions 3 and 11 to 17](../domains/communication-transcripts.md#key-design-decisions).

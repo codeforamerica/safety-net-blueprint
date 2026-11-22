@@ -136,7 +136,7 @@ paths:
               adapter:
                 summary: Answer the transcription adapter's connection request
                 value:
-                  match: {method: POST, url: /issue-connection}
+                  match: {method: POST, url: /credentials}
                   response:
                     status: 200
                     body:

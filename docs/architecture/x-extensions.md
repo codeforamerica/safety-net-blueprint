@@ -261,9 +261,9 @@ Declares a relationship between a spec element and another contract artifact. Us
 - **Operations answered outside the contracts** (`type: external`): something outside the contract set answers the operation, such as a state's adapter. Servers built from the contracts don't answer it themselves: the mock answers it only with an HTTP stub, or sends it where routing says, and otherwise with 501. `blueprint-resolve --domain` or `--capability` writes it on every operation of an API kept only because a chosen API calls it, so its contract is there and its behavior isn't. It takes `type` and nothing else: the operation's API declares its domain in `info.x-domain`, and there is no artifact to name.
 
 ```yaml
-/issue-connection:
+/credentials:
   post:
-    operationId: issueTranscriptConnection
+    operationId: requestCredentials
     x-relationship:
       type: external
 ```
@@ -348,11 +348,11 @@ get:
 | `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`, `external`. |
 | `resource` | FK and `state-machine-action` | For FK: related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`), required when `type` is `fk` or absent. For `state-machine-action`: the resource whose machine declares the action, since two machines in a domain can each have an action of the same name. |
 | `domain` | FK: optional; generated operations: required; `external`: not allowed | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
-| `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource, named without the `Id` suffix, in place of the FK field — which stays as well where it is a writable field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource, named without the `Id` suffix, beside the FK field, which stays; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
 | `fields` | FK only | Subset of fields to include when `style: expand`. Supports dot notation. Must be non-empty when specified. |
 | `id` | Generated operations only | Identifier of the artifact within its domain contract. For `state-machine-action`: the action `id`. For `ruleset`: the ruleset name. For `composition`: the composition name. |
 
-`links-only` style adds a `links` navigation object alongside the FK field without expanding it. `expand` style renames the FK field and replaces it with the related resource's schema. Omitting `style` leaves the field untouched — `x-relationship` is purely a metadata annotation in that case, used by tooling (field inventory, diagram generation) but not by the resolver.
+`links-only` style adds a `links` navigation object alongside the FK field without expanding it. `expand` style adds the related resource's schema beside the FK field, named without its `Id` suffix, so whatever reads the record, a state machine step among them, finds the id under the same name whatever the style. Omitting `style` leaves the field untouched — `x-relationship` is purely a metadata annotation in that case, used by tooling (field inventory, diagram generation) but not by the resolver.
 
 ---
 

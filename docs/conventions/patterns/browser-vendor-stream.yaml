@@ -91,7 +91,7 @@ rules:
 
 example: >
   Transcription, in the communication domain: the transcription session, the
-  transcript, the transcript audio adapter and the relay contract
+  transcript, the transcription session adapter and the relay contract
   (docs/architecture/domains/communication-transcripts.md, "How the parts work
   together" and Decisions 3, 11 to 17).
 

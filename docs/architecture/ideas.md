@@ -54,7 +54,7 @@ Not recommended: `@mswjs/data`. It overlaps the store seam and would mean taking
       - description: Production server
         url: https://api.state.gov/{domain}        # or https://{domain}.api.state.gov
       - description: Production server
-        apis: [communication-transcripts-audio-adapter]
+        apis: [communication-transcription-sessions-adapter]
         url: https://adapter.vendor.com            # an API that runs somewhere else
   ```
 

@@ -600,12 +600,11 @@ components:
             proofOfIncomeDocumentId:
               type: string
               format: uuid
-              readOnly: true
               description: The uploaded document evidencing household income, if one is attached.
               # Expanded across domains, and only on the way out: somebody
               # reading an application wants to see what was filed with it,
-              # not a link to go and fetch. Resolve renames the field to
-              # `proofOfIncomeDocument` and puts the record where the id was.
+              # not a link to go and fetch. Resolve adds the record as
+              # `proofOfIncomeDocument`, beside the id.
               x-relationship:
                 type: fk
                 domain: document-management

@@ -1,5 +1,5 @@
 /**
- * A transcript's get-connection answers with what its transcript audio adapter issued,
+ * A session's request-credentials answers with what its session adapter issued,
  * fitted to StreamConnection — run against the harness's contracts, with an
  * HTTP stub standing in for the adapter.
  *
@@ -32,39 +32,39 @@ const send = async (method, path, body) => {
   return { status: response.status, body: text ? JSON.parse(text) : null };
 };
 
-const recording = async () => {
+const created = async () => {
   const { body: profile } = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
-  const { body: transcript } = await send('POST', '/communication/transcripts', {
+  const { body: session } = await send('POST', '/communication/transcription-sessions', {
     profileId: profile.id, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z',
   });
-  return transcript;
+  return session;
 };
-const adapterAnswers = (body) => send('POST', '/mock/stubs/http', { match: { method: 'POST', url: '/issue-connection' }, response: { status: 200, body } });
-const getConnection = (transcript) => send('POST', `/communication/transcripts/${transcript.id}/get-connection`, {
+const adapterAnswers = (body) => send('POST', '/mock/stubs/http', { match: { method: 'POST', url: '/credentials' }, response: { status: 200, body } });
+const requestCredentials = (session) => send('POST', `/communication/transcription-sessions/${session.id}/request-credentials`, {
   audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'],
 });
 
 const PRESIGNED = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://transcribe.example/stream?X-Amz-Expires=300', expiresIn: 300 };
 
-test('get-connection leaves out what the adapter didn\'t send, and its metadata', async () => {
-  const transcript = await recording();
-  await adapterAnswers({ ...PRESIGNED, metadata: { transcriptId: transcript.id } });
-  const { status, body } = await getConnection(transcript);
+test('request-credentials leaves out what the adapter didn\'t send, and its metadata', async () => {
+  const session = await created();
+  await adapterAnswers({ ...PRESIGNED, metadata: { transcriptionSessionId: session.id } });
+  const { status, body } = await requestCredentials(session);
   assert.strictEqual(status, 200);
   assert.deepStrictEqual(body, PRESIGNED);
 });
 
-test('get-connection leaves out a null the adapter sent where StreamConnection takes none', async () => {
-  const transcript = await recording();
+test('request-credentials leaves out a null the adapter sent where StreamConnection takes none', async () => {
+  const session = await created();
   await adapterAnswers({ ...PRESIGNED, subprotocol: null, accessToken: null });
-  const { body } = await getConnection(transcript);
+  const { body } = await requestCredentials(session);
   assert.deepStrictEqual(body, PRESIGNED);
 });
 
-test('get-connection passes on a token the adapter issued', async () => {
-  const transcript = await recording();
+test('request-credentials passes on a token the adapter issued', async () => {
+  const session = await created();
   const token = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://relay.example', subprotocol: 'blueprint.audio.v1', accessToken: 'jwt', tokenType: 'Bearer', expiresIn: 60 };
   await adapterAnswers(token);
-  const { body } = await getConnection(transcript);
+  const { body } = await requestCredentials(session);
   assert.deepStrictEqual(body, token);
 });
