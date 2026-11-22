@@ -10,6 +10,10 @@
 # W3C Web Speech API and Google name them. See
 # docs/architecture/domains/communication-transcripts.md, Decisions 12 and 13.
 asyncapi: 3.0.0
+# Answered outside the contracts: a relay is a state's server, one way a
+# transcription session adapter reaches a service.
+x-relationship:
+  type: external
 info:
   title: Transcription relay
   version: 0.1.0

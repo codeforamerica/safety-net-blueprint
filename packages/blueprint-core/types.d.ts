@@ -113,10 +113,10 @@ export interface Doc {
    */
   protocols: string[];
   /**
-   * Whether the document is an adapter's: an OpenAPI document whose root has
-   * `x-relationship: { type: external }`, so something outside the contract
-   * set, such as a state's service, answers every operation. False for every
-   * other document. A single operation can be external too, in an API that
+   * Whether the document is an adapter's: an OpenAPI or AsyncAPI document
+   * whose root has `x-relationship: { type: external }`, so something outside
+   * the contract set, such as a state's service or the relay an adapter
+   * streams to, answers every operation. False for every other document. A single operation can be external too, in an API that
    * isn't: its own `x-relationship` says so.
    */
   adapter: boolean;

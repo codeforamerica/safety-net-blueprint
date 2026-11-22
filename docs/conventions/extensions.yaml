@@ -216,9 +216,10 @@ x_extensions:
       ruleset, or composition) to record which contract artifact produced the endpoint;
       and on an operation something outside the contracts answers (type: external),
       such as a state's adapter's, which servers built from the contracts answer only
-      with a stub or by routing it. At a document's root, type: external makes the
-      whole API an adapter: every operation is external, and core's doc.adapter is
-      true.
+      with a stub or by routing it. At an OpenAPI or AsyncAPI document's root, type:
+      external makes the whole API answered outside the contracts: an adapter, or
+      the relay an adapter streams to. Every operation is external, and core's
+      doc.adapter is true.
       The type field controls which other fields are required and how tooling interprets
       the annotation. Omitting type is equivalent to type: fk for backward compatibility.
       Every writable field named …Id that holds a uuid must declare it; validation
@@ -228,7 +229,7 @@ x_extensions:
     location: >
       Schema property level (FK fields); operation level (generated endpoints injected
       by the resolve pipeline, or one external operation); or the document root, with
-      type external only, for an adapter.
+      type external only, for an adapter or a relay.
     type: object
     fields:
       type: >

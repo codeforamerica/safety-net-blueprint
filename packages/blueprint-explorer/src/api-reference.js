@@ -1019,10 +1019,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  // An adapter's page is built, for whoever implements it, but listed in Try
-  // it rather than beside the public APIs: the home page skips it by this.
-  const marked = doc?.adapter ? page.replace('</head>', () => '<meta name="blueprint-adapter" content="true"/>\n</head>') : page;
-  const withNav = marked.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  const withNav = markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
   if (!tryFile) return withNav;
   // The mock loads after the page has rendered, so reading never waits on it.
   return withNav.replace('</body>', () => `${MOUNT_SEND_PANELS}\n</body>`);
@@ -1147,7 +1144,16 @@ function renderServers(spec, raw) {
   </section>`;
 }
 
-function buildSocketPage({ slug, spec, raw, fileMap = new Map() }) {
+/**
+ * An adapter's page, marked: it's built, for whoever implements it, but Try
+ * it lists it rather than the API reference, and the home page skips it by
+ * this mark (hub.js).
+ */
+const markedAdapter = (page, doc) => (doc?.adapter
+  ? page.replace('</head>', () => '<meta name="blueprint-adapter" content="true"/>\n</head>')
+  : page);
+
+function buildSocketPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   const info = spec.info ?? {};
   const title = info.title ?? slug;
   const { sentTo, sentBy, replies } = messagesByDirection(spec, raw);
@@ -1204,7 +1210,7 @@ function buildSocketPage({ slug, spec, raw, fileMap = new Map() }) {
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  return page.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  return markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
 }
 
 // ── Index (landing) page ──────────────────────────────────────────────────

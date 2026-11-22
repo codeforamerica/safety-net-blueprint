@@ -312,11 +312,12 @@ describe('protocolsOf', () => {
 });
 
 describe('doc.adapter', () => {
-  test('is true for an OpenAPI document whose root says x-relationship type external, and false otherwise', async () => {
+  test('is true for an OpenAPI or AsyncAPI document whose root says x-relationship type external, and false otherwise', async () => {
     const { toDoc } = await import('../../src/doc.js');
     const adapter = toDoc({ relativePath: 'domains/x/x-adapter-openapi.yaml', type: 'openapi', content: { 'x-relationship': { type: 'external' }, info: {} } });
     const api = toDoc({ relativePath: 'domains/x/x-openapi.yaml', type: 'openapi', content: { info: {} } });
-    const events = toDoc({ relativePath: 'domains/x/x-events-asyncapi.yaml', type: 'asyncapi', content: { 'x-relationship': { type: 'external' } } });
-    assert.deepEqual([adapter.adapter, api.adapter, events.adapter], [true, false, false]);
+    const relay = toDoc({ relativePath: 'domains/x/x-relay-asyncapi.yaml', type: 'asyncapi', content: { 'x-relationship': { type: 'external' } } });
+    const rules = toDoc({ relativePath: 'domains/x/x-rules.yaml', type: 'rules', content: { 'x-relationship': { type: 'external' } } });
+    assert.deepEqual([adapter.adapter, api.adapter, relay.adapter, rules.adapter], [true, false, true, false]);
   });
 });
