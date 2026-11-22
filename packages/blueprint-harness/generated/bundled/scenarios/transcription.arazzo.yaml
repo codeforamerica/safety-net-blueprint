@@ -5,7 +5,7 @@ info:
   x-domain: communication
   x-capability: transcripts
   description: |
-    A staff member transcribes a conversation as it's spoken. The client in their browser sends the audio straight to a transcription service and tells the session what happens; the session keeps the transcript on the server; the state's transcript audio adapter gives the credential the client connects with.
+    A staff member transcribes a conversation as it's spoken. The client in their browser sends the audio straight to a transcription service and tells the session what happens; the session keeps the transcript on the server; the state's session adapter gives the credential the client connects with.
 
     The main path starts, transcribes one line and stops. The other situations each start their own session.
   x-actors:
@@ -26,7 +26,7 @@ info:
       description: Turns the audio into text. In this demo, a fake the mock stands in for with stubs.
     - id: adapter
       name: Adapter
-      description: The state's transcript audio adapter, which holds the service's secret and gives the client a short-lived credential. In this demo, the mock stands in for it with stubs.
+      description: The state's session adapter, on the server, which holds the service's secret and gives the client a short-lived credential. In this demo, the mock stands in for it with stubs.
     - id: supervisor
       name: Supervisor
       description: Someone else with access to the transcript.

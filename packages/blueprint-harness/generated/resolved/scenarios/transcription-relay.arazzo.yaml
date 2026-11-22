@@ -5,7 +5,7 @@ info:
   x-domain: communication
   x-capability: transcripts
   description: |
-    A staff member transcribes a conversation as it's spoken, using a service the browser can't reach, such as Google Cloud Speech-to-Text. The client in their browser sends the audio to the state's relay instead, which passes it on to the service; the session keeps the transcript on the server; the state's transcript audio adapter gives the client a token for the relay.
+    A staff member transcribes a conversation as it's spoken, using a service the browser can't reach, such as Google Cloud Speech-to-Text. The client in their browser sends the audio to the state's relay instead, which passes it on to the service; the session keeps the transcript on the server; the state's session adapter gives the client a token for the relay.
 
     The main path starts, transcribes one line and stops. The other situations are the ones where the relay does something of its own. The rest run the same as without a relay, with the relay where the service is.
   x-actors:
@@ -26,7 +26,7 @@ info:
       description: The state's server in front of a service the browser can't reach. It speaks the blueprint's relay contract to the client and the service's own API to the service. In this demo, the mock stands in for it with stubs.
     - id: adapter
       name: Adapter
-      description: The state's transcript audio adapter, which signs a short-lived token for the relay. In this demo, the mock stands in for it with stubs.
+      description: The state's session adapter, on the server, which signs a short-lived token for the relay. In this demo, the mock stands in for it with stubs.
 sourceDescriptions:
   - name: sessions
     url: ../base/domains/communication/communication-transcription-sessions-openapi.yaml

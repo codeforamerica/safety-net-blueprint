@@ -5,7 +5,7 @@ export type ClientOptions = {
 };
 
 /**
- * What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
+ * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
  *
  */
 export type CredentialsRequest = {
@@ -138,7 +138,7 @@ export type CredentialsResponse = {
 
 export type RequestCredentialsData = {
     /**
-     * What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
+     * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
      *
      */
     body: {
