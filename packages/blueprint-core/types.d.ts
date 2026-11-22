@@ -112,6 +112,14 @@ export interface Doc {
    * messages, and for every other type.
    */
   protocols: string[];
+  /**
+   * Whether the document is an adapter's: an OpenAPI document whose root has
+   * `x-relationship: { type: external }`, so something outside the contract
+   * set, such as a state's service, answers every operation. False for every
+   * other document. A single operation can be external too, in an API that
+   * isn't: its own `x-relationship` says so.
+   */
+  adapter: boolean;
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;

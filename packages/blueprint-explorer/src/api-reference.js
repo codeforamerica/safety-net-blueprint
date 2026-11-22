@@ -150,7 +150,9 @@ try {
     for (const [path, pathItem] of Object.entries(entry.content?.paths ?? {})) {
       for (const method of HTTP_METHODS) {
         const op = pathItem?.[method];
-        const rel = op?.['x-relationship'];
+        if (!op) continue;
+        // An adapter's operations are all external, though none says so itself.
+        const rel = op['x-relationship'] ?? (entry.adapter ? { type: 'external' } : null);
         if (!rel?.type || rel.type === 'fk') continue;
         // Answered outside the contracts: it names no artifact, so it has no id.
         if (rel.type !== 'external' && (!rel.domain || !rel.id)) continue;
@@ -1232,7 +1234,7 @@ function buildIndexPage(entries) {
 
   const cards = [...byDomain.entries()].map(([domain, domainEntries]) => {
     // Use the "primary" spec (non-adapter, or first) for title/description/status
-    const primary = domainEntries.find(e => !e.slug.endsWith('-adapter') && !e.socket) ?? domainEntries[0];
+    const primary = domainEntries.find(e => !e.doc?.adapter && !e.socket) ?? domainEntries[0];
     const info    = primary.spec.info ?? {};
     const totalEndpoints = domainEntries.reduce((n, e) => n + countEndpoints(e.spec), 0);
     // The description's first sentence, however its lines wrap.

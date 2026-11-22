@@ -1,4 +1,7 @@
 openapi: 3.1.0
+# An adapter: something outside the contracts answers every operation.
+x-relationship:
+  type: external
 info:
   title: Data Exchange Adapter API
   version: 0.5.0

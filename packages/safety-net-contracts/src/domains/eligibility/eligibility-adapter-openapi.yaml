@@ -1,4 +1,7 @@
 openapi: 3.1.0
+# An adapter: something outside the contracts answers every operation.
+x-relationship:
+  type: external
 info:
   title: Eligibility Adapter API
   version: 0.5.0
@@ -38,8 +41,6 @@ paths:
         for the baseline criteria; states may extend the request via overlay if
         their rules engine needs additional context.
       operationId: evaluateExpeditedScreening
-      x-relationship:
-        type: external
       tags:
         - Evaluate
       requestBody:
@@ -73,8 +74,6 @@ paths:
         Applications that can be fully determined ex parte are closed automatically
         without caseworker intervention (42 CFR § 435.916).
       operationId: evaluateMedicaidExParte
-      x-relationship:
-        type: external
       tags:
         - Evaluate
       requestBody:
@@ -112,8 +111,6 @@ paths:
         chip, tanf, ccdf) and HouseholdDeterminationRequest for household programs
         (snap).
       operationId: evaluateDetermination
-      x-relationship:
-        type: external
       tags:
         - Evaluate
       requestBody:

@@ -5,6 +5,9 @@
 # See docs/architecture/domains/communication-transcripts.md, Decision 11, and
 # docs/architecture/cross-cutting/adapters.md for the pattern.
 openapi: 3.1.0
+# An adapter: something outside the contracts answers every operation.
+x-relationship:
+  type: external
 info:
   title: Transcription Session Adapter API
   version: 0.1.0
@@ -51,8 +54,6 @@ paths:
         renews one, and how it reconnects. Check the caller's sign-in before
         issuing one: the credential spends the state's account with the service.
       operationId: requestCredentials
-      x-relationship:
-        type: external
       # A credential spends the state's account with the service, so only a
       # signed-in caller gets one.
       security:
@@ -108,8 +109,6 @@ paths:
         signs no tokens, because no service it issues for sits behind a
         relay, answers 404.
       operationId: getCredentialKeys
-      x-relationship:
-        type: external
       # Public: relays and JWT libraries read a key set without signing in.
       security: []
       tags:

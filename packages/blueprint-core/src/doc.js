@@ -54,6 +54,9 @@ export function toDoc({ path, relativePath = null, domain = null, type, content 
     api: type === 'openapi' || type === 'asyncapi' ? apiNameOf(relativePath ?? path) : null,
     // What the API is reached over; none for an events document. See protocolsOf.
     protocols: protocolsOf(type, content),
+    // An API answered outside the contracts, such as a state's adapter: its
+    // root says x-relationship type external, so every operation is.
+    adapter: type === 'openapi' && content?.['x-relationship']?.type === 'external',
     type,
     content,
     refs() { return indexRefs(this.content); },

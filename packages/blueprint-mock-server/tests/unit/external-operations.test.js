@@ -78,3 +78,14 @@ test('a stub answers an external operation', async () => {
 test('an operation beside it that isn\'t external is answered as usual', async () => {
   assert.equal((await send('POST', '/decision-support/notes', {})).status, 201);
 });
+
+test('every operation of an adapter, marked at its document\'s root, is external', async () => {
+  const doc = contracts.docs[0];
+  const content = { ...doc.content, 'x-relationship': { type: 'external' } };
+  const adapter = { artifactVersion: 1, docs: [{ ...doc, relativePath: 'domains/decision-support/decision-support-adapter-openapi.yaml', content }] };
+  const log = console.log; console.log = () => {};
+  let own;
+  try { own = await createMockServer({ contracts: adapter, store: createMemoryStore(), seed: false }); } finally { console.log = log; }
+  const answer = await own.fetch(new Request('http://localhost/decision-support/notes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+  assert.equal(answer.status, 501, 'an operation the document marks nowhere else');
+});
