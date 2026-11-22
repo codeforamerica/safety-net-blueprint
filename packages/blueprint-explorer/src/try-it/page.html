@@ -336,7 +336,7 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom } =
   globalThis.BlueprintMock;
 
 // Where this explorer keeps the mock's records between its pages: under the
@@ -1168,8 +1168,25 @@ const resetTour = () => {
   branchClosed = false;
 };
 
+// The servers away from this machine a run was allowed to change, asked once each.
+const allowedAway = new Set();
+
+/**
+ * Whether a run may go on: asked once, before a scenario sends calls to a
+ * server chosen in the control panel that isn't this machine, since each
+ * step creates and changes what's there.
+ */
+const mayRun = () => {
+  const away = awayFrom(records, docs);
+  if (!away || allowedAway.has(away)) return true;
+  const ok = confirm(`This scenario's calls will go to ${away}, as the control panel says, and create and change records there. Run it?`);
+  if (ok) allowedAway.add(away);
+  return ok;
+};
+
 /** Run on, through the given step or to the end, remembering each answer. */
 const runOn = async (doc, until, say) => {
+  if (!mayRun()) return 0;
   const runner = runnerFor(doc);
   const entries = scenarioSteps(doc);
   let count = 0;

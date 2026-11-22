@@ -433,7 +433,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
   // routing sends it to a real service (routing.js).
   const realTags = [];
   const markReal = () => {
-    const routing = routingInUse(records);
+    const routing = routingInUse(records, docs);
     for (const { tag, op } of realTags) {
       const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
       tag.hidden = !entry;

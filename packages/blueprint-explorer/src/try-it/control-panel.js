@@ -25,7 +25,7 @@ import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPEN
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
-import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf } from './routing.js';
+import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -93,6 +93,12 @@ const STYLE = `
     border: 1px solid #2B1A78; background: #fff; color: #2B1A78; cursor: pointer; }
   #mock-panel .mp-remove { margin-left: .3rem; font: 600 11px system-ui, sans-serif; padding: 1px 10px; border-radius: 3px;
     border: 1px solid #b42318; background: #fff; color: #b42318; cursor: pointer; }
+  #mock-panel .mp-server { margin-bottom: .5rem; display: flex; flex-direction: column; gap: .35rem; align-items: flex-start; }
+  #mock-panel .mp-server select, #mock-panel .mp-server input { font: 12px system-ui, sans-serif; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; max-width: 100%; }
+  #mock-panel .mp-server input[type=url] { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; }
+  #mock-panel .mp-server .mp-edit { margin-left: 0; }
+  #mock-panel .mp-server-fields { display: flex; flex-direction: column; gap: .3rem; width: 100%; }
+  #mock-panel .mp-server-var { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
   #mock-panel .mp-route { padding: .35rem 0; border-bottom: 1px solid #f0eefb; font-size: .85rem; }
   #mock-panel .mp-route:last-child { border-bottom: 0; }
   #mock-panel .mp-route-head { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
@@ -204,9 +210,89 @@ const keep = async (running) => {
  * itself, such as an adapter's, then needs a stub, so the HTTP stub form is
  * offered for it, started on that call.
  */
+/**
+ * Where calls go, chosen in the page, as Swagger's server list does: this
+ * page, an environment the contracts' servers name, or a URL typed in. The
+ * site's own routing, listed below it, still wins.
+ */
+function serverChooser(running) {
+  const docs = extract(options.contracts, 'docs');
+  const environments = environmentsOf(docs);
+  const chosen = chosenServer(options);
+  const box = el('div', '', 'mp-server');
+  const pick = el('select');
+  pick.setAttribute('aria-label', 'Server');
+  pick.append(Object.assign(el('option', 'This page: the mock answers'), { value: '' }));
+  for (const environment of environments) {
+    const example = environment.apis[0];
+    pick.append(Object.assign(el('option', `${environment.description} (${expandServer(example.server, chosen?.variables)}${environment.apis.length > 1 ? `, +${environment.apis.length - 1}` : ''})`), { value: `env:${environment.description}` }));
+  }
+  pick.append(Object.assign(el('option', 'A URL you type…'), { value: 'url' }));
+  pick.value = chosen?.url ? 'url' : chosen?.environment ? `env:${chosen.environment}` : '';
+
+  const url = Object.assign(el('input'), { type: 'url', placeholder: 'http://localhost:1080', value: chosen?.url ?? '' });
+  url.setAttribute('aria-label', 'Server URL');
+  const fields = el('div', '', 'mp-server-fields');
+  const apply = Object.assign(el('button', 'Use it', 'mp-edit'), { type: 'button' });
+  const said = el('p', '', 'mp-note');
+
+  // An environment's server variables, each a field starting from its default.
+  const environmentPicked = () => environments.find((e) => `env:${e.description}` === pick.value);
+  const variableBoxes = new Map();
+  const drawFields = () => {
+    variableBoxes.clear();
+    fields.replaceChildren();
+    if (pick.value === 'url') { fields.append(url); return; }
+    for (const [name, variable] of Object.entries(environmentPicked()?.variables ?? {})) {
+      const input = Object.assign(el('input'), { type: 'text', value: chosen?.variables?.[name] ?? variable.default ?? '' });
+      input.setAttribute('aria-label', name);
+      variableBoxes.set(name, input);
+      const row = el('label', '', 'mp-server-var');
+      row.append(el('code', `{${name}}`), input);
+      fields.append(row);
+    }
+  };
+  const choice = () => {
+    if (pick.value === 'url') return url.value.trim() ? { url: url.value.trim().replace(/\/$/, '') } : null;
+    const environment = environmentPicked();
+    if (!environment) return null;
+    const variables = Object.fromEntries([...variableBoxes].map(([name, input]) => [name, input.value.trim()]));
+    return { environment: environment.description, ...(variableBoxes.size ? { variables } : {}) };
+  };
+  const use = async () => {
+    if (pick.value === 'url' && !url.value.trim()) { said.textContent = 'Type the server\'s URL.'; return; }
+    pick.disabled = apply.disabled = true;
+    await running.keep();
+    chooseServer(options, choice());
+    await running.reroute();
+    render();
+  };
+  pick.onchange = () => {
+    drawFields();
+    // A choice with nothing to fill in takes effect at once.
+    if (pick.value !== 'url' && !variableBoxes.size) use();
+  };
+  apply.onclick = use;
+  drawFields();
+
+  const row = el('div', '', 'mp-route-head');
+  row.append(pick);
+  box.append(row, fields);
+  if (pick.value === 'url' || variableBoxes.size) box.append(apply);
+  pick.addEventListener('change', () => { apply.remove(); if (pick.value === 'url' || variableBoxes.size) box.insertBefore(apply, said); });
+  box.append(said);
+  if (chosen) {
+    said.textContent = chosen.url
+      ? `Every call goes to ${chosen.url}, but what this site routes or you switched to this page. It has to allow calls from this page (CORS).`
+      : `Each API goes to its server for ${chosen.environment}; one with none stays in this page. Each has to allow calls from this page (CORS).`;
+  }
+  return box;
+}
+
 function routingSection(running, events) {
   const entries = siteRouting();
-  if (!entries.length) return [el('p', 'Every call is answered by the mock in this page.', 'mp-none')];
+  const chooser = serverChooser(running);
+  if (!entries.length) return [chooser, ...(chosenServer(options) ? [] : [el('p', 'Every call is answered by the mock in this page.', 'mp-none')])];
   const callsOut = stubChoices(extract(options.contracts, 'docs')).operations;
   const box = el('div');
   for (const entry of entries) {
@@ -241,11 +327,13 @@ function routingSection(running, events) {
     }
     box.append(row);
   }
-  return [box];
+  return [chooser, el('p', 'This site sends these its own way, whatever server is chosen above:', 'mp-note'), box];
 }
 
 /** The timers waiting, each with Fire, pinned at the top of the activity log while there are any. */
 function waitingSection(running, events) {
+  // With calls going to a server, its timers are its own: the page's are beside the point.
+  if (chosenServer(options)) return [];
   const waiting = waitingTimers(events);
   if (!waiting.length) return [];
   const box = el('div', '', 'happened mp-waiting');
@@ -453,7 +541,9 @@ async function render() {
 
   const status = el('p', `Built in ${running.ms} ms, ${running.seeded ? `with ${examples} sample records` : 'empty'}.`, 'mp-status');
   const controls = el('div', '', 'mp-controls');
-  for (const [label, seed] of [['Restart with data', true], ['Start empty', false]]) {
+  // With calls going to a server, its records and timers are its own: the page's are beside the point.
+  const away = chosenServer(options);
+  for (const [label, seed] of away ? [] : [['Restart with data', true], ['Start empty', false]]) {
     const button = el('button', label, 'mp-action');
     button.type = 'button';
     button.onclick = async () => {

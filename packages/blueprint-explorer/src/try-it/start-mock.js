@@ -5,8 +5,9 @@
  *
  * Its routing is the site's own: what the site's script sets on
  * BlueprintExplorer.routing (lib/site-script.js), in the mock's routing format,
- * less what the control panel switched to the page (routing.js). With none,
- * every call stays in the page.
+ * less what the control panel switched to the page, and what a server chosen
+ * in the control panel adds (routing.js). With none, every call stays in the
+ * page.
  *
  * Restored, it puts back what the last page left (records.js): the records,
  * with the event log, and the stubs. Started over, it forgets the stubs the
@@ -17,6 +18,7 @@
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { restoreRecords, saveRecords, restoreStubs, saveStubs, forgetStubs } from './records.js';
 import { routingInUse } from './routing.js';
+import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -37,7 +39,8 @@ let saving = false;
 export async function startMock({ contracts, scope, version, seed = true, restore = false, basePath = '' }) {
   const where = { scope, version };
   const started = performance.now();
-  const routing = routingInUse({ scope });
+  // The site's routing, less what was switched to the page, and any server chosen in it.
+  const routing = routingInUse({ scope }, extract(contracts, 'docs'));
   const mock = await createMockServer({ contracts, seed, basePath, routing });
   // Only to read and register stubs, through the mock's own routes.
   const send = (method, path, { body } = {}) => mock.fetch(new Request(ORIGIN + basePath + path, {
