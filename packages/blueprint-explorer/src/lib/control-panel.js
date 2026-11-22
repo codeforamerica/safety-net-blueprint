@@ -20,8 +20,8 @@ const MARK = '<!-- the mock: control panel -->';
 /**
  * Forgetting what pages left for the next, on a reload: the keys records.js
  * keeps the mock's records, stubs and each page's results under, and
- * routing.js the routing switched to the page, and activity.js the requests
- * Try it sent.
+ * routing.js the routing switched to the page and the server chosen in it,
+ * and activity.js the requests Try it sent.
  */
 const resetOnReload = (root) => `
 <script>
@@ -32,7 +32,7 @@ const resetOnReload = (root) => `
   const scope = new URL('${root}mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-routing:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
+      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-routing:\${scope}\`, \`blueprint-mock-server:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
         || key.startsWith(\`blueprint-try-results:\${scope}:\`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
