@@ -21,9 +21,9 @@ info:
     email: support@example.com
 servers:
   - url: https://adapter.example.com
-    description: State-configured adapter server
-  - url: http://localhost:9090
-    description: Local stub server
+    description: Production server
+  - url: http://localhost:1080
+    description: Local development server
 tags:
   - name: Evaluate
     description: Eligibility evaluation endpoints.
