@@ -61,7 +61,7 @@ components:
 workflows:
   - workflowId: startAndConnect
     summary: Starting and connecting
-    description: The staff member starts transcribing. The client asks how to connect, connects straight to the service, and tells the session the connection is open.
+    description: The staff member starts transcribing. The client asks for credentials, connects straight to the service, and tells the session the connection is open.
     x-branch: main
     steps:
       - stepId: start
@@ -115,14 +115,14 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors:
           - client
           - session
         description: |
-          Ask how to connect
+          Ask for credentials
 
-          - The session has no transcript yet, so it starts one, under the profile it was created with, then asks the transcript how to connect. The transcript asks the adapter, and the stub above answers.
+          - The session has no transcript yet, so it starts one, under the profile it was created with, then reads that transcript's profile for the service and languages, and asks its adapter for credentials. The stub above answers.
           - The answer says where to connect, which messages the connection uses (`subprotocol`), and the credential. The audio goes straight to the service; it never passes through the server.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
@@ -187,7 +187,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+            value: "{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -579,14 +579,14 @@ workflows:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
-      - stepId: getConnectionWithoutAModel
+      - stepId: requestCredentialsWithoutAModel
         x-actors:
           - client
           - session
         description: |
-          Try to ask how to connect: rejected (409)
+          Try to ask for credentials: rejected (409)
 
-          - Asking how to connect starts the transcript, and the transcript rejects it: under a profile that uses a transcription service, a transcript has to say which model turns speech into text.
+          - Asking for credentials starts the transcript, and the transcript rejects it: under a profile that uses a transcription service, a transcript has to say which model turns speech into text.
           - The transcript's `409` comes back as the session's answer, and the session stays in `created`.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
@@ -763,12 +763,12 @@ workflows:
             endedAt: "2026-10-12T10:00:09Z"
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: getConnectionWhilePaused
+      - stepId: requestCredentialsWhilePaused
         x-actors:
           - client
           - session
         description: |
-          Try to ask how to connect: rejected (409)
+          Try to ask for credentials: rejected (409)
 
           - Off the record, the session gives no credential and doesn't ask the adapter for one.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
@@ -844,7 +844,7 @@ workflows:
         description: |
           Resume
 
-          - The session resumes the transcript and is `connecting`: the client asks how to connect again.
+          - The session resumes the transcript and is `connecting`: the client asks for credentials again.
         operationId: $sourceDescriptions.sessions.resumeTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -1276,12 +1276,12 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnectionAgain
+      - stepId: requestCredentialsAgain
         x-actors:
           - client
           - session
         description: |
-          Ask how to connect
+          Ask for credentials
 
           - The session already has its transcript, so it only gets a new credential.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
@@ -1333,7 +1333,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnectionAgain.outputs.subprotocol}, {$steps.getConnectionAgain.outputs.accessToken}"
+            value: "{$steps.requestCredentialsAgain.outputs.subprotocol}, {$steps.requestCredentialsAgain.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -1444,12 +1444,12 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors:
           - client
           - session
         description: |
-          Ask how to connect
+          Ask for credentials
 
           - The session already names a transcript, so no new one is started.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
@@ -1503,7 +1503,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+            value: "{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}"
         requestBody:
           payload:
             type: start
@@ -1582,7 +1582,7 @@ workflows:
           Start a transcript, then add nothing
 
           - Under `english-interviews-30-minutes`, a profile the harness seeds: the same as `english-interviews`, but a transcript under it closes after 30 minutes with nothing added.
-          - In a conversation, the session starts the transcript the first time the client asks how to connect. This starts it directly, because the scheduler's stub answers at once: through the session, the transcript would close before the session finished connecting.
+          - In a conversation, the session starts the transcript the first time the client asks for credentials. This starts it directly, because the scheduler's stub answers at once: through the session, the transcript would close before the session finished connecting.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -1673,12 +1673,12 @@ workflows:
                 expiresIn: 300
         successCriteria:
           - condition: $statusCode == 201
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors:
           - client
           - session
         description: |
-          Ask how to connect
+          Ask for credentials
 
           - The session already has its transcript, so it only gets a new credential.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
@@ -1735,7 +1735,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: "{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}"
+            value: "{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}"
         requestBody:
           payload:
             type: start
