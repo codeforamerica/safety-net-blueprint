@@ -64,7 +64,7 @@ workflows:
   # ── The main path ─────────────────────────────────────────────────────────
   - workflowId: startAndConnect
     summary: Starting and connecting
-    description: The staff member starts transcribing. The client asks how to connect, gets the relay's address and a token for it, connects to the relay, and tells the session the connection is open.
+    description: The staff member starts transcribing. The client asks for credentials, gets the relay's address and a token for it, connects to the relay, and tells the session the connection is open.
     x-branch: main
     steps:
       - stepId: start
@@ -113,10 +113,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 201
 
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors: [client, session]
         description: |
-          Ask how to connect
+          Ask for credentials
 
           - The same request as without a relay, with the same shape of answer. `subprotocol` tells the client the connection uses the relay contract.
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
@@ -168,7 +168,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: '{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}'
+            value: '{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}'
         requestBody:
           payload:
             type: start
@@ -441,7 +441,7 @@ workflows:
   # ── Other situations ──────────────────────────────────────────────────────
   - workflowId: tokenExpired
     summary: When the token has expired
-    description: The client connects with a token kept from an earlier connection, which has run out. The relay rejects it, and the client asks how to connect again for a new one.
+    description: The client connects with a token kept from an earlier connection, which has run out. The relay rejects it, and the client asks for credentials again for a new one.
     x-branch: other
     steps:
       - stepId: start
@@ -474,9 +474,9 @@ workflows:
         successCriteria:
           - condition: $statusCode == 201
 
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors: [client, session]
-        description: Ask how to connect
+        description: Ask for credentials
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -520,7 +520,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: '{$steps.getConnection.outputs.subprotocol}, an-expired-token'
+            value: '{$steps.requestCredentials.outputs.subprotocol}, an-expired-token'
         requestBody:
           payload:
             type: start
@@ -531,7 +531,7 @@ workflows:
         description: |
           Error: not allowed
 
-          - Then the relay closes the connection. The client asks how to connect again for a new token.
+          - Then the relay closes the connection. The client asks for credentials again for a new token.
         operationId: $sourceDescriptions.audio.sendError
         action: receive
         successCriteria:
@@ -542,7 +542,7 @@ workflows:
         description: |
           Connect again, with a new token
 
-          - After a refusal, the client asks for a new connection once, since a new token fixes one that expired. Refused again, it reports the failure.
+          - After a refusal, the client asks for credentials again once, since a new token fixes one that expired. Refused again, it reports the failure.
         workflowId: reconnect
         parameters:
           - name: sessionId
@@ -550,7 +550,7 @@ workflows:
 
   - workflowId: connectionDrops
     summary: When the connection drops
-    description: The connection to the relay drops partway through. The client asks how to connect again for a new token, and the relay checks it as it did the first.
+    description: The connection to the relay drops partway through. The client asks for credentials again for a new token, and the relay checks it as it did the first.
     x-branch: other
     steps:
       - stepId: connected
@@ -669,9 +669,9 @@ workflows:
         successCriteria:
           - condition: $statusCode == 201
 
-      - stepId: getConnection
+      - stepId: requestCredentials
         x-actors: [client, session]
-        description: Ask how to connect
+        description: Ask for credentials
         operationId: $sourceDescriptions.sessions.requestCredentialsTranscriptionSession
         parameters:
           - reference: $components.parameters.caller
@@ -714,7 +714,7 @@ workflows:
         parameters:
           - name: Sec-WebSocket-Protocol
             in: header
-            value: '{$steps.getConnection.outputs.subprotocol}, {$steps.getConnection.outputs.accessToken}'
+            value: '{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}'
         requestBody:
           payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US], model: latest_long}
 
