@@ -120,7 +120,7 @@ npm run mock:start
 ```
 
 - **Mock server:** http://localhost:1080 — API endpoints with in-memory database
-- **Explorer:** the API reference lists every endpoint. In this repository it's built at `packages/safety-net-explorer/index.html`; for your own resolved specs, build one with `npx blueprint-build-explorer --spec=./resolved --out=./explorer`. Its Try it sends requests to a mock running in the page, not the server on port 1080; to call the server, copy the request from the curl tab.
+- **Explorer:** the API reference lists every endpoint. In this repository it's built at `packages/safety-net-explorer/index.html`; for your own resolved specs, build one with `npx blueprint-build-explorer --spec=./resolved --out=./explorer`. Turn on Try it, at the top of the page, and each operation sends its request to a mock running in the page, not the server on port 1080; to call the server, copy the request from the curl tab.
 
 The target: adding a transition is a table row, not endpoint code.
 

@@ -71,7 +71,7 @@ Browse all endpoints — REST and RPC — and their schemas in the explorer's AP
 npx blueprint-build-explorer --spec=./resolved --out=./explorer
 ```
 
-Open `explorer/index.html`. Each operation's Try it sends a request to a mock running in the page, so it works with no server. To call the mock server on port 1080 instead, copy the request from the curl tab.
+Open `explorer/index.html`, and turn on Try it at the top of an API page: each operation then sends its request to a mock running in the page, so it works with no server. To call the mock server on port 1080 instead, copy the request from the curl tab.
 
 ### Generated TypeScript Clients
 

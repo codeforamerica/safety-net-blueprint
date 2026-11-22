@@ -19,12 +19,14 @@ Generates a set of static HTML reference tools from resolved Blueprint contract 
 
 | Tool | Description |
 |------|-------------|
-| **API Reference** | Endpoint docs derived from resolved OpenAPI specs — parameters, request/response schemas, status codes, and links to related state machine transitions. Each operation shows its call as curl and through the generated TypeScript client, and sends it to the mock running in the page |
+| **API Reference** | Endpoint docs derived from resolved OpenAPI specs — parameters, request/response schemas, status codes, and links to related state machine transitions. Each operation shows its call as curl and through the generated TypeScript client, and with Try it on, sends it to the mock running in the page |
 | **State Machine Docs** | Full state machine reference — states, transitions, guard conditions, actor restrictions, and event subscriptions per resource |
 | **Event Catalog** | Cross-domain event index — every emitted event with its publisher, payload schema, and known subscribers |
 | **Data Dictionaries** | Field-level reference derived from writable schemas — field names, types, policy citations, and data classifications |
 | **Context Map** | Domain relationship diagram showing cross-domain data dependencies |
 | **Scenarios** | The Arazzo scenarios, played a step at a time against the mock server running in the browser, built from the contracts. Works served or opened from disk. The mock's files go in `mock/`, shared by every page that runs it, and the records you make carry from page to page within a browser tab. Reloading a page starts again from the sample records. Set `first_tour` in `config.yaml` to choose the scenario it opens with |
+
+Every page but the authored ones has a **Try it** switch at the top, which works like a browser's developer tools. Off, an API page is the reference. On, each operation becomes its request, with Send and the response, and the mock's control panel docks beside the page, or along the bottom of a narrow window. The panel restarts the mock with the sample records or empty, adds stubs, and logs each request Try it and Scenarios send, with its response and the events it set off; the timers waiting sit at the top of the log, each with Fire. The switch holds for the browser tab.
 
 ## Usage
 
