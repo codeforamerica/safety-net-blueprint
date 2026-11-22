@@ -419,13 +419,16 @@ const mock = await createMockServer({
 
 A test answers it with an [HTTP stub](#http-stubs) on `POST /issue-connection` instead, as the harness's transcript scenario does.
 
-A handler can also forward the call to a real service, adding what only the page has, such as the visitor's sign-in token. Read the body before sending it on: passed along as the request's own stream, Chrome sends it only to a server that speaks HTTP/2, and any other refuses the call.
+A handler can also forward the call to a real service, adding what only the page has, such as the visitor's sign-in token. Send only the headers the service reads, not the request's own: a header the page adds, such as the explorer's `X-Caller-Id`, fails every call with "Failed to fetch" unless the service's CORS allows it. A route with `to` passes on only an allowlist of headers for the same reason. Read the body before sending it on: passed along as the request's own stream, Chrome sends it only to a server that speaks HTTP/2, and any other refuses the call.
 
 ```js
 handler: async (request) => {
   const url = new URL(request.url);
-  const headers = new Headers(request.headers);
-  headers.set('Authorization', `Bearer ${await idTokenFromSignIn()}`);
+  // Only what the service reads, not every header the page sent.
+  const headers = {
+    'Content-Type': request.headers.get('Content-Type') ?? 'application/json',
+    Authorization: `Bearer ${await idTokenFromSignIn()}`,
+  };
   const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text();
   return fetch(`https://adapter.example.gov${url.pathname}${url.search}`, { method: request.method, headers, body });
 },

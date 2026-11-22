@@ -98,6 +98,37 @@ describe('a server chosen in the page', () => {
     assert.equal(awayFrom(where, docs), null);
   });
 
+  it('sends an environment only the headers the API\'s contract declares', async () => {
+    reset();
+    const declaring = {
+      type: 'openapi', api: 'cases', domain: 'cases', protocols: ['http'],
+      content: {
+        servers: [{ url: 'https://cases.example.org', description: 'Production server' }],
+        paths: { '/cases': { post: { parameters: [{ $ref: '#/components/parameters/Key' }] } } },
+        components: {
+          parameters: { Key: { name: 'Idempotency-Key', in: 'header' } },
+          securitySchemes: { bearer: { type: 'http', scheme: 'bearer' }, key: { type: 'apiKey', in: 'header', name: 'X-API-Key' } },
+        },
+      },
+    };
+    chooseServer(where, { environment: 'Production server' });
+    const [entry] = routingInUse(where, [declaring]);
+    let sent;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => { sent = { url, headers: Object.fromEntries(init.headers) }; return new Response('{}'); };
+    try {
+      await entry.handler(new Request('http://mock.invalid/cases', {
+        method: 'POST',
+        body: '{}',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'k1', Authorization: 'Bearer t', 'X-API-Key': 'a', 'X-Caller-Id': 'worker-1', 'X-Caller-Roles': 'caseworker' },
+      }));
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    assert.equal(sent.url, 'https://cases.example.org/cases');
+    assert.deepEqual(Object.keys(sent.headers).sort(), ['authorization', 'content-type', 'idempotency-key', 'x-api-key']);
+  });
+
   it('lists the environments the contracts\' servers name', () => {
     assert.deepEqual(environmentsOf(docs).map((e) => [e.description, e.apis.length, Object.keys(e.variables)]),
       [['Production server', 2, ['state']], ['Local development server', 2, []]]);

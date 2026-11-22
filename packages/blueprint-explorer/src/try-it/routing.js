@@ -96,12 +96,44 @@ const localBaseOf = (doc) => {
 export const expandServer = (server, given = {}) => String(server.url ?? '')
   .replace(/\{([^}]+)\}/g, (_, name) => given[name] ?? server.variables?.[name]?.default ?? `{${name}}`);
 
+const METHODS = ['get', 'put', 'post', 'patch', 'delete', 'head', 'options'];
+
+/**
+ * The headers an API's contract says its calls carry, lowercased: its header
+ * parameters, the headers its security schemes name (`Authorization` for a
+ * bearer token, OAuth or OpenID Connect; an API key's own header), and
+ * `Content-Type` and `Accept`, which OpenAPI gives as bodies and responses.
+ * Others the page adds, such as the mock's caller headers (X-Caller-Id), are
+ * no server's: a real one's CORS would refuse the call over them.
+ */
+export function declaredHeaders(doc, docs) {
+  const found = new Set(['accept', 'content-type']);
+  const parameter = (node) => {
+    if (typeof node?.$ref !== 'string') return node;
+    if (node.$ref.startsWith('#/')) return node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content);
+    return doc.resolveRef?.(node.$ref, docs);
+  };
+  for (const item of Object.values(doc.content?.paths ?? {})) {
+    for (const operation of [item, ...METHODS.map((method) => item?.[method])]) {
+      for (const each of operation?.parameters ?? []) {
+        const resolved = parameter(each);
+        if (resolved?.in === 'header' && resolved.name) found.add(resolved.name.toLowerCase());
+      }
+    }
+  }
+  for (const scheme of Object.values(doc.content?.components?.securitySchemes ?? {})) {
+    if (['http', 'oauth2', 'openIdConnect'].includes(scheme?.type)) found.add('authorization');
+    if (scheme?.type === 'apiKey' && scheme.in === 'header' && scheme.name) found.add(scheme.name.toLowerCase());
+  }
+  return found;
+}
+
 /**
  * The environments the contracts' servers name, each with every API that has
  * a server for it, and the variables those servers take.
  *
  * @param {object[]} docs
- * @returns {Array<{ description: string, apis: Array<{ api: string, domain: string|null, server: object, localBase: string }>, variables: Record<string, object> }>}
+ * @returns {Array<{ description: string, apis: Array<{ api: string, domain: string|null, server: object, localBase: string, headers: Set<string> }>, variables: Record<string, object> }>}
  */
 export function environmentsOf(docs) {
   const byDescription = new Map();
@@ -111,7 +143,7 @@ export function environmentsOf(docs) {
       if (!byDescription.has(server.description)) byDescription.set(server.description, { description: server.description, apis: [], variables: {} });
       const environment = byDescription.get(server.description);
       if (environment.apis.some((a) => a.api === doc.api)) continue;
-      environment.apis.push({ api: doc.api, domain: doc.domain ?? null, server, localBase: localBaseOf(doc) });
+      environment.apis.push({ api: doc.api, domain: doc.domain ?? null, server, localBase: localBaseOf(doc), headers: declaredHeaders(doc, docs) });
       Object.assign(environment.variables, server.variables ?? {});
     }
   }
@@ -123,15 +155,19 @@ const exceptFor = (entry, docs) => (entry.operation ? [{ operation: entry.operat
   : entry.api ? [{ api: entry.api }]
   : docs.filter((d) => d.type === 'openapi' && d.domain === entry.domain).map((d) => ({ api: d.api })));
 
-/** A handler sending one API's calls to its server for an environment, with the page's path for it taken off. */
-const toServer = ({ server, localBase }, variables) => async (request) => {
+/**
+ * A handler sending one API's calls to its server for an environment, with
+ * the page's path for it taken off, and only the headers its contract declares.
+ */
+const toServer = ({ server, localBase, headers: declared }, variables) => async (request) => {
   const incoming = new URL(request.url);
   const rest = incoming.pathname.startsWith(localBase) ? incoming.pathname.slice(localBase.length) : incoming.pathname;
   const target = `${expandServer(server, variables).replace(/\/$/, '')}${rest}${incoming.search}`;
   // Read first: a request's stream as a body needs HTTP/2 in Chrome.
   const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
   try {
-    return await fetch(target, { method: request.method, headers: request.headers, body });
+    const headers = [...request.headers].filter(([name]) => declared.has(name.toLowerCase()));
+    return await fetch(target, { method: request.method, headers, body });
   } catch (error) {
     // A browser says only "Failed to fetch" when the server doesn't allow the page's address.
     return Response.json({
