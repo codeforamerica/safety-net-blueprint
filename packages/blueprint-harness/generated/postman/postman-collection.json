@@ -7,6 +7,11 @@
   },
   "item": [
     {
+      "name": "Credentials",
+      "item": [],
+      "description": "Transcription Session Adapter API"
+    },
+    {
       "name": "Transcription-sessions",
       "item": [
         {
@@ -49,52 +54,6 @@
           ]
         },
         {
-          "name": "Get-connection Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/get-connection",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "get-connection"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the get-connection transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Connect Transcription-session",
           "request": {
             "method": "POST",
@@ -121,52 +80,6 @@
               ]
             },
             "description": "Trigger the connect transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Renew-connection Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/renew-connection",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "renew-connection"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the renew-connection transition"
           },
           "event": [
             {
@@ -551,11 +464,6 @@
         }
       ],
       "description": "Transcription sessions"
-    },
-    {
-      "name": "Issue-connection",
-      "item": [],
-      "description": "Transcript Audio Adapter API"
     },
     {
       "name": "Profiles",
@@ -2496,52 +2404,6 @@
               ]
             },
             "description": "Trigger the resume transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get-connection Transcript",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcripts/7a1e0c2d-0000-4000-8000-000000000001/get-connection",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcripts",
-                "7a1e0c2d-0000-4000-8000-000000000001",
-                "get-connection"
-              ],
-              "variables": [
-                "transcriptId"
-              ]
-            },
-            "description": "Trigger the get-connection transition"
           },
           "event": [
             {

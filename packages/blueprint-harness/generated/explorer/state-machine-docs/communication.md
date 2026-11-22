@@ -8,16 +8,20 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
 
 ### Actions
 
-- **get-connection** — Get where to connect and a short-lived credential, starting the transcript the first time.
+- **request-credentials** — Get where to connect and a short-lived credential from the session's adapter, starting the transcript the first time.
   - Transition: `created`/`disconnected`/`connecting` → `connecting`
   - If `!has(object.transcriptId)`:
     - `createTranscript`
     - sets `transcriptId`
-  - `getConnectionTranscript`
+  - `getTranscript`
+  - `getTranscriptionProfile`
+  - `requestCredentials`
   - Emit: `communication.transcription_session.connecting`
-- **renew-connection** — Get a fresh credential while connected, with no change to the session.
+- **renew-credentials** — Get a fresh credential while connected, with no change to the session.
   - Transition: no state change
-  - `getConnectionTranscript`
+  - `getTranscript`
+  - `getTranscriptionProfile`
+  - `requestCredentials`
 - **connect** — The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
   - Transition: `connecting` → `connected`
   - If `has(request.gap)`:
@@ -76,9 +80,6 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
     - `PATCH communication/transcripts/$object.id/entries/$openPause.id`
     - Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
     - Emit: `communication.transcript.resumed`
-- **get-connection** — Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
-  - Transition: no state change
-  - `issueTranscriptConnection`
 - **close** — End the transcript, at the time the client says. A pause still open ends then too.
   - Transition: `recording`/`paused` → `closed`
   - sets `closedAt`

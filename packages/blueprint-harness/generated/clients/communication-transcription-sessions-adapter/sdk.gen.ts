@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetTranscriptConnectionKeysData, GetTranscriptConnectionKeysErrors, GetTranscriptConnectionKeysResponses, IssueTranscriptConnectionData, IssueTranscriptConnectionErrors, IssueTranscriptConnectionResponses } from './types.gen';
-import { zGetTranscriptConnectionKeysData, zGetTranscriptConnectionKeysResponse, zIssueTranscriptConnectionData, zIssueTranscriptConnectionResponse } from './zod.gen';
+import type { GetCredentialKeysData, GetCredentialKeysErrors, GetCredentialKeysResponses, RequestCredentialsData, RequestCredentialsErrors, RequestCredentialsResponses } from './types.gen';
+import { zGetCredentialKeysData, zGetCredentialKeysResponse, zRequestCredentialsData, zRequestCredentialsResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -20,24 +20,25 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Issue a connection to a transcription service
+ * Request credentials for a transcription service
  *
- * Answers with where transcription software connects and a credential
+ * Answers with where the adapter in the browser connects and a credential
  * that starts one connection, for the service the request names. Every
  * service fits the one answer: a URL that may carry the credential, as
  * Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
  * Deepgram and AssemblyAI issue; or, for a service behind a relay, the
  * relay's URL, its subprotocol and a JWT the adapter signs for it.
  *
- * Asked again, it issues a fresh credential: that is how software
- * renews one, and how it reconnects.
+ * Asked again, it issues a fresh credential: that is how a session
+ * renews one, and how it reconnects. Check the caller's sign-in before
+ * issuing one: the credential spends the state's account with the service.
  *
  */
-export const issueTranscriptConnection = <ThrowOnError extends boolean = false>(options: Options<IssueTranscriptConnectionData, ThrowOnError>) => (options.client ?? client).post<IssueTranscriptConnectionResponses, IssueTranscriptConnectionErrors, ThrowOnError>({
-    requestValidator: async (data) => await zIssueTranscriptConnectionData.parseAsync(data),
+export const requestCredentials = <ThrowOnError extends boolean = false>(options: Options<RequestCredentialsData, ThrowOnError>) => (options.client ?? client).post<RequestCredentialsResponses, RequestCredentialsErrors, ThrowOnError>({
+    requestValidator: async (data) => await zRequestCredentialsData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zIssueTranscriptConnectionResponse.parseAsync(data),
-    url: '/issue-connection',
+    responseValidator: async (data) => await zRequestCredentialsResponse.parseAsync(data),
+    url: '/credentials',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -57,10 +58,10 @@ export const issueTranscriptConnection = <ThrowOnError extends boolean = false>(
  * relay, answers 404.
  *
  */
-export const getTranscriptConnectionKeys = <ThrowOnError extends boolean = false>(options?: Options<GetTranscriptConnectionKeysData, ThrowOnError>) => (options?.client ?? client).get<GetTranscriptConnectionKeysResponses, GetTranscriptConnectionKeysErrors, ThrowOnError>({
-    requestValidator: async (data) => await zGetTranscriptConnectionKeysData.parseAsync(data),
+export const getCredentialKeys = <ThrowOnError extends boolean = false>(options?: Options<GetCredentialKeysData, ThrowOnError>) => (options?.client ?? client).get<GetCredentialKeysResponses, GetCredentialKeysErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetCredentialKeysData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zGetTranscriptConnectionKeysResponse.parseAsync(data),
+    responseValidator: async (data) => await zGetCredentialKeysResponse.parseAsync(data),
     url: '/.well-known/jwks.json',
     ...options
 });

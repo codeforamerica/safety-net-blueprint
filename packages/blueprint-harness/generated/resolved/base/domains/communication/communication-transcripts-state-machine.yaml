@@ -103,38 +103,6 @@ machines:
               - emit:
                   event: resumed
                   type: communication.transcript.resumed
-      - id: get-connection
-        description: Get what the software needs to stream the conversation's audio to its transcription service — where to connect, and a short-lived credential.
-        transition:
-          from: recording
-        schema:
-          request:
-            $ref: "#/$defs/GetConnectionRequest"
-        steps:
-          - call:
-              operationId: issueTranscriptConnection
-              requestBody:
-                payload:
-                  provider: $profile.provider
-                  model: $object.model
-                  languages: $profile.languages
-                  audio: $request.audio
-                  protocols: $request.protocols
-                  metadata:
-                    transcriptId: $object.id
-            bind: $connection
-        response:
-          schema:
-            $ref: "#/$defs/StreamConnection"
-          payload:
-            provider: $connection.provider
-            protocol: $connection.protocol
-            subprotocol: $connection.subprotocol
-            url: $connection.url
-            accessToken: $connection.accessToken
-            tokenType: $connection.tokenType
-            expiresIn: $connection.expiresIn
-            connectionParameters: $connection.connectionParameters
       - id: close
         description: End the transcript, at the time the client says. A pause still open ends then too.
         transition:
@@ -260,10 +228,6 @@ machines:
             - actors:
                 - system
 $defs:
-  GetConnectionRequest:
-    $ref: ./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest
-  StreamConnection:
-    $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnection
   AtRequest:
     type: object
     additionalProperties: false

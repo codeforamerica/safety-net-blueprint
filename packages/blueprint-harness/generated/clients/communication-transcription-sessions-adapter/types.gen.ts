@@ -5,10 +5,10 @@ export type ClientOptions = {
 };
 
 /**
- * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+ * What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
  *
  */
-export type ConnectionRequest = {
+export type CredentialsRequest = {
     /**
      * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
      *
@@ -81,9 +81,9 @@ export type JsonWebKeySet = {
 };
 
 /**
- * Where and how the software connects, with metadata echoed back.
+ * Where and how the adapter in the browser connects, with metadata echoed back.
  */
-export type ConnectionResponse = {
+export type CredentialsResponse = {
     /**
      * Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
      *
@@ -136,9 +136,9 @@ export type ConnectionResponse = {
     };
 };
 
-export type IssueTranscriptConnectionData = {
+export type RequestCredentialsData = {
     /**
-     * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+     * What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
      *
      */
     body: {
@@ -193,14 +193,33 @@ export type IssueTranscriptConnectionData = {
     };
     path?: never;
     query?: never;
-    url: '/issue-connection';
+    url: '/credentials';
 };
 
-export type IssueTranscriptConnectionErrors = {
+export type RequestCredentialsErrors = {
     /**
      * The request is malformed or contains invalid parameters.
      */
     400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * Authentication is required or the provided credentials are invalid.
+     */
+    401: {
         /**
          * Machine-readable error code.
          */
@@ -257,11 +276,11 @@ export type IssueTranscriptConnectionErrors = {
     };
 };
 
-export type IssueTranscriptConnectionError = IssueTranscriptConnectionErrors[keyof IssueTranscriptConnectionErrors];
+export type RequestCredentialsError = RequestCredentialsErrors[keyof RequestCredentialsErrors];
 
-export type IssueTranscriptConnectionResponses = {
+export type RequestCredentialsResponses = {
     /**
-     * Where and how the software connects, with metadata echoed back.
+     * Where and how the adapter in the browser connects, with metadata echoed back.
      */
     200: {
         /**
@@ -317,16 +336,16 @@ export type IssueTranscriptConnectionResponses = {
     };
 };
 
-export type IssueTranscriptConnectionResponse = IssueTranscriptConnectionResponses[keyof IssueTranscriptConnectionResponses];
+export type RequestCredentialsResponse = RequestCredentialsResponses[keyof RequestCredentialsResponses];
 
-export type GetTranscriptConnectionKeysData = {
+export type GetCredentialKeysData = {
     body?: never;
     path?: never;
     query?: never;
     url: '/.well-known/jwks.json';
 };
 
-export type GetTranscriptConnectionKeysErrors = {
+export type GetCredentialKeysErrors = {
     /**
      * The requested resource was not found.
      */
@@ -367,9 +386,9 @@ export type GetTranscriptConnectionKeysErrors = {
     };
 };
 
-export type GetTranscriptConnectionKeysError = GetTranscriptConnectionKeysErrors[keyof GetTranscriptConnectionKeysErrors];
+export type GetCredentialKeysError = GetCredentialKeysErrors[keyof GetCredentialKeysErrors];
 
-export type GetTranscriptConnectionKeysResponses = {
+export type GetCredentialKeysResponses = {
     /**
      * A JSON Web Key Set (RFC 7517), public keys only.
      */
@@ -392,4 +411,4 @@ export type GetTranscriptConnectionKeysResponses = {
     };
 };
 
-export type GetTranscriptConnectionKeysResponse = GetTranscriptConnectionKeysResponses[keyof GetTranscriptConnectionKeysResponses];
+export type GetCredentialKeysResponse = GetCredentialKeysResponses[keyof GetCredentialKeysResponses];

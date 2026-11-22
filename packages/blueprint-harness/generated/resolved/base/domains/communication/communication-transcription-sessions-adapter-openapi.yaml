@@ -1,19 +1,18 @@
 openapi: 3.1.0
 info:
-  title: Transcript Audio Adapter API
+  title: Transcription Session Adapter API
   version: 0.1.0
   x-domain: communication
   x-capability: transcripts
   x-status: alpha
   x-visibility: external
   description: |
-    Contracted interface for the state-provided transcript audio adapter. The
-    blueprint calls it when transcription software asks how to connect, and the
-    adapter answers with where the software connects and a short-lived
-    credential — from the transcription service, or one it signs for a relay
-    the state runs in front of a service a browser can't reach. An adapter
-    that signs for a relay publishes the public keys the relay checks those
-    tokens with.
+    The server side of the state's transcription session adapter. A
+    transcription session calls it for credentials, and it answers with where
+    the adapter in the browser connects and a short-lived credential — from
+    the transcription service, or one it signs for a relay the state runs in
+    front of a service a browser can't reach. An adapter that signs for a
+    relay publishes the public keys the relay checks those tokens with.
 
     The adapter is stateless: one request, one answer. It maps the languages
     and audio it's given to what its service takes, and holds everything that
@@ -26,44 +25,46 @@ servers:
   - url: http://localhost:1080
     description: Local development server
 tags:
-  - name: Connections
-    description: Issuing what transcription software connects with.
+  - name: Credentials
+    description: Issuing what the adapter in the browser connects with.
   - name: Keys
     description: The public keys a relay checks the adapter's tokens with.
 paths:
-  /issue-connection:
+  /credentials:
     post:
-      summary: Issue a connection to a transcription service
+      summary: Request credentials for a transcription service
       description: |
-        Answers with where transcription software connects and a credential
+        Answers with where the adapter in the browser connects and a credential
         that starts one connection, for the service the request names. Every
         service fits the one answer: a URL that may carry the credential, as
         Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
         Deepgram and AssemblyAI issue; or, for a service behind a relay, the
         relay's URL, its subprotocol and a JWT the adapter signs for it.
 
-        Asked again, it issues a fresh credential: that is how software
-        renews one, and how it reconnects.
-      operationId: issueTranscriptConnection
+        Asked again, it issues a fresh credential: that is how a session
+        renews one, and how it reconnects. Check the caller's sign-in before
+        issuing one: the credential spends the state's account with the service.
+      operationId: requestCredentials
       x-relationship:
         type: external
       tags:
-        - Connections
+        - Credentials
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConnectionRequest"
+              $ref: "#/components/schemas/CredentialsRequest"
       responses:
         "200":
-          description: Where and how the software connects.
+          description: Where and how the adapter in the browser connects.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: "#/components/schemas/CredentialsResponse"
               example:
                 metadata:
+                  transcriptionSessionId: 7a1e0c2d-0000-4000-8000-0000000000c9
                   transcriptId: 7a1e0c2d-0000-4000-8000-0000000000c1
                 provider: elevenlabs-scribe
                 protocol: websocket
@@ -76,6 +77,8 @@ paths:
                   language_code: en
         "400":
           $ref: ../../components/responses.yaml#/BadRequest
+        "401":
+          $ref: ../../components/responses.yaml#/Unauthorized
         "422":
           description: |
             The service can't take what the request asks for — several languages for a service that takes one and can't detect among them, say, or an audio encoding it doesn't accept — named in details.
@@ -96,7 +99,7 @@ paths:
         the old one until the tokens it signed have expired. An adapter that
         signs no tokens, because no service it issues for sits behind a
         relay, answers 404.
-      operationId: getTranscriptConnectionKeys
+      operationId: getCredentialKeys
       x-relationship:
         type: external
       tags:
@@ -123,9 +126,9 @@ paths:
           $ref: ../../components/responses.yaml#/InternalError
 components:
   schemas:
-    ConnectionRequest:
+    CredentialsRequest:
       description: |
-        What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+        What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
       allOf:
         - $ref: ../../components/adapter.yaml#/AdapterRequest
         - type: object
@@ -205,8 +208,8 @@ components:
                 description: The algorithm the key signs with
                 such as ES256.: null
             description: A public key, with the parameters its key type takes (RFC 7518).
-    ConnectionResponse:
-      description: Where and how the software connects, with metadata echoed back.
+    CredentialsResponse:
+      description: Where and how the adapter in the browser connects, with metadata echoed back.
       unevaluatedProperties: false
       allOf:
         - $ref: ../../components/adapter.yaml#/AdapterResponse

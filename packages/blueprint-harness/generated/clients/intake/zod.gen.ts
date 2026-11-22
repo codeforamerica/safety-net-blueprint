@@ -81,6 +81,7 @@ export const zApplication = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -235,6 +236,7 @@ export const zApplication = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -696,6 +698,7 @@ export const zApplicationList = z.object({
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         previousHousehold: z.optional(z.object({
             size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -850,6 +853,7 @@ export const zApplicationList = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
+            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
             application: z.object({
@@ -1066,6 +1070,7 @@ export const zApplicationMember = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     application: z.object({
@@ -1297,6 +1302,7 @@ export const zApplicationMemberList = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -1490,6 +1496,7 @@ export const zApplicationDetailsResponse = z.object({
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         previousHousehold: z.optional(z.object({
             size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -1644,6 +1651,7 @@ export const zApplicationDetailsResponse = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
+            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
             application: z.object({
@@ -1783,6 +1791,7 @@ export const zApplicationDetailsResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -1946,6 +1955,7 @@ export const zApplicationWritable2 = z.object({
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -2013,6 +2023,7 @@ export const zApplicationWritable2 = z.object({
             })
         ]))
     }).and(z.object({
+        applicationId: z.uuid(),
         application: z.object({
             programsAppliedFor: z.optional(z.array(z.enum([
                 'snap',
@@ -2296,6 +2307,7 @@ export const zApplicationListWritable = z.object({
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10))
     }).and(z.object({
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         members: z.optional(z.array(z.object({
             firstName: z.string(),
             lastName: z.string(),
@@ -2363,6 +2375,7 @@ export const zApplicationListWritable = z.object({
                 })
             ]))
         }).and(z.object({
+            applicationId: z.uuid(),
             application: z.object({
                 programsAppliedFor: z.optional(z.array(z.enum([
                     'snap',
@@ -2459,6 +2472,7 @@ export const zApplicationMemberWritable2 = z.object({
         })
     ]))
 }).and(z.object({
+    applicationId: z.uuid(),
     application: z.object({
         programsAppliedFor: z.optional(z.array(z.enum([
             'snap',
@@ -2537,6 +2551,7 @@ export const zApplicationMemberListWritable = z.object({
             })
         ]))
     }).and(z.object({
+        applicationId: z.uuid(),
         application: z.object({
             programsAppliedFor: z.optional(z.array(z.enum([
                 'snap',
@@ -2620,6 +2635,7 @@ export const zApplicationDetailsResponseWritable = z.object({
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10))
     }).and(z.object({
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         members: z.optional(z.array(z.object({
             firstName: z.string(),
             lastName: z.string(),
@@ -2687,6 +2703,7 @@ export const zApplicationDetailsResponseWritable = z.object({
                 })
             ]))
         }).and(z.object({
+            applicationId: z.uuid(),
             application: z.object({
                 programsAppliedFor: z.optional(z.array(z.enum([
                     'snap',
@@ -2774,6 +2791,7 @@ export const zApplicationDetailsResponseWritable = z.object({
             })
         ]))
     }).and(z.object({
+        applicationId: z.uuid(),
         application: z.object({
             programsAppliedFor: z.optional(z.array(z.enum([
                 'snap',
@@ -2879,6 +2897,7 @@ export const zListApplicationsResponse = z.object({
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         previousHousehold: z.optional(z.object({
             size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -3033,6 +3052,7 @@ export const zListApplicationsResponse = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
+            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
             application: z.object({
@@ -3195,6 +3215,7 @@ export const zCreateApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -3349,6 +3370,7 @@ export const zCreateApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -3483,6 +3505,7 @@ export const zGetApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -3637,6 +3660,7 @@ export const zGetApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -3794,6 +3818,7 @@ export const zUpdateApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -3948,6 +3973,7 @@ export const zUpdateApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -4554,6 +4580,7 @@ export const zListApplicationMembersResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -4730,6 +4757,7 @@ export const zCreateApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     application: z.object({
@@ -4848,6 +4876,7 @@ export const zGetApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     application: z.object({
@@ -5018,6 +5047,7 @@ export const zUpdateApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     application: z.object({
@@ -5091,6 +5121,7 @@ export const zSubmitApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -5245,6 +5276,7 @@ export const zSubmitApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -5366,6 +5398,7 @@ export const zOpenApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -5520,6 +5553,7 @@ export const zOpenApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -5644,6 +5678,7 @@ export const zCloseApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -5798,6 +5833,7 @@ export const zCloseApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -5919,6 +5955,7 @@ export const zWithdrawApplicationResponse = z.object({
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     previousHousehold: z.optional(z.object({
         size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -6073,6 +6110,7 @@ export const zWithdrawApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -6588,6 +6626,7 @@ export const zGetApplicationDetailsResponse = z.object({
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         previousHousehold: z.optional(z.object({
             size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -6742,6 +6781,7 @@ export const zGetApplicationDetailsResponse = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
+            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
             application: z.object({
@@ -6881,6 +6921,7 @@ export const zGetApplicationDetailsResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({
@@ -7000,6 +7041,7 @@ export const zUpdateApplicationDetailsResponse = z.object({
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         previousHousehold: z.optional(z.object({
             size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
@@ -7154,6 +7196,7 @@ export const zUpdateApplicationDetailsResponse = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
+            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
             application: z.object({
@@ -7293,6 +7336,7 @@ export const zUpdateApplicationDetailsResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         application: z.object({

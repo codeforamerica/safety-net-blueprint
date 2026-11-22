@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddLineTranscriptionSessionData, AddLineTranscriptionSessionErrors, AddLineTranscriptionSessionResponses, CloseTranscriptionSessionData, CloseTranscriptionSessionErrors, CloseTranscriptionSessionResponses, ConnectTranscriptionSessionData, ConnectTranscriptionSessionErrors, ConnectTranscriptionSessionResponses, CreateTranscriptionSessionData, CreateTranscriptionSessionErrors, CreateTranscriptionSessionResponses, DisconnectTranscriptionSessionData, DisconnectTranscriptionSessionErrors, DisconnectTranscriptionSessionResponses, FailTranscriptionSessionData, FailTranscriptionSessionErrors, FailTranscriptionSessionResponses, GetConnectionTranscriptionSessionData, GetConnectionTranscriptionSessionErrors, GetConnectionTranscriptionSessionResponses, GetTranscriptionSessionData, GetTranscriptionSessionErrors, GetTranscriptionSessionResponses, PauseTranscriptionSessionData, PauseTranscriptionSessionErrors, PauseTranscriptionSessionResponses, RenewConnectionTranscriptionSessionData, RenewConnectionTranscriptionSessionErrors, RenewConnectionTranscriptionSessionResponses, ResumeTranscriptionSessionData, ResumeTranscriptionSessionErrors, ResumeTranscriptionSessionResponses, StopTranscriptionSessionData, StopTranscriptionSessionErrors, StopTranscriptionSessionResponses, UpdateLineTranscriptionSessionData, UpdateLineTranscriptionSessionErrors, UpdateLineTranscriptionSessionResponses } from './types.gen';
-import { zAddLineTranscriptionSessionData, zAddLineTranscriptionSessionResponse, zCloseTranscriptionSessionData, zCloseTranscriptionSessionResponse, zConnectTranscriptionSessionData, zConnectTranscriptionSessionResponse, zCreateTranscriptionSessionData, zCreateTranscriptionSessionResponse, zDisconnectTranscriptionSessionData, zDisconnectTranscriptionSessionResponse, zFailTranscriptionSessionData, zFailTranscriptionSessionResponse, zGetConnectionTranscriptionSessionData, zGetConnectionTranscriptionSessionResponse, zGetTranscriptionSessionData, zGetTranscriptionSessionResponse, zPauseTranscriptionSessionData, zPauseTranscriptionSessionResponse, zRenewConnectionTranscriptionSessionData, zRenewConnectionTranscriptionSessionResponse, zResumeTranscriptionSessionData, zResumeTranscriptionSessionResponse, zStopTranscriptionSessionData, zStopTranscriptionSessionResponse, zUpdateLineTranscriptionSessionData, zUpdateLineTranscriptionSessionResponse } from './zod.gen';
+import type { AddLineTranscriptionSessionData, AddLineTranscriptionSessionErrors, AddLineTranscriptionSessionResponses, CloseTranscriptionSessionData, CloseTranscriptionSessionErrors, CloseTranscriptionSessionResponses, ConnectTranscriptionSessionData, ConnectTranscriptionSessionErrors, ConnectTranscriptionSessionResponses, CreateTranscriptionSessionData, CreateTranscriptionSessionErrors, CreateTranscriptionSessionResponses, DisconnectTranscriptionSessionData, DisconnectTranscriptionSessionErrors, DisconnectTranscriptionSessionResponses, FailTranscriptionSessionData, FailTranscriptionSessionErrors, FailTranscriptionSessionResponses, GetTranscriptionSessionData, GetTranscriptionSessionErrors, GetTranscriptionSessionResponses, PauseTranscriptionSessionData, PauseTranscriptionSessionErrors, PauseTranscriptionSessionResponses, RenewCredentialsTranscriptionSessionData, RenewCredentialsTranscriptionSessionErrors, RenewCredentialsTranscriptionSessionResponses, RequestCredentialsTranscriptionSessionData, RequestCredentialsTranscriptionSessionErrors, RequestCredentialsTranscriptionSessionResponses, ResumeTranscriptionSessionData, ResumeTranscriptionSessionErrors, ResumeTranscriptionSessionResponses, StopTranscriptionSessionData, StopTranscriptionSessionErrors, StopTranscriptionSessionResponses, UpdateLineTranscriptionSessionData, UpdateLineTranscriptionSessionErrors, UpdateLineTranscriptionSessionResponses } from './types.gen';
+import { zAddLineTranscriptionSessionData, zAddLineTranscriptionSessionResponse, zCloseTranscriptionSessionData, zCloseTranscriptionSessionResponse, zConnectTranscriptionSessionData, zConnectTranscriptionSessionResponse, zCreateTranscriptionSessionData, zCreateTranscriptionSessionResponse, zDisconnectTranscriptionSessionData, zDisconnectTranscriptionSessionResponse, zFailTranscriptionSessionData, zFailTranscriptionSessionResponse, zGetTranscriptionSessionData, zGetTranscriptionSessionResponse, zPauseTranscriptionSessionData, zPauseTranscriptionSessionResponse, zRenewCredentialsTranscriptionSessionData, zRenewCredentialsTranscriptionSessionResponse, zRequestCredentialsTranscriptionSessionData, zRequestCredentialsTranscriptionSessionResponse, zResumeTranscriptionSessionData, zResumeTranscriptionSessionResponse, zStopTranscriptionSessionData, zStopTranscriptionSessionResponse, zUpdateLineTranscriptionSessionData, zUpdateLineTranscriptionSessionResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -56,17 +56,17 @@ export const getTranscriptionSession = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * Get connection transcriptionsession
+ * Request credentials transcriptionsession
  *
- * Get where to connect and a short-lived credential, starting the transcript the first time.
+ * Get where to connect and a short-lived credential from the session's adapter, starting the transcript the first time.
  *
  * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
-export const getConnectionTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<GetConnectionTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<GetConnectionTranscriptionSessionResponses, GetConnectionTranscriptionSessionErrors, ThrowOnError>({
-    requestValidator: async (data) => await zGetConnectionTranscriptionSessionData.parseAsync(data),
+export const requestCredentialsTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<RequestCredentialsTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<RequestCredentialsTranscriptionSessionResponses, RequestCredentialsTranscriptionSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zRequestCredentialsTranscriptionSessionData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zGetConnectionTranscriptionSessionResponse.parseAsync(data),
-    url: '/transcription-sessions/{transcriptionSessionId}/get-connection',
+    responseValidator: async (data) => await zRequestCredentialsTranscriptionSessionResponse.parseAsync(data),
+    url: '/transcription-sessions/{transcriptionSessionId}/request-credentials',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -75,17 +75,17 @@ export const getConnectionTranscriptionSession = <ThrowOnError extends boolean =
 });
 
 /**
- * Renew connection transcriptionsession
+ * Renew credentials transcriptionsession
  *
  * Get a fresh credential while connected, with no change to the session.
  *
  * It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
  */
-export const renewConnectionTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<RenewConnectionTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<RenewConnectionTranscriptionSessionResponses, RenewConnectionTranscriptionSessionErrors, ThrowOnError>({
-    requestValidator: async (data) => await zRenewConnectionTranscriptionSessionData.parseAsync(data),
+export const renewCredentialsTranscriptionSession = <ThrowOnError extends boolean = false>(options: Options<RenewCredentialsTranscriptionSessionData, ThrowOnError>) => (options.client ?? client).post<RenewCredentialsTranscriptionSessionResponses, RenewCredentialsTranscriptionSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zRenewCredentialsTranscriptionSessionData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zRenewConnectionTranscriptionSessionResponse.parseAsync(data),
-    url: '/transcription-sessions/{transcriptionSessionId}/renew-connection',
+    responseValidator: async (data) => await zRenewCredentialsTranscriptionSessionResponse.parseAsync(data),
+    url: '/transcription-sessions/{transcriptionSessionId}/renew-credentials',
     ...options,
     headers: {
         'Content-Type': 'application/json',

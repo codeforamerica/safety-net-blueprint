@@ -3,10 +3,10 @@
 import { z } from 'zod';
 
 /**
- * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+ * What the service needs to issue a credential: the service and its languages, from the session's profile; the model, from the session; and the audio and protocols, from the software.
  *
  */
-export const zConnectionRequest = z.object({
+export const zCredentialsRequest = z.object({
     metadata: z.optional(z.record(z.string(), z.unknown()))
 }).and(z.object({
     provider: z.enum([
@@ -58,9 +58,9 @@ export const zJsonWebKeySet = z.object({
 });
 
 /**
- * Where and how the software connects, with metadata echoed back.
+ * Where and how the adapter in the browser connects, with metadata echoed back.
  */
-export const zConnectionResponse = z.object({
+export const zCredentialsResponse = z.object({
     metadata: z.record(z.string(), z.unknown())
 }).and(z.object({
     provider: z.enum([
@@ -87,7 +87,7 @@ export const zConnectionResponse = z.object({
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
 
-export const zIssueTranscriptConnectionData = z.object({
+export const zRequestCredentialsData = z.object({
     body: z.object({
         metadata: z.optional(z.record(z.string(), z.unknown()))
     }).and(z.object({
@@ -131,9 +131,9 @@ export const zIssueTranscriptConnectionData = z.object({
 });
 
 /**
- * Where and how the software connects, with metadata echoed back.
+ * Where and how the adapter in the browser connects, with metadata echoed back.
  */
-export const zIssueTranscriptConnectionResponse = z.object({
+export const zRequestCredentialsResponse = z.object({
     metadata: z.record(z.string(), z.unknown())
 }).and(z.object({
     provider: z.enum([
@@ -160,7 +160,7 @@ export const zIssueTranscriptConnectionResponse = z.object({
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
 
-export const zGetTranscriptConnectionKeysData = z.object({
+export const zGetCredentialKeysData = z.object({
     body: z.optional(z.never()),
     path: z.optional(z.never()),
     query: z.optional(z.never())
@@ -169,7 +169,7 @@ export const zGetTranscriptConnectionKeysData = z.object({
 /**
  * A JSON Web Key Set (RFC 7517), public keys only.
  */
-export const zGetTranscriptConnectionKeysResponse = z.object({
+export const zGetCredentialKeysResponse = z.object({
     keys: z.array(z.object({
         kty: z.string(),
         kid: z.string(),

@@ -89,22 +89,22 @@ paths:
           $ref: ../../components/responses.yaml#/NotFound
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-  /transcription-sessions/{transcriptionSessionId}/get-connection:
+  /transcription-sessions/{transcriptionSessionId}/request-credentials:
     parameters:
       - $ref: "#/components/parameters/TranscriptionSessionIdParam"
     post:
-      summary: Get connection transcriptionsession
+      summary: Request credentials transcriptionsession
       description: |-
-        Get where to connect and a short-lived credential, starting the transcript the first time.
+        Get where to connect and a short-lived credential from the session's adapter, starting the transcript the first time.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
-      operationId: getConnectionTranscriptionSession
+      operationId: requestCredentialsTranscriptionSession
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GetConnectionRequest"
+              $ref: "#/components/schemas/CredentialsRequest"
       responses:
         "200":
           description: Transition applied successfully.
@@ -134,23 +134,23 @@ paths:
         type: state-machine-action
         domain: communication
         resource: TranscriptionSession
-        id: get-connection
-  /transcription-sessions/{transcriptionSessionId}/renew-connection:
+        id: request-credentials
+  /transcription-sessions/{transcriptionSessionId}/renew-credentials:
     parameters:
       - $ref: "#/components/parameters/TranscriptionSessionIdParam"
     post:
-      summary: Renew connection transcriptionsession
+      summary: Renew credentials transcriptionsession
       description: |-
         Get a fresh credential while connected, with no change to the session.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
-      operationId: renewConnectionTranscriptionSession
+      operationId: renewCredentialsTranscriptionSession
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GetConnectionRequest"
+              $ref: "#/components/schemas/CredentialsRequest"
       responses:
         "200":
           description: Transition applied successfully.
@@ -180,7 +180,7 @@ paths:
         type: state-machine-action
         domain: communication
         resource: TranscriptionSession
-        id: renew-connection
+        id: renew-credentials
   /transcription-sessions/{transcriptionSessionId}/connect:
     parameters:
       - $ref: "#/components/parameters/TranscriptionSessionIdParam"
@@ -688,8 +688,8 @@ components:
             Payload to start a session: `transcriptId`, or `profileId`,
             `client` and `startedAt` for a new transcript. id, status,
             createdAt and updatedAt are set by the server.
-    GetConnectionRequest:
-      $ref: ./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest
+    CredentialsRequest:
+      $ref: ./communication-transcripts-schema.yaml#/$defs/CredentialsRequest
     StreamConnection:
       $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnection
     ConnectRequest:

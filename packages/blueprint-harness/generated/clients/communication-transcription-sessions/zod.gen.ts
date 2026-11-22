@@ -70,10 +70,10 @@ export const zTranscriptionSessionCreate = z.object({
 }));
 
 /**
- * What the software will stream, so the transcript audio adapter can issue a connection for it: the audio, and the protocols the software can connect over. The transcript's get-connection takes it, and the session's passes it on.
+ * What the software will stream, so the session adapter can issue credentials for it: the audio, and the protocols the software can connect over. The session's request-credentials takes it, and passes it on to the adapter.
  *
  */
-export const zGetConnectionRequest = z.object({
+export const zCredentialsRequest = z.object({
     audio: z.object({
         encoding: z.enum([
             'linear16',
@@ -298,7 +298,7 @@ export const zGetTranscriptionSessionResponse = z.object({
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
 
-export const zGetConnectionTranscriptionSessionData = z.object({
+export const zRequestCredentialsTranscriptionSessionData = z.object({
     body: z.object({
         audio: z.object({
             encoding: z.enum([
@@ -328,7 +328,7 @@ export const zGetConnectionTranscriptionSessionData = z.object({
  * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
  *
  */
-export const zGetConnectionTranscriptionSessionResponse = z.object({
+export const zRequestCredentialsTranscriptionSessionResponse = z.object({
     provider: z.enum([
         'assemblyai',
         'aws-transcribe',
@@ -353,7 +353,7 @@ export const zGetConnectionTranscriptionSessionResponse = z.object({
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 });
 
-export const zRenewConnectionTranscriptionSessionData = z.object({
+export const zRenewCredentialsTranscriptionSessionData = z.object({
     body: z.object({
         audio: z.object({
             encoding: z.enum([
@@ -383,7 +383,7 @@ export const zRenewConnectionTranscriptionSessionData = z.object({
  * How the software connects to its transcription service, or to the relay in front of one: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
  *
  */
-export const zRenewConnectionTranscriptionSessionResponse = z.object({
+export const zRenewCredentialsTranscriptionSessionResponse = z.object({
     provider: z.enum([
         'assemblyai',
         'aws-transcribe',

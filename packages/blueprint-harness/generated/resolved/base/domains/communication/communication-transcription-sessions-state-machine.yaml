@@ -98,8 +98,8 @@ machines:
               x-relationship:
                 resource: TranscriptEntry
     actions:
-      - id: get-connection
-        description: Get where to connect and a short-lived credential, starting the transcript the first time.
+      - id: request-credentials
+        description: Get where to connect and a short-lived credential from the session's adapter, starting the transcript the first time.
         transition:
           from:
             - created
@@ -108,7 +108,7 @@ machines:
           to: connecting
         schema:
           request:
-            $ref: "#/$defs/GetConnectionRequest"
+            $ref: "#/$defs/CredentialsRequest"
         steps:
           - if: "!has(object.transcriptId)"
             then:
@@ -128,48 +128,100 @@ machines:
                   field: transcriptId
                   value: $transcript.id
           - call:
-              operationId: getConnectionTranscript
+              operationId: getTranscript
               parameters:
                 - name: transcriptId
                   in: path
                   value: $object.transcriptId
+            runAs: caller
+            bind: $current
+          - call:
+              operationId: getTranscriptionProfile
+              parameters:
+                - name: profileId
+                  in: path
+                  value: $current.profileId
+            runAs: caller
+            bind: $profile
+          - call:
+              operationId: requestCredentials
               requestBody:
                 payload:
+                  provider: $profile.provider
+                  model: $current.model
+                  languages: $profile.languages
                   audio: $request.audio
                   protocols: $request.protocols
+                  metadata:
+                    transcriptionSessionId: $object.id
+                    transcriptId: $object.transcriptId
             runAs: caller
-            bind: $connection
+            bind: $credentials
           - emit:
               event: connecting
               type: communication.transcription_session.connecting
         response:
           schema:
             $ref: "#/$defs/StreamConnection"
-          payload: $connection
-      - id: renew-connection
+          payload:
+            provider: $credentials.provider
+            protocol: $credentials.protocol
+            subprotocol: $credentials.subprotocol
+            url: $credentials.url
+            accessToken: $credentials.accessToken
+            tokenType: $credentials.tokenType
+            expiresIn: $credentials.expiresIn
+            connectionParameters: $credentials.connectionParameters
+      - id: renew-credentials
         description: Get a fresh credential while connected, with no change to the session.
         transition:
           from: connected
         schema:
           request:
-            $ref: "#/$defs/GetConnectionRequest"
+            $ref: "#/$defs/CredentialsRequest"
         steps:
           - call:
-              operationId: getConnectionTranscript
+              operationId: getTranscript
               parameters:
                 - name: transcriptId
                   in: path
                   value: $object.transcriptId
+            runAs: caller
+            bind: $current
+          - call:
+              operationId: getTranscriptionProfile
+              parameters:
+                - name: profileId
+                  in: path
+                  value: $current.profileId
+            runAs: caller
+            bind: $profile
+          - call:
+              operationId: requestCredentials
               requestBody:
                 payload:
+                  provider: $profile.provider
+                  model: $current.model
+                  languages: $profile.languages
                   audio: $request.audio
                   protocols: $request.protocols
+                  metadata:
+                    transcriptionSessionId: $object.id
+                    transcriptId: $object.transcriptId
             runAs: caller
-            bind: $connection
+            bind: $credentials
         response:
           schema:
             $ref: "#/$defs/StreamConnection"
-          payload: $connection
+          payload:
+            provider: $credentials.provider
+            protocol: $credentials.protocol
+            subprotocol: $credentials.subprotocol
+            url: $credentials.url
+            accessToken: $credentials.accessToken
+            tokenType: $credentials.tokenType
+            expiresIn: $credentials.expiresIn
+            connectionParameters: $credentials.connectionParameters
       - id: connect
         description: The connection to the service is open. A stretch with nothing captured, after a reconnect or before carrying on a transcript, is recorded as a gap.
         transition:
@@ -401,8 +453,8 @@ machines:
                 - transcriptOrStart
                 - transcriptExists
 $defs:
-  GetConnectionRequest:
-    $ref: ./communication-transcripts-schema.yaml#/$defs/GetConnectionRequest
+  CredentialsRequest:
+    $ref: ./communication-transcripts-schema.yaml#/$defs/CredentialsRequest
   StreamConnection:
     $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnection
   AtRequest:
