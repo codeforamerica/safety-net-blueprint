@@ -101,7 +101,7 @@
 </head>
 <body>
   <div id="page-header">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">reason</a></div>
+    <div class="page-crumbs" style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">reason</a></div>
     
       <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
         <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">reason</code></div>
@@ -4482,17 +4482,31 @@
   const scope = new URL('../mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`].includes(key)
+      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
         || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
 </script>
-<button id="mock-panel-toggle" type="button" aria-controls="mock-panel" aria-expanded="false"
-  style="position:fixed;right:16px;bottom:16px;z-index:999;font:600 13px system-ui,sans-serif;padding:8px 14px;border-radius:100px;border:0;background:#2B1A78;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;">Mock server</button>
+<style>
+  #try-it-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font: 600 12px system-ui, sans-serif;
+    color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); border-radius: 100px; padding: 2px 4px 2px 10px; cursor: pointer; }
+  #try-it-switch .knob { width: 28px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.3); position: relative; transition: background .15s; }
+  #try-it-switch .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  #try-it-switch[aria-checked="true"] .knob { background: #22c55e; }
+  #try-it-switch[aria-checked="true"] .knob::after { left: 14px; }
+  #try-it-switch.floating { position: fixed; top: 8px; right: 16px; z-index: 1001; background: #2B1A78; }
+  html[data-try-it="on"] body { padding-right: var(--mock-panel-width, 30rem); }
+  /* Narrow, the panel docks along the bottom instead, as developer tools do. */
+  @media (max-width: 1200px) { html[data-try-it="on"] body { padding-right: 0; padding-bottom: var(--mock-panel-height, 40vh); } }
+</style>
 <script>
 (() => {
   const root = new URL('../', location.href);
+  const scope = new URL('mock/', root).href;
+  const key = 'blueprint-try-it:' + scope;
+  const stored = () => { try { return sessionStorage.getItem(key) === 'on'; } catch { return false; } };
+  const remember = (on) => { try { if (on) sessionStorage.setItem(key, 'on'); else sessionStorage.removeItem(key); } catch { /* this page only */ } };
   const load = (src) => new Promise((resolve, reject) => document.head.append(
     Object.assign(document.createElement('script'), { src, onload: resolve, onerror: reject })));
   // A page that runs the mock has it loading already; any other loads it now.
@@ -4503,9 +4517,31 @@
     }
     return load(new URL('mock/mock.js', root).href).then(() => load(new URL('mock/contracts.js', root).href));
   };
-  document.getElementById('mock-panel-toggle').onclick = () => ready().then(() => BlueprintMock.toggleControlPanel({
-    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('mock/', root).href,
-  }));
+
+  const toggle = document.createElement('button');
+  toggle.id = 'try-it-switch';
+  toggle.type = 'button';
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-controls', 'mock-panel');
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  const crumbs = document.querySelector('.page-crumbs');
+  if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
+
+  const show = (on) => {
+    document.documentElement.dataset.tryIt = on ? 'on' : 'off';
+    toggle.setAttribute('aria-checked', String(on));
+    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+  };
+  const turn = (on) => {
+    remember(on);
+    show(on);
+    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+  };
+  toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
+  // The panel's own Close turns it off too.
+  addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
+  show(stored());
+  if (stored()) turn(true);
 })();
 </script>
 </body>
