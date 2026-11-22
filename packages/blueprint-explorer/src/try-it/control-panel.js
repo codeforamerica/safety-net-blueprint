@@ -13,8 +13,8 @@
  * (activity.js).
  *
  * A page that runs the mock itself (the API reference, the Scenarios page)
- * hands it over with `hostMock`, so the drawer shows and starts over that
- * page's mock. On any other page the drawer starts one of its own when it
+ * hands it over with `hostMock`, so the panel shows and starts over that
+ * page's mock. On any other page the panel starts one of its own when it
  * first opens, with what the last page left (records.js), and leaves what it
  * holds for the next.
  */
@@ -104,7 +104,7 @@ const FORMS = { events: eventStubForm, http: httpStubForm, ws: wsStubForm };
 
 /**
  * The stub being written, if any: its kind, a new one or the id of one being
- * edited, and its form, kept as it is while the drawer is drawn again around it.
+ * edited, and its form, kept as it is while the panel is drawn again around it.
  * @type {{ kind: string, id: string|null, form: HTMLElement } | null}
  */
 let editing = null;
@@ -123,7 +123,7 @@ const CONTRACTS = [
 ];
 
 /**
- * The mock the drawer shows: the page's, once it hands it over, else its own.
+ * The mock the panel shows: the page's, once it hands it over, else its own.
  * @type {{ mock: () => object, restart: (options: { seed: boolean }) => Promise<void>,
  *   seeded: boolean, ms: number, keep: () => Promise<void>, changed?: () => Promise<unknown> } | null}
  */
@@ -133,27 +133,27 @@ let options = null;
 let panel = null;
 
 /**
- * Show the mock again, if the drawer is open: the page sent it something.
+ * Show the mock again, if the panel is open: the page sent it something.
  */
 export function mockChanged() {
   if (panel?.classList.contains('open')) render();
 }
 
 /**
- * Hand the drawer the page's mock, each time the page starts it.
+ * Hand the panel the page's mock, each time the page starts it.
  *
  * @param {{ mock: () => object, restart: (options: { seed: boolean }) => Promise<void>, seeded: boolean, ms: number,
  *   keep: () => Promise<void>, changed?: () => Promise<unknown> }} given - The
  *   mock as it is now; how to start it over; whether it started with the
  *   sample records, and how long it took to build (start-mock.js); how to save
- *   it for the next page; and what the page does when the drawer changes it
+ *   it for the next page; and what the page does when the panel changes it
  */
 export function hostMock(given) {
   host = given;
   if (panel?.classList.contains('open')) render();
 }
 
-/** A mock of the drawer's own, for a page that runs none, with what the last page left. */
+/** A mock of the panel's own, for a page that runs none, with what the last page left. */
 async function startOwn({ seed, restore }) {
   const session = await startMock({ contracts: options.contracts, scope: options.scope, version: options.version, seed, restore });
   own = {
@@ -169,14 +169,14 @@ const stat = (count, label, className = '') => {
   return row;
 };
 
-/** A request to the mock the drawer shows. */
+/** A request to the mock the panel shows. */
 const send = (running, method, path, body) => running.mock().fetch(new Request(ORIGIN + path, {
   method, body: body ? JSON.stringify(body) : undefined, headers: body ? { 'Content-Type': 'application/json' } : {},
 }));
 
 const json = async (response) => (response.ok ? response.json() : null);
 
-/** Keep for the next page what the drawer changed, and let the page show it. */
+/** Keep for the next page what the panel changed, and let the page show it. */
 const keep = async (running) => {
   await running.keep();
   await running.changed?.();
