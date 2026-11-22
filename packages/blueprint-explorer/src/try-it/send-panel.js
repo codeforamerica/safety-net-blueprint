@@ -21,7 +21,7 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { loadResults, saveResults } from './records.js';
 import { startMock } from './start-mock.js';
-import { whatHappened, trailFor, followedFrom, HAPPENED_STYLE } from './event-trail.js';
+import { logRequest } from './activity.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 
@@ -299,6 +299,20 @@ const startingBodies = (docs, examples, op) => {
 
 
 const STYLE = `
+  /* Two views of an operation. With Try it off, the doc view: the reference,
+     and the call as code beside it; the means to send it go. */
+  html:not([data-try-it="on"]) .try-params, html:not([data-try-it="on"]) .try-body,
+  html:not([data-try-it="on"]) .try-code .foot, html:not([data-try-it="on"]) .resp-tab.sent,
+  html:not([data-try-it="on"]) .try-docs { display: none; }
+  /* With it on, the Try it view: one column the card's width, the request,
+     Send and the response; the docs folded under its description, opened
+     on asking; what it set off in the control panel. */
+  html[data-try-it="on"] .trying .op-body { grid-template-columns: minmax(0, 1fr) !important; }
+  html[data-try-it="on"] .trying:not(.docs-open) .op-docs > :not(.op-desc):not(.try-docs) { display: none; }
+  html[data-try-it="on"] .trying:not(.docs-open) .resp-tab:not(.sent),
+  html[data-try-it="on"] .trying:not(.docs-open) .resp-panel:not([data-resp="sent"]):not([data-resp="local"]),
+  html[data-try-it="on"] .trying:not(.docs-open) .responses-section:not(:has(.resp-tab.sent)) { display: none; }
+  .try-docs { font: 600 12px system-ui, sans-serif; color: #2B1A78; background: none; border: 0; padding: 4px 0; cursor: pointer; }
   .try-params .row { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: 8px; align-items: center; padding: 3px 0; }
   .try-params label { font: 600 12px monospace; color: #333; }
   .try-params label span { font: 400 11px sans-serif; color: #888; margin-left: 4px; }
@@ -331,7 +345,23 @@ const STYLE = `
 export async function mountSendPanels({ contracts, version, scope }) {
   const holders = [...document.querySelectorAll('[data-try-op]')];
   if (!holders.length) return;
-  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE + HAPPENED_STYLE }));
+  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE }));
+  // An operation's responses as its view has them: what was sent, in the Try
+  // it view; the documented ones, in the doc view.
+  const showAnswers = (holder) => {
+    const asTried = trying();
+    const section = holder.querySelector('.responses-section');
+    const tab = section?.querySelector(asTried ? '.resp-tab.sent' : '.resp-tab:not(.sent)');
+    if (tab && !tab.classList.contains('on')) tab.click();
+  };
+  // Try it turned off: bodies are read, not edited, and each operation shows
+  // its documented responses again rather than what was sent.
+  const trying = () => document.documentElement.dataset.tryIt === 'on';
+  const followTryIt = () => {
+    for (const body of document.querySelectorAll('.try-code .body-edit')) body.contentEditable = trying() ? 'plaintext-only' : 'false';
+    for (const holder of document.querySelectorAll('[data-try-op]')) showAnswers(holder);
+  };
+  new MutationObserver(followTryIt).observe(document.documentElement, { attributes: true, attributeFilter: ['data-try-it'] });
 
   const docs = extract(contracts, 'docs');
   const examples = { records: extract(docs, 'examples'), config: {} };
@@ -341,12 +371,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   }
   const records = { scope, version };
-  // Where the events a call sets off lead.
-  const trail = trailFor(docs, scope);
-  // Each result catching up with what it set off since: a timer fired from
-  // another page, or from the control panel. Once the mock is up, and again
-  // whenever the control panel changes it.
-  const catchUps = [];
   // What each operation last sent and got back, as this page was left.
   const results = loadResults(records);
   const roles = docs.find((d) => Array.isArray(d.content?.$defs?.RoleType?.enum))?.content.$defs.RoleType.enum ?? [];
@@ -400,7 +424,8 @@ export async function mountSendPanels({ contracts, version, scope }) {
       ...session,
       mock: () => mock,
       restart: ({ seed: again }) => start({ seed: again, restore: false }),
-      changed: () => Promise.all(catchUps.map((catchUp) => catchUp())),
+      // The control panel changed the mock: a record may have come or gone.
+      changed: refreshPickers,
     });
   };
 
@@ -466,6 +491,17 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (responses) responses.before(node); else side.append(node);
     };
     if (!op || !body) continue;
+    // With Try it on, the Try it view, its docs folded under the description.
+    holder.classList.add('trying');
+    const fold = Object.assign(el('button', '▸ Docs', 'try-docs'), { type: 'button' });
+    fold.setAttribute('aria-expanded', 'false');
+    fold.onclick = () => {
+      const open = holder.classList.toggle('docs-open');
+      fold.textContent = open ? '▾ Docs' : '▸ Docs';
+      fold.setAttribute('aria-expanded', String(open));
+    };
+    const description = holder.querySelector('.op-docs > .op-desc');
+    if (description) description.after(fold); else holder.querySelector('.op-docs')?.prepend(fold);
 
 
     // The parameters whose values the client exports as a constant.
@@ -484,6 +520,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
       const box = Object.assign(el('input'), { type: 'text', autocomplete: 'off' });
       const label = el('label', param.dataset.param);
       label.append(el('span', param.dataset.in));
+      // Its description, from the docs, on hovering over its name.
+      const described = param.querySelector('.fdesc')?.textContent.trim();
+      if (described) label.title = described;
       const row = el('div', '', 'row');
       row.append(label, box);
       const constant = constants.get(`${param.dataset.in}:${param.dataset.param}`);
@@ -597,7 +636,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     // being typed in.
     const MARK = '\u0000body\u0000';
     const bodyEdit = el('span', '', 'body-edit');
-    bodyEdit.contentEditable = 'plaintext-only';
+    bodyEdit.contentEditable = trying() ? 'plaintext-only' : 'false';
     bodyEdit.spellcheck = false;
     const indentOf = () => (tabOf() === 'typescript' ? '  ' : '');
     bodyEdit.addEventListener('input', (event) => {
@@ -672,15 +711,14 @@ export async function mountSendPanels({ contracts, version, scope }) {
       for (const other of tabs.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
       for (const other of section.querySelectorAll('.resp-panel')) other.hidden = other !== panel;
     };
-    // A response, and what the call set off, as Send shows them.
-    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming, events, returnedEvent }) => {
+    // A response, as Send shows it. What the call set off is in the control panel's activity log.
+    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming }) => {
       const headerList = el('div', '', 'sent-headers');
       for (const [name, value] of headers) headerList.append(el('div', `${name}: ${value}`));
-      showSent(`${status} · sent`, ok, [
+      showSent(String(status), ok, [
         el('div', `${status}${statusText ? ` ${statusText}` : ''} · ${ms} ms`, `sent-status ${ok ? 'ok' : 'bad'}`),
         headerList,
         el('pre', streaming ? `${shown || '(nothing yet)'}\n\n(a stream: shown for its first ${STREAM_MS / 1000} seconds, then closed)` : (shown || '(no body)'), 'sent-body'),
-        ...(events ? [whatHappened(events, { trail, shown: returnedEvent })] : []),
       ]);
     };
     button.onclick = async () => {
@@ -733,6 +771,10 @@ export async function mountSendPanels({ contracts, version, scope }) {
           returnedEvent,
         };
         showResult(result);
+        logRequest(records, {
+          time: sentAt, method: op.method, path: query.size ? `${path}?${query}` : path, body: request.body,
+          status: response.status, ok: response.ok, ms, shown, eventIds: (events ?? []).map((event) => event.id),
+        });
         // Kept for coming back to this page, with what was sent.
         if (holder.id) {
           results[holder.id] = { params: Object.fromEntries([...values].map(([k, box]) => [k, box.value])), body: bodyBox?.value, result };
@@ -752,7 +794,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
         if (key) key.value = crypto.randomUUID();
         refresh();
       } catch (error) {
-        showSent('not sent', false, [el('div', `Not sent: ${error.message}`, 'sent-status bad')]);
+        showSent('Error', false, [el('div', `Not sent: ${error.message}`, 'sent-status bad')]);
+        logRequest(records, { time: new Date().toISOString(), method: op.method, path: op.path, status: null, ok: false, error: error.message });
+        mockChanged();
       } finally {
         button.disabled = false;
       }
@@ -768,16 +812,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (details) details.open = true;
       refresh();
     }
-    catchUps.push(async () => {
-      const last = holder.id ? results[holder.id]?.result : null;
-      if (!last?.events || !last.since) return;
-      const added = followedFrom(last.events.map((event) => event.id), await eventsSince(last.since))
-        .filter((event) => !last.events.some((known) => known.id === event.id));
-      if (!added.length) return;
-      last.events = [...last.events, ...added];
-      showResult(last);
-      saveResults(records, results);
-    });
   }
   refreshAll();
   // Results put back open push what's below them down, so once they're in,
@@ -789,5 +823,4 @@ export async function mountSendPanels({ contracts, version, scope }) {
   }
 
   await start({ seed: true, restore: true });
-  await Promise.all(catchUps.map((catchUp) => catchUp()));
 }

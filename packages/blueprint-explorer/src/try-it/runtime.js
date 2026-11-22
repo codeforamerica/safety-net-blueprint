@@ -16,4 +16,5 @@ export { createMockServer, runScenario, startScenario, operationIndex, controlOp
 export { extract, generate } from '@codeforamerica/blueprint-core/browser';
 export { startMock } from './start-mock.js';
 export { mountSendPanels } from './send-panel.js';
-export { toggleControlPanel, hostMock, mockChanged } from './control-panel.js';
+export { setTryIt, hostMock, mockChanged } from './control-panel.js';
+export { logRequest } from './activity.js';

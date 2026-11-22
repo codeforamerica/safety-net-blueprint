@@ -697,7 +697,7 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
   const id       = endpointId(method, path);
   const params   = op.parameters ?? [];
   const descHtml = op.description
-    ? `<div style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
+    ? `<div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
     : '';
 
   // What a success answers with: beside the body's name when there's a

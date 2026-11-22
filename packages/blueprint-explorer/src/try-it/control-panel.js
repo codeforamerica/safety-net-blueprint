@@ -1,13 +1,16 @@
 /**
- * The control panel: a drawer, on every explorer page, for the mock server
- * running in the page.
+ * The control panel: docked beside every explorer page while Try it is on,
+ * for the mock server running in the page.
  *
- * A button in the page's corner opens and closes it. It shows what the mock
+ * The Try it switch in the page's header turns it on and off
+ * (lib/control-panel.js), as a browser's developer tools open beside a page.
+ * It shows what the mock
  * was built from and how it started, and starts it over, with the sample
  * records or empty. Below that, the timers waiting, each fired by a stub
- * standing in for the timer service; the events published, the latest first;
- * and the stubs, added and edited with the contracts' choices offered
- * (stub-editor.js).
+ * standing in for the timer service; the stubs, added and edited with the
+ * contracts' choices offered (stub-editor.js); and the activity log: each
+ * request Try it sent and the events it set off, the latest first
+ * (activity.js).
  *
  * A page that runs the mock itself (the API reference, the Scenarios page)
  * hands it over with `hostMock`, so the drawer shows and starts over that
@@ -18,7 +21,8 @@
 
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { startMock } from './start-mock.js';
-import { trailFor, eventLines, waitingTimers, waitingLines, HAPPENED_STYLE } from './event-trail.js';
+import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPENED_STYLE } from './event-trail.js';
+import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
 
@@ -32,14 +36,28 @@ const el = (tag, text = '', className = '') => {
 };
 
 const STYLE = `
-  #mock-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 1000; width: min(30rem, 100vw);
-    background: #fff; box-shadow: -4px 0 18px rgba(0,0,0,.15); overflow: auto; font: 14px/1.5 system-ui, sans-serif; color: #1a1a1a;
-    transform: translateX(100%); transition: transform .2s ease; visibility: hidden; }
-  #mock-panel.open { transform: none; visibility: visible; }
+  #mock-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 1000; width: var(--mock-panel-width, 30rem); max-width: 100vw;
+    background: #fff; border-left: 1px solid #d9d6ee; overflow: auto; font: 14px/1.5 system-ui, sans-serif; color: #1a1a1a; display: none; }
+  #mock-panel.open { display: block; }
+  /* Narrow, docked along the bottom, the page above it its full width. */
+  @media (max-width: 1200px) {
+    #mock-panel { top: auto; left: 0; width: 100vw; height: var(--mock-panel-height, 40vh); border-left: 0; border-top: 1px solid #d9d6ee;
+      display: none; flex-direction: column; overflow: hidden; }
+    #mock-panel.open { display: flex; }
+    #mock-panel .mp-head { position: static; flex: none; }
+    /* Side by side, each scrolling on its own. */
+    #mock-panel .mp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0 20px; padding: 0 16px; }
+    #mock-panel .mp-settings, #mock-panel .mp-activity { overflow: auto; padding: 12px 0; }
+    #mock-panel .mp-activity > h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+    #mock-panel .mp-body.mp-editing { grid-template-columns: minmax(0, 1fr); }
+  }
   #mock-panel .mp-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
     padding: 12px 16px; background: #2B1A78; color: #fff; font-weight: 700; }
   #mock-panel .mp-close { background: none; border: 0; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
   #mock-panel .mp-body { padding: 16px; }
+  #mock-panel .mp-body.mp-editing .mp-activity { display: none; }
+  #mock-panel .mp-waiting { border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; padding: 6px 10px; margin: 0 0 .6rem; }
+  #mock-panel .mp-waiting .mp-note { font: 12px system-ui, sans-serif; margin-top: 4px; }
   #mock-panel .mp-about { margin: 1rem 0 0; }
   #mock-panel .mp-about > summary { cursor: pointer; font-weight: 700; font-size: .95rem; }
   #mock-panel .mp-about > .mp-lede { margin-top: .5rem; }
@@ -60,6 +78,11 @@ const STYLE = `
     padding-top: .8rem; border-top: 1px solid #e2e2e2; }
   #mock-panel .mp-none, #mock-panel .mp-note { font-size: .85rem; color: #777; margin: 0; }
   #mock-panel .happened { margin-top: 0; }
+  #mock-panel .happened-under { padding-left: 16px; border-left: 2px solid #eeeaf8; margin: 0 0 4px 4px; }
+  #mock-panel .happened-bad { color: #b42318; }
+  #mock-panel .mp-filters { display: flex; gap: 4px; align-items: center; margin-bottom: .5rem; }
+  #mock-panel .mp-filter { font: 600 11px system-ui, sans-serif; padding: 1px 10px; border-radius: 3px; border: 1px solid #c7c4ea; background: #fff; color: #2B1A78; cursor: pointer; }
+  #mock-panel .mp-filter[aria-pressed="true"] { background: #2B1A78; color: #fff; border-color: #2B1A78; }
   #mock-panel .mp-rows { margin: 0; padding: 0; list-style: none; font: 12px ui-monospace, Menlo, monospace; }
   #mock-panel .mp-rows li { display: flex; gap: .6rem; align-items: baseline; padding: .15rem 0; }
   #mock-panel .mp-rows .n { margin-left: auto; color: #555; }
@@ -160,10 +183,12 @@ const keep = async (running) => {
 };
 
 /** The timers waiting, each with Fire. */
-async function timersSection(running, events) {
+/** The timers waiting, each with Fire, pinned at the top of the activity log while there are any. */
+function waitingSection(running, events) {
   const waiting = waitingTimers(events);
-  if (!waiting.length) return [el('p', 'None.', 'mp-none')];
-  const box = el('div', '', 'happened');
+  if (!waiting.length) return [];
+  const box = el('div', '', 'happened mp-waiting');
+  box.append(el('div', 'Timers waiting', 'happened-heading'));
   // A stub matching this one timer fires it as soon as it is registered,
   // standing in for the timer service (the mock's POST /mock/stubs/events).
   box.append(...waitingLines(waiting, {
@@ -173,15 +198,87 @@ async function timersSection(running, events) {
       render();
     },
   }));
-  return [box, el('p', 'Fire stands in for the timer service: a stub matching the timer sends its callback now.', 'mp-note')];
+  box.append(el('p', 'Fire stands in for the timer service: a stub matching the timer sends its callback now.', 'mp-note'));
+  return [box];
 }
 
 /** The events published, the latest first, each under the one that caused it. */
-function eventsSection(events, total) {
-  if (!events.length) return [el('p', 'None yet.', 'mp-none')];
+/** Which of the activity log's kinds it shows. */
+let shownKinds = 'all';
+const KINDS = [['all', 'All'], ['requests', 'Requests'], ['events', 'Events']];
+
+/** A request Try it sent, opening to its body and the response. */
+function requestLine(request) {
+  const row = el('details', '', 'happened-event');
+  row.dataset.request = request.time;
+  const outcome = request.status === null ? `not sent: ${request.error ?? ''}` : `${request.status}${request.ms !== undefined ? ` · ${request.ms} ms` : ''}`;
+  const summary = el('summary');
+  summary.append(el('span', `${request.method} ${request.path}`, 'happened-type'), el('span', `  → ${outcome}`, request.ok ? 'happened-subject' : 'happened-bad'));
+  row.append(summary);
+  if (request.body) row.append(el('div', 'Request', 'happened-heading'), el('pre', request.body, 'happened-body'));
+  if (request.shown) row.append(el('div', 'Response', 'happened-heading'), el('pre', request.shown, 'happened-body'));
+  return row;
+}
+
+/**
+ * Everything that happened in the mock, the latest first: each request Try
+ * it sent with the events it set off under it, and the events nothing logged
+ * set off, such as a timer firing, on their own. Clear empties it.
+ */
+function activitySection(running, events) {
+  const docs = extract(options.contracts, 'docs');
+  const trail = trailFor(docs, options.scope);
+  const { requests, clearedAt } = activityOf(options);
+  const since = clearedAt ? events.filter((event) => !event.time || event.time >= clearedAt) : events;
+
+  const bar = el('div', '', 'mp-filters');
+  for (const [kind, label] of KINDS) {
+    const button = Object.assign(el('button', label, 'mp-filter'), { type: 'button' });
+    button.setAttribute('aria-pressed', String(shownKinds === kind));
+    button.onclick = () => { shownKinds = kind; render(); };
+    bar.append(button);
+  }
+  const clear = Object.assign(el('button', 'Clear', 'mp-edit'), { type: 'button' });
+  clear.onclick = () => { clearActivity(options); render(); };
+  bar.append(clear);
+
   const box = el('div', '', 'happened');
-  box.append(...eventLines(events, { trail: trailFor(extract(options.contracts, 'docs'), options.scope), newestFirst: true }));
-  return [...(total > events.length ? [el('p', `The latest ${events.length} of ${total}.`, 'mp-note')] : []), box];
+  if (shownKinds === 'events') {
+    box.append(...eventLines(since, { trail, newestFirst: true }));
+  } else {
+    // Each request's events, and what followed from them.
+    const claimed = new Set();
+    const items = requests.map((request) => {
+      const own = since.filter((event) => (request.eventIds ?? []).includes(event.id));
+      const all = [...own, ...followedFrom(own.map((event) => event.id), since).filter((event) => !own.includes(event))];
+      for (const event of all) claimed.add(event.id);
+      return { time: request.time, request, events: all };
+    });
+    if (shownKinds === 'all') {
+      // The events no request set off, each with what followed from it.
+      const loose = since.filter((event) => !claimed.has(event.id));
+      const looseIds = new Set(loose.map((event) => event.id));
+      for (const root of loose.filter((event) => !looseIds.has(event.causationid))) {
+        const group = [root, ...followedFrom([root.id], loose)];
+        items.push({ time: root.time ?? '', events: group });
+      }
+    }
+    items.sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
+    for (const item of items) {
+      if (!item.request) {
+        box.append(...eventLines(item.events, { trail }));
+        continue;
+      }
+      box.append(requestLine(item.request));
+      if (shownKinds === 'all' && item.events.length) {
+        const under = el('div', '', 'happened-under');
+        under.append(...eventLines(item.events, { trail }));
+        box.append(under);
+      }
+    }
+  }
+  const empty = !box.childElementCount;
+  return [bar, ...waitingSection(running, events), empty ? el('p', 'Nothing yet. Send a request from an operation, and it shows here with what it set off.', 'mp-none') : box];
 }
 
 /** A stub registered, or why the mock refused it. */
@@ -300,6 +397,8 @@ async function render() {
     button.onclick = async () => {
       for (const other of controls.querySelectorAll('button')) other.disabled = true;
       await running.restart({ seed });
+      // A new mock: what the log showed happened in the old one.
+      clearActivity(options);
       render();
     };
     controls.append(button);
@@ -312,25 +411,31 @@ async function render() {
   const logged = (await json(await send(running, 'GET', '/platform/events?limit=1')))?.total ?? 0;
   const listed = await json(await send(running, 'GET', `/platform/events?sort=time&offset=${Math.max(0, logged - LOG_SIZE)}&limit=${LOG_SIZE}`));
   const events = listed?.items ?? [];
-  const sections = [
-    el('h3', 'Timers waiting'), ...await timersSection(running, events),
-    el('h3', 'Event history'), ...eventsSection(events, listed?.total ?? events.length),
-    el('h3', 'Stubs'), ...await stubsSection(running, events),
-  ];
+  // What you can do, then what happened: one under the other, or side by
+  // side when the panel is docked along the bottom.
+  const settings = el('div', '', 'mp-settings');
+  settings.append(status, controls, about, el('h3', 'Stubs'), ...await stubsSection(running, events));
+  const activity = el('div', '', 'mp-activity');
+  activity.append(el('h3', 'Activity'), ...activitySection(running, events));
   // Drawn again, an event opened stays open.
   const opened = new Set([...body.querySelectorAll('details[open][data-event]')].map((row) => row.dataset.event));
-  body.replaceChildren(status, controls, about, ...sections);
+  const openedRequests = new Set([...body.querySelectorAll('details[open][data-request]')].map((row) => row.dataset.request));
+  // A stub being written takes the room the log had, until it's registered or cancelled.
+  body.classList.toggle('mp-editing', Boolean(editing));
+  body.replaceChildren(settings, activity);
   for (const row of body.querySelectorAll('details[data-event]')) row.open = opened.has(row.dataset.event);
+  for (const row of body.querySelectorAll('details[data-request]')) row.open = openedRequests.has(row.dataset.request);
 }
 
 /**
- * Open the drawer, or close it if it's open. The first time on a page that
- * runs no mock of its own, it starts one.
+ * Turn Try it on, docking the panel beside the page, or off. The first time
+ * on a page that runs no mock of its own, it starts one.
  *
+ * @param {boolean} on
  * @param {{ contracts: object, version: string, scope: string }} given - The
  *   contract set, its version, and the mock's folder, where records are kept
  */
-export async function toggleControlPanel(given) {
+export async function setTryIt(on, given) {
   options ??= given;
   if (!panel) {
     document.head.append(Object.assign(el('style'), { textContent: STYLE + HAPPENED_STYLE + STUB_STYLE + COMBO_STYLE }));
@@ -340,19 +445,18 @@ export async function toggleControlPanel(given) {
     const head = el('div', '', 'mp-head');
     const close = el('button', '×', 'mp-close');
     close.type = 'button';
-    close.setAttribute('aria-label', 'Close');
-    close.onclick = () => toggleControlPanel();
+    close.setAttribute('aria-label', 'Turn off Try it');
+    // The switch hears it, and remembers it for the tab.
+    close.onclick = () => {
+      setTryIt(false);
+      dispatchEvent(new CustomEvent('try-it', { detail: { on: false } }));
+    };
     head.append(el('span', 'Mock server'), close);
     panel.append(head, el('div', '', 'mp-body'));
     document.body.append(panel);
-    addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && panel.classList.contains('open')) toggleControlPanel();
-    });
   }
-  const opening = !panel.classList.contains('open');
-  panel.classList.toggle('open', opening);
-  document.getElementById('mock-panel-toggle')?.setAttribute('aria-expanded', String(opening));
-  if (!opening) return;
+  panel.classList.toggle('open', on);
+  if (!on) return;
   render();
   if (!host && !own) {
     await startOwn({ seed: true, restore: true });

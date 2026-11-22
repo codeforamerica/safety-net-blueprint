@@ -12,6 +12,7 @@ Possibilities for the mock server and the explorer that nobody is working on. Th
 
 ### Beyond Try it
 
+- **One reference for operations, behavior and events.** An operation's card would show what happens behind it: the transition it runs, the guards that can refuse it, the events it publishes and who subscribes. With Try it on, the same things appear in the log as they happen. The state machine docs and the event catalog would become views of that one reference rather than tools of their own.
 - **State machines you can walk.** The diagram is already generated. Clicking a transition could move a record, and an illegal one could be refused, so the page for `close` shows the 409 rather than describing it.
 - **Compositions previewed.** The assembled shape exists in no schema, so today the page can only describe it. The page could show one built from the sample records.
 - **Annotations with a value beside them.** Click a field and see the citation it carries and a value a transition just wrote.

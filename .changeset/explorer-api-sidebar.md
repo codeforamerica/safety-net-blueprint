@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-explorer": minor
 ---
 
-Before, an API reference page described each operation for reading only. Now its sidebar groups operations by resource, and each operation names what it takes and returns and shows its curl and TypeScript call beside its responses, ready to send to the mock running in the page with a body picked from the sample records; a rules endpoint also shows the client's local evaluation, which runs in the page. (#465)
+Before, an API reference page described each operation for reading only. Now each shows its curl and TypeScript call, and with Try it on, sends it to the mock running in the page, or for a rules endpoint, runs the client's evaluation in the page. (#465)

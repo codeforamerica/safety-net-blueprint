@@ -68,7 +68,8 @@ export function breadcrumb(segments) {
     }
     return `<a href="${seg.href}" style="color:${COLORS.lightBlue};text-decoration:none;">${esc(seg.label)}</a>`;
   });
-  return `<div style="background:${COLORS.darkBlue};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:${FONT};color:${COLORS.lightBlue};">${parts.join(sep)}</div>`;
+  // Marked, so the Try it switch can sit at its end (lib/control-panel.js).
+  return `<div class="page-crumbs" style="background:${COLORS.darkBlue};padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:${FONT};color:${COLORS.lightBlue};">${parts.join(sep)}</div>`;
 }
 
 // ── Inline expand helpers ──────────────────────────────────────────────────

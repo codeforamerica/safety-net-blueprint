@@ -336,7 +336,7 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest } =
   globalThis.BlueprintMock;
 
 // Where this explorer keeps the mock's records between its pages: under the
@@ -1055,9 +1055,28 @@ const sectionIntroOf = (workflow) => {
 /** The run of the tour on this server, started at its first step. */
 const runnerFor = (doc) => {
   if (!tourRunner) {
-    const fetchHere = (request) => {
+    // Each call a step makes goes in the control panel's activity log, with
+    // its response and the events it set off, as Send's do.
+    const fetchHere = async (request) => {
       const { pathname, search } = new URL(request.url);
-      return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
+      const time = new Date().toISOString();
+      const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().text();
+      const started = performance.now();
+      const response = await mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
+      const ms = Math.round(performance.now() - started);
+      // A stream doesn't end, so its body is left out.
+      let shown = '';
+      if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) {
+        const text = await response.clone().text();
+        try { shown = JSON.stringify(JSON.parse(text), null, 2); } catch { shown = text; }
+      }
+      let eventIds = [];
+      if (request.method !== 'GET' && response.ok) {
+        const listed = await mock.fetch(new Request(new URL(`${basePath}/platform/events?start=${encodeURIComponent(time)}&sort=time&limit=100`, location.origin)));
+        if (listed.ok) eventIds = ((await listed.json())?.items ?? []).map((event) => event.id);
+      }
+      logRequest(records, { time, method: request.method, path: pathname + search, body: body || undefined, status: response.status, ok: response.ok, ms, shown, eventIds });
+      return response;
     };
     // The mock's WebSocket, for steps on a connection an AsyncAPI document
     // describes, such as the relay's.
