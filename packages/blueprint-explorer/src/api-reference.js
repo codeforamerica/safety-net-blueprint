@@ -1019,7 +1019,10 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
     navSearch: true,
     extraStyle: OPERATION_STYLE,
   });
-  const withNav = page.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
+  // An adapter's page is built, for whoever implements it, but listed in Try
+  // it rather than beside the public APIs: the home page skips it by this.
+  const marked = doc?.adapter ? page.replace('</head>', () => '<meta name="blueprint-adapter" content="true"/>\n</head>') : page;
+  const withNav = marked.replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n</body>`);
   if (!tryFile) return withNav;
   // The mock loads after the page has rendered, so reading never waits on it.
   return withNav.replace('</body>', () => `${MOUNT_SEND_PANELS}\n</body>`);
@@ -1220,9 +1223,10 @@ function countEndpoints(spec) {
 }
 
 function buildIndexPage(entries) {
-  // Group by x-domain; preserve insertion order (specs are already sorted)
+  // Group by x-domain; preserve insertion order (specs are already sorted).
+  // Adapters aren't public APIs: Try it's "Where calls go" lists them.
   const byDomain = new Map();
-  for (const entry of entries) {
+  for (const entry of entries.filter((e) => !e.doc?.adapter)) {
     const domain = entry.spec.info?.['x-domain'] ?? entry.slug;
     if (!byDomain.has(domain)) byDomain.set(domain, []);
     byDomain.get(domain).push(entry);
