@@ -1204,6 +1204,12 @@ function buildSocketPage({ slug, spec, raw, fileMap = new Map() }) {
 
 // ── Index (landing) page ──────────────────────────────────────────────────
 
+/** A description's first sentence: its first paragraph up to the first full stop. */
+function firstSentence(description) {
+  const paragraph = String(description ?? '').trim().split(/\n\s*\n/)[0].replace(/\s+/g, ' ');
+  return paragraph.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? paragraph;
+}
+
 function countEndpoints(spec) {
   return Object.values(spec.paths ?? {}).reduce((n, pathItem) => {
     if (!pathItem || typeof pathItem !== 'object') return n;
@@ -1229,9 +1235,8 @@ function buildIndexPage(entries) {
     const primary = domainEntries.find(e => !e.slug.endsWith('-adapter') && !e.socket) ?? domainEntries[0];
     const info    = primary.spec.info ?? {};
     const totalEndpoints = domainEntries.reduce((n, e) => n + countEndpoints(e.spec), 0);
-    const desc    = info.description
-      ? info.description.split('\n').find(l => l.trim()) ?? ''
-      : '';
+    // The description's first sentence, however its lines wrap.
+    const desc    = firstSentence(info.description);
 
     const domainLabel = titleCase(domain);
 
