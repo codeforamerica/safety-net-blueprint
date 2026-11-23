@@ -45,6 +45,9 @@ components:
         allOf:
           - $ref: ../../base/schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string

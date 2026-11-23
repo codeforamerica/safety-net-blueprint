@@ -54,7 +54,8 @@ paths:
         credential from requestCredentials, connects to the service, streams
         the audio, and publishes the session's events as things happen, each
         with the session's id as its subject and partition key, so one
-        session's events stay in order:
+        session's events stay in order. What it sends is
+        communication-transcription-sessions-adapter-asyncapi.yaml:
 
         - `connected` when the connection opens, with the stretch nothing
           was captured in as `gap`: after a reconnect, from when it dropped;

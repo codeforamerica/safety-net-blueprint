@@ -402,6 +402,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -414,6 +417,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -426,6 +432,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -438,6 +447,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -450,6 +462,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -462,6 +477,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -474,6 +492,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
@@ -486,6 +507,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -496,6 +519,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -506,6 +531,8 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
             properties:
               type:
                 type: string
@@ -516,6 +543,9 @@ components:
         allOf:
           - $ref: ../../schemas/events.yaml#/$defs/Event
           - type: object
+            required:
+              - type
+              - data
             properties:
               type:
                 type: string
