@@ -114,9 +114,11 @@ Output is written to the `--content` directory as static HTML files. The API ref
 
 #### Transcription session adapters
 
-A transcription session's start and resume, on the API reference, take audio: a recording, the microphone, or typed lines, which the page speaks with Kokoro, an open speech model loaded from a CDN the first time. Send sends the one call. The session then calls its adapter, which runs in the page through the site's routing, and the adapter streams the audio and publishes the session's events — connected, each line, ended — which the session and the transcript follow. The adapter's calls and events show in the activity log, and you hear the audio as it streams.
+A transcription session's start and resume, on the API reference, take audio: the microphone, a recording, or typed lines, which the page speaks with Kokoro, an open speech model loaded from a CDN the first time. Send sends the one call. The session then calls its adapter, which runs in the page through the site's routing, and the adapter streams the audio and publishes the session's events — connected, each line, ended — which the session and the transcript follow. The adapter's calls and events show in the activity log.
 
-An adapter is a module of routing handlers, named in the site's [routing](#a-sites-routing). The explorer has an example, [`examples/session-adapters/whisper.js`](examples/session-adapters/whisper.js), which transcribes in the page with Whisper, with no service or account; copy it to write one for another service. A contract set offers it with a profile naming `whisper` in its config, and a site routes to it:
+An adapter hears audio as it would in an app, by asking the browser for the microphone (`getUserMedia`). When the reader chose a recording or typed lines, Try it answers the adapter's next request for the microphone with a stream playing them, aloud too, so you hear what the adapter hears.
+
+An adapter is a module of routing handlers, named in the site's [routing](#a-sites-routing). The blueprint's harness site has one, [`packages/blueprint-harness/explorer/adapters/whisper.js`](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/explorer/adapters/whisper.js), which transcribes in the page with Whisper, with no service or account: the whole adapter, to copy into a site and to write one for another service from. A contract set offers it with a profile naming `whisper` in its config, and a site routes to it:
 
 ```yaml
 # routing.yaml
@@ -125,25 +127,6 @@ routing:
     match: { provider: whisper }
     handler: ./adapters/whisper.js
 ```
-
-`sessionAdapter`, from `@codeforamerica/blueprint-explorer/session-adapter`, does what every adapter's streaming part shares — answering at once, each event's envelope, pausing, stopping and `ended` — so an adapter writes only how it reaches its service:
-
-```js
-// adapters/transcribe.js
-import { sessionAdapter } from '@codeforamerica/blueprint-explorer/session-adapter';
-
-export const { startStream, pauseStream, stopStream } = sessionAdapter({
-  async start({ stream, audio, publish, requestCredentials }) {
-    // stream: transcriptionSessionId, transcriptId, provider, model, languages, lastActivityAt
-    // requestCredentials({ audio, protocols }): where to connect, from the adapter's credentials part
-    // audio.frames({ encoding, sampleRateHertz, channelCount }): the audio, at the pace it was spoken
-    // publish('connected' | 'line_updated' | 'line_finished' | 'disconnected' | 'failed', data)
-    return { async stop() { /* publish the last line, then close */ } };
-  },
-});
-```
-
-Pausing stops the adapter, and resuming starts it again. After a stop, the helper publishes `ended`. Outside the explorer, pass your own audio: `sessionAdapter({ start }, { audioFor: (sessionId) => microphone })`.
 
 The libraries and models for Whisper and Kokoro come from jsDelivr and Hugging Face. A site that hosts them itself distributes Kokoro's speech-sound step, eSpeak NG, which is GPL-3.
 

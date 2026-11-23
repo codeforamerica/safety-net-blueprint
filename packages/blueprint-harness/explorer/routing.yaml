@@ -1,8 +1,8 @@
 # Where the harness explorer's calls are answered besides the mock in the page:
-# a session whose profile's provider is whisper streams to the explorer's
-# example Whisper adapter, which transcribes in the page with no service.
+# a session whose profile's provider is whisper streams to the Whisper
+# adapter beside this file, which transcribes in the page with no service.
 $schema: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
 routing:
   - api: communication-transcription-sessions-adapter
     match: { provider: whisper }
-    handler: ../../blueprint-explorer/examples/session-adapters/whisper.js
+    handler: ./adapters/whisper.js

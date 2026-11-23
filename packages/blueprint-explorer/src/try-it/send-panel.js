@@ -27,8 +27,7 @@ import { hostMock, mockChanged } from './control-panel.js';
 import { mountSocketPanel, SOCKET_STYLE } from './socket-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf } from './routing.js';
-import { recordingSource, microphoneSource } from './audio-sources.js';
-import { audioForSession } from '../session-adapter.js';
+import { playAsMicrophone, useMicrophone } from './as-microphone.js';
 import { speakLines, VOICES } from './kokoro.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -500,17 +499,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
     } catch { return []; }
   };
 
-  // A routed handler's calls and events, such as a session adapter's, logged
-  // beside Send's (session-adapter.js).
-  globalThis.BlueprintExplorer ??= {};
-  globalThis.BlueprintExplorer.logCall = ({ method, path, sent, status, body }) => {
-    logRequest(records, {
-      time: new Date().toISOString(), method, path, body: sent === undefined ? undefined : JSON.stringify(sent),
-      status, ok: status < 400, ms: 0, shown: body === undefined ? '' : JSON.stringify(body, null, 2), eventIds: body?.id && body?.specversion ? [body.id] : [],
-    });
-    mockChanged();
-  };
-
   // ── Comboboxes ───────────────────────────────────────────────────────────
   // A parameter with choices — an enum's values, the records held under a
   // path — is a combobox (combobox.js). A record shows its status and
@@ -601,9 +589,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
       form.append(row);
       values.set(`${param.dataset.in}:${param.dataset.param}`, box);
     }
-    // A transcription session's connect takes audio, a recording or the
-    // microphone: Send then streams it through the adapter for the session's
-    // profile's service.
+    // A transcription session's start and resume take audio: the microphone,
+    // a recording, or typed lines, which the session's adapter hears when it
+    // asks for the microphone.
     let audioChoice = null;
     let recording = null;
     let typed = null;
@@ -612,9 +600,8 @@ export async function mountSendPanels({ contracts, version, scope }) {
     if (takesAudio(op)) {
       audioChoice = el('select');
       audioChoice.append(
-        Object.assign(el('option', 'None'), { value: '' }),
-        Object.assign(el('option', 'A recording'), { value: 'recording' }),
         Object.assign(el('option', 'The microphone'), { value: 'microphone' }),
+        Object.assign(el('option', 'A recording'), { value: 'recording' }),
         Object.assign(el('option', 'Typed lines, spoken'), { value: 'typed' }),
       );
       recording = Object.assign(el('input'), { type: 'file', accept: 'audio/*', hidden: true });
@@ -917,9 +904,10 @@ export async function mountSendPanels({ contracts, version, scope }) {
     };
 
     /**
-     * The audio chosen for this start or resume, handed to the session's
-     * adapter for when the session starts it: a recording, the microphone,
-     * or typed lines, spoken first. Null, with why, when it can't be.
+     * The audio chosen for this start or resume, what the session's adapter
+     * hears when it asks for the microphone (as-microphone.js): the
+     * microphone itself, a recording, or typed lines, spoken first. Null,
+     * with why, when it can't be.
      */
     async function chooseAudio() {
       const request = requestFor();
@@ -929,11 +917,11 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (audioChoice.value === 'recording') {
         const file = recording.files[0];
         if (!file) return refuse('choose a recording first.');
-        audioForSession(sessionId, recordingSource(file));
+        playAsMicrophone(file);
         return { spoken: '' };
       }
       if (audioChoice.value === 'microphone') {
-        audioForSession(sessionId, microphoneSource());
+        useMicrophone();
         return { spoken: '' };
       }
       const lines = typedText.value.split('\n').map((line) => line.trim()).filter(Boolean);
@@ -945,7 +933,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
         const speech = await speakLines(lines, typedVoices.map((pick) => pick.value), ({ line, of, device, speechSeconds, makingSeconds }) => showSent('audio', true, [
           el('div', `Speaking line ${line} of ${of} on ${on(device)}: ${speechSeconds.toFixed(1)} s of speech in ${makingSeconds.toFixed(1)} s`, 'sent-status ok'),
         ]));
-        audioForSession(sessionId, recordingSource(speech.recording));
+        playAsMicrophone(speech.recording);
         return { spoken: `Typed lines spoken on ${on(speech.device)}: ${speech.speechSeconds.toFixed(1)} s of speech in ${speech.makingSeconds.toFixed(1)} s, after ${speech.loadingSeconds.toFixed(1)} s loading.` };
       } catch (error) {
         return refuse(`the lines weren't spoken: ${error.message}`);

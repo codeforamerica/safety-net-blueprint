@@ -4,16 +4,14 @@
   "description": "Static documentation generator for Blueprint framework projects \u2014 contract reference, state machine diagrams, event catalog, and data dictionaries",
   "type": "module",
   "exports": {
-    ".": "./src/index.js",
-    "./session-adapter": "./src/session-adapter.js"
+    ".": "./src/index.js"
   },
   "files": [
     "src/",
     "dist/",
     "build.js",
     "schemas/",
-    "authored/",
-    "examples/"
+    "authored/"
   ],
   "scripts": {
     "build:browser": "node scripts/build-browser.js",

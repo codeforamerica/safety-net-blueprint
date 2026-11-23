@@ -518,8 +518,7 @@ function handlerContext(routes, context) {
     const text = await response.text();
     let parsed = text;
     try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-    // What was sent too, so whoever made the call can log it.
-    return { status: response.status, body: parsed, method, path: `${path}${search}`, sent: body };
+    return { status: response.status, body: parsed };
   };
   const eventTypes = [...new Set((context.operations?.all ?? []).map((operation) => operation.event).filter(Boolean))];
   const publish = async (event, data = {}, { subject, partitionkey = subject } = {}) => {

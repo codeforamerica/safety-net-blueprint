@@ -5,7 +5,7 @@ import { extract } from '@codeforamerica/blueprint-core';
 import { mixTo, toLinear16 } from '../../src/try-it/audio.js';
 import { messagesToSend, localUrl, declaredFormat, stubNeeded } from '../../src/try-it/socket-panel.js';
 import { stubChoices } from '../../src/try-it/stub-editor.js';
-import { sessionAdapter } from '../../src/session-adapter.js';
+import { startStream, stopStream } from '../../../blueprint-harness/explorer/adapters/whisper.js';
 
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 const docs = extract(contracts, 'docs');
@@ -59,33 +59,24 @@ describe('the relay in Try it', () => {
   });
 });
 
-describe('a session adapter, as routing handlers', () => {
-  it('starts the adapter after answering, publishes with the session and transcript, and ends after a stop', async () => {
+describe('the harness Whisper adapter, as routing handlers', () => {
+  it('answers at once, publishes failed when it gets no credentials, and ended after a stop', async () => {
     const published = [];
-    let heard = null;
     const context = {
       params: { transcriptionSessionId: 's1' },
       publish: async (event, data, { subject }) => { published.push([event, data, subject]); return { status: 201, body: {} }; },
-      call: async () => ({ status: 200, body: {} }),
+      call: async () => ({ status: 503, body: { message: 'down' } }),
     };
-    const { startStream, stopStream } = sessionAdapter({
-      async start({ audio, publish }) {
-        heard = audio;
-        await publish('connected', {});
-        return { async stop() { await publish('line_finished', { key: 'l1' }); } };
-      },
-    }, { audioFor: () => null });
     const started = await startStream(new Request('http://x/streams', { method: 'POST', body: JSON.stringify({ transcriptionSessionId: 's1', transcriptId: 't1', provider: 'whisper', metadata: { a: 1 } }) }), context);
     assert.equal(started.status, 202);
     assert.deepEqual(await started.json(), { metadata: { a: 1 } });
     await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.ok(heard?.frames, 'with no audio chosen, it hears silence');
     assert.equal((await stopStream(new Request('http://x/streams/s1/stop', { method: 'POST' }), context)).status, 202);
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.deepEqual(published.map(([event, data, subject]) => [event, data.transcriptId, subject]), [
-      ['transcription_session.connected', 't1', 's1'],
-      ['transcription_session.line_finished', 't1', 's1'],
+      ['transcription_session.failed', 't1', 's1'],
       ['transcription_session.ended', 't1', 's1'],
     ]);
+    assert.equal(published[0][1].reason, 'requestCredentials answered 503: down');
   });
 });
