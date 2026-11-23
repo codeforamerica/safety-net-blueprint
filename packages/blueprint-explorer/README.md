@@ -104,13 +104,38 @@ BlueprintExplorer.routing = [{
 }];
 ```
 
-The control panel lists the routing under "Where calls go", and each entry has a switch between the real service and the mock in the page, for the browser tab: the mock restarts without that entry, keeping records and stubs. A call the mock can't answer itself, such as an adapter's, then needs a stub, and the panel offers the HTTP stub form for it. On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
+The control panel lists the routing under "Server", and each entry has a switch between the real service and the mock in the page, for the browser tab: the mock restarts without that entry, keeping records and stubs. A call the mock can't answer itself, such as an adapter's, then needs a stub, and the panel offers the HTTP stub form for it. On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
 
-The reader can also choose a server for the tab, as Swagger's server list does: at the top of "Where calls go", an environment the contracts' `servers` name by `description`, such as "Production server", which sends each API to its own server for it, or a URL they type, which takes every call, such as a local `blueprint-mock`. The site's own routing still wins, and a reload puts every call back in the page. Record pickers list the chosen server's records; Restart, Start empty and timers, which are the page's own, are hidden; and Scenarios asks once before running against a server that isn't this machine. A server has to allow calls from the site's address (CORS); a refused call says so. To list real servers, set them in an overlay ([overlay guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md#set-an-apis-servers)).
+The reader can also choose a server for the tab, as Swagger's server list does: at the top of "Server", an environment the contracts' `servers` name by `description`, such as "Production server", which sends each API to its own server for it, or a URL they type, which takes every call, such as a local `blueprint-mock`. The site's own routing still wins, and a reload puts every call back in the page. Record pickers list the chosen server's records; Restart, Start empty and timers, which are the page's own, are hidden; and Scenarios asks once before running against a server that isn't this machine. A server has to allow calls from the site's address (CORS); a refused call says so. To list real servers, set them in an overlay ([overlay guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md#set-an-apis-servers)).
 
 The mock server guide's [routing section](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#answering-in-a-page) shows a handler that forwards a call. A real service has to accept requests from the site's address (CORS).
 
 Output is written to the `--content` directory as static HTML files. The API reference, state machine docs, event catalog, and data dictionaries update automatically as contracts change — rebuild after each resolve step.
+
+#### Transcription session adapters
+
+A transcription session's start and resume, on the API reference, take audio: a recording, the microphone, or typed lines, which the page speaks with Kokoro, an open speech model loaded from a CDN the first time. Send sends the one call. The session then calls its adapter, which runs in the page: the adapter for the session's profile's service gets its credential, streams the audio, and publishes the session's events — connected, each line, ended — which the session and the transcript follow. The adapter's calls and events show in the activity log. You hear the audio as it streams.
+
+The explorer has one adapter, for `whisper`, which transcribes in the page with no service or account; a contract set offers it with a profile naming `whisper` in its config. A site adds an adapter for another service in its script, and its own comes before the explorer's. The explorer answers the session's calls to the adapter and puts each event in its envelope; the adapter streams and reports:
+
+```js
+// portal.js
+BlueprintExplorer.sessionAdapters = [{
+  service: 'aws-transcribe',
+  name: 'Amazon Transcribe',
+  async start({ stream, audio, publish, requestCredentials, speakers }) {
+    // stream: transcriptionSessionId, transcriptId, provider, model, languages, lastActivityAt
+    // requestCredentials({ audio, protocols }): where to connect, from the adapter's credentials part
+    // audio.frames({ encoding, sampleRateHertz, channelCount }): the audio, at the pace it was spoken
+    // publish('connected' | 'line_updated' | 'line_finished' | 'disconnected' | 'failed', data)
+    return { async stop() { /* publish the last line, then close */ } };
+  },
+}];
+```
+
+Pausing stops the adapter, and resuming starts it again. After a stop, the explorer publishes `ended`.
+
+The libraries and models for Whisper and Kokoro come from jsDelivr and Hugging Face. A site that hosts them itself distributes Kokoro's speech-sound step, eSpeak NG, which is GPL-3.
 
 ## Changelog
 

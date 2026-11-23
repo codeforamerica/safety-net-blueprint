@@ -110,7 +110,8 @@ test('executeTransition — returns 422 when request body fails schema', async (
 
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 422);
-  assert.ok(result.error.includes('validation'));
+  // The message names what's wrong, not only the details.
+  assert.strictEqual(result.error, 'The request body is invalid: reason is required.');
   assert.strictEqual(store.findById('testresources', 'res-2').status, 'open');
 });
 

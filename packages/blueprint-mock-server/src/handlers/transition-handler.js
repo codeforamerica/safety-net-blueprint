@@ -73,5 +73,6 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
 function statusCode(status) {
   if (status === 404) return 'NOT_FOUND';
   if (status === 403) return 'FORBIDDEN';
+  if (status === 422) return 'VALIDATION_ERROR';
   return 'CONFLICT';
 }

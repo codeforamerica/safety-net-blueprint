@@ -1304,7 +1304,7 @@ function countEndpoints(spec) {
 
 function buildIndexPage(entries) {
   // Group by x-domain; preserve insertion order (specs are already sorted).
-  // Adapters aren't public APIs: Try it's "Where calls go" lists them.
+  // Adapters aren't public APIs: an adapter's page is built, for whoever implements it, and linked from its callers.
   const byDomain = new Map();
   for (const entry of entries.filter((e) => !e.doc?.adapter)) {
     const domain = entry.spec.info?.['x-domain'] ?? entry.slug;

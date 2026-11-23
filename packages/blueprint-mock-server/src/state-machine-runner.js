@@ -12,6 +12,7 @@ import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { playsAnyOf, theSystem } from './auth-context.js';
 import { whenFree } from './record-turns.js';
+import { whatsWrong } from './validator.js';
 
 /**
  * Check guard clauses, as an action's or a governed resource's create.
@@ -203,7 +204,7 @@ async function transitionRecord({
     const relativePath = declaredIn.get(stateMachine);
     const source = relativePath ? { relativePath, defs: stateMachine.$defs } : null;
     const { valid, errors } = instance.schemas.validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`, source);
-    return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
+    return valid ? null : { status: 422, error: `The request body is invalid${whatsWrong(errors)}`, details: errors };
   };
   const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
   if (refused) return { success: false, ...refused };

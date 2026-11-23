@@ -27,6 +27,8 @@ import { hostMock, mockChanged } from './control-panel.js';
 import { mountSocketPanel, SOCKET_STYLE } from './socket-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf, implementationOf } from './routing.js';
+import { hostSessionAdapters, audioForSession, recordingSource, microphoneSource } from './session-adapters.js';
+import { speakLines, VOICES } from './kokoro.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -223,18 +225,34 @@ const followed = (doc, node, docs) => {
 const local = (doc, node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
   ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content) : node);
 
-/** The operation an element names, with its document, method and served path. */
-const operationFor = (docs, file, operationId) => {
+/**
+ * The operation an element names, with its document, method and served path;
+ * or, given `at`, the one at that method and served path.
+ */
+const operationFor = (docs, file, operationId, at = null) => {
   const doc = docs.find((d) => d.type === 'openapi' && d.relativePath === file);
   for (const [path, item] of Object.entries(doc?.content?.paths ?? {})) {
     for (const method of ['get', 'put', 'post', 'patch', 'delete']) {
-      if (item?.[method]?.operationId === operationId) {
+      const found = at
+        ? item?.[method] && method.toUpperCase() === at.method && basePathOf(doc) + path === at.path
+        : item?.[method]?.operationId === operationId;
+      if (found) {
         return { doc, method: method.toUpperCase(), path: basePathOf(doc) + path, operation: item[method], item };
       }
     }
   }
   return null;
 };
+
+/** What typed lines start as: an interview's opening. */
+const TYPED_LINES = `Who lives with you?
+My sister and her two kids.
+Does anyone in the household work?
+I do, at the grocery store. About two hundred dollars a week.`;
+
+/** The transcription sessions API, whose connect can stream a recording. */
+const SESSIONS_API = 'communication-transcription-sessions';
+const takesAudio = (op) => op.doc.api === SESSIONS_API && op.method === 'POST' && /\/(start|resume)$/.test(op.path);
 
 /**
  * The fields a request schema accepts, through `allOf`, `oneOf`, `anyOf`
@@ -329,6 +347,11 @@ const STYLE = `
   .try-docs { font: 600 12px system-ui, sans-serif; color: #2B1A78; background: none; border: 0; padding: 4px 0; cursor: pointer; }
   .try-params .row { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: 8px; align-items: center; padding: 3px 0; }
   .try-params label { font: 600 12px monospace; color: #333; }
+  .try-params .audio-boxes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .try-params .audio-boxes select { width: auto; }
+  .try-params .typed-lines textarea { width: 100%; box-sizing: border-box; min-height: 6rem; font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; margin: 4px 0; }
+  .try-params .typed-lines .voices { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #555; }
+  .try-params .typed-lines .voices select { width: auto; }
   .try-params label span { font: 400 11px sans-serif; color: #888; margin-left: 4px; }
   .try-params input, .try-body textarea, .try-body select { font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; width: 100%; box-sizing: border-box; background: #fff; }
   .try-body textarea { min-height: 9rem; resize: vertical; }
@@ -477,6 +500,31 @@ export async function mountSendPanels({ contracts, version, scope }) {
     } catch { return []; }
   };
 
+  /**
+   * A call the page makes on its own rather than from a form, such as the
+   * session adapter's: sent, and logged as Send logs its own.
+   */
+  const callLogged = async (method, path, body) => {
+    const sentAt = new Date().toISOString();
+    const started = performance.now();
+    const text = body === undefined ? undefined : JSON.stringify(body);
+    const response = await send(method, path, { body: text });
+    const ms = Math.round(performance.now() - started);
+    const raw = await response.text();
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
+    const events = method !== 'GET' && response.ok ? await eventsSince(sentAt) : [];
+    logRequest(records, {
+      time: sentAt, method, path, body: text, status: response.status, ok: response.ok, ms,
+      shown: parsed ? JSON.stringify(parsed, null, 2) : raw, eventIds: events.map((event) => event.id),
+    });
+    mockChanged();
+    return { status: response.status, body: parsed };
+  };
+  // The session adapter in the page calls and publishes through this, so its
+  // calls show in the activity log beside Send's.
+  hostSessionAdapters({ call: callLogged, docs });
+
   // ── Comboboxes ───────────────────────────────────────────────────────────
   // A parameter with choices — an enum's values, the records held under a
   // path — is a combobox (combobox.js). A record shows its status and
@@ -566,6 +614,52 @@ export async function mountSendPanels({ contracts, version, scope }) {
       }
       form.append(row);
       values.set(`${param.dataset.in}:${param.dataset.param}`, box);
+    }
+    // A transcription session's connect takes audio, a recording or the
+    // microphone: Send then streams it through the adapter for the session's
+    // profile's service.
+    let audioChoice = null;
+    let recording = null;
+    let typed = null;
+    let typedText = null;
+    let typedVoices = [];
+    if (takesAudio(op)) {
+      audioChoice = el('select');
+      audioChoice.append(
+        Object.assign(el('option', 'None'), { value: '' }),
+        Object.assign(el('option', 'A recording'), { value: 'recording' }),
+        Object.assign(el('option', 'The microphone'), { value: 'microphone' }),
+        Object.assign(el('option', 'Typed lines, spoken'), { value: 'typed' }),
+      );
+      recording = Object.assign(el('input'), { type: 'file', accept: 'audio/*', hidden: true });
+      // Lines to speak, the two voices taking turns.
+      typed = el('div', '', 'typed-lines');
+      typed.hidden = true;
+      typedText = el('textarea');
+      typedText.value = TYPED_LINES;
+      typedText.setAttribute('aria-label', 'Lines to speak, one a line');
+      const voicePicker = (chosen, label) => {
+        const pick = el('select');
+        pick.setAttribute('aria-label', label);
+        pick.append(...VOICES.map((voice) => Object.assign(el('option', voice.name), { value: voice.id })));
+        pick.value = chosen;
+        return pick;
+      };
+      typedVoices = [voicePicker('af_heart', 'First speaker\'s voice'), voicePicker('am_michael', 'Second speaker\'s voice')];
+      const voices = el('div', '', 'voices');
+      voices.append(el('span', 'Voices, taking turns'), ...typedVoices);
+      typed.append(typedText, voices);
+      audioChoice.onchange = () => {
+        recording.hidden = audioChoice.value !== 'recording';
+        typed.hidden = audioChoice.value !== 'typed';
+      };
+      const label = el('label', 'Audio');
+      label.title = 'What the session\'s adapter hears once this starts it: the adapter for the session\'s profile\'s service streams it, and its events show in the activity log. You hear it as it streams.';
+      const boxes = el('span', '', 'audio-boxes');
+      boxes.append(audioChoice, recording);
+      const row = el('div', '', 'row');
+      row.append(label, boxes);
+      form.append(row, typed);
     }
     form.prepend(el('h4', values.size ? 'Parameters' : 'Request', 'op-h'), callerRow());
     place(form);
@@ -765,6 +859,13 @@ export async function mountSendPanels({ contracts, version, scope }) {
         return;
       }
       if (!mock) return;
+      // The audio the session's adapter hears once this starts it.
+      let spoken = '';
+      if (audioChoice?.value) {
+        const chosen = await chooseAudio();
+        if (!chosen) return;
+        spoken = chosen.spoken;
+      }
       button.disabled = true;
       try {
         const request = requestFor();
@@ -797,6 +898,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
           returnedEvent,
         };
         showResult(result);
+        if (spoken) holder.querySelector('.resp-panel[data-resp="sent"]')?.append(el('div', spoken, 'sent-status ok'));
         logRequest(records, {
           time: sentAt, method: op.method, path: query.size ? `${path}?${query}` : path, body: request.body,
           status: response.status, ok: response.ok, ms, shown, eventIds: (events ?? []).map((event) => event.id),
@@ -827,6 +929,44 @@ export async function mountSendPanels({ contracts, version, scope }) {
         button.disabled = false;
       }
     };
+
+    /**
+     * The audio chosen for this start or resume, handed to the session's
+     * adapter for when the session starts it: a recording, the microphone,
+     * or typed lines, spoken first. Null, with why, when it can't be.
+     */
+    async function chooseAudio() {
+      const request = requestFor();
+      const sessionId = request.path.transcriptionSessionId;
+      const refuse = (why) => { showSent('audio · not sent', false, [el('div', `Not sent: ${why}`, 'sent-status bad')]); return null; };
+      if (!sessionId) return refuse('give transcriptionSessionId first, a session you started.');
+      if (audioChoice.value === 'recording') {
+        const file = recording.files[0];
+        if (!file) return refuse('choose a recording first.');
+        audioForSession(sessionId, recordingSource(file));
+        return { spoken: '' };
+      }
+      if (audioChoice.value === 'microphone') {
+        audioForSession(sessionId, microphoneSource());
+        return { spoken: '' };
+      }
+      const lines = typedText.value.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (!lines.length) return refuse('type a line to speak first.');
+      button.disabled = true;
+      const on = (device) => (device === 'webgpu' ? 'the GPU' : 'the CPU');
+      showSent('audio', true, [el('div', 'Loading the voices (Kokoro). The first time, this downloads the model…', 'sent-status ok')]);
+      try {
+        const speech = await speakLines(lines, typedVoices.map((pick) => pick.value), ({ line, of, device, speechSeconds, makingSeconds }) => showSent('audio', true, [
+          el('div', `Speaking line ${line} of ${of} on ${on(device)}: ${speechSeconds.toFixed(1)} s of speech in ${makingSeconds.toFixed(1)} s`, 'sent-status ok'),
+        ]));
+        audioForSession(sessionId, recordingSource(speech.recording));
+        return { spoken: `Typed lines spoken on ${on(speech.device)}: ${speech.speechSeconds.toFixed(1)} s of speech in ${speech.makingSeconds.toFixed(1)} s, after ${speech.loadingSeconds.toFixed(1)} s loading.` };
+      } catch (error) {
+        return refuse(`the lines weren't spoken: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+    }
 
     // Coming back to the page: as it was left, open, with what was sent and what came back.
     const kept = holder.id ? results[holder.id] : null;

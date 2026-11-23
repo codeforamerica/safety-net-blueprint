@@ -25,8 +25,7 @@ import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPEN
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
-import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer,
-  implementationsFor, usesImplementation, useImplementation } from './routing.js';
+import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -98,6 +97,10 @@ const STYLE = `
   #mock-panel .mp-server select, #mock-panel .mp-server input { font: 12px system-ui, sans-serif; padding: 3px 6px; border: 1px solid #c7c4ea; border-radius: 4px; max-width: 100%; }
   #mock-panel .mp-server input[type=url] { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; }
   #mock-panel .mp-server .mp-edit { margin-left: 0; }
+  #mock-panel .mp-server .mp-note { width: 100%; overflow-wrap: anywhere; }
+  #mock-panel .mp-server .mp-rows { margin-top: .4rem; }
+  #mock-panel .mp-server .mp-rows li { flex-wrap: wrap; gap: 0 .6rem; }
+  #mock-panel .mp-server .mp-rows .n { margin-left: 0; overflow-wrap: anywhere; }
   #mock-panel .mp-server-fields { display: flex; flex-direction: column; gap: .3rem; width: 100%; }
   #mock-panel .mp-server-var { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
   #mock-panel .mp-route { padding: .35rem 0; border-bottom: 1px solid #f0eefb; font-size: .85rem; }
@@ -110,8 +113,6 @@ const STYLE = `
   #mock-panel .mp-switch button[aria-pressed="true"] { background: #2B1A78; color: #fff; cursor: default; }
   #mock-panel .mp-route .mp-note { margin-top: .3rem; }
   #mock-panel .mp-route .mp-edit { margin: .3rem 0 0; }
-  #mock-panel .mp-adapter { flex: 1; min-width: 0; font-weight: 600; }
-  #mock-panel .mp-adapter a { color: #2B1A78; }
 `;
 
 // How many events the log shows: the mock's list hands back at most this many at once.
@@ -214,7 +215,7 @@ const keep = async (running) => {
  * offered for it, started on that call.
  */
 /**
- * Where calls go, chosen in the page, as Swagger's server list does: this
+ * The server, chosen in the page, as Swagger's server list does: this
  * page, an environment the contracts' servers name, or a URL typed in. The
  * site's own routing, listed below it, still wins.
  */
@@ -225,12 +226,20 @@ function serverChooser(running) {
   const box = el('div', '', 'mp-server');
   const pick = el('select');
   pick.setAttribute('aria-label', 'Server');
-  pick.append(Object.assign(el('option', 'This page: the mock answers'), { value: '' }));
-  for (const environment of environments) {
-    const example = environment.apis[0];
-    pick.append(Object.assign(el('option', `${environment.description} (${expandServer(example.server, chosen?.variables)}${environment.apis.length > 1 ? `, +${environment.apis.length - 1}` : ''})`), { value: `env:${environment.description}` }));
+  // Named for what they are: a mock, here or on this computer, or real services.
+  const urlsOf = (environment) => environment.apis.map((a) => ({ api: a.api, url: expandServer(a.server, chosen?.variables) }));
+  const labelOf = (environment) => {
+    const urls = urlsOf(environment).map((a) => a.url);
+    if (!urls.every(isLocal)) return `Real services (${environment.description.replace(/\s+server$/i, '')})`;
+    const hosts = [...new Set(urls.map((url) => { try { return new URL(url).host; } catch { return url; } }))];
+    return `Mock server on this computer (${hosts.join(', ')})`;
+  };
+  pick.append(Object.assign(el('option', 'Mock, in this page'), { value: '' }));
+  // Real services first: they're what a reader comes to switch to.
+  for (const environment of [...environments].sort((a, b) => Number(urlsOf(a).every((x) => isLocal(x.url))) - Number(urlsOf(b).every((x) => isLocal(x.url))))) {
+    pick.append(Object.assign(el('option', labelOf(environment)), { value: `env:${environment.description}` }));
   }
-  pick.append(Object.assign(el('option', 'A URL you type…'), { value: 'url' }));
+  pick.append(Object.assign(el('option', 'Another server…'), { value: 'url' }));
   pick.value = chosen?.url ? 'url' : chosen?.environment ? `env:${chosen.environment}` : '';
 
   const url = Object.assign(el('input'), { type: 'url', placeholder: 'http://localhost:1080', value: chosen?.url ?? '' });
@@ -284,128 +293,78 @@ function serverChooser(running) {
   if (pick.value === 'url' || variableBoxes.size) box.append(apply);
   pick.addEventListener('change', () => { apply.remove(); if (pick.value === 'url' || variableBoxes.size) box.insertBefore(apply, said); });
   box.append(said);
-  if (chosen) {
-    said.textContent = chosen.url
-      ? `Every call goes to ${chosen.url}, but what this site routes or you switched to this page. It has to allow calls from this page (CORS).`
-      : `Each API goes to its server for ${chosen.environment}; one with none stays in this page. Each has to allow calls from this page (CORS).`;
+  if (chosen?.url) {
+    said.textContent = `Every call goes to ${chosen.url}, but what this site routes or you switched to this page. It has to allow calls from this page (CORS).`;
+  } else if (chosen) {
+    // Where each API goes, so the addresses are here when wanted, not in the menu.
+    said.textContent = 'Each API goes to its own server; one with none stays in this page. Each has to allow calls from this page (CORS).';
+    const environment = environments.find((e) => e.description === chosen.environment);
+    const list = el('ul', '', 'mp-rows');
+    for (const { api, url } of environment ? urlsOf(environment) : []) {
+      const item = el('li');
+      item.append(el('code', api), el('span', url, 'n'));
+      list.append(item);
+    }
+    said.append(list);
+  } else {
+    said.textContent = 'Everything answers in your browser. A transcription session uses Whisper, in this page.';
   }
   return box;
 }
 
-/**
- * One row of "Where calls go": what it covers, and a switch between where it
- * can go. The real service, when the site routes it (`entry`); an
- * implementation running in the page, when the explorer has one
- * (`implementation`, implementations.js); and the mock in the page, which
- * offers a stub form for each call it can't answer itself.
- *
- * @param {object} running
- * @param {object[]} events
- * @param {{ entry?: object, implementation?: object, label: HTMLElement,
- *   covers: (o: object) => boolean, callsOut: object[] }} row
- */
-function routeRow(running, events, { entry = null, implementation = null, label, covers, callsOut }) {
-  const name = entry ? entryName(entry) : implementation?.api ?? '';
-  const api = entry?.api ?? implementation?.api;
-  const now = implementation && usesImplementation(options, api) ? 'implementation' : !entry || inPage(options, entry) ? 'mock' : 'real';
-  const choices = [
-    ...(entry ? [['real', 'Real service']] : []),
-    ...(implementation ? [['implementation', implementation.name]] : []),
-    ['mock', 'Mock in this page'],
-  ];
+/** A stub form for each call the mock can't answer itself, among those a row covers. */
+const stubOffers = (running, events, operations) => operations.flatMap((operation) => {
+  const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
+  add.onclick = () => openEditor(running, 'http', events, null, operation.key);
+  return [el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'), add];
+});
+
+/** One of the site's routing entries: where it goes, with a switch back to the mock in this page. */
+function routeRow(running, events, { entry, callsOut }) {
+  const local = inPage(options, entry);
   const row = el('div', '', 'mp-route');
   const head = el('div', '', 'mp-route-head');
-  head.append(label);
-  // A switch only when there's somewhere else to send it.
-  if (choices.length > 1) {
-    const toggle = el('span', '', 'mp-switch');
-    toggle.setAttribute('role', 'group');
-    toggle.setAttribute('aria-label', `Where ${name} goes`);
-    for (const [choice, text] of choices) {
-      const button = Object.assign(el('button', text), { type: 'button' });
-      button.setAttribute('aria-pressed', String(now === choice));
-      button.onclick = async () => {
-        if (now === choice) return;
-        for (const other of toggle.querySelectorAll('button')) other.disabled = true;
-        await running.keep();
-        if (entry) switchEntry(options, entry, choice !== 'real');
-        if (implementation) useImplementation(options, api, choice === 'implementation');
-        await running.reroute();
-        render();
-      };
-      toggle.append(button);
-    }
-    head.append(toggle);
+  const name = entryName(entry);
+  const toggle = el('span', '', 'mp-switch');
+  toggle.setAttribute('role', 'group');
+  toggle.setAttribute('aria-label', `Where ${name} goes`);
+  for (const [text, toPage] of [['Real service', false], ['Mock in this page', true]]) {
+    const button = Object.assign(el('button', text), { type: 'button' });
+    button.setAttribute('aria-pressed', String(local === toPage));
+    button.onclick = async () => {
+      if (local === toPage) return;
+      for (const other of toggle.querySelectorAll('button')) other.disabled = true;
+      await running.keep();
+      switchEntry(options, entry, toPage);
+      await running.reroute();
+      render();
+    };
+    toggle.append(button);
   }
-  const said = {
-    real: () => `Sent to ${entry && destinationOf(entry)}.`,
-    implementation: () => `Answered by the ${implementation.name.charAt(0).toLowerCase()}${implementation.name.slice(1)}, as a real service would. The mock checks what it sends against the contract, and a stub still comes first.`,
-    mock: () => 'Answered by the mock in this page.',
-  }[now]();
-  row.append(head, el('p', said, 'mp-route-to'));
-  if (now === 'implementation' && implementation.note) row.append(el('p', implementation.note, 'mp-note'));
-  if (now === 'mock') {
-    for (const operation of callsOut.filter(covers)) {
-      row.append(el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'));
-      const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
-      add.onclick = () => openEditor(running, 'http', events, null, operation.key);
-      row.append(add);
-    }
-  }
+  head.append(el('code', name === '*' ? '* (every domain)' : name), toggle);
+  row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
+  if (local) row.append(...stubOffers(running, events, callsOut.filter((o) => entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain }))));
   return row;
 }
 
 /**
- * Where calls go: the server picked in the page; the adapters, the services
- * the contracts call but don't answer, each answered here by stubs, by an
- * implementation running in the page where the explorer has one, or by the
- * real service where the site routes it; and the site's other routing.
+ * The server: the one picked in the page — this page's mock, a mock server,
+ * or real services — and the site's own routing, each entry with a switch
+ * back to the mock in this page. A transcription session's adapter follows
+ * the pick (session-adapters.js).
  */
 function routingSection(running, events) {
   const docs = extract(options.contracts, 'docs');
   const entries = siteRouting();
-  const implementations = implementationsFor(docs);
-  const chooser = serverChooser(running);
   const callsOut = stubChoices(docs).operations;
-  const adapters = docs.filter((doc) => doc.adapter);
-  const parts = [chooser];
-
-  if (adapters.length) {
+  const parts = [serverChooser(running)];
+  if (entries.length) {
     const box = el('div');
-    for (const adapter of adapters) {
-      // An adapter's contract, on its API reference page, for whoever implements it.
-      const label = el('span', '', 'mp-adapter');
-      label.append(Object.assign(el('a', adapter.content?.info?.title ?? adapter.api), {
-        href: new URL(`../api-reference/${adapter.api}.html`, options.scope).href,
-        title: 'Its contract',
-      }));
-      box.append(routeRow(running, events, {
-        entry: entries.find((entry) => entry.api === adapter.api) ?? null,
-        implementation: implementations.find((i) => i.api === adapter.api) ?? null,
-        label,
-        covers: (o) => o.apiName === adapter.api,
-        callsOut,
-      }));
-    }
-    parts.push(el('p', 'Adapters: services the contracts call but don\'t answer. Each is answered here by stubs, by one running in this page, or by the real service where this site routes it.', 'mp-note'), box);
-  }
-
-  const others = entries.filter((entry) => !adapters.some((adapter) => adapter.api === entry.api));
-  if (others.length) {
-    const box = el('div');
-    for (const entry of others) {
-      const name = entryName(entry);
-      box.append(routeRow(running, events, {
-        entry,
-        implementation: implementations.find((i) => i.api === entry.api) ?? null,
-        label: el('code', name === '*' ? '* (every domain)' : name),
-        covers: (o) => Boolean(entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain })),
-        callsOut,
-      }));
-    }
+    for (const entry of entries) box.append(routeRow(running, events, { entry, callsOut }));
     parts.push(el('p', 'This site sends these its own way, whatever server is chosen above:', 'mp-note'), box);
+  } else if (!chosenServer(options)) {
+    parts.push(el('p', 'Every call is answered by the mock in this page.', 'mp-none'));
   }
-  if (!adapters.length && !entries.length && !chosenServer(options)) parts.push(el('p', 'Every call is answered by the mock in this page.', 'mp-none'));
   return parts;
 }
 
@@ -709,7 +668,7 @@ async function render() {
   // side when the panel is docked along the bottom.
   const settings = el('div', '', 'mp-settings');
   settings.append(status, controls, about,
-    el('h3', 'Where calls go'), ...routingSection(running, events),
+    el('h3', 'Server'), ...routingSection(running, events),
     el('h3', 'Stubs'), ...await stubsSection(running, events));
   const activity = el('div', '', 'mp-activity');
   activity.append(el('h3', 'Activity'), ...activitySection(running, events));

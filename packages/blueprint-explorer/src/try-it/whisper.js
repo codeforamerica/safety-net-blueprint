@@ -1,11 +1,11 @@
 /**
- * Speech to text in the page, for the relay in this page (in-page-relay.js):
+ * Speech to text in the page, for the Whisper session adapter (whisper-adapter.js):
  * OpenAI's Whisper, tiny English model (MIT code, Apache-2.0 weights), run by
  * Hugging Face's transformers.js (Apache-2.0) on ONNX Runtime Web.
  *
  * Nothing is bundled with the explorer. The library comes from jsDelivr and
- * the model from Hugging Face the first time someone chooses the relay in this
- * page, about 47 MB, and the browser keeps them for the next time. The audio
+ * the model from Hugging Face the first time a session's adapter is Whisper's,
+ * about 47 MB, and the browser keeps them for the next time. The audio
  * never leaves the page. It works on a page opened from disk, as the
  * explorer is.
  */

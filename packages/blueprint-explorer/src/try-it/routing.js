@@ -8,11 +8,14 @@
  * of it, and a reload forgets it (lib/control-panel.js), as it does the
  * records: the default is always what the site says.
  *
- * An API the explorer has an implementation of (implementations.js) can be
- * switched to that instead, which takes the API's place in the routing.
+ * The transcription session adapter's streaming part always runs in the page
+ * (session-adapters.js), and while the page is the mock, its credentials part's
+ * credentials are answered in the page too (implementations.js), as Whisper
+ * in this page, which needs none, would have them.
  */
 
-import { IMPLEMENTATIONS } from './implementations.js';
+import { whisperCredentials } from './implementations.js';
+import { streamHandlers } from './session-adapters.js';
 
 /** The site's routing entries, as its script set them. */
 export const siteRouting = () => globalThis.BlueprintExplorer?.routing ?? [];
@@ -59,48 +62,33 @@ const setSwitch = (where, key, on) => {
   try { sessionStorage.setItem(keyFor(where.scope), JSON.stringify([...keys])); } catch { /* the switch lasts this page only */ }
 };
 
-// ── Implementations in the page ──────────────────────────────────────────────
+// ── The transcription session's adapter ─────────────────────────────────────
 
-/** Marks an entry an implementation in the page added, with its name. */
-const IMPLEMENTED = Symbol('implementation in the page');
+/** The session adapter's API, whose credentials Whisper answers in the page. */
+export const SESSION_ADAPTER_API = 'communication-transcription-sessions-adapter';
 
-const implementationKey = (api) => `implementation:${api}`;
+/** Marks the entry Whisper's credentials take, with its name. */
+const IMPLEMENTED = Symbol('answered in the page');
 
-/**
- * The implementations in the page of the contract set's APIs.
- *
- * @param {object[]} docs
- * @returns {typeof IMPLEMENTATIONS}
- */
-export const implementationsFor = (docs) => IMPLEMENTATIONS.filter((implementation) => docs.some((doc) => doc.api === implementation.api));
-
-/** Whether an API was switched to its implementation in the page. */
-export const usesImplementation = (where, api) => switched(where).has(implementationKey(api));
-
-/**
- * Switch an API to its implementation in the page, or off it. The mock takes
- * it when it next starts.
- */
-export function useImplementation(where, api, on) {
-  setSwitch(where, implementationKey(api), on);
-}
-
-/** The name of the implementation in the page an entry is, or null. */
+/** The name of what answers an entry in the page, or null for one that leaves it. */
 export const implementationOf = (entry) => entry?.[IMPLEMENTED] ?? null;
 
-/** The routing with each API switched to its implementation sent there, in place of any entry for it. */
-const withImplementations = (where, routing) => {
-  const chosen = IMPLEMENTATIONS.filter((implementation) => usesImplementation(where, implementation.api));
-  if (!chosen.length) return routing;
-  const apis = new Set(chosen.map((implementation) => implementation.api));
-  return [
-    ...routing.filter((entry) => !apis.has(entry.api)),
-    ...chosen.map((implementation) => {
-      const entry = { api: implementation.api, handler: implementation.handler };
-      entry[IMPLEMENTED] = implementation.name;
-      return entry;
-    }),
-  ];
+/**
+ * The routing, with the session adapter's streaming part in the page, whatever
+ * server is chosen, since it's the part that runs in the browser; and its
+ * credentials part's credentials answered in the page while the page is the mock,
+ * as Whisper's. A stub registered for any of them still answers first.
+ */
+const withSessionAdapter = (where, routing, docs) => {
+  if (!docs.some((doc) => doc.api === SESSION_ADAPTER_API)) return routing;
+  const inThisPage = (entry, name) => { entry[IMPLEMENTED] = name; return entry; };
+  const pagePart = Object.entries(streamHandlers)
+    .map(([operation, handler]) => inThisPage({ operation, handler }, 'The session adapter, in this page'));
+  const ours = new Set(Object.keys(streamHandlers));
+  const kept = routing.filter((other) => !ours.has(other.operation));
+  if (chosenServer(where)) return [...kept, ...pagePart];
+  const credentials = inThisPage({ api: SESSION_ADAPTER_API, handler: whisperCredentials }, 'Whisper, in this page');
+  return [...kept.filter((other) => other.api !== SESSION_ADAPTER_API), credentials, ...pagePart];
 };
 
 // ── A server chosen in the page ──────────────────────────────────────────────
@@ -233,16 +221,14 @@ const toServer = ({ server, localBase, headers: declared }, variables) => async 
 /**
  * The routing the mock takes: the site's, less what was switched to the
  * page, and what the server chosen in the page adds; and the APIs switched
- * to an implementation in the page, sent there whatever else says.
+ * to the page while the page is the mock, for Whisper.
  *
  * @param {{ scope: string }} where
- * @param {object[]} [docs] - The contract set, which a chosen server and an implementation need
+ * @param {object[]} [docs] - The contract set, which a chosen server and the session's adapter need
  * @returns {object[]}
  */
 export function routingInUse(where, docs = []) {
-  const apis = new Set(docs.map((doc) => doc.api));
-  return withImplementations(where, routingWithServer(where, docs))
-    .filter((entry) => !implementationOf(entry) || apis.has(entry.api));
+  return withSessionAdapter(where, routingWithServer(where, docs), docs);
 }
 
 /** The site's routing, less what was switched to the page, and what the server chosen in the page adds. */

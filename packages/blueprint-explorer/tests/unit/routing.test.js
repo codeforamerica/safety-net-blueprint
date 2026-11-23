@@ -1,8 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { entryFor, entryName, routingInUse, chooseServer, switchEntry, environmentsOf, destinationOf, awayFrom,
-  implementationsFor, useImplementation, usesImplementation, implementationOf } from '../../src/try-it/routing.js';
-import { InPageRelay } from '../../src/try-it/in-page-relay.js';
+  implementationOf, SESSION_ADAPTER_API } from '../../src/try-it/routing.js';
 
 const adapter = { operationId: 'requestCredentials', api: 'communication-transcription-sessions-adapter', domain: 'communication' };
 const transcripts = { operationId: 'createTranscript', api: 'communication-transcripts', domain: 'communication' };
@@ -56,9 +55,11 @@ describe('a server chosen in the page', () => {
   ];
   const reset = () => { stored.clear(); globalThis.BlueprintExplorer = { routing: [] }; };
 
-  it('adds nothing until one is chosen', () => {
+  it('adds nothing until one is chosen, but the session adapter: its credentials answered for Whisper, and its streaming part', () => {
     reset();
-    assert.deepEqual(routingInUse(where, docs), []);
+    assert.deepEqual(routingInUse(where, docs).map(implementationOf), [
+      'Whisper, in this page', ...Array(3).fill('The session adapter, in this page'),
+    ]);
   });
 
   it('sends every call to a URL typed in, but sockets, and leaves the site\'s narrower entries to win', () => {
@@ -86,7 +87,8 @@ describe('a server chosen in the page', () => {
   it('sends each API to its own server for an environment, its variables filled in', () => {
     reset();
     chooseServer(where, { environment: 'Production server', variables: { state: 'ny' } });
-    const routing = routingInUse(where, docs);
+    // The adapter's streaming part stays in the page (its own test, below).
+    const routing = routingInUse(where, docs).filter((entry) => !implementationOf(entry));
     assert.deepEqual(routing.map((entry) => [entry.api, destinationOf(entry), typeof entry.handler]), [
       ['intake', 'https://api.example.org/intake', 'function'],
       ['communication-transcription-sessions-adapter', 'https://ny.adapter.example.org', 'function'],
@@ -137,32 +139,33 @@ describe('a server chosen in the page', () => {
   });
 });
 
-describe('an implementation in the page', () => {
+describe('the transcription session\'s adapter', () => {
   const stored = new Map();
   globalThis.sessionStorage = { getItem: (k) => stored.get(k) ?? null, setItem: (k, v) => stored.set(k, v), removeItem: (k) => stored.delete(k) };
-  const where = { scope: 'test-implementations' };
-  const relay = { type: 'asyncapi', api: 'communication-transcripts-relay', domain: 'communication', protocols: ['ws'], content: {} };
+  const where = { scope: 'test-session-adapter' };
+  const adapterApi = { type: 'openapi', api: SESSION_ADAPTER_API, domain: 'communication', protocols: ['http'], content: {
+    servers: [{ url: 'https://adapter.example.org', description: 'Production server' }, { url: 'http://localhost:1080', description: 'Local development server' }],
+  } };
   const reset = () => { stored.clear(); globalThis.BlueprintExplorer = { routing: [] }; };
 
-  it('is offered only for an API the contract set has', () => {
-    assert.deepEqual(implementationsFor([relay]).map((i) => i.api), ['communication-transcripts-relay']);
-    assert.deepEqual(implementationsFor([]), []);
+  const pagePart = (routing) => routing.filter((entry) => entry.operation).map((entry) => [entry.operation, implementationOf(entry)]);
+  const PAGE_PART = ['startStream', 'pauseStream', 'stopStream'].map((operation) => [operation, 'The session adapter, in this page']);
+
+  it('has its credentials answered in the page while the page is the mock, whatever the site routes', () => {
+    reset();
+    globalThis.BlueprintExplorer.routing = [{ api: SESSION_ADAPTER_API, to: 'https://adapter.example.org' }];
+    const routing = routingInUse(where, [adapterApi]);
+    assert.deepEqual(routing.filter((entry) => entry.api).map(implementationOf), ['Whisper, in this page']);
+    assert.deepEqual(pagePart(routing), PAGE_PART);
   });
 
-  it('takes the API\'s place in the routing once chosen, the site\'s entry for it included, and gives it back', () => {
+  it('has them answered by the chosen server once there is one, its streaming part staying in the page', () => {
     reset();
-    const site = { api: 'communication-transcripts-relay', to: 'wss://relay.example.org' };
-    globalThis.BlueprintExplorer.routing = [site];
-    assert.deepEqual(routingInUse(where, [relay]), [site]);
-    useImplementation(where, relay.api, true);
-    assert.equal(usesImplementation(where, relay.api), true);
-    const [entry, ...rest] = routingInUse(where, [relay]);
-    assert.deepEqual(rest, []);
-    assert.equal(entry.handler, InPageRelay);
-    assert.equal(implementationOf(entry), 'Relay in this page');
-    assert.equal(destinationOf(entry), 'Relay in this page');
-    useImplementation(where, relay.api, false);
-    assert.deepEqual(routingInUse(where, [relay]), [site]);
+    for (const choice of [{ url: 'http://localhost:1080' }, { environment: 'Production server' }]) {
+      chooseServer(where, choice);
+      const routing = routingInUse(where, [adapterApi]);
+      assert.ok(!routing.some((entry) => !entry.operation && implementationOf(entry)));
+      assert.deepEqual(pagePart(routing), PAGE_PART);
+    }
   });
 });
-
