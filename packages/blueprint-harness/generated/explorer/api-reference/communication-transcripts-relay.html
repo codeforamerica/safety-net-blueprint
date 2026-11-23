@@ -132,6 +132,9 @@
   .nav-method-get { color: #86efac; } .nav-method-post { color: #a5b4fc; }
   .nav-method-put, .nav-method-patch { color: #fcd34d; } .nav-method-delete { color: #fca5a5; }
 
+  .socket-intro { max-width: 720px; margin-bottom: 1.5rem; }
+  .socket-intro details > summary { cursor: pointer; color: #2B1A78; font-size: 13px; }
+
   </style>
 <meta name="blueprint-adapter" content="true"/>
 </head>
@@ -159,74 +162,92 @@
       </div>
       <div id="sidebar-nav">
         <div class="nav-section">
-    <a href="#section-connecting" class="nav-link">Connecting</a>
-  </div><div class="nav-section">
     <div class="nav-section-label">Sent to Transcription relay</div>
+    <a href="#op-connect" class="nav-link nav-op" title="">
+      <span class="nav-op-path">Connect</span> <span style="font-size:10px;opacity:.6;">handshake</span>
+    </a>
     <a href="#msg-start" class="nav-link nav-op" title="The software is about to send audio, in this format.">
-      <span class="nav-op-path">start</span>
+      <span class="nav-op-path">start</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-audio" class="nav-link nav-op" title="The audio, as binary frames in the format start gave.">
-      <span class="nav-op-path">audio</span>
+      <span class="nav-op-path">audio</span> <span style="font-size:10px;opacity:.6;">binary</span>
     </a><a href="#msg-keepalive" class="nav-link nav-op" title="The software is still here, though it has sent no audio for a while.">
-      <span class="nav-op-path">keepalive</span>
+      <span class="nav-op-path">keepalive</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-finalize" class="nav-link nav-op" title="Finish what's been said so far, and send it as final.">
-      <span class="nav-op-path">finalize</span>
+      <span class="nav-op-path">finalize</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-end" class="nav-link nav-op" title="The software has sent its last audio.">
-      <span class="nav-op-path">end</span>
+      <span class="nav-op-path">end</span> <span style="font-size:10px;opacity:.6;">JSON</span>
+    </a>
+    <a href="#op-disconnect" class="nav-link nav-op" title="">
+      <span class="nav-op-path">Disconnect</span> <span style="font-size:10px;opacity:.6;">close</span>
     </a>
   </div><div class="nav-section">
     <div class="nav-section-label">Sent by Transcription relay</div>
     <a href="#msg-started" class="nav-link nav-op" title="The relay is ready for audio.">
-      <span class="nav-op-path">started</span>
+      <span class="nav-op-path">started</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-result" class="nav-link nav-op" title="What the service heard of one stretch of speech.">
-      <span class="nav-op-path">result</span>
+      <span class="nav-op-path">result</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-ended" class="nav-link nav-op" title="The relay has sent its last result; it closes the connection next.">
-      <span class="nav-op-path">ended</span>
+      <span class="nav-op-path">ended</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a><a href="#msg-error" class="nav-link nav-op" title="Something went wrong; the relay closes the connection after it.">
-      <span class="nav-op-path">error</span>
+      <span class="nav-op-path">error</span> <span style="font-size:10px;opacity:.6;">JSON</span>
     </a>
   </div>
       </div>
     </nav>
     <main id="content">
-      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;"><div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">One WebSocket connection per stream, speaking the subprotocol <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">blueprint.transcripts.relay.v1</code>. The session's adapter gets the relay's URL and a token from its server part's requestCredentials, and opens the connection asking for the subprotocol and presenting the token beside it, in the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Sec-WebSocket-Protocol</code> header — not in the URL, which is logged (RFC 6750). The relay answers with the subprotocol's name only, never the token.</p><p style="margin:0 0 6px;">The relay checks the token before it accepts the connection. When the token is missing, expired, or for another relay, the relay either refuses the upgrade with HTTP 401, or accepts, sends <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">error</code> with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">not-allowed</code>, and closes with code 1008. It sends nothing else either way. Either way, the software asks for a new connection once, since a new token fixes one that expired, and reports the failure if that one is refused too.</p><p style="margin:0 0 6px;">The software sends <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">start</code>, then the audio as binary frames, and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">end</code> when it's done; the relay answers <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">started</code>, sends results as the service hears, and after <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">end</code> its last results and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code>, then closes the connection. Every other message is JSON with a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">type</code>.</p><p style="margin:0 0 6px;">Times are whole milliseconds from the start of the connection.</p></div></div></div><section id="section-connecting" style="margin-bottom:2.5rem;">
-    <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:1rem;">Connecting</h2>
-    <div style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;padding:10px 14px;background:#FFFFFF;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:12px;font-weight:700;color:#2B1A78;">relay</span>
-        <code style="font-size:12px;color:#555;background:#f0f0f0;padding:1px 6px;border-radius:3px;">wss://{relayHost}</code>
-      </div>
-      <div class="fdesc" style="margin-top:6px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The relay a state runs. Its URL comes from the session adapter's requestCredentials.</p></div></div>
-      <div class="op-section"><h4 class="op-h">Variables</h4><div class="param">
+      <div class="socket-intro"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">One WebSocket connection per stream, speaking the subprotocol <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">blueprint.transcripts.relay.v1</code>. The session's adapter gets the relay's URL and a token from its server part's requestCredentials, and opens the connection asking for the subprotocol and presenting the token beside it, in the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Sec-WebSocket-Protocol</code> header — not in the URL, which is logged (RFC 6750). The relay answers with the subprotocol's name only, never the token.</p></div><details><summary>More</summary><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The relay checks the token before it accepts the connection. When the token is missing, expired, or for another relay, the relay either refuses the upgrade with HTTP 401, or accepts, sends <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">error</code> with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">not-allowed</code>, and closes with code 1008. It sends nothing else either way. Either way, the software asks for a new connection once, since a new token fixes one that expired, and reports the failure if that one is refused too.</p><p style="margin:0 0 6px;">The software sends <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">start</code>, then the audio as binary frames, and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">end</code> when it's done; the relay answers <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">started</code>, sends results as the service hears, and after <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">end</code> its last results and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">ended</code>, then closes the connection. Every other message is JSON with a <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">type</code>.</p><p style="margin:0 0 6px;">Times are whole milliseconds from the start of the connection.</p></div></details></div><div data-try-socket="base/domains/communication/communication-transcripts-relay-asyncapi.yaml"><section id="section-sent-to" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:1rem;">Sent to Transcription relay</h2>
+      <div id="op-connect" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details open>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">Connect</code><span class="op-name">Open the connection, at one of the servers.</span>
+      </span>
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        <span class="pill">handshake</span>
+        <a href="#op-connect" class="permalink" title="Link to connecting">#</a>
+      </span>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-desc" style="padding-top:12px;">An HTTP request asking to upgrade to a WebSocket (RFC 6455), with the subprotocols the client offers in <code>Sec-WebSocket-Protocol</code>.</div>
+        <div class="op-section">
+      <h4 class="op-h">relay <code style="font-size:12px;font-weight:400;color:#555;background:#f0f0f0;padding:1px 6px;border-radius:3px;">wss://{relayHost}</code></h4>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The relay a state runs. Its URL comes from the session adapter's requestCredentials.</p></div></div>
+      <div style="margin-top:6px;"><div class="param">
         <div class="field-head"><code class="fname">{relayHost}</code></div>
         <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The relay's host, as requestCredentials answers with it.</p></div></div>
       </div></div>
-      <div class="op-section"><h4 class="op-h">Authentication</h4><div class="param">
+      <div style="margin-top:6px;"><div class="fdesc"><b>Authentication</b></div><div class="param">
         <div class="field-head"><code class="fname">relayToken</code> <span class="pill">http, bearer, JWT</span></div>
         <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A short-lived JWT (RFC 7519, following RFC 8725) the session adapter's server signs, naming the relay as its audience and expiring within a minute. The relay checks the signature, audience and expiry against the public keys the adapter publishes (its getCredentialKeys, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">GET /.well-known/jwks.json</code>), so it can check tokens but never make them. A browser can't set the Authorization header on a WebSocket, so the software presents it in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Sec-WebSocket-Protocol</code>, after the subprotocol's name.</p></div></div>
       </div></div>
-    </div><div style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;padding:10px 14px;background:#FFFFFF;">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:12px;font-weight:700;color:#2B1A78;">local</span>
-        <code style="font-size:12px;color:#555;background:#f0f0f0;padding:1px 6px;border-radius:3px;">ws://localhost:1080/communication/transcripts-relay</code>
-      </div>
-      <div class="fdesc" style="margin-top:6px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The mock, as the OpenAPI contracts' localhost server is.</p></div></div>
+    </div><div class="op-section">
+      <h4 class="op-h">local <code style="font-size:12px;font-weight:400;color:#555;background:#f0f0f0;padding:1px 6px;border-radius:3px;">ws://localhost:1080/communication/transcripts-relay</code></h4>
+      <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The mock, as the OpenAPI contracts' localhost server is.</p></div></div>
       
-      <div class="op-section"><h4 class="op-h">Authentication</h4><div class="param">
+      <div style="margin-top:6px;"><div class="fdesc"><b>Authentication</b></div><div class="param">
         <div class="field-head"><code class="fname">relayToken</code> <span class="pill">http, bearer, JWT</span></div>
         <div class="fdesc"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A short-lived JWT (RFC 7519, following RFC 8725) the session adapter's server signs, naming the relay as its audience and expiring within a minute. The relay checks the signature, audience and expiry against the public keys the adapter publishes (its getCredentialKeys, <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">GET /.well-known/jwks.json</code>), so it can check tokens but never make them. A browser can't set the Authorization header on a WebSocket, so the software presents it in <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">Sec-WebSocket-Protocol</code>, after the subprotocol's name.</p></div></div>
       </div></div>
     </div>
-  </section><section id="section-sent-to" style="margin-bottom:2.5rem;">
-      <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:1rem;">Sent to Transcription relay</h2>
+      </div>
+      <aside class="op-side"><div data-socket-connect></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">The connection opens (<code>101</code>), speaking one of the subprotocols offered, or is refused.</div></div></aside>
+    </div>
+  </details>
+</div>
       <div id="msg-start" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">start</code>
         <span class="op-name">The software is about to send audio, in this format.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-start" class="permalink" title="Link to this message">#</a>
       </span>
@@ -234,7 +255,7 @@
     <div class="op-body">
       <div class="op-docs">
         
-        <div class="op-returns">Answered with <a href="#msg-started"><code>started</code></a> or <a href="#msg-error"><code>error</code></a></div>
+        
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -320,48 +341,50 @@
       
     </div></div></div>
       </div>
-      <aside class="op-side"></aside>
+      <aside class="op-side"><div data-socket-send="start"></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc"><a href="#msg-started"><code>started</code></a> or <a href="#msg-error"><code>error</code></a></div></div></aside>
     </div>
   </details>
 </div><div id="msg-audio" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">audio</code>
         <span class="op-name">The audio, as binary frames in the format start gave.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">binary</span>
         <a href="#msg-audio" class="permalink" title="Link to this message">#</a>
       </span>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Sent as binary WebSocket frames, not JSON — base64 would make it a third larger. Frames of 50 to 100 milliseconds are typical.</p></div></div>
+        <div class="op-desc" style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Sent as binary WebSocket frames, not JSON — base64 would make it a third larger. Frames of 50 to 100 milliseconds are typical.</p></div></div>
         
         <div class="op-section"><h4 class="op-h">Payload <span class="pill">application/octet-stream</span></h4>
         <div class="fdesc">Binary WebSocket frames, not JSON.</div></div>
       </div>
-      <aside class="op-side"></aside>
+      <aside class="op-side"><div data-socket-send="audio"></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">Nothing in reply.</div></div></aside>
     </div>
   </details>
 </div><div id="msg-keepalive" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">keepalive</code>
         <span class="op-name">The software is still here, though it has sent no audio for a while.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-keepalive" class="permalink" title="Link to this message">#</a>
       </span>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Browser code can't send WebSocket pings, so a quiet connection is kept open with this.</p></div></div>
+        <div class="op-desc" style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Browser code can't send WebSocket pings, so a quiet connection is kept open with this.</p></div></div>
         
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
@@ -375,18 +398,19 @@
       <div class="values"><span class="values-label">Values</span><code class="value-chip">keepalive</code></div>
     </div></div></div>
       </div>
-      <aside class="op-side"></aside>
+      <aside class="op-side"><div data-socket-send="keepalive"></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">Nothing in reply.</div></div></aside>
     </div>
   </details>
 </div><div id="msg-finalize" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">finalize</code>
         <span class="op-name">Finish what's been said so far, and send it as final.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-finalize" class="permalink" title="Link to this message">#</a>
       </span>
@@ -407,18 +431,19 @@
       <div class="values"><span class="values-label">Values</span><code class="value-chip">finalize</code></div>
     </div></div></div>
       </div>
-      <aside class="op-side"></aside>
+      <aside class="op-side"><div data-socket-send="finalize"></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">Nothing in reply.</div></div></aside>
     </div>
   </details>
 </div><div id="msg-end" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">end</code>
         <span class="op-name">The software has sent its last audio.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-end" class="permalink" title="Link to this message">#</a>
       </span>
@@ -426,7 +451,7 @@
     <div class="op-body">
       <div class="op-docs">
         
-        <div class="op-returns">Answered with <a href="#msg-ended"><code>ended</code></a> or <a href="#msg-error"><code>error</code></a></div>
+        
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -439,21 +464,43 @@
       <div class="values"><span class="values-label">Values</span><code class="value-chip">end</code></div>
     </div></div></div>
       </div>
-      <aside class="op-side"></aside>
+      <aside class="op-side"><div data-socket-send="end"></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc"><a href="#msg-ended"><code>ended</code></a> or <a href="#msg-error"><code>error</code></a></div></div></aside>
+    </div>
+  </details>
+</div>
+      <div id="op-disconnect" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details open>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">Disconnect</code><span class="op-name">Close the connection.</span>
+      </span>
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        <span class="pill">close</span>
+        <a href="#op-disconnect" class="permalink" title="Link to closing">#</a>
+      </span>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-desc" style="padding-top:12px;">A close frame with a code and a reason (RFC 6455): <code>1000</code> for a normal close. The server can close the connection too; the log shows its code and reason.</div>
+      </div>
+      <aside class="op-side"><div data-socket-close></div><div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">The connection closes.</div></div></aside>
     </div>
   </details>
 </div>
     </section><section id="section-sent-by" style="margin-bottom:2.5rem;">
       <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:1rem;">Sent by Transcription relay</h2>
       <div id="msg-started" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">started</code>
         <span class="op-name">The relay is ready for audio.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-started" class="permalink" title="Link to this message">#</a>
       </span>
@@ -461,7 +508,7 @@
     <div class="op-body">
       <div class="op-docs">
         
-        
+        <div class="op-returns">In reply to <a href="#msg-start"><code>start</code></a></div>
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -478,22 +525,23 @@
     </div>
   </details>
 </div><div id="msg-result" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">result</code>
         <span class="op-name">What the service heard of one stretch of speech.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-result" class="permalink" title="Link to this message">#</a>
       </span>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A result the service may still revise has isFinal false; a later result with the same id replaces it, and the one with isFinal true is what the transcript keeps.</p></div></div>
-        
+        <div class="op-desc" style="padding-top:12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">A result the service may still revise has isFinal false; a later result with the same id replaces it, and the one with isFinal true is what the transcript keeps.</p></div></div>
+        <div class="op-returns">Sent on its own, not in reply to a message.</div>
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -668,14 +716,15 @@
     </div>
   </details>
 </div><div id="msg-ended" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">ended</code>
         <span class="op-name">The relay has sent its last result; it closes the connection next.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-ended" class="permalink" title="Link to this message">#</a>
       </span>
@@ -683,7 +732,7 @@
     <div class="op-body">
       <div class="op-docs">
         
-        
+        <div class="op-returns">In reply to <a href="#msg-end"><code>end</code></a></div>
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -700,14 +749,15 @@
     </div>
   </details>
 </div><div id="msg-error" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
+  <details open>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">error</code>
         <span class="op-name">Something went wrong; the relay closes the connection after it.</span>
       </span>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <span class="pill">JSON</span>
         <a href="#msg-error" class="permalink" title="Link to this message">#</a>
       </span>
@@ -715,7 +765,7 @@
     <div class="op-body">
       <div class="op-docs">
         
-        
+        <div class="op-returns">In reply to <a href="#msg-start"><code>start</code></a> or <a href="#msg-end"><code>end</code></a></div>
         <div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">application/json</span></h4>
         <div class="body-fields"><div class="field">
       <div class="field-head">
@@ -751,7 +801,7 @@
     </div>
   </details>
 </div>
-    </section>
+    </section></div>
     </main>
   </div>
   <script>
@@ -955,6 +1005,15 @@
     target.scrollIntoView({ block: 'start' });
   });
 </script>
+<script src="../mock/mock.js" defer></script>
+<script src="../mock/contracts.js" defer></script>
+<script type="module">
+if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
+  BlueprintMock.mountSendPanels({
+    contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+  });
+}
+</script>
 <!-- the mock: control panel -->
 <script>
 (() => {
@@ -1026,5 +1085,7 @@
   if (stored()) turn(true);
 })();
 </script>
+<!-- the site's routing -->
+<script src="../site-routing.js"></script>
 </body>
 </html>
