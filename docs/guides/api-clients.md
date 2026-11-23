@@ -177,14 +177,14 @@ const task = zTask.parse(apiResponse);
 
 ## Typed events
 
-An API that sends events has `Events` beside its SDK functions, generated from the events document resolve writes beside it (`*-events-asyncapi.yaml`): a type for each event with its exact `data`, `Events.types` naming each by resource and event, `Events.is` to narrow an event by its type, and `Events.publish` to send one through the platform's `publishEvent`, when the contract set has the platform's events API.
+An API that sends events has `Events` beside its SDK functions, generated from the events document resolve writes beside it (`*-events-asyncapi.yaml`): a type for each event with its exact `data`, `Events.is` to narrow an event by its type, and `Events.publish` to send one through the platform's `publishEvent`, when the contract set has the platform's events API.
 
 Follow a session's events, with `data` typed once the type is checked:
 
 ```typescript
 import { communicationTranscriptionSessions as sessions } from './generated';
 
-if (sessions.Events.is(event, sessions.Events.types.transcriptionSessionLineFinished)) {
+if (sessions.Events.is(event, 'communication.transcription_session.line_finished')) {
   showLine(event.data.key, event.data.text);   // data is the finished line's shape
 }
 ```

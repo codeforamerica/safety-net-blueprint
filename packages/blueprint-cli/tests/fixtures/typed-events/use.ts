@@ -6,7 +6,7 @@ import { Events } from '../../../../blueprint-harness/generated/clients/communic
 declare const event: { type: string; data?: unknown };
 
 // A subscriber narrows an event by its type, its data with it.
-if (Events.is(event, Events.types.transcriptionSessionLineFinished)) {
+if (Events.is(event, 'communication.transcription_session.line_finished')) {
   const text: string = event.data.text;
   const key: string = event.data.key;
   // @ts-expect-error — a line's text is a string

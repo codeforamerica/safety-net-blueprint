@@ -679,9 +679,6 @@ async function generateEventHelpers({ eventsSpec, domainOutputDir, outputDir, do
     rmSync(configPath, { force: true });
   }
 
-  // The type without its domain, in camelCase: transcriptionSessionLineFinished,
-  // unique within the API, whose resources each have their own created.
-  const camel = (type) => type.split('.').slice(-2).join('_').replace(/_([a-z])/g, (_, c) => c.toUpperCase());
   const lines = [
     '// Generated from the events document beside this API. Do not edit.',
     `import type { ${events.join(', ')} } from './events/types.gen.js';`,
@@ -696,14 +693,9 @@ async function generateEventHelpers({ eventsSpec, domainOutputDir, outputDir, do
     '/** The event of one type. */',
     'export type EventOf<T extends EventType> = Extract<Event, { type: T }>;',
     '',
-    '/** Each event\'s type, by name. */',
-    'export const types = {',
-    ...events.map((name) => `  ${camel(typeOf.get(name))}: '${typeOf.get(name)}',`),
-    '} as const;',
-    '',
     '/**',
     ' * Whether an event is of a type, narrowing it, its data included:',
-    " * `if (Events.is(event, Events.types.transcriptionSessionLineFinished)) event.data.text`.",
+    " * `if (Events.is(event, 'communication.transcription_session.line_finished')) event.data.text`.",
     ' */',
     'export function is<T extends EventType>(event: { type?: string } | null | undefined, type: T): event is EventOf<T> {',
     '  return event?.type === type;',
