@@ -300,7 +300,9 @@ export function buildEventCatalogs(positioned) {
       };
       const properties = { type: { type: 'string', const: type } };
       if (data) properties.data = data;
-      schemas[`${name}Event`] = asOpenApi({ allOf: [ENVELOPE, { type: 'object', properties }] });
+      // An event that declares its data always carries it, so a typed client
+      // can read it without checking it's there.
+      schemas[`${name}Event`] = asOpenApi({ allOf: [ENVELOPE, { type: 'object', required: data ? ['type', 'data'] : ['type'], properties }] });
       if (!timer) operations[`send${name}`] = operation('send', type, [name]);
     }
 

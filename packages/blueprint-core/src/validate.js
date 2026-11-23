@@ -267,9 +267,10 @@ function brokenExternalRefs(doc, byRelativePath) {
     .filter(([literal]) => followRef(literal, byRelativePath, doc.relativePath) === null)
     .map(([literal, ref]) => ({
       rule: 'unresolved-external-ref',
-      message:
-        `$ref "${literal}" names no document in the contract set. ` +
-        `Check the path — it is resolved relative to this document's directory.`,
+      // The document may be there with nothing at the part after #.
+      message: followRef(ref.file, byRelativePath, doc.relativePath) === null
+        ? `$ref "${literal}" names no document in the contract set. Check the path — it is resolved relative to this document's directory.`
+        : `$ref "${literal}" names ${ref.file}, which has nothing at ${literal.slice(literal.indexOf('#'))}.`,
       path: ref.pointer || (doc.relativePath ?? doc.path),
     }));
 }

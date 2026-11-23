@@ -73,6 +73,18 @@ describe('unresolved-external-ref', () => {
     assert.match(found[0].message, /names no document in the contract set/);
   });
 
+  test('a ref naming a document in the set with nothing at its pointer says which part is missing', () => {
+    const docs = setOf({
+      'domains/intake/shared.yaml': { $defs: { Member: { type: 'object' } } },
+      'domains/intake/intake-openapi.yaml': spec({
+        components: { schemas: { Application: { $ref: './shared.yaml#/$defs/Membr' } } },
+      }),
+    });
+
+    const [found] = findings(docs, 'unresolved-external-ref');
+    assert.match(found.message, /names \.\/shared\.yaml, which has nothing at #\/\$defs\/Membr/);
+  });
+
   test('a path missing a directory segment is an error — the shape of the 56', () => {
     // `../../schemas/events.yaml` where the file is at `base/schemas/events.yaml`.
     const docs = setOf({

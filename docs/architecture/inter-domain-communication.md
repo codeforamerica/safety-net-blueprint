@@ -122,7 +122,7 @@ The `type` field is always derived implicitly: `{domain}.{resource}.{event}`. Th
 
 **3. Published by a running adapter**
 
-A [running adapter](cross-cutting/adapters.md#a-running-adapter) is a resource's implementation for one outside system, such as a transcription session's adapter for one transcription service. It reports what happened by publishing the resource's own events with `publishEvent`, which the resource follows under `on:`. Those events are declared under the resource's `emits:` like any other, and described as published by the adapter.
+A [running adapter](cross-cutting/adapters.md#a-running-adapter) is a resource's implementation for one outside system, such as a transcription session's adapter for one transcription service. It reports what happened by publishing the resource's own events with `publishEvent`, which the resource follows under `on:`. Those events are declared under the resource's `emits:` like any other, and the adapter's own AsyncAPI document lists them as what it sends.
 
 ### Who publishes an event
 

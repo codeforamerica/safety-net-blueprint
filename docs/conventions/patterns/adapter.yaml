@@ -63,8 +63,10 @@ rules:
     For a running adapter, the resource calls the adapter's operations —
     start, pause, stop — and the adapter reports only by publishing the
     resource's own events with publishEvent, declared under the resource's
-    emits and described as published by the adapter. The resource follows them
-    under on:. Give the adapter no operations on the resource's API: that API
+    emits. List what it sends in the adapter's own AsyncAPI document,
+    <api>-adapter-asyncapi.yaml, marked x-relationship external, with a send
+    operation per event whose channel is a $ref to the resource's generated
+    channel. The resource follows them under on:. Give the adapter no operations on the resource's API: that API
     is what the resource's consumers call, and a report from the adapter is
     something that happened, not a request.
   - >-
