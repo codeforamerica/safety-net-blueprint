@@ -10,7 +10,7 @@
   "allOf": [
     {
       "type": "object",
-      "description": "Which transcript the session writes to: `transcriptId` for an existing\none, or what to start a new one with, which the session passes to\n`createTranscript` the first time the software asks how to stream.\n",
+      "description": "Which transcript the session writes to: `transcriptId` for an existing\none, or what to start a new one with, which the session passes to\n`createTranscript` when it starts.\n",
       "properties": {
         "transcriptId": {
           "type": "string",

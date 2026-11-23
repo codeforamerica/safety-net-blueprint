@@ -3,7 +3,49 @@
 import { z } from 'zod';
 
 /**
- * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+ * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+ *
+ */
+export const zStreamRequest = z.object({
+    metadata: z.optional(z.record(z.string(), z.unknown()))
+}).and(z.object({
+    transcriptionSessionId: z.uuid(),
+    transcriptId: z.uuid(),
+    provider: z.enum([
+        'assemblyai',
+        'aws-transcribe',
+        'azure-speech',
+        'deepgram',
+        'elevenlabs-scribe',
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics',
+        'whisper'
+    ]),
+    model: z.optional(z.string()),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true })),
+    links: z.optional(z.object({
+        transcriptionSession: z.optional(z.string()),
+        transcript: z.optional(z.string())
+    }).readonly())
+}));
+
+/**
+ * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+ *
+ */
+export const zStreamResponse = z.object({
+    metadata: z.record(z.string(), z.unknown())
+});
+
+/**
+ * What the service needs to issue a credential: the service, model and languages the adapter was started with, and the audio and protocols the streaming part streams with.
  *
  */
 export const zCredentialsRequest = z.object({
@@ -22,7 +64,8 @@ export const zCredentialsRequest = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     model: z.optional(z.string()),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
@@ -58,7 +101,7 @@ export const zJsonWebKeySet = z.object({
 });
 
 /**
- * Where and how the adapter in the browser connects, with metadata echoed back.
+ * Where and how the streaming part connects, with metadata echoed back.
  */
 export const zCredentialsResponse = z.object({
     metadata: z.record(z.string(), z.unknown())
@@ -76,7 +119,8 @@ export const zCredentialsResponse = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     protocol: z.enum(['websocket', 'webrtc']),
     subprotocol: z.optional(z.string()),
@@ -86,6 +130,119 @@ export const zCredentialsResponse = z.object({
     expiresIn: z.int().gte(1),
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
+
+/**
+ * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+ *
+ */
+export const zStreamRequestWritable = z.object({
+    metadata: z.optional(z.record(z.string(), z.unknown()))
+}).and(z.object({
+    transcriptionSessionId: z.uuid(),
+    transcriptId: z.uuid(),
+    provider: z.enum([
+        'assemblyai',
+        'aws-transcribe',
+        'azure-speech',
+        'deepgram',
+        'elevenlabs-scribe',
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics',
+        'whisper'
+    ]),
+    model: z.optional(z.string()),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }))
+}));
+
+/**
+ * The session being streamed for.
+ */
+export const zTranscriptionSessionIdParam = z.uuid();
+
+export const zStartStreamData = z.object({
+    body: z.object({
+        metadata: z.optional(z.record(z.string(), z.unknown()))
+    }).and(z.object({
+        transcriptionSessionId: z.uuid(),
+        transcriptId: z.uuid(),
+        provider: z.enum([
+            'assemblyai',
+            'aws-transcribe',
+            'azure-speech',
+            'deepgram',
+            'elevenlabs-scribe',
+            'fake-transcription',
+            'gladia',
+            'google-cloud-speech',
+            'google-gemini-live',
+            'none',
+            'openai-realtime',
+            'soniox',
+            'speechmatics',
+            'whisper'
+        ]),
+        model: z.optional(z.string()),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        lastActivityAt: z.optional(z.iso.datetime({ offset: true })),
+        links: z.optional(z.object({
+            transcriptionSession: z.optional(z.string()),
+            transcript: z.optional(z.string())
+        }).readonly())
+    })),
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+ *
+ */
+export const zStartStreamResponse = z.object({
+    metadata: z.record(z.string(), z.unknown())
+});
+
+export const zPauseStreamData = z.object({
+    body: z.optional(z.object({
+        metadata: z.optional(z.record(z.string(), z.unknown()))
+    })),
+    path: z.object({
+        transcriptionSessionId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+ *
+ */
+export const zPauseStreamResponse = z.object({
+    metadata: z.record(z.string(), z.unknown())
+});
+
+export const zStopStreamData = z.object({
+    body: z.optional(z.object({
+        metadata: z.optional(z.record(z.string(), z.unknown()))
+    })),
+    path: z.object({
+        transcriptionSessionId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+ *
+ */
+export const zStopStreamResponse = z.object({
+    metadata: z.record(z.string(), z.unknown())
+});
 
 export const zRequestCredentialsData = z.object({
     body: z.object({
@@ -104,7 +261,8 @@ export const zRequestCredentialsData = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         model: z.optional(z.string()),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
@@ -131,7 +289,7 @@ export const zRequestCredentialsData = z.object({
 });
 
 /**
- * Where and how the adapter in the browser connects, with metadata echoed back.
+ * Where and how the streaming part connects, with metadata echoed back.
  */
 export const zRequestCredentialsResponse = z.object({
     metadata: z.record(z.string(), z.unknown())
@@ -149,7 +307,8 @@ export const zRequestCredentialsResponse = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     protocol: z.enum(['websocket', 'webrtc']),
     subprotocol: z.optional(z.string()),

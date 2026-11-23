@@ -94,7 +94,7 @@ export const getDecision = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Complete determination
+ * Complete
  *
  * Marks the determination as complete once all program results are resolved.
  */

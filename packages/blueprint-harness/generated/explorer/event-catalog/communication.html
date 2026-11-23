@@ -145,7 +145,7 @@
     <div style="background:#2B1A78;color:#FFFFFF;">
     <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:0.9375rem;font-weight:800;">Communication events</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">21 events</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">22 events</span>
     </div>
     <div style="padding:0 1.25rem 0.6rem;font-size:11px;color:rgba(255,255,255,0.55);">What each event carries, who publishes it and who subscribes to it</div>
   </div>
@@ -192,25 +192,27 @@
     </a>
   </div><div class="nav-section">
     <div class="nav-section-label">transcription session</div>
-    <a href="#event-communication.transcription_session.closed" class="nav-link nav-op" title="The session is done and the transcript closed. The software closes any connection still open, whoever closed it.">
+    <a href="#event-communication.transcription_session.closed" class="nav-link nav-op" title="The session is done and the transcript closed, whoever closed it.">
       <span class="nav-op-path">closed</span>
-    </a><a href="#event-communication.transcription_session.connected" class="nav-link nav-op" title="The connection to the service is open.">
+    </a><a href="#event-communication.transcription_session.connected" class="nav-link nav-op" title="Published by the adapter. The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.">
       <span class="nav-op-path">connected</span>
-    </a><a href="#event-communication.transcription_session.connecting" class="nav-link nav-op" title="The software is getting where to connect and opening the connection.">
+    </a><a href="#event-communication.transcription_session.connecting" class="nav-link nav-op" title="The session started or resumed; its adapter is getting a credential and opening the connection.">
       <span class="nav-op-path">connecting</span>
     </a><a href="#event-communication.transcription_session.created" class="nav-link nav-op" title="A TranscriptionSession was created. Carries the record as created.">
       <span class="nav-op-path">created</span>
-    </a><a href="#event-communication.transcription_session.disconnected" class="nav-link nav-op" title="The connection dropped; the software is trying again.">
+    </a><a href="#event-communication.transcription_session.disconnected" class="nav-link nav-op" title="Published by the adapter. The connection dropped; it's trying again.">
       <span class="nav-op-path">disconnected</span>
-    </a><a href="#event-communication.transcription_session.failed" class="nav-link nav-op" title="The software gave up connecting or reconnecting. The transcript is still open.">
+    </a><a href="#event-communication.transcription_session.ended" class="nav-link nav-op" title="Published by the adapter after the session stopped it. The last line is published and the connection closed.">
+      <span class="nav-op-path">ended</span>
+    </a><a href="#event-communication.transcription_session.failed" class="nav-link nav-op" title="Published by the adapter. It gave up connecting or reconnecting. The transcript is still open.">
       <span class="nav-op-path">failed</span>
-    </a><a href="#event-communication.transcription_session.line_added" class="nav-link nav-op" title="A finished line was added to the transcript.">
-      <span class="nav-op-path">line_added</span>
-    </a><a href="#event-communication.transcription_session.line_updated" class="nav-link nav-op" title="A line in progress, to show. Not kept.">
+    </a><a href="#event-communication.transcription_session.line_finished" class="nav-link nav-op" title="Published by the adapter. A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.">
+      <span class="nav-op-path">line_finished</span>
+    </a><a href="#event-communication.transcription_session.line_updated" class="nav-link nav-op" title="Published by the adapter. A line in progress, to show. Not kept.">
       <span class="nav-op-path">line_updated</span>
-    </a><a href="#event-communication.transcription_session.paused" class="nav-link nav-op" title="Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.">
+    </a><a href="#event-communication.transcription_session.paused" class="nav-link nav-op" title="Off the record. The adapter closes the connection, so no audio goes to the service, whoever paused it — the app, or someone pausing the transcript.">
       <span class="nav-op-path">paused</span>
-    </a><a href="#event-communication.transcription_session.stopping" class="nav-link nav-op" title="Stop was asked for. The software sends the end of the audio and waits for the last text.">
+    </a><a href="#event-communication.transcription_session.stopping" class="nav-link nav-op" title="Stop was asked for. The adapter sends the end of the audio and publishes the last text, then ended.">
       <span class="nav-op-path">stopping</span>
     </a>
   </div>
@@ -571,13 +573,13 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.closed</code>
-        <span class="op-name">The session is done and the transcript closed. The software closes any connection still open, whoever closed it.</span>
+        <span class="op-name">The session is done and the transcript closed, whoever closed it.</span>
       </span>
       <a href="#event-communication.transcription_session.closed" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-close">Communication › TranscriptionSession › close</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
         <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
@@ -598,14 +600,14 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.connected</code>
-        <span class="op-name">The connection to the service is open.</span>
+        <span class="op-name">Published by the adapter. The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.</span>
       </span>
       <a href="#event-communication.transcription_session.connected" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-connect">Communication › TranscriptionSession › connect</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
-        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcription_session.connected">Communication › TranscriptionSession</a><br><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcript-communication.transcription_session.connected">Communication › Transcript</a></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
       <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
@@ -615,7 +617,10 @@
   &quot;type&quot;: &quot;communication.transcription_session.connected&quot;,
   &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
   &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
-  &quot;datacontenttype&quot;: &quot;application/json&quot;
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+  }
 }</pre></aside>
     </div>
   </details>
@@ -625,13 +630,13 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.connecting</code>
-        <span class="op-name">The software is getting where to connect and opening the connection.</span>
+        <span class="op-name">The session started or resumed; its adapter is getting a credential and opening the connection.</span>
       </span>
       <a href="#event-communication.transcription_session.connecting" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-request-credentials">Communication › TranscriptionSession › request-credentials</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-start">Communication › TranscriptionSession › start</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
         <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
@@ -680,14 +685,14 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.disconnected</code>
-        <span class="op-name">The connection dropped; the software is trying again.</span>
+        <span class="op-name">Published by the adapter. The connection dropped; it's trying again.</span>
       </span>
       <a href="#event-communication.transcription_session.disconnected" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-disconnect">Communication › TranscriptionSession › disconnect</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
-        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcription_session.disconnected">Communication › TranscriptionSession</a></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
       <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
@@ -697,7 +702,41 @@
   &quot;type&quot;: &quot;communication.transcription_session.disconnected&quot;,
   &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
   &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
-  &quot;datacontenttype&quot;: &quot;application/json&quot;
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+  }
+}</pre></aside>
+    </div>
+  </details>
+</div><div id="event-communication.transcription_session.ended" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+  <details>
+    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+      <span class="op-line">
+        <code class="op-path">communication.transcription_session.ended</code>
+        <span class="op-name">Published by the adapter after the session stopped it. The last line is published and the connection closed.</span>
+      </span>
+      <a href="#event-communication.transcription_session.ended" class="permalink" title="Link to this event">#</a>
+    </summary>
+    <div class="op-body">
+      <div class="op-docs">
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcription_session.ended">Communication › TranscriptionSession</a></div></div>
+        <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
+      </div>
+      <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
+  &quot;specversion&quot;: &quot;1.0&quot;,
+  &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
+  &quot;source&quot;: &quot;/communication&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.ended&quot;,
+  &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+  &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+    &quot;at&quot;: &quot;2024-01-01T00:00:00Z&quot;
+  }
 }</pre></aside>
     </div>
   </details>
@@ -707,14 +746,14 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.failed</code>
-        <span class="op-name">The software gave up connecting or reconnecting. The transcript is still open.</span>
+        <span class="op-name">Published by the adapter. It gave up connecting or reconnecting. The transcript is still open.</span>
       </span>
       <a href="#event-communication.transcription_session.failed" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-fail">Communication › TranscriptionSession › fail</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
-        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcriptionsession-communication.transcription_session.failed">Communication › TranscriptionSession</a></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
       <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
@@ -724,37 +763,44 @@
   &quot;type&quot;: &quot;communication.transcription_session.failed&quot;,
   &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
   &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
-  &quot;datacontenttype&quot;: &quot;application/json&quot;
+  &quot;datacontenttype&quot;: &quot;application/json&quot;,
+  &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+  }
 }</pre></aside>
     </div>
   </details>
-</div><div id="event-communication.transcription_session.line_added" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
+</div><div id="event-communication.transcription_session.line_finished" class="content-item op-post" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
     <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
-        <code class="op-path">communication.transcription_session.line_added</code>
-        <span class="op-name">A finished line was added to the transcript.</span>
+        <code class="op-path">communication.transcription_session.line_finished</code>
+        <span class="op-name">Published by the adapter. A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.</span>
       </span>
-      <a href="#event-communication.transcription_session.line_added" class="permalink" title="Link to this event">#</a>
+      <a href="#event-communication.transcription_session.line_finished" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-add-line">Communication › TranscriptionSession › add-line</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
-        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
+        <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span class="who-kind">State machine:</span> <a href="../state-machine-docs/communication.html#on-transcript-communication.transcription_session.line_finished">Communication › Transcript</a></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
       <aside class="op-side"><h4 class="op-h">Example</h4><pre class="event-example">{
   &quot;specversion&quot;: &quot;1.0&quot;,
   &quot;id&quot;: &quot;00000000-0000-4000-8000-000000000000&quot;,
   &quot;source&quot;: &quot;/communication&quot;,
-  &quot;type&quot;: &quot;communication.transcription_session.line_added&quot;,
+  &quot;type&quot;: &quot;communication.transcription_session.line_finished&quot;,
   &quot;subject&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
   &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
   &quot;datacontenttype&quot;: &quot;application/json&quot;,
   &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
     &quot;key&quot;: &quot;example&quot;,
-    &quot;entryId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;
+    &quot;startedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+    &quot;endedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+    &quot;text&quot;: &quot;example&quot;,
+    &quot;speaker&quot;: &quot;example&quot;
   }
 }</pre></aside>
     </div>
@@ -765,13 +811,13 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.line_updated</code>
-        <span class="op-name">A line in progress, to show. Not kept.</span>
+        <span class="op-name">Published by the adapter. A line in progress, to show. Not kept.</span>
       </span>
       <a href="#event-communication.transcription_session.line_updated" class="permalink" title="Link to this event">#</a>
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-section"><h4 class="op-h">Published by</h4><div><span class="who-kind">State machine action:</span> <a href="../state-machine-docs/communication.html#action-transcriptionsession-update-line">Communication › TranscriptionSession › update-line</a><p class="how">To see it published, try that call: what happened lists this event.</p></div></div>
+        <div class="op-section"><h4 class="op-h">Published by</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
         <div class="op-section"><h4 class="op-h">Subscribers</h4><div><span style="color:#999;font-size:11px;">none</span></div></div>
         <div class="op-section"><h4 class="op-h">Defined in</h4><code style="font-size:11.5px;">base/domains/communication/communication-transcription-sessions-events-asyncapi.yaml</code></div>
       </div>
@@ -784,6 +830,7 @@
   &quot;time&quot;: &quot;2024-01-01T00:00:00Z&quot;,
   &quot;datacontenttype&quot;: &quot;application/json&quot;,
   &quot;data&quot;: {
+    &quot;transcriptId&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
     &quot;key&quot;: &quot;example&quot;,
     &quot;text&quot;: &quot;example&quot;,
     &quot;startedAt&quot;: &quot;2024-01-01T00:00:00Z&quot;
@@ -797,7 +844,7 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.paused</code>
-        <span class="op-name">Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.</span>
+        <span class="op-name">Off the record. The adapter closes the connection, so no audio goes to the service, whoever paused it — the app, or someone pausing the transcript.</span>
       </span>
       <a href="#event-communication.transcription_session.paused" class="permalink" title="Link to this event">#</a>
     </summary>
@@ -824,7 +871,7 @@
       <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
       <span class="op-line">
         <code class="op-path">communication.transcription_session.stopping</code>
-        <span class="op-name">Stop was asked for. The software sends the end of the audio and waits for the last text.</span>
+        <span class="op-name">Stop was asked for. The adapter sends the end of the audio and publishes the last text, then ended.</span>
       </span>
       <a href="#event-communication.transcription_session.stopping" class="permalink" title="Link to this event">#</a>
     </summary>

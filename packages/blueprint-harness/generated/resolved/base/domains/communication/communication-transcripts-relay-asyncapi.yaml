@@ -9,8 +9,8 @@ info:
   x-status: alpha
   description: |
     One WebSocket connection per stream, speaking the subprotocol
-    `blueprint.transcripts.relay.v1`. The software gets the relay's URL and a
-    token from the session's request-credentials action, and opens the connection
+    `blueprint.transcripts.relay.v1`. The session's adapter gets the relay's
+    URL and a token from its server part's requestCredentials, and opens the connection
     asking for the subprotocol and presenting the token beside it, in the
     `Sec-WebSocket-Protocol` header — not in the URL, which is logged (RFC
     6750). The relay answers with the subprotocol's name only, never the token.
@@ -32,10 +32,10 @@ servers:
   relay:
     host: "{relayHost}"
     protocol: wss
-    description: The relay a state runs. Its URL comes from the session's request-credentials action.
+    description: The relay a state runs. Its URL comes from the session adapter's requestCredentials.
     variables:
       relayHost:
-        description: The relay's host, as request-credentials answers with it.
+        description: The relay's host, as requestCredentials answers with it.
     security:
       - $ref: "#/components/securitySchemes/relayToken"
   local:
@@ -49,7 +49,7 @@ channels:
   audio:
     address: null
     description: |
-      The connection, at the URL request-credentials answers with. Everything for one stream travels on it, both ways.
+      The connection, at the URL requestCredentials answers with. Everything for one stream travels on it, both ways.
     messages:
       start:
         $ref: "#/components/messages/start"
@@ -163,10 +163,10 @@ components:
             minItems: 1
             items:
               $ref: ../../schemas/enums.yaml#/$defs/Language
-            description: The languages the conversation may be in, as request-credentials' connectionParameters gave them. Absent, the service detects the language, if it can.
+            description: The languages the conversation may be in, as requestCredentials' connectionParameters gave them. Absent, the service detects the language, if it can.
           model:
             type: string
-            description: The service's model, as request-credentials' connectionParameters gave it.
+            description: The service's model, as requestCredentials' connectionParameters gave it.
           interimResults:
             type: boolean
             default: true

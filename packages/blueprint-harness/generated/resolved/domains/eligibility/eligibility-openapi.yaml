@@ -173,9 +173,11 @@ paths:
     parameters:
       - $ref: "#/components/parameters/DeterminationIdParam"
     post:
-      summary: Complete determination
+      summary: Complete
       description: Marks the determination as complete once all program results are resolved.
       operationId: completeDetermination
+      tags:
+        - Determinations
       responses:
         "200":
           description: Transition applied successfully.
@@ -197,8 +199,6 @@ paths:
                 $ref: ../../base/components/responses.yaml#/Error
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
-      tags:
-        - Determinations
       x-relationship:
         type: state-machine-action
         domain: eligibility

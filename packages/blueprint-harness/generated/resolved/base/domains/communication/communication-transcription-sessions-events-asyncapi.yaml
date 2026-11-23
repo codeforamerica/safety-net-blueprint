@@ -26,6 +26,26 @@ channels:
     messages:
       CommunicationTranscriptionSessionDisconnected:
         $ref: "#/components/messages/CommunicationTranscriptionSessionDisconnected"
+  communication.transcription_session.failed:
+    address: communication.transcription_session.failed
+    messages:
+      CommunicationTranscriptionSessionFailed:
+        $ref: "#/components/messages/CommunicationTranscriptionSessionFailed"
+  communication.transcription_session.line_updated:
+    address: communication.transcription_session.line_updated
+    messages:
+      CommunicationTranscriptionSessionLineUpdated:
+        $ref: "#/components/messages/CommunicationTranscriptionSessionLineUpdated"
+  communication.transcription_session.line_finished:
+    address: communication.transcription_session.line_finished
+    messages:
+      CommunicationTranscriptionSessionLineFinished:
+        $ref: "#/components/messages/CommunicationTranscriptionSessionLineFinished"
+  communication.transcription_session.ended:
+    address: communication.transcription_session.ended
+    messages:
+      CommunicationTranscriptionSessionEnded:
+        $ref: "#/components/messages/CommunicationTranscriptionSessionEnded"
   communication.transcription_session.paused:
     address: communication.transcription_session.paused
     messages:
@@ -41,21 +61,6 @@ channels:
     messages:
       CommunicationTranscriptionSessionClosed:
         $ref: "#/components/messages/CommunicationTranscriptionSessionClosed"
-  communication.transcription_session.failed:
-    address: communication.transcription_session.failed
-    messages:
-      CommunicationTranscriptionSessionFailed:
-        $ref: "#/components/messages/CommunicationTranscriptionSessionFailed"
-  communication.transcription_session.line_updated:
-    address: communication.transcription_session.line_updated
-    messages:
-      CommunicationTranscriptionSessionLineUpdated:
-        $ref: "#/components/messages/CommunicationTranscriptionSessionLineUpdated"
-  communication.transcription_session.line_added:
-    address: communication.transcription_session.line_added
-    messages:
-      CommunicationTranscriptionSessionLineAdded:
-        $ref: "#/components/messages/CommunicationTranscriptionSessionLineAdded"
   communication.transcript.paused:
     $ref: ./communication-transcripts-events-asyncapi.yaml#/channels/communication.transcript.paused
   communication.transcript.closed:
@@ -85,6 +90,30 @@ operations:
       $ref: "#/channels/communication.transcription_session.disconnected"
     messages:
       - $ref: "#/channels/communication.transcription_session.disconnected/messages/CommunicationTranscriptionSessionDisconnected"
+  sendCommunicationTranscriptionSessionFailed:
+    action: send
+    channel:
+      $ref: "#/channels/communication.transcription_session.failed"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.failed/messages/CommunicationTranscriptionSessionFailed"
+  sendCommunicationTranscriptionSessionLineUpdated:
+    action: send
+    channel:
+      $ref: "#/channels/communication.transcription_session.line_updated"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.line_updated/messages/CommunicationTranscriptionSessionLineUpdated"
+  sendCommunicationTranscriptionSessionLineFinished:
+    action: send
+    channel:
+      $ref: "#/channels/communication.transcription_session.line_finished"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.line_finished/messages/CommunicationTranscriptionSessionLineFinished"
+  sendCommunicationTranscriptionSessionEnded:
+    action: send
+    channel:
+      $ref: "#/channels/communication.transcription_session.ended"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.ended/messages/CommunicationTranscriptionSessionEnded"
   sendCommunicationTranscriptionSessionPaused:
     action: send
     channel:
@@ -103,24 +132,30 @@ operations:
       $ref: "#/channels/communication.transcription_session.closed"
     messages:
       - $ref: "#/channels/communication.transcription_session.closed/messages/CommunicationTranscriptionSessionClosed"
-  sendCommunicationTranscriptionSessionFailed:
-    action: send
+  receiveCommunicationTranscriptionSessionConnected:
+    action: receive
+    channel:
+      $ref: "#/channels/communication.transcription_session.connected"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.connected/messages/CommunicationTranscriptionSessionConnected"
+  receiveCommunicationTranscriptionSessionDisconnected:
+    action: receive
+    channel:
+      $ref: "#/channels/communication.transcription_session.disconnected"
+    messages:
+      - $ref: "#/channels/communication.transcription_session.disconnected/messages/CommunicationTranscriptionSessionDisconnected"
+  receiveCommunicationTranscriptionSessionFailed:
+    action: receive
     channel:
       $ref: "#/channels/communication.transcription_session.failed"
     messages:
       - $ref: "#/channels/communication.transcription_session.failed/messages/CommunicationTranscriptionSessionFailed"
-  sendCommunicationTranscriptionSessionLineUpdated:
-    action: send
+  receiveCommunicationTranscriptionSessionEnded:
+    action: receive
     channel:
-      $ref: "#/channels/communication.transcription_session.line_updated"
+      $ref: "#/channels/communication.transcription_session.ended"
     messages:
-      - $ref: "#/channels/communication.transcription_session.line_updated/messages/CommunicationTranscriptionSessionLineUpdated"
-  sendCommunicationTranscriptionSessionLineAdded:
-    action: send
-    channel:
-      $ref: "#/channels/communication.transcription_session.line_added"
-    messages:
-      - $ref: "#/channels/communication.transcription_session.line_added/messages/CommunicationTranscriptionSessionLineAdded"
+      - $ref: "#/channels/communication.transcription_session.ended/messages/CommunicationTranscriptionSessionEnded"
   receiveCommunicationTranscriptPaused:
     action: receive
     channel:
@@ -156,7 +191,7 @@ components:
             data: {}
     CommunicationTranscriptionSessionConnecting:
       name: communication.transcription_session.connecting
-      summary: The software is getting where to connect and opening the connection.
+      summary: The session started or resumed; its adapter is getting a credential and opening the connection.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -174,7 +209,7 @@ components:
             datacontenttype: application/json
     CommunicationTranscriptionSessionConnected:
       name: communication.transcription_session.connected
-      summary: The connection to the service is open.
+      summary: Published by the adapter. The connection to the service is open. A stretch with nothing captured before it, after a reconnect or when carrying on a transcript, is its gap; the transcript records it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -190,9 +225,11 @@ components:
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
     CommunicationTranscriptionSessionDisconnected:
       name: communication.transcription_session.disconnected
-      summary: The connection dropped; the software is trying again.
+      summary: Published by the adapter. The connection dropped; it's trying again.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -208,9 +245,100 @@ components:
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
+    CommunicationTranscriptionSessionFailed:
+      name: communication.transcription_session.failed
+      summary: Published by the adapter. It gave up connecting or reconnecting. The transcript is still open.
+      payload:
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionSessionFailedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.failed event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.failed
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
+    CommunicationTranscriptionSessionLineUpdated:
+      name: communication.transcription_session.line_updated
+      summary: Published by the adapter. A line in progress, to show. Not kept.
+      payload:
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionSessionLineUpdatedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.line_updated event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.line_updated
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
+              key: example
+              text: example
+              startedAt: "2024-01-01T00:00:00Z"
+    CommunicationTranscriptionSessionLineFinished:
+      name: communication.transcription_session.line_finished
+      summary: Published by the adapter. A finished line. The transcript keeps it, once for its key, and its entry's created event names this event as its cause, in causationid, so a consumer can tell which entry a line became; one the transcript refuses, closed say, isn't kept.
+      payload:
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionSessionLineFinishedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.line_finished event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.line_finished
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
+              key: example
+              startedAt: "2024-01-01T00:00:00Z"
+              endedAt: "2024-01-01T00:00:00Z"
+              text: example
+              speaker: example
+    CommunicationTranscriptionSessionEnded:
+      name: communication.transcription_session.ended
+      summary: Published by the adapter after the session stopped it. The last line is published and the connection closed.
+      payload:
+        schemaFormat: application/vnd.oai.openapi;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/CommunicationTranscriptionSessionEndedEvent"
+      examples:
+        - name: Example
+          summary: An example communication.transcription_session.ended event.
+          payload:
+            specversion: "1.0"
+            id: 00000000-0000-4000-8000-000000000000
+            source: /communication
+            type: communication.transcription_session.ended
+            subject: 00000000-0000-4000-8000-000000000001
+            time: "2024-01-01T00:00:00Z"
+            datacontenttype: application/json
+            data:
+              transcriptId: 00000000-0000-4000-8000-000000000001
+              at: "2024-01-01T00:00:00Z"
     CommunicationTranscriptionSessionPaused:
       name: communication.transcription_session.paused
-      summary: Off the record. The software closes the connection, so no audio leaves the page, whoever paused it — the software, or someone pausing the transcript.
+      summary: Off the record. The adapter closes the connection, so no audio goes to the service, whoever paused it — the app, or someone pausing the transcript.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -228,7 +356,7 @@ components:
             datacontenttype: application/json
     CommunicationTranscriptionSessionStopping:
       name: communication.transcription_session.stopping
-      summary: Stop was asked for. The software sends the end of the audio and waits for the last text.
+      summary: Stop was asked for. The adapter sends the end of the audio and publishes the last text, then ended.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -246,7 +374,7 @@ components:
             datacontenttype: application/json
     CommunicationTranscriptionSessionClosed:
       name: communication.transcription_session.closed
-      summary: The session is done and the transcript closed. The software closes any connection still open, whoever closed it.
+      summary: The session is done and the transcript closed, whoever closed it.
       payload:
         schemaFormat: application/vnd.oai.openapi;version=3.1.0
         schema:
@@ -262,67 +390,6 @@ components:
             subject: 00000000-0000-4000-8000-000000000001
             time: "2024-01-01T00:00:00Z"
             datacontenttype: application/json
-    CommunicationTranscriptionSessionFailed:
-      name: communication.transcription_session.failed
-      summary: The software gave up connecting or reconnecting. The transcript is still open.
-      payload:
-        schemaFormat: application/vnd.oai.openapi;version=3.1.0
-        schema:
-          $ref: "#/components/schemas/CommunicationTranscriptionSessionFailedEvent"
-      examples:
-        - name: Example
-          summary: An example communication.transcription_session.failed event.
-          payload:
-            specversion: "1.0"
-            id: 00000000-0000-4000-8000-000000000000
-            source: /communication
-            type: communication.transcription_session.failed
-            subject: 00000000-0000-4000-8000-000000000001
-            time: "2024-01-01T00:00:00Z"
-            datacontenttype: application/json
-    CommunicationTranscriptionSessionLineUpdated:
-      name: communication.transcription_session.line_updated
-      summary: A line in progress, to show. Not kept.
-      payload:
-        schemaFormat: application/vnd.oai.openapi;version=3.1.0
-        schema:
-          $ref: "#/components/schemas/CommunicationTranscriptionSessionLineUpdatedEvent"
-      examples:
-        - name: Example
-          summary: An example communication.transcription_session.line_updated event.
-          payload:
-            specversion: "1.0"
-            id: 00000000-0000-4000-8000-000000000000
-            source: /communication
-            type: communication.transcription_session.line_updated
-            subject: 00000000-0000-4000-8000-000000000001
-            time: "2024-01-01T00:00:00Z"
-            datacontenttype: application/json
-            data:
-              key: example
-              text: example
-              startedAt: "2024-01-01T00:00:00Z"
-    CommunicationTranscriptionSessionLineAdded:
-      name: communication.transcription_session.line_added
-      summary: A finished line was added to the transcript.
-      payload:
-        schemaFormat: application/vnd.oai.openapi;version=3.1.0
-        schema:
-          $ref: "#/components/schemas/CommunicationTranscriptionSessionLineAddedEvent"
-      examples:
-        - name: Example
-          summary: An example communication.transcription_session.line_added event.
-          payload:
-            specversion: "1.0"
-            id: 00000000-0000-4000-8000-000000000000
-            source: /communication
-            type: communication.transcription_session.line_added
-            subject: 00000000-0000-4000-8000-000000000001
-            time: "2024-01-01T00:00:00Z"
-            datacontenttype: application/json
-            data:
-              key: example
-              entryId: 00000000-0000-4000-8000-000000000001
   schemas:
     CommunicationTranscriptionSessionCreatedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
@@ -356,6 +423,32 @@ components:
               type:
                 type: string
                 const: communication.transcription_session.connected
+              data:
+                type: object
+                required:
+                  - transcriptId
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  gap:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - startedAt
+                      - endedAt
+                    description: The stretch nothing was captured in, by the client's clock.
+                    properties:
+                      startedAt:
+                        type: string
+                        format: date-time
+                      endedAt:
+                        type: string
+                        format: date-time
     CommunicationTranscriptionSessionDisconnectedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
       schema:
@@ -366,6 +459,170 @@ components:
               type:
                 type: string
                 const: communication.transcription_session.disconnected
+              data:
+                type: object
+                required:
+                  - transcriptId
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  at:
+                    type: string
+                    format: date-time
+                    description: When it dropped
+                    by the client's clock.: null
+    CommunicationTranscriptionSessionFailedEvent:
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_session.failed
+              data:
+                type: object
+                required:
+                  - transcriptId
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  reason:
+                    type: string
+                    description: Why
+                    for people.: null
+    CommunicationTranscriptionSessionLineUpdatedEvent:
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_session.line_updated
+              data:
+                type: object
+                required:
+                  - transcriptId
+                  - key
+                  - text
+                  - startedAt
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  key:
+                    type: string
+                    maxLength: 255
+                    description: The line's key, the same on every update and on the finished line, and unique within the session. A service's own result id is unique only within one connection, so the adapter makes it unique across reconnects, for example by putting the connection's number in front.
+                  text:
+                    type: string
+                  speaker:
+                    type: string
+                    description: Who's speaking, as the transcript's Speaker names it.
+                  startedAt:
+                    type: string
+                    format: date-time
+                    description: When it began, by the client's clock.
+    CommunicationTranscriptionSessionLineFinishedEvent:
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_session.line_finished
+              data:
+                type: object
+                required:
+                  - transcriptId
+                  - key
+                  - startedAt
+                  - endedAt
+                  - text
+                  - speaker
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  key:
+                    type: string
+                    maxLength: 255
+                    description: The line's key, as on its updates. The transcript keeps a line once for the session and its key, so one published again after a network error isn't added twice.
+                  startedAt:
+                    type: string
+                    format: date-time
+                    description: When it began, by the client's clock.
+                  endedAt:
+                    type: string
+                    format: date-time
+                    description: When it ended.
+                  text:
+                    type: string
+                    minLength: 1
+                  speaker:
+                    type: string
+                    description: Who's speaking, as the transcript's Speaker names it.
+                  speakerLabel:
+                    type: string
+                    description: The service's own label for the voice, when it tells voices apart.
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                  language:
+                    type: string
+                    description: The line's language, as a BCP 47 tag the Language enum lists.
+    CommunicationTranscriptionSessionEndedEvent:
+      schemaFormat: application/vnd.oai.openapi;version=3.1.0
+      schema:
+        allOf:
+          - $ref: ../../schemas/events.yaml#/$defs/Event
+          - type: object
+            properties:
+              type:
+                type: string
+                const: communication.transcription_session.ended
+              data:
+                type: object
+                required:
+                  - transcriptId
+                  - at
+                properties:
+                  transcriptId:
+                    type: string
+                    format: uuid
+                    description: The session's transcript.
+                    x-relationship:
+                      resource: Transcript
+                      style: links-only
+                  at:
+                    type: string
+                    format: date-time
+                    description: When the last text came in
+                    by the client's clock; the transcript closes at it.: null
     CommunicationTranscriptionSessionPausedEvent:
       schemaFormat: application/vnd.oai.openapi;version=3.1.0
       schema:
@@ -396,71 +653,3 @@ components:
               type:
                 type: string
                 const: communication.transcription_session.closed
-    CommunicationTranscriptionSessionFailedEvent:
-      schemaFormat: application/vnd.oai.openapi;version=3.1.0
-      schema:
-        allOf:
-          - $ref: ../../schemas/events.yaml#/$defs/Event
-          - type: object
-            properties:
-              type:
-                type: string
-                const: communication.transcription_session.failed
-    CommunicationTranscriptionSessionLineUpdatedEvent:
-      schemaFormat: application/vnd.oai.openapi;version=3.1.0
-      schema:
-        allOf:
-          - $ref: ../../schemas/events.yaml#/$defs/Event
-          - type: object
-            properties:
-              type:
-                type: string
-                const: communication.transcription_session.line_updated
-              data:
-                type: object
-                required:
-                  - key
-                  - text
-                  - startedAt
-                properties:
-                  key:
-                    type: string
-                    description: The line's key
-                    the same on every update and on the finished line.: null
-                  text:
-                    type: string
-                  speaker:
-                    type: string
-                    description: Who's speaking
-                    as the transcript's Speaker names it.: null
-                  startedAt:
-                    type: string
-                    format: date-time
-                    description: When it began
-                    by the client's clock.: null
-    CommunicationTranscriptionSessionLineAddedEvent:
-      schemaFormat: application/vnd.oai.openapi;version=3.1.0
-      schema:
-        allOf:
-          - $ref: ../../schemas/events.yaml#/$defs/Event
-          - type: object
-            properties:
-              type:
-                type: string
-                const: communication.transcription_session.line_added
-              data:
-                type: object
-                required:
-                  - key
-                  - entryId
-                properties:
-                  key:
-                    type: string
-                    description: The line's key
-                    as the client gave it.: null
-                  entryId:
-                    type: string
-                    format: uuid
-                    description: The transcript entry the line became.
-                    x-relationship:
-                      resource: TranscriptEntry

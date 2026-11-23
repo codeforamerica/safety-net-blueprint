@@ -5,7 +5,80 @@ export type ClientOptions = {
 };
 
 /**
- * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+ * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+ *
+ */
+export type StreamRequest = {
+    /**
+     * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+     *
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown | {
+        [key: string]: unknown;
+    } | undefined;
+} & {
+    /**
+     * The session, the subject of every event the adapter publishes.
+     */
+    transcriptionSessionId: string;
+    /**
+     * The session's transcript, on every event the adapter publishes.
+     */
+    transcriptId: string;
+    /**
+     * The transcription service, an entry of the transcription-services registry.
+     */
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    /**
+     * The service's model, from the transcript.
+     */
+    model?: string;
+    /**
+     * The languages the conversation may be in, from the transcript's profile.
+     */
+    languages?: Array<string>;
+    /**
+     * When a session carries on a transcript that's still recording, when the transcript last heard from anyone. The adapter reports from then to its first connection as a gap.
+     *
+     */
+    lastActivityAt?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related TranscriptionSession resource.
+         */
+        transcriptionSession?: string;
+        /**
+         * Link to the related Transcript resource.
+         */
+        transcript?: string;
+    };
+};
+
+/**
+ * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+ *
+ */
+export type StreamResponse = {
+    /**
+     * Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+     *
+     */
+    metadata: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown | {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * What the service needs to issue a credential: the service, model and languages the adapter was started with, and the audio and protocols the streaming part streams with.
  *
  */
 export type CredentialsRequest = {
@@ -23,7 +96,7 @@ export type CredentialsRequest = {
     /**
      * The transcription service, an entry of the transcription-services registry.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The service's model, for a service that fixes it when issuing the credential.
      */
@@ -54,7 +127,7 @@ export type CredentialsRequest = {
         channelCount: number;
     };
     /**
-     * The protocols the software can connect over. The adapter answers with one of them.
+     * The protocols the streaming part can connect over. The adapter answers with one of them.
      */
     protocols: Array<'websocket' | 'webrtc'>;
 };
@@ -81,7 +154,7 @@ export type JsonWebKeySet = {
 };
 
 /**
- * Where and how the adapter in the browser connects, with metadata echoed back.
+ * Where and how the streaming part connects, with metadata echoed back.
  */
 export type CredentialsResponse = {
     /**
@@ -98,7 +171,7 @@ export type CredentialsResponse = {
     /**
      * The transcription service, as the transcript's profile names it.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * How the software connects to the service.
      */
@@ -136,9 +209,364 @@ export type CredentialsResponse = {
     };
 };
 
+/**
+ * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+ *
+ */
+export type StreamRequestWritable = {
+    /**
+     * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+     *
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown | {
+        [key: string]: unknown;
+    } | undefined;
+} & {
+    /**
+     * The session, the subject of every event the adapter publishes.
+     */
+    transcriptionSessionId: string;
+    /**
+     * The session's transcript, on every event the adapter publishes.
+     */
+    transcriptId: string;
+    /**
+     * The transcription service, an entry of the transcription-services registry.
+     */
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    /**
+     * The service's model, from the transcript.
+     */
+    model?: string;
+    /**
+     * The languages the conversation may be in, from the transcript's profile.
+     */
+    languages?: Array<string>;
+    /**
+     * When a session carries on a transcript that's still recording, when the transcript last heard from anyone. The adapter reports from then to its first connection as a gap.
+     *
+     */
+    lastActivityAt?: string;
+};
+
+/**
+ * The session being streamed for.
+ */
+export type TranscriptionSessionIdParam = string;
+
+export type StartStreamData = {
+    /**
+     * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
+     *
+     */
+    body: {
+        /**
+         * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        } | undefined;
+    } & {
+        /**
+         * The session, the subject of every event the adapter publishes.
+         */
+        transcriptionSessionId: string;
+        /**
+         * The session's transcript, on every event the adapter publishes.
+         */
+        transcriptId: string;
+        /**
+         * The transcription service, an entry of the transcription-services registry.
+         */
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        /**
+         * The service's model, from the transcript.
+         */
+        model?: string;
+        /**
+         * The languages the conversation may be in, from the transcript's profile.
+         */
+        languages?: Array<string>;
+        /**
+         * When a session carries on a transcript that's still recording, when the transcript last heard from anyone. The adapter reports from then to its first connection as a gap.
+         *
+         */
+        lastActivityAt?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related TranscriptionSession resource.
+             */
+            transcriptionSession?: string;
+            /**
+             * Link to the related Transcript resource.
+             */
+            transcript?: string;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/streams';
+};
+
+export type StartStreamErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type StartStreamError = StartStreamErrors[keyof StartStreamErrors];
+
+export type StartStreamResponses = {
+    /**
+     * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+     *
+     */
+    202: {
+        /**
+         * Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+         *
+         */
+        metadata: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type StartStreamResponse = StartStreamResponses[keyof StartStreamResponses];
+
+export type PauseStreamData = {
+    /**
+     * Base schema for all adapter request payloads. Defines the metadata passthrough field that the blueprint sets for correlation. Adapters must echo it back unchanged in the response — they must not inspect or depend on its contents.
+     *
+     */
+    body?: {
+        /**
+         * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        } | undefined;
+    };
+    path: {
+        /**
+         * The session being streamed for.
+         */
+        transcriptionSessionId: string;
+    };
+    query?: never;
+    url: '/streams/{transcriptionSessionId}/pause';
+};
+
+export type PauseStreamErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type PauseStreamError = PauseStreamErrors[keyof PauseStreamErrors];
+
+export type PauseStreamResponses = {
+    /**
+     * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+     *
+     */
+    202: {
+        /**
+         * Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+         *
+         */
+        metadata: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type PauseStreamResponse = PauseStreamResponses[keyof PauseStreamResponses];
+
+export type StopStreamData = {
+    /**
+     * Base schema for all adapter request payloads. Defines the metadata passthrough field that the blueprint sets for correlation. Adapters must echo it back unchanged in the response — they must not inspect or depend on its contents.
+     *
+     */
+    body?: {
+        /**
+         * Opaque correlation context set by the blueprint. Echo back unchanged in the response. The adapter must not inspect or modify this field.
+         *
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        } | undefined;
+    };
+    path: {
+        /**
+         * The session being streamed for.
+         */
+        transcriptionSessionId: string;
+    };
+    query?: never;
+    url: '/streams/{transcriptionSessionId}/stop';
+};
+
+export type StopStreamErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type StopStreamError = StopStreamErrors[keyof StopStreamErrors];
+
+export type StopStreamResponses = {
+    /**
+     * Base schema for all adapter response payloads. Requires the metadata field to be echoed back unchanged from the request so the blueprint can correlate the response to internal records.
+     *
+     */
+    202: {
+        /**
+         * Echoed back unchanged from the request. The blueprint uses this to map the response to its internal records without exposing resource identities to the adapter.
+         *
+         */
+        metadata: {
+            [key: string]: unknown;
+        };
+        [key: string]: unknown | {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type StopStreamResponse = StopStreamResponses[keyof StopStreamResponses];
+
 export type RequestCredentialsData = {
     /**
-     * What the service needs to issue a credential: the service and its languages, from the transcript's profile; the model, from the transcript; and the audio and protocols, from the software.
+     * What the service needs to issue a credential: the service, model and languages the adapter was started with, and the audio and protocols the streaming part streams with.
      *
      */
     body: {
@@ -156,7 +584,7 @@ export type RequestCredentialsData = {
         /**
          * The transcription service, an entry of the transcription-services registry.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The service's model, for a service that fixes it when issuing the credential.
          */
@@ -187,7 +615,7 @@ export type RequestCredentialsData = {
             channelCount: number;
         };
         /**
-         * The protocols the software can connect over. The adapter answers with one of them.
+         * The protocols the streaming part can connect over. The adapter answers with one of them.
          */
         protocols: Array<'websocket' | 'webrtc'>;
     };
@@ -280,7 +708,7 @@ export type RequestCredentialsError = RequestCredentialsErrors[keyof RequestCred
 
 export type RequestCredentialsResponses = {
     /**
-     * Where and how the adapter in the browser connects, with metadata echoed back.
+     * Where and how the streaming part connects, with metadata echoed back.
      */
     200: {
         /**
@@ -297,7 +725,7 @@ export type RequestCredentialsResponses = {
         /**
          * The transcription service, as the transcript's profile names it.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * How the software connects to the service.
          */

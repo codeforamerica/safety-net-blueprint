@@ -246,7 +246,7 @@ export const updateTranscriptionProfile = <ThrowOnError extends boolean = false>
 });
 
 /**
- * Pause transcript
+ * Pause
  *
  * Take the conversation off the record, at the time the client says.
  *
@@ -265,7 +265,7 @@ export const pauseTranscript = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * Resume transcript
+ * Resume
  *
  * Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
  *
@@ -284,7 +284,7 @@ export const resumeTranscript = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Close transcript
+ * Close
  *
  * End the transcript, at the time the client says. A pause still open ends then too.
  *

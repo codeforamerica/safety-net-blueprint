@@ -49,7 +49,8 @@ export const zTranscript = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -115,7 +116,8 @@ export const zTranscriptList = z.object({
                 'none',
                 'openai-realtime',
                 'soniox',
-                'speechmatics'
+                'speechmatics',
+                'whisper'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -339,7 +341,8 @@ export const zTranscriptionProfileWritable = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -364,7 +367,8 @@ export const zTranscriptionProfile = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -391,7 +395,8 @@ export const zTranscriptionProfileCreate = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -415,7 +420,8 @@ export const zTranscriptionProfileUpdate = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ])),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -438,7 +444,8 @@ export const zTranscriptionProfileList = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -484,7 +491,8 @@ export const zTranscriptWritable2 = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -515,7 +523,8 @@ export const zTranscriptListWritable = z.object({
                 'none',
                 'openai-realtime',
                 'soniox',
-                'speechmatics'
+                'speechmatics',
+                'whisper'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -611,7 +620,8 @@ export const zTranscriptionProfileWritable2 = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -634,7 +644,8 @@ export const zTranscriptionProfileListWritable = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -709,7 +720,8 @@ export const zListTranscriptsResponse = z.object({
                 'none',
                 'openai-realtime',
                 'soniox',
-                'speechmatics'
+                'speechmatics',
+                'whisper'
             ]),
             languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
             idleTimeout: z.optional(z.string())
@@ -779,7 +791,8 @@ export const zCreateTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -849,7 +862,8 @@ export const zGetTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -911,7 +925,8 @@ export const zUpdateTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1191,7 +1206,8 @@ export const zListTranscriptionProfilesResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1224,7 +1240,8 @@ export const zCreateTranscriptionProfileData = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1254,7 +1271,8 @@ export const zCreateTranscriptionProfileResponse = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1292,7 +1310,8 @@ export const zGetTranscriptionProfileResponse = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1320,7 +1339,8 @@ export const zUpdateTranscriptionProfileData = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ])),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1350,7 +1370,8 @@ export const zUpdateTranscriptionProfileResponse = z.object({
         'none',
         'openai-realtime',
         'soniox',
-        'speechmatics'
+        'speechmatics',
+        'whisper'
     ]),
     languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
     idleTimeout: z.optional(z.string())
@@ -1408,7 +1429,8 @@ export const zPauseTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1467,7 +1489,8 @@ export const zResumeTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())
@@ -1526,7 +1549,8 @@ export const zCloseTranscriptResponse = z.object({
             'none',
             'openai-realtime',
             'soniox',
-            'speechmatics'
+            'speechmatics',
+            'whisper'
         ]),
         languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
         idleTimeout: z.optional(z.string())

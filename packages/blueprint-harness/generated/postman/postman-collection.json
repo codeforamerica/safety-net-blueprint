@@ -7,6 +7,102 @@
   },
   "item": [
     {
+      "name": "Streams",
+      "item": [
+        {
+          "name": "Pause Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/streams/{{transcriptionSessionId}}/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "streams",
+                "{{transcriptionSessionId}}",
+                "pause"
+              ],
+              "variables": [
+                "transcriptionSessionId"
+              ]
+            },
+            "description": "Trigger the pause transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stop Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/streams/{{transcriptionSessionId}}/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "streams",
+                "{{transcriptionSessionId}}",
+                "stop"
+              ],
+              "variables": [
+                "transcriptionSessionId"
+              ]
+            },
+            "description": "Trigger the stop transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Transcription Session Adapter API"
+    },
+    {
       "name": "Credentials",
       "item": [],
       "description": "Transcription Session Adapter API"
@@ -14,6 +110,116 @@
     {
       "name": "Transcription-sessions",
       "item": [
+        {
+          "name": "List All Transcription-sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/communication/transcription-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "communication",
+                "transcription-sessions"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transcription-sessions (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/communication/transcription-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "communication",
+                "transcription-sessions"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Get Non-Existent Transcription-session (404)",
           "request": {
@@ -54,7 +260,7 @@
           ]
         },
         {
-          "name": "Connect Transcription-session",
+          "name": "Start Transcription-session",
           "request": {
             "method": "POST",
             "header": [
@@ -65,7 +271,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/connect",
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/start",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -73,243 +279,13 @@
                 "communication",
                 "transcription-sessions",
                 "{{transcriptionSessionId}}",
-                "connect"
+                "start"
               ],
               "variables": [
                 "transcriptionSessionId"
               ]
             },
-            "description": "Trigger the connect transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update-line Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/update-line",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "update-line"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the update-line transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Add-line Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/add-line",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "add-line"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the add-line transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pause Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/pause",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "pause"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the pause transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Resume Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/resume",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "resume"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the resume transition"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Disconnect Transcription-session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Caller-Id",
-                "value": "{{callerId}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/disconnect",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "transcription-sessions",
-                "{{transcriptionSessionId}}",
-                "disconnect"
-              ],
-              "variables": [
-                "transcriptionSessionId"
-              ]
-            },
-            "description": "Trigger the disconnect transition"
+            "description": "Trigger the start transition"
           },
           "event": [
             {
@@ -376,7 +352,7 @@
           ]
         },
         {
-          "name": "Close Transcription-session",
+          "name": "Pause Transcription-session (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -387,7 +363,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/close",
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/pause",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -395,26 +371,21 @@
                 "communication",
                 "transcription-sessions",
                 "{{transcriptionSessionId}}",
-                "close"
+                "pause"
               ],
               "variables": [
                 "transcriptionSessionId"
               ]
             },
-            "description": "Trigger the close transition"
+            "description": "Trigger the pause transition"
           },
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
+                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
+                  "    pm.response.to.have.status(409);",
                   "});"
                 ]
               }
@@ -422,7 +393,7 @@
           ]
         },
         {
-          "name": "Fail Transcription-session (409 Conflict)",
+          "name": "Resume Transcription-session (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -433,7 +404,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/fail",
+              "raw": "{{baseUrl}}/communication/transcription-sessions/{{transcriptionSessionId}}/resume",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -441,13 +412,13 @@
                 "communication",
                 "transcription-sessions",
                 "{{transcriptionSessionId}}",
-                "fail"
+                "resume"
               ],
               "variables": [
                 "transcriptionSessionId"
               ]
             },
-            "description": "Trigger the fail transition"
+            "description": "Trigger the resume transition"
           },
           "event": [
             {
@@ -857,6 +828,48 @@
                 "communication",
                 "profiles",
                 "7a1e0c2d-0000-4000-8000-0000000000f3"
+              ],
+              "variables": [
+                "profileId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptionProfile english-whisper",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/communication/profiles/7a1e0c2d-0000-4000-8000-0000000000f4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "communication",
+                "profiles",
+                "7a1e0c2d-0000-4000-8000-0000000000f4"
               ],
               "variables": [
                 "profileId"

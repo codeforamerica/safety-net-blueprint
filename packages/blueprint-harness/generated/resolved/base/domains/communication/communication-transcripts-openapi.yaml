@@ -455,12 +455,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Pause transcript
+      summary: Pause
       description: |-
         Take the conversation off the record, at the time the client says.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: pauseTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -490,8 +492,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
@@ -501,12 +501,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Resume transcript
+      summary: Resume
       description: |-
         Put the conversation back on the record, at the time the client says. Already recording, nothing changes.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: resumeTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -536,8 +538,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
@@ -547,12 +547,14 @@ paths:
     parameters:
       - $ref: "#/components/parameters/TranscriptIdParam"
     post:
-      summary: Close transcript
+      summary: Close
       description: |-
         End the transcript, at the time the client says. A pause still open ends then too.
 
         It calls another operation. When that call fails, the action answers with the call's own status and error, so a 404 or 422 can be about the record the call names. When the action catches the failure, `details[0]` is this record as it now is.
       operationId: closeTranscript
+      tags:
+        - Transcripts
       requestBody:
         required: true
         content:
@@ -582,8 +584,6 @@ paths:
           $ref: ../../components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../components/responses.yaml#/InternalError
-      tags:
-        - Transcripts
       x-relationship:
         type: state-machine-action
         domain: communication
@@ -1032,6 +1032,7 @@ components:
             - openai-realtime
             - soniox
             - speechmatics
+            - whisper
         languages:
           type: array
           minItems: 1

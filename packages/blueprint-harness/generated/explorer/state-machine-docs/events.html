@@ -75,33 +75,29 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="communication.html">Communication/Transcript</a></td>
     </tr><tr>
-      <td><code>communication.transcription_session.closed</code></td>
-      <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
-    </tr><tr>
       <td><code>communication.transcription_session.connected</code></td>
-      <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="communication.html">Communication/TranscriptionSession</a>, <a href="communication.html">Communication/Transcript</a></td>
     </tr><tr>
       <td><code>communication.transcription_session.connecting</code></td>
       <td><a href="communication.html">Communication/TranscriptionSession</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
       <td><code>communication.transcription_session.disconnected</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
+    </tr><tr>
+      <td><code>communication.transcription_session.ended</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="communication.html">Communication/TranscriptionSession</a></td>
     </tr><tr>
       <td><code>communication.transcription_session.failed</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
     </tr><tr>
-      <td><code>communication.transcription_session.line_added</code></td>
-      <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
-    </tr><tr>
-      <td><code>communication.transcription_session.line_updated</code></td>
-      <td><a href="communication.html">Communication/TranscriptionSession</a></td>
-      <td><span style="color:#999;font-size:11px;">none</span></td>
+      <td><code>communication.transcription_session.line_finished</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="communication.html">Communication/Transcript</a></td>
     </tr><tr>
       <td><code>communication.transcription_session.paused</code></td>
       <td><a href="communication.html">Communication/TranscriptionSession</a></td>
@@ -177,7 +173,7 @@
     <h3 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2rem 0 0.75rem;">Subscribed but not emitted</h3>
     <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
     <ul style="font-size:13px;color:#666;">
-      <li><code>communication.transcript.created</code></li><li><code>communication.transcript.idle_check</code></li><li><code>communication.transcript_entry.created</code></li><li><code>decision-support.suggestion.created</code></li><li><code>decision-support.suggestion.suggestion_expiry</code></li><li><code>intake.application.review_reminder</code></li><li><code>intake.application_income.created</code></li><li><code>intake.application_income.updated</code></li>
+      <li><code>communication.transcript.created</code></li><li><code>communication.transcript.idle_check</code></li><li><code>communication.transcript_entry.created</code></li><li><code>communication.transcription_session.connected</code></li><li><code>communication.transcription_session.disconnected</code></li><li><code>communication.transcription_session.ended</code></li><li><code>communication.transcription_session.failed</code></li><li><code>communication.transcription_session.line_finished</code></li><li><code>decision-support.suggestion.created</code></li><li><code>decision-support.suggestion.suggestion_expiry</code></li><li><code>intake.application.review_reminder</code></li><li><code>intake.application_income.created</code></li><li><code>intake.application_income.updated</code></li>
     </ul></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

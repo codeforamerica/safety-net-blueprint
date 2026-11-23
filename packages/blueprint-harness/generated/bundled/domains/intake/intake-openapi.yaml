@@ -8433,9 +8433,11 @@ paths:
           format: uuid
         example: 00000000-0000-0000-0000-000000000001
     post:
-      summary: Submit application
+      summary: Submit
       description: Formally submits a draft application, starting the regulatory processing clock.
       operationId: submitApplication
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -9323,8 +9325,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -9341,9 +9341,11 @@ paths:
           format: uuid
         example: 00000000-0000-0000-0000-000000000001
     post:
-      summary: Open application
+      summary: Open
       description: Moves a submitted application into active caseworker review.
       operationId: openApplication
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -10231,8 +10233,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -10249,9 +10249,11 @@ paths:
           format: uuid
         example: 00000000-0000-0000-0000-000000000001
     post:
-      summary: Close application
+      summary: Close
       description: Closes the application once intake processing is complete.
       operationId: closeApplication
+      tags:
+        - Applications
       requestBody:
         required: true
         content:
@@ -11180,8 +11182,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -11198,9 +11198,11 @@ paths:
           format: uuid
         example: 00000000-0000-0000-0000-000000000001
     post:
-      summary: Withdraw application
+      summary: Withdraw
       description: Withdraws the application at the household's request.
       operationId: withdrawApplication
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -12088,8 +12090,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -12111,9 +12111,11 @@ paths:
         schema:
           type: string
     post:
-      summary: Start interview
+      summary: Start
       description: Starts the interview and puts its flags to the worker.
       operationId: startInterview
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -12296,8 +12298,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -12319,10 +12319,12 @@ paths:
         schema:
           type: string
     post:
-      summary: Process suggestions interview
+      summary: Process suggestions
       description: |
         Evaluates the flags again, proposing a suggestion for a newly flagged record and expiring one whose flag cleared — called when the household's incomes change.
       operationId: processSuggestionsInterview
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -12505,8 +12507,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
@@ -12528,9 +12528,11 @@ paths:
         schema:
           type: string
     post:
-      summary: Complete interview
+      summary: Complete
       description: Finishes the interview and expires its suggestions still open.
       operationId: completeInterview
+      tags:
+        - Applications
       responses:
         "200":
           description: Transition applied successfully.
@@ -12713,8 +12715,6 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-      tags:
-        - Applications
       x-relationship:
         type: state-machine-action
         domain: intake
