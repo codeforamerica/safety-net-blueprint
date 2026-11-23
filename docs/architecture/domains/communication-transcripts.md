@@ -28,8 +28,8 @@ anything else the framework adds to the domain.
    under a profile: the transcription service and languages the state chose for
    that kind of conversation. The software begins sending the audio to that
    service.
-2. As each sentence is finished, the software adds it to the transcript, with
-   when it was said and who said it.
+2. As each sentence is finished, the software reports it, with when it was
+   said and who said it, and the transcript keeps it.
 3. If the other person asks to go off the record, the staff member pauses the
    transcript. Nothing said while paused is kept. When they resume, recording
    continues.
@@ -37,8 +37,8 @@ anything else the framework adds to the domain.
    software records the stretch that was lost once transcription works again.
 5. Anyone following along, such as the staff member's own screen, sees each
    change as it happens.
-6. When the conversation ends, the staff member closes the transcript. Nothing more is
-   added after that.
+6. When the conversation ends, the staff member stops. Once the last sentence
+   is in, the transcript closes, and nothing more is added after that.
 
 ## How the parts work together
 
@@ -83,9 +83,9 @@ model in the page is its own business; the session and the app can't tell.
 | Part | API | Defined in | What it does |
 |---|---|---|---|
 | App | — | — | The software in the browser: the staff member's screen. It calls the session's actions — start, pause, resume, stop — through the SDK generated from the contracts, and follows the session's events ([Decision 16](#decision-16-the-apps-actions-go-in-and-the-adapter-reports-by-publishing-the-sessions-events)). |
-| Session | sessions API | `communication-transcription-sessions-openapi.yaml`; its actions, events and reactions in `communication-transcription-sessions-state-machine.yaml` | Keeps track of the connection. Its actions start the transcript, call the transcripts API for pauses and closing, and start, pause and stop its adapter; it follows what the adapter publishes. Runs in the page, kept there by routing. |
+| Session | sessions API | `communication-transcription-sessions-openapi.yaml`; its actions, events and reactions in `communication-transcription-sessions-state-machine.yaml` | Keeps track of the connection. Its actions start the transcript, call the transcripts API to pause and resume, and start, pause and stop its adapter; it follows what the adapter publishes, and closes the transcript when the adapter has ended. Usually kept in the page by routing. |
 | Session adapter | adapter API: `startStream`, `pauseStream`, `stopStream` | `communication-transcription-sessions-adapter-openapi.yaml` | Code for one transcription service, running in the page: it gets a credential, captures and streams the audio, turns the service's results into lines, reconnects after a drop, renews its credential, and publishes the session's events — `connected`, `line_updated`, `line_finished`, `disconnected`, `failed`, `ended` — with `publishEvent`. One per service: Amazon Transcribe, Deepgram, a relay, a model in the page. |
-| Session adapter's credentials part | adapter API: `requestCredentials`, and `getCredentialKeys` for an adapter that signs tokens for a relay | `communication-transcription-sessions-adapter-openapi.yaml` | Holds the service's secret, so it runs on a server: it answers the streaming part's `requestCredentials` with where to connect and a credential that lasts minutes, after checking the staff member is signed in ([Decision 11](#decision-11-the-adapter-asks-its-server-part-how-to-stream-in-one-shape-for-every-service)). Once the streaming part connects, it's out of the picture until a renewal or a reconnect. |
+| Session adapter's credentials part | adapter API: `requestCredentials`, and `getCredentialKeys` for an adapter that signs tokens for a relay | `communication-transcription-sessions-adapter-openapi.yaml` | Holds the service's secret, so it runs on a server: it answers the streaming part's `requestCredentials` with where to connect and a credential that lasts minutes, after checking the staff member is signed in ([Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)). Once the streaming part connects, it's out of the picture until a renewal or a reconnect. |
 | Transcript | transcripts API | `communication-transcripts-openapi.yaml`; its actions, events and reactions in `communication-transcripts-state-machine.yaml` | Keeps the transcript and its rules. It follows the session's `line_finished` and the gap on `connected`, and keeps each line once ([Decision 17](#decision-17-a-line-in-progress-is-tied-to-its-finished-line-by-the-adapters-key)). Sends every change as an event. |
 | Relay | relay API | `communication-transcripts-relay-asyncapi.yaml` | One way an adapter reaches a service a browser can't, such as Google Cloud Speech-to-Text, which takes only gRPC, or a model the state runs itself: a server the state runs, speaking the relay API toward the adapter and the service's API toward the service ([Decisions 12](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract) and [13](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names)). Inside the adapter's black box: the session never sees it. |
 | Service | service's API | The vendor's documentation, such as [Amazon Transcribe streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html) | Turns speech into text: Amazon Transcribe, Deepgram, Whisper, a model the state runs. |
@@ -140,9 +140,10 @@ no contract has to say where it runs.
   server, except the session's API and the adapter's streaming operations,
   which stay in the page. The session's actions call the transcript's
   operations by their ids, so routing carries those calls to the server too.
-- **A demo with no backend** routes nothing: the mock serves everything in the
-  page, the adapter's credentials are answered by a routing `handler` in the
-  page or an HTTP stub, and the events never leave the browser.
+- **A demo with no backend** keeps everything in the page: the mock serves the
+  session and the transcript, the adapter's operations, both parts, are
+  answered by a routing `handler` in the page or by HTTP stubs, and the events
+  never leave the browser.
 
 The [mock guide's routing section](../../guides/mock-server.md#routing-to-a-real-service)
 has the configuration. The diagrams below show the end state, with the
@@ -179,7 +180,9 @@ sequenceDiagram
     Session-->>App: The session
     Note over App: Follows the session's events from here
     App->>Session: start
-    Session->>Server: createTranscript, the first time
+    Session->>Server: createTranscript, unless the session names one
+    Session->>Server: getTranscriptionProfile
+    Note over Session: The profile's service, model<br/>and languages go to the adapter
     Session->>Adapter: startStream
     Adapter-->>Session: Accepted
     Session--)App: connecting
@@ -249,6 +252,7 @@ sequenceDiagram
     Note over App: The staff member resumes
     App->>Session: resume
     Session->>Server: resumeTranscript
+    Session->>Server: getTranscript, getTranscriptionProfile
     Session->>Adapter: startStream
     Session--)App: connecting
     Note over Adapter,Service: Starts again, as in starting and connecting
@@ -497,13 +501,13 @@ All in `blueprint-core/base-contracts/domains/communication/`.
 |---|---|
 | API — transcripts, their entries, and profiles | `communication-transcripts-openapi.yaml` |
 | Lifecycle and the rules for entries | `communication-transcripts-state-machine.yaml` |
-| API — the session, designed to run in the page (Decisions 14 to 17) | `communication-transcription-sessions-openapi.yaml` |
+| API — the session, usually kept in the page by routing (Decisions 14 to 17) | `communication-transcription-sessions-openapi.yaml` |
 | The session's lifecycle: its actions, the events its adapter publishes, and what it follows | `communication-transcription-sessions-state-machine.yaml` |
 | Events | Generated by resolve beside each API, as `communication-transcripts-events-asyncapi.yaml` and `communication-transcription-sessions-events-asyncapi.yaml`, from the APIs and the state machines' `emits:` |
 | Transcription services, including `whisper` and `none` | `communication-transcripts-registry-transcription-services.yaml` |
 | The session adapter: the streaming operations the session calls, and the credential its credentials part issues (Decisions 11 and 16) | `communication-transcription-sessions-adapter-openapi.yaml` |
 | The contract a relay implements: audio in, text out (Decisions 12 and 13) | `communication-transcripts-relay-asyncapi.yaml` |
-| Shapes the adapter, the relay contract and the transcripts API share | `communication-transcripts-schema.yaml` |
+| Shapes the adapter and the relay contract share | `communication-transcripts-schema.yaml` |
 | Profiles a deployment starts with | `communication-transcripts-config.yaml`, validated by `communication-transcripts-config-schema.yaml` |
 | Sample transcripts | `communication-transcripts-mock-data.yaml` |
 
@@ -521,7 +525,7 @@ All in `blueprint-core/base-contracts/domains/communication/`.
 | 8 | [A retry is recognized by a key](#decision-8-a-retry-is-recognized-by-a-key) | The software sends the same key when it retries |
 | 9 | [A dropped connection is a gap, not an event](#decision-9-a-dropped-connection-is-a-gap-not-an-event) | The record shows what was lost, whatever caused it |
 | 10 | [A transcript names its profile; the profile's history is the record](#decision-10-a-transcript-names-its-profile-the-profiles-history-is-the-record) | Profiles change through the API, and their change events say what each said when |
-| 11 | [The adapter asks its credentials part how to stream, in one shape for every service](#decision-11-the-adapter-asks-its-server-part-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
+| 11 | [The adapter asks its credentials part how to stream, in one shape for every service](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service) | Where to connect, a short-lived credential and the settings to send, named as OAuth names a token response |
 | 12 | [A service with no browser path sits behind a relay that implements the blueprint's relay contract](#decision-12-a-service-with-no-browser-path-sits-behind-a-relay-that-implements-the-blueprints-relay-contract) | Google, a self-hosted model, or any service a state fronts itself |
 | 13 | [The relay contract takes the services' common pattern and the standard result names](#decision-13-the-relay-contract-takes-the-services-common-pattern-and-the-standard-result-names) | Binary audio, start/end lifecycle, W3C and Google result names; a signed token in the subprotocol |
 | 14 | [The session's states follow WebRTC's, named to match its actions](#decision-14-the-sessions-states-follow-webrtcs-named-to-match-its-actions) | `created`, `connecting`, `connected`, `disconnected`, `paused`, `stopping`, `closed` and `failed`; a state shares its word with the action or event that leads to it |
@@ -735,8 +739,9 @@ transcript gets the line twice.
 
 **Options:**
 - **(A)** The software chooses each entry's identifier.
-- **(B) ✓** The software sends a key with each line it adds, and the same key
-  on a retry; a repeat gets the first answer back.
+- **(B) ✓** The software gives each line a key, and the same key when it
+  sends the line again; the transcript keeps the line once for the session
+  and that key.
 - **(C)** A line's start time and speaker together.
 
 ### Decision 9: A dropped connection is a gap, not an event
@@ -909,9 +914,9 @@ decides whether a deployment can use them.
 - A relay is the state's service, on the service's side. The adapter streams
   to it as it would to any service, so audio still never passes through the
   blueprint ([Decision 3](#decision-3-audio-never-passes-through-the-blueprint)).
-- Self-hosted models — Whisper, NVIDIA Riva — are a real option for a state
-  that doesn't want interview audio sent to a vendor, and have no browser
-  path. A relay also lets a state keep audio inside its own boundary, or change
+- A model a state runs on its own servers, such as Whisper or NVIDIA Riva, is
+  a real option for a state that doesn't want interview audio sent to a
+  vendor, and has no browser path of its own. A relay also lets a state keep audio inside its own boundary, or change
   the service behind it without changing the adapter.
 
 **Options:**
@@ -922,7 +927,7 @@ decides whether a deployment can use them.
   then depends on a vendor's format.
 - **(C) ✓** A relay that implements a relay contract the blueprint defines,
   in AsyncAPI: one adapter works with any relay, for any service behind it.
-  The operation in [Decision 11](#decision-11-the-adapter-asks-its-server-part-how-to-stream-in-one-shape-for-every-service)
+  The operation in [Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)
   answers with the relay's URL and a credential the relay accepts.
 
 **Decision:** Choosing a service behind a relay means running the relay: a
@@ -1108,7 +1113,7 @@ service doesn't hear it decides what pausing has to do to the connection.
   done differently by each vendor; disconnecting and connecting again is the
   same for all of them.
 - The adapter already knows how to start: it gets a credential and connects
-  ([Decision 11](#decision-11-the-adapter-asks-its-server-part-how-to-stream-in-one-shape-for-every-service)).
+  ([Decision 11](#decision-11-the-adapter-asks-its-credentials-part-how-to-stream-in-one-shape-for-every-service)).
 
 **Options:**
 - **(A)** Stay connected and stop sending audio. No new state, but every
@@ -1187,7 +1192,7 @@ subject and partition key, so one session's events stay in order.
 
 | What happens | Who | How | State | What else follows |
 |---|---|---|---|---|
-| Start | The app | `start` | `created` → `connecting` | The session starts the transcript the first time, then calls `startStream` |
+| Start | The app | `start` | `created` → `connecting` | The session starts the transcript unless it names one to carry on, reads its profile, then calls `startStream` |
 | The connection is open | The adapter | `connected` | `connecting` or `disconnected` → `connected` | With a `gap`, the transcript keeps the stretch that was lost ([Decision 9](#decision-9-a-dropped-connection-is-a-gap-not-an-event)) |
 | The connection dropped | The adapter | `disconnected` | `connected` → `disconnected` | The adapter reconnects on its own |
 | Gave up | The adapter | `failed` | `connecting` or `disconnected` → `failed` | The transcript stays open |
@@ -1307,8 +1312,8 @@ until they are closed; the profiles the framework provides set 30 minutes.
 
 - **The session adapter's code** — signing in to the service, streaming audio,
   reconnecting, and turning the service's results into lines are the
-  adapter's; issuing a credential with the service's secret is its server
-  part's. The contracts say what each must do and publish.
+  adapter's; issuing a credential with the service's secret is its
+  credentials part's. The contracts say what each must do and publish.
 - **Capturing audio** — the microphone or the call window, which a browser grants
   only to the page.
 - **Storing audio** — the blueprint keeps the record, not the recording.
