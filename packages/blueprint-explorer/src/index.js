@@ -7,3 +7,4 @@ export { build as buildEventCatalog }        from './event-catalog.js';
 export { build as buildApiReference }        from './api-reference.js';
 export { build as buildTryIt }               from './try-it/build.js';
 export { build as buildHub }                 from './hub.js';
+export { bundleSiteRouting }                 from './lib/site-routing.js';

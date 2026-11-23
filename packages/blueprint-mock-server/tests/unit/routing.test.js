@@ -300,9 +300,9 @@ test('planRouting — refuses a target carrying a username or password', () => {
 });
 
 test('planRouting — needs one of to and handler, and not both', () => {
-  assert.throws(() => plan([{ operation: 'createApplication' }]), /must match a schema in anyOf|needs exactly one of "to" or "handler"/);
+  assert.throws(() => plan([{ operation: 'createApplication' }]), /needs exactly one of "to" or "handler"/);
   assert.throws(() => plan([{ operation: 'createApplication', to: 'https://x.test', handler: () => new Response() }]), /needs exactly one of "to" or "handler"/);
-  assert.throws(() => plan([{ operation: 'createApplication', handler: 'not a function' }]), /handler is a function/);
+  assert.throws(() => plan([{ operation: 'createApplication', handler: 42 }]), /handler/);
 });
 
 test('planRouting — needs exactly one of domain, api and operation', () => {

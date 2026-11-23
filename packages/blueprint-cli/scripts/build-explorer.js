@@ -35,6 +35,7 @@ import {
   buildApiReference,
   buildTryIt,
   buildHub,
+  bundleSiteRouting,
 } from '@codeforamerica/blueprint-explorer';
 
 const args        = process.argv.slice(2);
@@ -90,6 +91,14 @@ if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
 if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
 if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
 if (doBuild('scenarios'))         buildTryIt({ contentDir, resolvedDir });
+
+// The site's routing, checked against the contracts and bundled with its modules.
+try {
+  await bundleSiteRouting({ configDir, outDir, resolvedDir });
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 // Hub is always rebuilt last so it can scan all tool output directories
 buildHub({ contentDir, authoredDir });

@@ -450,6 +450,46 @@ export interface RulesEntry {
   rulesets: Array<{ name: string; path: string }>;
 }
 
+/** One route: a domain, API or operation, and who answers it (schemas/routing-schema.yaml). */
+export interface Route {
+  domain?: string;
+  api?: string;
+  operation?: string;
+  /** Only the requests whose JSON body has these values, by dot path: one of several implementations, chosen per request. */
+  match?: Record<string, string | number | boolean>;
+  except?: Array<{ api: string } | { operation: string }>;
+  to?: string;
+  /**
+   * Code that answers: in a file, a module's path; in code, a function
+   * answering every operation the route covers, or a module of them by operationId.
+   */
+  handler?: string | RouteHandler | Record<string, RouteHandler>;
+  includeHeaders?: string[];
+  timeoutMs?: number;
+}
+
+/** A routed handler: the request, its path parameters, and the means to publish an event or make another call. */
+export type RouteHandler = (
+  request: Request,
+  context: {
+    params: Record<string, string>;
+    publish: (event: string, data?: object, options?: { subject?: string; partitionkey?: string }) => Promise<{ status: number; body: unknown }>;
+    call: (operationId: string, options?: { params?: Record<string, string>; query?: Record<string, string>; body?: unknown; headers?: Record<string, string> }) => Promise<{ status: number; body: unknown }>;
+  },
+) => Response | Promise<Response>;
+
+/**
+ * Check routing against its schema and against the contracts it routes:
+ * every domain, API, operation and except it names exists, each field a match
+ * names is in a request it routes with a value that field allows, and each
+ * route has one answer. Warns when a single operation is routed apart from
+ * its resource's other operations. Runs in a browser too.
+ */
+export function validateRouting(
+  document: { routing: Route[] },
+  docs: Doc[],
+): { errors: string[]; warnings: string[] };
+
 /**
  * Read out a fact the documents already state.
  *

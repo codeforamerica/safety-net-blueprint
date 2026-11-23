@@ -41,7 +41,7 @@ export { runScenario, startScenario, operationIndex, controlOperations } from '.
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {Array} [options.routing] - Domains, APIs and operations something
  *   else answers — a service at a URL, or a `handler` function this page
- *   passes — as `schemas/routing-schema.json` describes the entries.
+ *   passes — as blueprint-core's `schemas/routing-schema.yaml` describes the entries.
  *   Configuration for this page, not part of the contract set.
  * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[], routed: string[], stopFollowing: () => void, WebSocket: typeof WebSocket }>}
  *   `stopFollowing` stops reading the events of services routing sends to,

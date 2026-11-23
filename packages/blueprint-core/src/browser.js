@@ -37,3 +37,4 @@
 
 export { extract } from './extract.js';
 export { generate } from './generate.js';
+export { validateRouting } from './routing.js';

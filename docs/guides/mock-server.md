@@ -363,7 +363,7 @@ A close reason over the network is cut to the 123 bytes a WebSocket frame holds,
 
 ## Routing to a real service
 
-Routing hands a domain, an API, a socket or a single operation to something other than the mock — a real service at a URL, or a function a page passes in — while everything else stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
+Routing hands a domain, an API, a socket or a single operation to something other than the mock — a real service at a URL, or code — while everything else stays mocked. Routing is configuration, not part of the contracts; why, and how the same rules carry over to a state's own gateway, is in [routing](../architecture/cross-cutting/routing.md). It is how a state connects its backend one domain at a time without leaving the mock environment, and how a page with no backend answers an operation itself.
 
 ```yaml
 # routing.yaml — per environment; keep it out of the contracts directory
@@ -383,22 +383,60 @@ routing:
 npm run mock:start -- --spec=<contracts> --routing=routing.yaml
 ```
 
-In a page, pass the same entries to `createMockServer({ contracts, routing })`, or to `createMockClient`, which keeps a page's own APIs and sends the rest to the server with a `*` entry (the [mock's README](../../packages/blueprint-mock-server/README.md#a-client-and-a-server)). Both are checked against [`schemas/routing-schema.json`](../../packages/blueprint-mock-server/schemas/routing-schema.json).
+In a page, pass the same entries to `createMockServer({ contracts, routing })`, or to `createMockClient`, which keeps a page's own APIs and sends the rest to the server with a `*` entry (the [mock's README](../../packages/blueprint-mock-server/README.md#a-client-and-a-server)). Both are checked against [`schemas/routing-schema.yaml`](../../packages/blueprint-core/schemas/routing-schema.yaml) in blueprint-core, and against the contracts, by core's `validateRouting`.
 
 | Field | |
 |---|---|
 | `domain` | Every route the domain's APIs declare, state machine actions included, and every event their state machines receive. Named by its directory under `domains/`, or `*` for every domain, which also answers any request the mock has no route for. |
 | `api` | One API's routes and received events. Named by its OpenAPI file's name without `-openapi.yaml` — `intake`, `communication-transcripts` — which its events AsyncAPI shares. Or a socket, by its AsyncAPI file's name without `-asyncapi.yaml`: [Routing a socket](#routing-a-socket). |
 | `operation` | One operation, by its id: an OpenAPI `operationId`, or an AsyncAPI `receive` operation's. Bare when one API declares it; `$apis.<api>.<id>` when more than one does. |
+| `match` | Only the requests whose JSON body has these values: dot paths into the body, each with the value it must equal, as a [stub's match](#http-stubs) is written. For several implementations of one API: [Several implementations](#several-implementations). Only on an `api` or `operation` entry. |
 | `except` | What stays in the mock, inside the entry: `{ api }` or `{ operation }` on a domain, any of them on `*`, `{ operation }` on an API. Not on an operation entry. |
 | `to` | The service's base URL. For a request, its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. For a socket, a `ws` or `wss` URL, used as written. It may not carry a username or password. |
-| `handler` | A function that answers instead, `(request) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has; for a socket, the `WebSocket` constructor's. Code only, so a page can pass one and a file can't. |
+| `handler` | Code that answers instead. In a file, the path of a JavaScript module, relative to the file, that exports a handler for each operation it answers, by operationId. In code, a function, `(request, context) => response` — `fetch`'s signature, as an [MSW](https://mswjs.io/) resolver has — answering every operation the entry covers, or such a module itself. For a socket, the `WebSocket` constructor's, in code only. [Handlers](#handlers). |
 | `includeHeaders` | Headers to pass along beyond the defaults, below. |
 | `timeoutMs` | How long to wait before answering `504`, or for a socket's connection to open. Defaults to 10000. |
 
-Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, a domain over `*`, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, or carries a key the schema does not.
+Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` or `handler`. When entries overlap, the narrowest answers: an operation over an API, an API over a domain, a domain over `*`, whichever is listed first. The server refuses to start when an entry names nothing the contracts declare, names the same thing twice, names an operation more than one API declares without qualifying it, names a `send` operation — an API sends its own events — has an `except` outside it, matches a field no request it routes has or a value the field doesn't allow, or carries a key the schema does not. `blueprint validate --resolved=<contracts> --routing=<file>` runs the same checks without starting anything.
 
-**Prefer a domain to an operation.** A routed operation answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Routing the whole domain keeps them together.
+**Prefer a domain to an operation.** A routed operation answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Routing the whole domain keeps them together. The server warns about an operation routed apart from the rest of its API, unless something outside the contracts answers it anyway, as an adapter's operations are.
+
+### Handlers
+
+A handler gets the request and a context: `params`, the request's path parameters; `call(operationId, { params, query, body })`, which makes another call, through routing, and answers `{ status, body }`; and `publish(event, data, { subject })`, which sends an event the contracts declare, named by its type or the end of it — `transcription_session.connected` — through `publishEvent`, so it goes wherever routing sends publishing. A module can leave operations out: one it doesn't export is answered as if it weren't routed. A module that answers none of what its entry routes stops the server.
+
+```yaml
+routing:
+  - api: communication-transcription-sessions-adapter
+    handler: ./adapters/transcribe.js
+```
+
+```js
+// adapters/transcribe.js
+export async function startStream(request, { publish, call }) {
+  const stream = await request.json();
+  const { body: credentials } = await call('requestCredentials', { body: { /* … */ } });
+  // … connect to the service, then report:
+  await publish('transcription_session.connected', { transcriptId: stream.transcriptId }, { subject: stream.transcriptionSessionId });
+  return Response.json({ metadata: stream.metadata ?? {} }, { status: 202 });
+}
+```
+
+### Several implementations
+
+When more than one implementation answers the same API — one session adapter per transcription service — give each entry a `match`. The first whose match the request's body meets answers it:
+
+```yaml
+routing:
+  - api: communication-transcription-sessions-adapter
+    match: { provider: whisper }
+    handler: ./adapters/whisper.js
+  - api: communication-transcription-sessions-adapter
+    match: { provider: aws-transcribe }
+    handler: ./adapters/transcribe.js
+```
+
+`startStream` carries `provider`, from the session's profile, so it picks the entry. `pauseStream` and `stopStream` carry no `provider`: they go to the entry that answered the earlier request naming the same session, by a path parameter with the name and value of one of that request's fields. A request no entry matches is answered `501`.
 
 ### Answering in a page
 
@@ -434,7 +472,7 @@ handler: async (request) => {
 },
 ```
 
-A built explorer takes its routing from a script of the site's own: see the explorer's README.
+A built explorer takes its routing from `routing:` in its `config.yaml`, or from a script of the site's own: see the explorer's README.
 
 What a handler answers is checked against the operation's response schema. One the schema doesn't allow is answered `502`, naming what is wrong, and logged, so a broken handler shows at once.
 

@@ -1,7 +1,8 @@
 {
-  "$id": "https://blueprint.codeforamerica.org/schemas/routing-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blueprint.codeforamerica.org/schemas/routing-schema.yaml",
   "title": "Routing",
-  "description": "Domains, APIs, sockets and operations that something other than the mock answers: a service at a URL, or a function passed in code. Per-environment configuration, read at boot; never part of a contract set.",
+  "description": "Where each domain, API, socket and operation is answered in one deployment, when something other than the blueprint's own runtime answers it: a service at a URL, or code. Per-environment configuration, read when the runtime starts; never part of a contract set. See docs/conventions/patterns/routing.yaml.",
   "type": "object",
   "required": [
     "routing"
@@ -11,13 +12,13 @@
     "routing": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Route"
+        "$ref": "#/$defs/Route"
       }
     }
   },
-  "definitions": {
+  "$defs": {
     "Route": {
-      "description": "One domain, API or operation, and who answers it: exactly one of domain, api and operation, and one of to and handler.",
+      "description": "One domain, API or operation, and who answers it: exactly one of domain, api and operation, and exactly one of to and handler. With match, only the requests it matches: one of several implementations of the same API or operation, such as one session adapter per transcription service.",
       "type": "object",
       "oneOf": [
         {
@@ -79,6 +80,23 @@
             "$apis.workflow.receiveIntakeApplicationSubmitted"
           ]
         },
+        "match": {
+          "description": "Only the requests whose JSON body has these values: dot paths into the body, each with the value it must equal, as a stub's match is written. Several entries for the same API or operation, each with its own match, are implementations chosen per request, such as one per transcription service, by startStream's provider. A later request with none of the fields, such as stopStream's, goes to the entry that answered the earlier request naming the same resource: by a path parameter with the name and value of a field of that request. Only on an api or operation entry.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "examples": [
+            {
+              "provider": "whisper"
+            }
+          ]
+        },
         "except": {
           "description": "What stays in the mock, inside this entry: on a domain, an API in it or an operation; on *, any API or operation; on an API, an operation in it. Not on an operation entry.",
           "type": "array",
@@ -120,7 +138,16 @@
           "pattern": "^(https?|wss?)://[^/@?#]+([/?#].*)?$"
         },
         "handler": {
-          "description": "A function that answers instead, passed in code only, so never in a file. For a domain, API or operation, it has fetch's signature, (Request) => Response; a received event reaches it as the request to would have been sent, and what it answers is checked against the operation's response schema. For a socket, it has the WebSocket constructor's signature, used as new handler(url, protocols), and every message it sends is checked against the messages the contract lets the socket send."
+          "description": "Code that answers instead. In a file, a JavaScript module, by path relative to the file, that exports a handler for each operation it answers, by operationId; it needn't answer every operation the entry covers, and one it doesn't answer is answered as if the entry weren't there. In code, a function, with fetch's signature, that answers every operation the entry covers, or such a module itself. A handler gets a second argument, { params, publish, call }: the request's path parameters; publish(event, data, { subject }), to send an event the contracts declare; and call(operationId, { params, query, body }), to make another call, through routing. A received event reaches a handler as the request to would have been sent, and what it answers is checked against the operation's response schema. For a socket, a class used as new WebSocket(url, protocols), in code only.",
+          "if": {
+            "type": "string"
+          },
+          "then": {
+            "pattern": "\\.(m?js)$"
+          },
+          "examples": [
+            "./adapters/whisper.js"
+          ]
         },
         "includeHeaders": {
           "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included. Not on a socket: a browser's WebSocket sends no headers of its own, and its subprotocols, a token among them, are passed on as offered.",
@@ -136,7 +163,30 @@
           "type": "integer",
           "minimum": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "match"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "api"
+                ]
+              },
+              {
+                "required": [
+                  "operation"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     }
   }
 }

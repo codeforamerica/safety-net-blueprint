@@ -131,10 +131,15 @@ export function assembleServer(
   refuseOwnRouteCollisions(routes, apiSpecs);
   const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]));
   const byApiAndId = new Map(details.map((operation) => [`${operation.api}#${operation.id}`, operation]));
+  // A routed handler's calls go through the mock's own dispatcher, routing
+  // included, once it exists.
+  let dispatcher = null;
   const { routed, receives, sends, unmatched } = applyRouting(routes, routing, {
     instance,
     operations,
     domainOfApi,
+    docs,
+    dispatch: () => dispatcher,
     // What a routed handler's answer is checked against.
     responseSchema: (route, status) => {
       const operation = byApiAndId.get(`${route.api}#${route.operationId}`);
@@ -151,6 +156,7 @@ export function assembleServer(
   const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { instance });
 
   // An action calling an operation as its caller sends the call through here.
-  stepCalls.serve(createDispatcher(routes, { unmatched }));
+  dispatcher = createDispatcher(routes, { unmatched });
+  stepCalls.serve(dispatcher);
   return { routes, fetch: createDispatcher(routes, { basePath, unmatched }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
 }

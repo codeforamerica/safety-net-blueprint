@@ -68,6 +68,24 @@ featured_links:                # under the tagline
 - **`featured_heading`** puts a label before the featured links, such as "For state leadership". There's none by default.
 - **`blueprint_pages: true`** adds the Blueprint's own pages for state leadership (executive summary, adoption model, architecture principles) under `authored/`. A site gets none of them otherwise.
 
+### A site's routing
+
+Name a routing file in `config.yaml`, relative to it, to send some operations to real services, or to code of the site's own, instead of the mock in the page:
+
+```yaml
+routing: routing.yaml
+```
+
+```yaml
+# routing.yaml, in the mock server's routing format
+routing:
+  - api: communication-transcription-sessions-adapter
+    match: { provider: aws-transcribe }
+    handler: ./adapters/transcribe.js
+```
+
+A `handler` is a JavaScript module that exports a handler for each operation it answers, by operationId, as the mock server guide's [handlers](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#handlers) describes. The build checks the routing against the contracts and fails, listing each problem, when it's wrong. It then bundles the file with the modules it names, and whatever they import, into `site-routing.js`, which every page loads after the site's own script, since a page opened from disk can't import a module.
+
 ### A site's own script
 
 Name a JavaScript file in `config.yaml`, relative to it, and every page loads it before the mock starts:

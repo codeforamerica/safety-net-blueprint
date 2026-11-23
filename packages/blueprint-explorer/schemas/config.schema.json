@@ -70,6 +70,11 @@
       "type": "string",
       "pattern": "^(?!/)(?!.*\\.\\.).+\\.js$"
     },
+    "routing": {
+      "description": "A routing file of the site's own, relative to config.yaml (e.g. routing.yaml), in blueprint-core's routing format: which operations a service at a URL, or a module of the site's, answers instead of the mock in the page, such as a transcription session adapter for one service. The build checks it against the contracts, bundles it with the modules it names, and loads it on every page, after the site's script.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*\\.\\.).+\\.(ya?ml|json)$"
+    },
     "pages": {
       "description": "A folder of the site's own pages, relative to config.yaml (e.g. pages). Each Markdown page is rendered in the explorer's layout as an HTML page of the same name, titled by its first heading; anything else is copied as it is. Link a page from featured_links (e.g. pages/getting-started.html).",
       "type": "string",

@@ -27,8 +27,7 @@
  * the same schema, so a bad array and a file with a typo fail the same way.
  */
 
-import { assertValid, dotted } from './mock-schemas.js';
-import schema from '../schemas/routing-schema.json' with { type: 'json' };
+import { validateRouting } from '@codeforamerica/blueprint-core/browser';
 
 /**
  * Request headers that travel without being named.
@@ -73,6 +72,28 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /**
+ * The answer a registered HTTP stub gives a request, if one matches, used
+ * up as it answers: a stub is a per-test override, and outranks routing the
+ * same way it outranks normal mock handling, whether the route goes to a URL,
+ * a module or a handler. Answered the way the mock's own handler for this
+ * method would answer it, so a stub behaves the same whether or not its route
+ * is real.
+ *
+ * @param {object|null} stubs - The mock's HTTP stubs (mock-stub-engine.js)
+ * @param {Request} request
+ * @returns {Response|null}
+ */
+function stubbedAnswer(stubs, request) {
+  const httpStub = stubs?.matchAndPopHttp(request.method, new URL(request.url).pathname);
+  if (!httpStub) return null;
+  const isDelete = request.method.toUpperCase() === 'DELETE';
+  const status = httpStub.response?.status ?? (isDelete ? 204 : 200);
+  return status === 204 || (isDelete && !httpStub.response?.body)
+    ? new Response(null, { status })
+    : Response.json(httpStub.response?.body ?? {}, { status });
+}
+
+/**
  * A handler that reissues the request to `target`.
  *
  * @param {string} target - Absolute base URL of the real service
@@ -88,18 +109,8 @@ export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIM
   return async function forwarded(request) {
     const incoming = new URL(request.url);
 
-    // A stub is a per-test override, and outranks the configuration the same
-    // way it outranks normal mock handling.
-    const httpStub = stubs?.matchAndPopHttp(request.method, incoming.pathname);
-    // Answered the way the mock's own handler for this method would answer
-    // it, so a stub behaves the same whether or not its route is real.
-    if (httpStub) {
-      const isDelete = request.method.toUpperCase() === 'DELETE';
-      const status = httpStub.response?.status ?? (isDelete ? 204 : 200);
-      return status === 204 || (isDelete && !httpStub.response?.body)
-        ? new Response(null, { status })
-        : Response.json(httpStub.response?.body ?? {}, { status });
-    }
+    const stubbed = stubbedAnswer(stubs, request);
+    if (stubbed) return stubbed;
 
     const base = new URL(target);
     // The target's own path is a prefix, not something the route replaces:
@@ -177,35 +188,28 @@ export function forwardTo(target, { includeHeaders = [], timeoutMs = DEFAULT_TIM
 function entryName(entry, index) {
   if (entry?.domain === EVERY_DOMAIN) return 'The routing entry for every domain';
   if (typeof entry?.domain === 'string') return `Routed domain "${entry.domain}"`;
-  if (typeof entry?.api === 'string') return `Routed API "${entry.api}"`;
-  if (typeof entry?.operation === 'string') return `Routed operation "${entry.operation}"`;
+  const matching = entry?.match && typeof entry.match === 'object'
+    ? ` matching ${Object.entries(entry.match).map(([path, value]) => `${path}=${value}`).join(', ')}` : '';
+  if (typeof entry?.api === 'string') return `Routed API "${entry.api}"${matching}`;
+  if (typeof entry?.operation === 'string') return `Routed operation "${entry.operation}"${matching}`;
   return `Routing entry #${index + 1}`;
 }
 
-/** Throw every way `document` disagrees with the schema, naming each entry. */
-function checkSchema(document) {
-  const entries = Array.isArray(document?.routing) ? document.routing : [];
-  assertValid(schema, document, (pointer) => {
-    const [, index, rest = ''] = pointer.match(/^\/routing\/(\d+)(.*)$/) ?? [];
-    if (index === undefined) {
-      return [pointer === '' ? 'The routing configuration' : 'routing', ''];
-    }
-    return [entryName(entries[Number(index)], Number(index)), dotted(rest)];
-  }, { oneOf: 'needs exactly one of "domain", "api" or "operation"' });
-}
-
 /**
- * The entries a configuration file declares, once it has been checked.
- *
- * The file is the schema's whole document, so an empty file or a misspelled
- * top-level key fails here rather than loading as nothing to route — which
- * would boot a server that looks configured and routes nothing.
+ * The entries a routing file declares. The file is the whole document, so an
+ * empty file or a misspelled top-level key fails here rather than loading as
+ * nothing to route, which would boot a server that looks configured and routes
+ * nothing. Everything else is checked against the contracts when the mock
+ * starts (planRouting, with core's validateRouting).
  *
  * @param {unknown} document - The parsed file
  * @returns {Array}
  */
 export function routingFromDocument(document) {
-  checkSchema(document);
+  if (!document || typeof document !== 'object' || Array.isArray(document)) throw new Error('The routing configuration must be object');
+  if (!Array.isArray(document.routing)) throw new Error('The routing configuration needs "routing", a list of entries');
+  const extra = Object.keys(document).filter((key) => key !== 'routing' && !key.startsWith('$'));
+  if (extra.length) throw new Error(extra.map((key) => `The routing configuration has an unknown key "${key}"`).join('\n'));
   return document.routing;
 }
 
@@ -242,79 +246,22 @@ const narrowness = (entry) => (entry.operation ? 2 : entry.api ? 1 : entry.domai
  * @param {Map<string, { paths: string[] }>} [context.sockets] - APIs reached over their own connection, which the mock serves (ws.js)
  * @returns {{ byRoute: Map<string, object>, receives: Array<{ api: string, event: string, id: string, entry: object }>, sockets: Array<{ api: string, entry: object }> }}
  */
-export function planRouting(routing, { routes, operations, domainOfApi, sockets = new Map() }) {
-  checkSchema({ routing });
-
-  const find = (ref, name) => {
-    const { operation, candidates } = operations?.find(ref) ?? { candidates: [] };
-    if (operation) return operation;
-    throw new Error(candidates.length > 1
-      ? `${name} names an operation more than one API declares; write ${candidates.map((o) => `$apis.${o.api}.${o.id}`).join(' or ')}`
-      : `${name} names no operation the contracts declare`);
+export function planRouting(routing, { routes, operations, domainOfApi, docs, sockets = new Map() }) {
+  // What routing names, checked against its schema and the contracts by core,
+  // so the mock, the explorer and `blueprint validate` say the same thing.
+  // Without the contract set, as in a test, what's known of it.
+  const contracts = docs ?? {
+    operations, domainOfApi, sockets: new Set(sockets.keys()), requestFields: new Map(), external: new Set(),
   };
-  const apis = new Set(domainOfApi.keys());
-  const domains = new Set(domainOfApi.values());
+  const { errors, warnings, entries } = validateRouting({ routing }, contracts);
+  if (errors.length) throw new Error(errors.join('\n'));
+  for (const warning of warnings) console.warn(`  Warning: ${warning}`);
 
-  // What each entry names, once, checked: the domain, API or operation, and
-  // what its except takes back out.
-  const seen = new Set();
-  const entries = routing.map((entry, index) => {
-    const name = entryName(entry, index);
-    const id = entry.domain ? `domain ${entry.domain}` : entry.api ? `api ${entry.api}` : `operation ${entry.operation}`;
-    if (seen.has(id)) throw new Error(`${name} is configured more than once`);
-    seen.add(id);
-    if (Boolean(entry.to) === Boolean(entry.handler)) throw new Error(`${name} needs exactly one of "to" or "handler"`);
-    if (entry.handler !== undefined && typeof entry.handler !== 'function') {
-      throw new Error(`${name}'s handler is a function passed in code: (request) => response, or for an API reached over its own connection, a class used as new WebSocket(url, protocols)`);
-    }
-
-    let operation = null;
-    if (entry.domain && entry.domain !== EVERY_DOMAIN && !domains.has(entry.domain)) {
-      throw new Error(`${name} declares no APIs. Domains the contracts declare: ${[...domains].sort().join(', ')}`);
-    }
-    if (entry.api && !apis.has(entry.api)) {
-      throw new Error(`${name} is no API the contracts declare. APIs: ${[...apis].sort().join(', ')}`);
-    }
-    if (entry.api && sockets.has(entry.api)) {
-      // A socket's messages all travel on one connection, which goes one place.
-      if (entry.except) throw new Error(`${name} is reached over its own connection, which goes one place, so it takes no except`);
-      // A browser's WebSocket sends no headers of its own; its subprotocols, a token among them, are passed on as offered.
-      if (entry.includeHeaders) throw new Error(`${name} is reached over its own connection, which passes on the subprotocols the client offered and no headers, so it takes no includeHeaders`);
-    }
-    if (entry.operation) {
-      operation = find(entry.operation, name);
-      if (sockets.has(operation.api)) {
-        throw new Error(`${name} is an operation of ${operation.api}, which is reached over its own connection; its messages all travel on it, so route the API instead`);
-      }
-      if (operation.kind === 'asyncapi' && operation.action !== 'receive') {
-        throw new Error(`${name} is a send operation; an API sends its own events. Route the receive operation that hears it instead.`);
-      }
-      if (entry.except) throw new Error(`${name} is one operation, so it takes no except`);
-    }
-    if (!(entry.api && sockets.has(entry.api)) && /^wss?:/.test(entry.to ?? '')) {
-      throw new Error(`${name} is routed to a WebSocket URL, ${entry.to}; only an API reached over its own connection is. Use an http or https URL`);
-    }
-
-    const except = (entry.except ?? []).map((item) => {
-      if (item.api) {
-        if (entry.domain === EVERY_DOMAIN && !apis.has(item.api)) {
-          throw new Error(`${name} excepts API "${item.api}", which the contracts don't declare. APIs: ${[...apis].sort().join(', ')}`);
-        }
-        if (entry.domain !== EVERY_DOMAIN && (!entry.domain || domainOfApi.get(item.api) !== entry.domain)) {
-          throw new Error(`${name} excepts API "${item.api}", which isn't inside it. An except names an API in the entry's domain, or an operation in the entry's domain or API.`);
-        }
-        return { api: item.api };
-      }
-      const excepted = find(item.operation, `${name}'s except`);
-      const inside = entry.api ? excepted.api === entry.api
-        : entry.domain === EVERY_DOMAIN || domainOfApi.get(excepted.api) === entry.domain;
-      if (!inside) throw new Error(`${name} excepts "${item.operation}", which isn't inside it.`);
-      return { operation: excepted };
-    });
-    return { entry, name, operation, except };
-  });
-
-  /** The narrowest entry that covers a thing, unless its except takes it back. */
+  /**
+   * The narrowest entry that covers a thing, unless its except takes it back;
+   * or, when entries of that narrowness have a match, all of them, chosen
+   * between per request (byMatch).
+   */
   const covering = ({ domain, api, id }) => {
     // Only an entry naming a socket routes it.
     if (sockets.has(api)) return null;
@@ -324,7 +271,10 @@ export function planRouting(routing, { routes, operations, domainOfApi, sockets 
     const chosen = covers.sort((a, b) => narrowness(b.entry) - narrowness(a.entry))[0];
     if (!chosen) return null;
     const excepted = chosen.except.some((e) => (e.api ? e.api === api : e.operation.api === api && e.operation.id === id));
-    return excepted ? null : chosen;
+    if (excepted) return null;
+    if (!chosen.entry.match) return chosen;
+    const matching = covers.filter((c) => c.entry.match && narrowness(c.entry) === narrowness(chosen.entry));
+    return { ...chosen, entry: { matching: matching.map((c) => c.entry) } };
   };
 
   const byRoute = new Map();
@@ -336,7 +286,7 @@ export function planRouting(routing, { routes, operations, domainOfApi, sockets 
   // An operation entry names something the route table may not hold under
   // that id — one of the mock's own routes, say.
   for (const { entry, name, operation } of entries) {
-    if (operation?.kind !== 'openapi') continue;
+    if (operation?.kind !== 'openapi' || entry.match) continue;
     const served = [...routes].find(([, route]) => route.api === operation.api && route.operationId === operation.id);
     if (!served) throw new Error(`${name} matches no route the mock serves`);
     if (served[1].mock) throw new Error(`${name} is one the mock serves itself, not one the contracts declare`);
@@ -372,9 +322,9 @@ export function planRouting(routing, { routes, operations, domainOfApi, sockets 
  * @param {{ validate: Function }} schemas - The mock's validator
  * @returns {(request: Request) => Promise<Response>}
  */
-function checkedHandler(handler, responseSchema, name, schemas) {
-  return async function routed(request) {
-    const response = await handler(request);
+function checkedHandler(handler, responseSchema, name, schemas, context = {}) {
+  return async function routed(request, matched = {}) {
+    const response = await handler(request, { ...context, params: matched.params ?? {} });
     if (!(response instanceof Response)) {
       const message = `The handler routed for ${name} returned ${response === null ? 'null' : typeof response}, not a Response.`;
       console.warn(message);
@@ -421,22 +371,170 @@ export function applyRouting(routes, routing = [], context) {
   if (routing.length === 0) return { routed: [], receives: [], sends: [], unmatched: null };
   const sockets = context.instance?.ws?.sockets() ?? new Map();
   const { byRoute, receives, sends, everything, sockets: routedSockets } = planRouting(routing, { ...context, routes, sockets });
+  const reporting = handlerContext(routes, context);
+
+  /**
+   * Who answers a route for one entry: its handler, the one its module
+   * exports for the route's operation, or its URL. Null when the entry's
+   * module doesn't answer the route's operation.
+   */
+  const answerFor = (entry, key, route) => {
+    const handler = handlerFor(entry, route);
+    if (entry.handler !== undefined && !handler) return null;
+    return handler
+      ? checkedHandler(handler, (status) => context.responseSchema(route, status), key, context.instance.schemas, reporting)
+      : forwardTo(entry.to, { includeHeaders: entry.includeHeaders, timeoutMs: entry.timeoutMs, stubs: context.instance.stubs });
+  };
+  // Which entry answered for a resource, for the requests after: one map per
+  // group of matching entries, shared by the routes they cover.
+  const chosen = new WeakMap();
+  // The entries whose module answered something, so one answering nothing fails.
+  const used = new Set();
+  const answering = (entry, key, route) => {
+    const answer = answerFor(entry, key, route);
+    if (answer) used.add(entry);
+    return answer;
+  };
 
   for (const [key, entry] of byRoute) {
     const route = routes.get(key);
-    route.handler = entry.handler
-      ? checkedHandler(entry.handler, (status) => context.responseSchema(route, status), key, context.instance.schemas)
-      : forwardTo(entry.to, { includeHeaders: entry.includeHeaders, timeoutMs: entry.timeoutMs, stubs: context.instance.stubs });
+    if (entry.matching) {
+      const memory = chosen.get(entry.matching[0]) ?? new Map();
+      chosen.set(entry.matching[0], memory);
+      const answers = entry.matching.map((matching) => ({ entry: matching, match: matching.match, answer: answering(matching, key, route) }))
+        .filter(({ answer }) => answer);
+      if (!answers.length) continue;
+      route.handler = byMatch(answers, memory, key);
+    } else {
+      const answer = answering(entry, key, route);
+      if (!answer) continue;
+      route.handler = answer;
+    }
+    // A stub answers first, whoever the route goes to.
+    const answer = route.handler;
+    route.handler = async (request, matched) => stubbedAnswer(context.instance.stubs, request) ?? answer(request, matched);
     // Marked, so a check that reads the mock's records knows these aren't the ones that count.
     route.routed = true;
   }
+  const idle = routing.filter((entry) => entry.handler && typeof entry.handler === 'object' && !used.has(entry));
+  if (idle.length) {
+    throw new Error(idle.map((entry) => `${entryName(entry, routing.indexOf(entry))}'s module exports a handler for none of the operations it's routed for`).join('\n'));
+  }
   // No operation to check a handler's answer against, so it's passed on as it is.
   const unmatched = everything && (everything.handler
-    ? async (request) => everything.handler(request)
+    ? async (request) => everything.handler(request, reporting)
     : forwardTo(everything.to, { includeHeaders: everything.includeHeaders, timeoutMs: everything.timeoutMs, stubs: context.instance.stubs }));
   for (const { api, entry } of routedSockets) context.instance.ws.route(api, entry);
   const routedPaths = routedSockets.flatMap(({ api }) => sockets.get(api).paths.map((path) => `WS ${path}`));
   return { routed: [...byRoute.keys(), ...routedPaths], receives, sends, unmatched };
+}
+
+/**
+ * The handler an entry gives a route: its function, which answers every
+ * operation it covers; or, from a module, the export named for the route's
+ * operationId, null when it has none. A module needn't answer every operation
+ * of the API it's routed for, as an adapter that signs no tokens has no key
+ * set; one it doesn't answer stays as the mock answers it. A module's path,
+ * as a file writes it, is loaded by whoever reads the file (the CLI, the
+ * explorer's build) before it gets here.
+ */
+function handlerFor(entry, route) {
+  const { handler } = entry;
+  if (handler === undefined || typeof handler === 'function') return handler ?? null;
+  if (typeof handler === 'string') {
+    throw new Error(`${entryName(entry, 0)}'s handler, ${handler}, wasn't loaded: pass the module itself in code, or read routing from a file with the CLI or the explorer's build`);
+  }
+  const named = handler[route.operationId] ?? handler.default?.[route.operationId];
+  if (named === undefined) return null;
+  if (typeof named !== 'function') throw new Error(`${entryName(entry, 0)}'s module exports ${route.operationId}, which isn't a function`);
+  return named;
+}
+
+/**
+ * A route several entries answer, each with a match: the first whose match
+ * the request's JSON body meets answers it, and a later request with none of
+ * the fields the entries match on goes to the entry that answered the earlier
+ * request naming the same resource, by a path parameter with the name and
+ * value of a field of that request. A content-based router (Enterprise
+ * Integration Patterns).
+ *
+ * @param {Array<{ entry: object, match: object, answer: Function }>} answers - This route's answer from each entry
+ * @param {Map<string, object>} memory - `field=value` → the entry that answered, shared by the group's routes
+ * @param {string} key - The route, for the message
+ */
+function byMatch(answers, memory, key) {
+  const fields = [...new Set(answers.flatMap(({ match }) => Object.keys(match)))];
+  const at = (body, path) => path.split('.').reduce((value, part) => value?.[part], body);
+  return async function chooseByMatch(request, matched = {}) {
+    const body = await request.clone().json().catch(() => null);
+    const named = body && fields.some((path) => at(body, path) !== undefined);
+    let chosen = null;
+    if (named) {
+      chosen = answers.find(({ match }) => Object.entries(match).every(([path, value]) => at(body, path) === value)) ?? null;
+      if (chosen) {
+        for (const [field, value] of Object.entries(body)) {
+          if (typeof value === 'string') memory.set(`${field}=${value}`, chosen.entry);
+        }
+      }
+    } else {
+      // The entry that answered before; this route's answer from it.
+      let remembered = null;
+      for (const [name, value] of Object.entries(matched.params ?? {})) remembered = memory.get(`${name}=${value}`) ?? remembered;
+      chosen = remembered ? answers.find((a) => a.entry === remembered) ?? null : null;
+    }
+    const answer = chosen?.answer;
+    if (!answer) {
+      return Response.json({
+        code: 'NOT_IMPLEMENTED',
+        message: named
+          ? `No route for ${key} matches this request: ${fields.map((path) => `${path}=${at(body, path)}`).join(', ')}`
+          : `No route answers ${key} here: no earlier request matched for it`,
+      }, { status: 501 });
+    }
+    return answer(request, matched);
+  };
+}
+
+/**
+ * What a routed handler gets besides the request: `call`, to make another
+ * call by operationId, through routing; and `publish`, to send an event,
+ * which is a call to publishEvent, so it goes wherever routing sends that.
+ *
+ * @param {Map<string, object>} routes
+ * @param {object} context - applyRouting's, with `dispatch`: the mock's fetch, once it exists
+ */
+function handlerContext(routes, context) {
+  const call = async (operationId, { params = {}, query, body, headers = {} } = {}) => {
+    const found = [...routes].find(([, route]) => route.operationId === operationId || `$apis.${route.api}.${route.operationId}` === operationId);
+    if (!found) throw new Error(`call: no operation "${operationId}"`);
+    const [method, template] = found[0].split(' ');
+    const path = template.replace(/\{([^}]+)\}/g, (_, name) => encodeURIComponent(params[name] ?? ''));
+    const search = query ? `?${new URLSearchParams(query)}` : '';
+    const response = await context.dispatch()(new Request(`http://routed.invalid${path}${search}`, {
+      method,
+      headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }));
+    const text = await response.text();
+    let parsed = text;
+    try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+    return { status: response.status, body: parsed };
+  };
+  const eventTypes = [...new Set((context.operations?.all ?? []).map((operation) => operation.event).filter(Boolean))];
+  const publish = async (event, data = {}, { subject, partitionkey = subject } = {}) => {
+    const types = eventTypes.filter((type) => type === event || type.endsWith(`.${event}`));
+    if (types.length !== 1) {
+      throw new Error(types.length ? `publish: "${event}" could be ${types.join(' or ')}; name more of it` : `publish: no event the contracts declare is "${event}"`);
+    }
+    const [type] = types;
+    return call('publishEvent', {
+      body: {
+        specversion: '1.0', id: crypto.randomUUID(), source: `/${type.split('.')[0]}`, type, subject, partitionkey,
+        time: new Date().toISOString(), datacontenttype: 'application/json', data,
+      },
+    });
+  };
+  return { call, publish };
 }
 
 /**
