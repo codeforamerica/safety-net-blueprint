@@ -1,10 +1,19 @@
 /**
- * Whisper in this page: the session adapter (session-adapters.js) for a
- * profile whose service is `whisper`. It transcribes in the browser, with
- * Whisper (whisper.js), so a session can be tried with no transcription
- * service and no account. It asks for credentials as every adapter does, and
- * needs none; while the page is the mock, that's answered in the page
- * (implementations.js).
+ * Whisper in this page: an example transcription session adapter, for a
+ * profile whose provider is `whisper`. It transcribes in the browser, with
+ * Whisper (whisper-model.js), so a session can be tried with no transcription
+ * service and no account. A site routes the session adapter to it:
+ *
+ *   # routing.yaml
+ *   routing:
+ *     - api: communication-transcription-sessions-adapter
+ *       match: { provider: whisper }
+ *       handler: ./whisper.js
+ *
+ * Copy it to write an adapter for another service: the streaming part is
+ * `start`, given to sessionAdapter, which does what every adapter shares; the
+ * credentials part, requestCredentials, is answered here since Whisper needs
+ * none, where another service's goes to the state's server.
  *
  * It hears 16 kHz mono linear16 frames, in stretches of speech: while someone
  * talks, a line in progress about every 1.5 seconds; at a pause of 0.7
@@ -12,7 +21,8 @@
  * stretch at a time rather than a stream, so lines in progress come in steps.
  */
 
-import { loadWhisper, WHISPER_RATE } from './whisper.js';
+import { sessionAdapter } from '@codeforamerica/blueprint-explorer/session-adapter';
+import { loadWhisper, WHISPER_RATE } from './whisper-model.js';
 
 const FORMAT = { encoding: 'linear16', sampleRateHertz: WHISPER_RATE, channelCount: 1 };
 // Below this level (root mean square, full scale 1), a frame is silence.
@@ -39,15 +49,12 @@ const silent = (samples) => {
   return Math.sqrt(sum / Math.max(1, samples.length)) < SILENCE;
 };
 
-export const whisperAdapter = {
-  service: 'whisper',
-  name: 'Whisper in this page',
-
-  async start({ stream, audio, publish, requestCredentials, speakers = [] }) {
+export const { startStream, pauseStream, stopStream } = sessionAdapter({
+  async start({ stream, audio, publish, requestCredentials }) {
     await requestCredentials({ audio: FORMAT, protocols: ['websocket'] });
     const transcribe = await loadWhisper();
-    // One speaker: Whisper doesn't tell voices apart.
-    const speaker = speakers.includes('unknown') ? 'unknown' : speakers[0] ?? 'unknown';
+    // One speaker, Speaker's `unknown`: Whisper doesn't tell voices apart.
+    const speaker = 'unknown';
     const began = Date.now();
     const at = (ms) => new Date(began + ms).toISOString();
     // Keys stay unique when the session resumes and starts the adapter again.
@@ -142,4 +149,14 @@ export const whisperAdapter = {
       done: listening.then(() => work),
     };
   },
-};
+});
+
+/**
+ * The credentials part: Whisper needs none, so where to connect names nothing
+ * real. Another service's adapter leaves this to the state's server, which
+ * holds the service's secret.
+ */
+export async function requestCredentials(request) {
+  const { metadata, provider } = await request.json();
+  return Response.json({ metadata, provider, protocol: 'websocket', url: 'wss://whisper.invalid/in-this-page', expiresIn: 3600 });
+}

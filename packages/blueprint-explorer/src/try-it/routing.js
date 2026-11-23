@@ -2,20 +2,14 @@
  * Where the mock in a page sends its calls: the site's routing, less the
  * entries someone switched to the mock in the page from the control panel.
  *
- * The site's routing is what its script sets on BlueprintExplorer.routing
- * (lib/site-script.js), in the mock server's routing format. With none, every
- * call is answered in the page. A switch holds for the browser tab, every page
- * of it, and a reload forgets it (lib/control-panel.js), as it does the
- * records: the default is always what the site says.
- *
- * The transcription session adapter's streaming part always runs in the page
- * (session-adapters.js), and while the page is the mock, its credentials part's
- * credentials are answered in the page too (implementations.js), as Whisper
- * in this page, which needs none, would have them.
+ * The site's routing is what BlueprintExplorer.routing holds, in the mock
+ * server's routing format: the routing file config.yaml names, bundled with
+ * its handler modules (lib/site-routing.js), and whatever the site's script
+ * adds (lib/site-script.js). With none, every call is answered in the page. A
+ * switch holds for the browser tab, every page of it, and a reload forgets it
+ * (lib/control-panel.js), as it does the records: the default is always what
+ * the site says.
  */
-
-import { whisperCredentials } from './implementations.js';
-import { streamHandlers } from './session-adapters.js';
 
 /** The site's routing entries, as its script set them. */
 export const siteRouting = () => globalThis.BlueprintExplorer?.routing ?? [];
@@ -60,35 +54,6 @@ const setSwitch = (where, key, on) => {
   const keys = switched(where);
   if (on) keys.add(key); else keys.delete(key);
   try { sessionStorage.setItem(keyFor(where.scope), JSON.stringify([...keys])); } catch { /* the switch lasts this page only */ }
-};
-
-// ── The transcription session's adapter ─────────────────────────────────────
-
-/** The session adapter's API, whose credentials Whisper answers in the page. */
-export const SESSION_ADAPTER_API = 'communication-transcription-sessions-adapter';
-
-/** Marks the entry Whisper's credentials take, with its name. */
-const IMPLEMENTED = Symbol('answered in the page');
-
-/** The name of what answers an entry in the page, or null for one that leaves it. */
-export const implementationOf = (entry) => entry?.[IMPLEMENTED] ?? null;
-
-/**
- * The routing, with the session adapter's streaming part in the page, whatever
- * server is chosen, since it's the part that runs in the browser; and its
- * credentials part's credentials answered in the page while the page is the mock,
- * as Whisper's. A stub registered for any of them still answers first.
- */
-const withSessionAdapter = (where, routing, docs) => {
-  if (!docs.some((doc) => doc.api === SESSION_ADAPTER_API)) return routing;
-  const inThisPage = (entry, name) => { entry[IMPLEMENTED] = name; return entry; };
-  const pagePart = Object.entries(streamHandlers)
-    .map(([operation, handler]) => inThisPage({ operation, handler }, 'The session adapter, in this page'));
-  const ours = new Set(Object.keys(streamHandlers));
-  const kept = routing.filter((other) => !ours.has(other.operation));
-  if (chosenServer(where)) return [...kept, ...pagePart];
-  const credentials = inThisPage({ api: SESSION_ADAPTER_API, handler: whisperCredentials }, 'Whisper, in this page');
-  return [...kept.filter((other) => other.api !== SESSION_ADAPTER_API), credentials, ...pagePart];
 };
 
 // ── A server chosen in the page ──────────────────────────────────────────────
@@ -228,7 +193,7 @@ const toServer = ({ server, localBase, headers: declared }, variables) => async 
  * @returns {object[]}
  */
 export function routingInUse(where, docs = []) {
-  return withSessionAdapter(where, routingWithServer(where, docs), docs);
+  return routingWithServer(where, docs);
 }
 
 /** The site's routing, less what was switched to the page, and what the server chosen in the page adds. */
@@ -281,7 +246,7 @@ export function entryFor(routing, { operationId, api, domain }) {
 }
 
 /** Where an entry sends its calls, in words. */
-export const destinationOf = (entry) => entry[CHOSEN] ?? entry[IMPLEMENTED] ?? (entry.to ? entry.to : 'a handler in this site\'s script');
+export const destinationOf = (entry) => entry[CHOSEN] ?? (entry.to ? entry.to : 'a handler of this site\'s');
 
 /** Whether an entry is one the server chosen in the page added. */
 export const fromChosenServer = (entry) => Boolean(entry?.[CHOSEN]);

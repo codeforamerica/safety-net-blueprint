@@ -26,8 +26,9 @@ import { tryView } from './try-view.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { mountSocketPanel, SOCKET_STYLE } from './socket-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
-import { routingInUse, entryFor, destinationOf, implementationOf } from './routing.js';
-import { hostSessionAdapters, audioForSession, recordingSource, microphoneSource } from './session-adapters.js';
+import { routingInUse, entryFor, destinationOf } from './routing.js';
+import { recordingSource, microphoneSource } from './audio-sources.js';
+import { audioForSession } from '../session-adapter.js';
 import { speakLines, VOICES } from './kokoro.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -463,8 +464,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     const routing = routingInUse(records, docs);
     for (const { tag, op } of realTags) {
       const entry = entryFor(routing, { operationId: op.operation.operationId, api: op.doc.api, domain: op.doc.domain });
-      // An implementation in the page isn't a real service.
-      tag.hidden = !entry || Boolean(implementationOf(entry));
+      tag.hidden = !entry;
       if (!tag.hidden) tag.title = `Sent to ${destinationOf(entry)}, not answered by the mock in this page.`;
     }
   };
@@ -500,30 +500,16 @@ export async function mountSendPanels({ contracts, version, scope }) {
     } catch { return []; }
   };
 
-  /**
-   * A call the page makes on its own rather than from a form, such as the
-   * session adapter's: sent, and logged as Send logs its own.
-   */
-  const callLogged = async (method, path, body) => {
-    const sentAt = new Date().toISOString();
-    const started = performance.now();
-    const text = body === undefined ? undefined : JSON.stringify(body);
-    const response = await send(method, path, { body: text });
-    const ms = Math.round(performance.now() - started);
-    const raw = await response.text();
-    let parsed = null;
-    try { parsed = JSON.parse(raw); } catch { /* not JSON */ }
-    const events = method !== 'GET' && response.ok ? await eventsSince(sentAt) : [];
+  // A routed handler's calls and events, such as a session adapter's, logged
+  // beside Send's (session-adapter.js).
+  globalThis.BlueprintExplorer ??= {};
+  globalThis.BlueprintExplorer.logCall = ({ method, path, sent, status, body }) => {
     logRequest(records, {
-      time: sentAt, method, path, body: text, status: response.status, ok: response.ok, ms,
-      shown: parsed ? JSON.stringify(parsed, null, 2) : raw, eventIds: events.map((event) => event.id),
+      time: new Date().toISOString(), method, path, body: sent === undefined ? undefined : JSON.stringify(sent),
+      status, ok: status < 400, ms: 0, shown: body === undefined ? '' : JSON.stringify(body, null, 2), eventIds: body?.id && body?.specversion ? [body.id] : [],
     });
     mockChanged();
-    return { status: response.status, body: parsed };
   };
-  // The session adapter in the page calls and publishes through this, so its
-  // calls show in the activity log beside Send's.
-  hostSessionAdapters({ call: callLogged, docs });
 
   // ── Comboboxes ───────────────────────────────────────────────────────────
   // A parameter with choices — an enum's values, the records held under a

@@ -403,7 +403,7 @@ Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` 
 
 ### Handlers
 
-A handler gets the request and a context: `params`, the request's path parameters; `call(operationId, { params, query, body })`, which makes another call, through routing, and answers `{ status, body }`; and `publish(event, data, { subject })`, which sends an event the contracts declare, named by its type or the end of it — `transcription_session.connected` — through `publishEvent`, so it goes wherever routing sends publishing. A module can leave operations out: one it doesn't export is answered as if it weren't routed. A module that answers none of what its entry routes stops the server.
+A handler gets the request and a context: `params`, the request's path parameters; `call(operationId, { params, query, body })`, which makes another call, through routing, and answers `{ status, body }`, with the `method`, `path` and body `sent`; and `publish(event, data, { subject })`, which sends an event the contracts declare, named by its type or the end of it — `transcription_session.connected` — through `publishEvent`, so it goes wherever routing sends publishing. A module can leave operations out: one it doesn't export is answered as if it weren't routed. A module that answers none of what its entry routes stops the server.
 
 ```yaml
 routing:

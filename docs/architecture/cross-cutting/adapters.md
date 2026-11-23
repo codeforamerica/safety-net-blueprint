@@ -116,7 +116,7 @@ Three rules keep the events reliable:
 
 What a running adapter publishes is a fact about the adapter, not about anything it reports to: see [who publishes an event](../inter-domain-communication.md#who-publishes-an-event). When it runs outside the server, as in a browser, see [events from outside the server](../inter-domain-communication.md#events-from-outside-the-server).
 
-In demos and tests, stub the adapter's operations and play the adapter by publishing the resource's events, as the transcription scenarios do, or answer its operations in the page with a reference adapter, as the explorer's Whisper does.
+In demos and tests, stub the adapter's operations and play the adapter by publishing the resource's events, as the transcription scenarios do, or answer its operations in the page with a reference adapter routed as a handler module, as the explorer's example Whisper adapter is ([`packages/blueprint-explorer/examples/session-adapters/whisper.js`](../../../packages/blueprint-explorer/examples/session-adapters/whisper.js)).
 
 The transcription session adapter (`communication-transcription-sessions-adapter-openapi.yaml`) is the first. Its streaming part is the running adapter, and its credentials part, a request-and-answer adapter of its own, issues the short-lived credential the streaming part connects with.
 

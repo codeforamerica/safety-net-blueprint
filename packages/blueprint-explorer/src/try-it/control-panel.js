@@ -350,8 +350,7 @@ function routeRow(running, events, { entry, callsOut }) {
 /**
  * The server: the one picked in the page — this page's mock, a mock server,
  * or real services — and the site's own routing, each entry with a switch
- * back to the mock in this page. A transcription session's adapter follows
- * the pick (session-adapters.js).
+ * back to the mock in this page.
  */
 function routingSection(running, events) {
   const docs = extract(options.contracts, 'docs');

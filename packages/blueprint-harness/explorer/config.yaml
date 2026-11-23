@@ -42,3 +42,7 @@ events:
     publisher: eligibility
     status: implemented
     subscribers: []
+
+# The harness's own routing: sessions under a Whisper profile transcribe in
+# the page, with the explorer's example adapter.
+routing: routing.yaml

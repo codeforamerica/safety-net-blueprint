@@ -1,5 +1,5 @@
 /**
- * Speech to text in the page, for the Whisper session adapter (whisper-adapter.js):
+ * Speech to text in the page, for the Whisper session adapter (whisper.js):
  * OpenAI's Whisper, tiny English model (MIT code, Apache-2.0 weights), run by
  * Hugging Face's transformers.js (Apache-2.0) on ONNX Runtime Web.
  *
