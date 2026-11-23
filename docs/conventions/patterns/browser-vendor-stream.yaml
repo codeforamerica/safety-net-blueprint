@@ -8,8 +8,10 @@ pattern: Browser-to-vendor stream
 summary: >
   The browser streams to a vendor directly, for something live such as
   speech, while the blueprint keeps the result. A session in the page tracks
-  the connection, a server adapter issues short-lived credentials, and a relay
-  stands in for a vendor the browser can't reach.
+  the connection; its running adapter streams to the vendor and reports by
+  publishing the session's events; the adapter's credentials part issues
+  short-lived credentials; and a relay stands in for a vendor the browser
+  can't reach.
 
 use_when:
   - >-
@@ -44,29 +46,37 @@ rules:
     routing the domain to the server except the session's API. No contract says
     where it runs.
   - >-
-    Make the page and the client adapter talk only to the session. The
-    session's actions call the record's operations by operationId, so routing
-    carries the calls to the server; the client adapter never calls the record
-    directly.
+    Give the session's API only what the app does: start, pause, resume and
+    stop. The page calls only those, and follows the session's events.
   - >-
-    Send everything in as a session action, and send an event out from each, so
-    whoever follows along listens to the session. Nothing goes straight to the
-    event stream.
+    Make the session's adapter for each vendor a running adapter
+    (patterns/adapter.yaml): the session calls it to start, pause and stop
+    streaming; it streams to the vendor and reports by publishing the
+    session's events — connected, disconnected, failed, each draft and each
+    finished result, and ended — which the session follows. The adapter never
+    calls the session or the record.
+  - >-
+    Have the record follow the finished results itself, under on:, and keep
+    each once. The session's actions call the record's operations by
+    operationId, so routing carries the calls to the server; the adapter's
+    events reach the record wherever routing sends publishEvent.
   - >-
     Keep only finished results on the server. Drafts, such as a line still being
-    revised, stay in the page as events; tie each draft to its finished result
-    with a key the client gives, sent as the finished result's Idempotency-Key.
+    revised, are events nothing keeps; tie each draft to its finished result
+    with a key the adapter gives, which the record keeps the result once by.
   - >-
-    Issue the vendor's credential from a server adapter the state runs, which
-    holds the vendor's secret, as a short-lived credential in one shape for
-    every vendor. The vendor's secret never reaches the page.
+    Issue the vendor's credential from the adapter's credentials part, which the
+    state runs and which holds the vendor's secret, as a short-lived credential
+    in one shape for every vendor. The adapter's streaming part asks for it, and the
+    vendor's secret never reaches the page.
   - >-
-    Split getting a connection from the connection opening into two actions:
-    the blueprint gets where to connect and a credential; only the client knows
-    whether the connection opened, and says so.
+    Let the adapter get its credential and open the connection itself, and
+    publish connected when it opens: only the adapter knows whether it did.
+    Between start and connected the session is connecting, so a connection
+    that fails to open has somewhere to land.
   - >-
     Define a relay contract, in AsyncAPI, for vendors a browser can't reach; the
-    state runs the relay, which implements it toward the client and speaks the
+    state runs the relay, which implements it toward the adapter and speaks the
     vendor's protocol toward the vendor.
   - >-
     Have the relay check the credential during the handshake, before it

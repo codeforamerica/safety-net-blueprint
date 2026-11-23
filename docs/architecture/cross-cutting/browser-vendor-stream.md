@@ -38,11 +38,11 @@ record" needs no pause.
 
 | Part | Where it runs | Defined by | What it does |
 |---|---|---|---|
-| Page | Browser | The app | The user's screen; captures the stream and calls only the session |
-| Client adapter | Browser | The app, for one vendor | Streams to the vendor and tells the session what happens |
-| Session | Browser, kept there by routing | The blueprint: OpenAPI and a state machine | Tracks the connection; its actions call the record's operations |
-| The record | Server | The blueprint: OpenAPI and a state machine | Keeps the result and its rules |
-| Server adapter | Beside the server | The blueprint's contract; the state implements it | Holds the vendor's secret and issues a short-lived credential |
+| Page | Browser | The app | The user's screen; calls only the session's actions, and follows its events |
+| Session | Browser, kept there by routing | The blueprint: OpenAPI and a state machine | Tracks the connection; starts, pauses and stops its adapter, and follows what the adapter publishes |
+| Session adapter, streaming part | Browser | The blueprint's contract; the app or the state implements it for one vendor | Streams to the vendor and publishes the session's events: connected, each draft and finished result, ended |
+| The record | Server | The blueprint: OpenAPI and a state machine | Keeps the finished results, which it follows, and its rules |
+| Session adapter, credentials part | Beside the server | The blueprint's contract; the state implements it | Holds the vendor's secret and issues a short-lived credential |
 | Relay | The state's server, optional | The blueprint's relay contract, in AsyncAPI; the state implements it | Stands in for a vendor a browser can't reach |
 
 ## Why each rule
@@ -54,39 +54,49 @@ run in either place; routing — per-environment configuration — decides where
 so no contract says where it runs, and a demo with no backend runs everything
 in the page.
 
-**The page and the client adapter talk only to the session.** One API for every
-client adapter, whatever its vendor, keeps the contracts vendor-neutral, and
-the session's state decides what's allowed — a line arriving after the session
-failed is refused. The session calls the record by operationId, so routing
-carries those calls to the server.
+**The session's API is what the app does.** Start, pause, resume and stop are
+the only operations, because they're the only things an app decides. What the
+connection does — opening, dropping, a line heard — isn't a request anyone
+makes; it's something that happened, so it isn't an operation.
 
-**Everything goes in as an action, and each action sends an event out.** That's
-what a state machine is for: take actions in, check them against the state,
-change the record, send events out. An action is the only way in that the
-session's contract defines and its guards check; something sent straight to
-the event stream would bypass them.
+**The adapter is the session's implementation, and it reports with events.**
+The session calls its adapter to start, pause and stop, and the adapter
+publishes the session's own events as things happen: connected, disconnected,
+each draft and finished line, ended. The session follows them, and so does
+anything else interested. One adapter per vendor, behind one session, keeps
+the contracts vendor-neutral. See [a running adapter](adapters.md#a-running-adapter).
 
-**Only finished results reach the server.** A draft is revised several times a
+**The record follows the finished results.** The transcript, not the session,
+decides what it keeps: it follows each finished line and adds it, once, by the
+session and the line's key. "The adapter finished a line" and "the transcript
+kept it" are two facts with two owners, so two events
+([who publishes an event](../inter-domain-communication.md#who-publishes-an-event)).
+When the record is on a server, the adapter's events reach it through
+`publishEvent`, which brings the checks in
+[events from outside the server](../inter-domain-communication.md#events-from-outside-the-server).
+
+**Only finished results are kept.** A draft is revised several times a
 second and is the least reliable text there is; some never finish; and
 whatever reads the record should see only what was finally heard. Drafts are
-events for the page; the finished result is kept once, tied to its drafts by a
-key the client gives, which is also its idempotency key, so a retry keeps it
-once.
+events nothing keeps; the finished result is kept once, tied to its drafts by
+a key the adapter gives, so one published again keeps it once.
 
-**A server adapter issues the credential.** Vendors design for browsers
-connecting directly, with short-lived credentials, but issuing one takes the
-vendor's secret, which can't be in a page. The adapter holds it and answers in
-one shape for every vendor, named as OAuth names a token response.
+**The adapter's credentials part issues the credential.** Vendors design for
+browsers connecting directly, with short-lived credentials, but issuing one
+takes the vendor's secret, which can't be in a page. The credentials part holds it
+and answers in one shape for every vendor, named as OAuth names a token
+response. The streaming part asks for one when it starts, and again to renew it or
+reconnect.
 
-**Getting a connection and opening it are two actions.** The blueprint never
-touches the stream, so it can get where to connect and a credential, but only
-the client knows whether the connection opened. Between the two, the session is
+**Only the adapter says the connection opened.** The blueprint never touches
+the stream, so only the adapter knows whether the connection opened, and it
+publishes `connected` when it does. Between start and that, the session is
 `connecting`, so a connection that fails to open has somewhere to land.
 
 **A relay contract, for vendors a browser can't reach.** Some vendors take only
 gRPC, and a model a state runs itself has no browser credentials. A relay the
 state runs stands in for them, implementing a contract the blueprint defines,
-so one client adapter works with any relay. It's one contract for the whole
+so one adapter works with any relay. It's one contract for the whole
 connection — the stream in and the result back — because they travel over one
 connection with one lifecycle.
 
@@ -104,5 +114,5 @@ every vendor; keeping a quiet connection open is done differently by each.
 ## Where it's used
 
 - **Transcription**, in the communication domain: the transcription session,
-  the transcription session, the transcript, the transcription session adapter and the relay contract. Its decisions
+  the transcript, the transcription session adapter and the relay contract. Its decisions
   are [Decisions 3 and 11 to 17](../domains/communication-transcripts.md#key-design-decisions).

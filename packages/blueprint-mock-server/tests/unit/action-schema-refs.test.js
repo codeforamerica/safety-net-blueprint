@@ -1,9 +1,10 @@
 /**
  * Schemas whose refs lead into other files are checked, not skipped: an
  * action's request schema, declared in a state machine, and what a routed
- * handler answers. Run against the harness's transcription session, whose
- * request-credentials request is a ref to a ref into the transcripts schema file,
- * and whose add-line request refers to the transcripts API's Speaker.
+ * handler answers. Run against the harness's contracts: a suggestion's accept
+ * request is a ref to a $def whose call refers into the base operations
+ * schema, and the transcription session adapter's credentials answer refers
+ * into the transcripts schema file.
  */
 
 import { test, beforeEach, afterEach } from 'node:test';
@@ -14,6 +15,7 @@ import { createMockServer } from '../../src/server.js';
 const contracts = JSON.parse(readFileSync(new URL('../../../blueprint-harness/generated/contracts.json', import.meta.url), 'utf8'));
 
 const AUDIO = { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 };
+
 let answer;
 let mock;
 let warnings;
@@ -45,40 +47,29 @@ const send = async (method, path, body) => {
   return { status: response.status, body: text ? JSON.parse(text) : null };
 };
 
-const session = async () => {
-  const { body: profile } = await send('POST', '/communication/profiles', { name: 'english', provider: 'aws-transcribe', languages: ['en-US'] });
-  const { body } = await send('POST', '/communication/transcription-sessions', {
-    profileId: profile.id, model: 'standard', client: 'interview-assistant/0.1.0', startedAt: '2026-10-12T10:00:00Z',
-  });
-  return body;
+const CALL = {
+  operationId: 'getTranscriptionProfile',
+  parameters: [{ name: 'profileId', in: 'path', value: '7a1e0c2d-0000-4000-8000-0000000000f1' }],
 };
-const act = (s, action, body) => send('POST', `/communication/transcription-sessions/${s.id}/${action}`, body);
 
 test('an action\'s request is checked against a schema in another file', async () => {
-  const s = await session();
-  const refused = await act(s, 'request-credentials', { audio: { ...AUDIO, encoding: 'wav' }, protocols: ['websocket'] });
-  const accepted = await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
-  assert.strictEqual(refused.status, 422);
-  assert.strictEqual(accepted.status, 200);
+  const { status: proposed, body: suggestion } = await send('POST', '/decision-support/suggestions', { kind: 'operation', call: CALL });
+  assert.strictEqual(proposed, 201, JSON.stringify(suggestion));
+  const accept = (body) => send('POST', `/decision-support/suggestions/${suggestion.id}/accept`, body);
+  const refused = await accept({ call: { ...CALL, parameters: 'none' } });
+  assert.strictEqual(refused.status, 422, JSON.stringify(refused.body));
+  const accepted = await accept({ call: CALL });
+  assert.strictEqual(accepted.status, 200, JSON.stringify(accepted.body));
   assert.deepStrictEqual(warnings.filter((w) => w.includes('no validator')), []);
 });
 
-test('an inline action schema\'s ref into another file is checked', async () => {
-  const s = await session();
-  await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
-  await act(s, 'connect', {});
-  const line = { key: 'l1', startedAt: '2026-10-12T10:00:01Z', endedAt: '2026-10-12T10:00:02Z', text: 'Hello.' };
-  const refused = await act(s, 'add-line', { ...line, speaker: 'narrator' });
-  const accepted = await act(s, 'add-line', { ...line, speaker: 'staff' });
-  assert.strictEqual(refused.status, 422);
-  assert.strictEqual(accepted.status, 200);
-  assert.deepStrictEqual(warnings.filter((w) => w.includes('no validator')), []);
+const credentials = (audio) => send('POST', '/credentials', {
+  metadata: { transcriptionSessionId: 'a' }, provider: 'aws-transcribe', languages: ['en-US'], audio, protocols: ['websocket'],
 });
 
 test('a routed handler\'s answer is checked against a response schema with refs into other files', async () => {
   answer = () => ({ provider: 'aws-transcribe', protocol: 'carrier-pigeon', url: 'wss://transcribe.example/stream', expiresIn: 300 });
-  const s = await session();
-  const { status } = await act(s, 'request-credentials', { audio: AUDIO, protocols: ['websocket'] });
+  const { status } = await credentials(AUDIO);
   assert.notStrictEqual(status, 200);
   assert.deepStrictEqual(warnings.filter((w) => w.includes('no validator')), []);
 });

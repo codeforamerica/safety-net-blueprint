@@ -204,7 +204,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     const onEvents = smEntry.machine?.on;
     if (!Array.isArray(onEvents)) continue;
     for (const entry of onEvents) {
-      if (entry.type && Array.isArray(entry.steps)) {
+      // A transition alone is a reaction too: the record moves to its state.
+      if (entry.type && (Array.isArray(entry.steps) || entry.transition?.to)) {
         machineEventSubs.push({ smEntry, entry });
       }
     }
@@ -381,7 +382,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         console.error(`Machine onEvent "${entry.type}": call ${named} failed with ${outcome.status}: ${outcome.body?.message ?? ''}${why ? ` (${why})` : ''} — nothing saved`);
       };
 
-      const reaction = whenReady(applyStepsWithCalls(entry.steps, resource, context, store, perform), (applied) => {
+      const reaction = whenReady(applyStepsWithCalls(entry.steps ?? [], resource, context, store, perform), (applied) => {
         if (!applied.failed) return finish(applied, context, entry.transition?.to);
         const { step, outcome } = applied.failed;
         if (!step.catch) return unhandled(applied.failed);

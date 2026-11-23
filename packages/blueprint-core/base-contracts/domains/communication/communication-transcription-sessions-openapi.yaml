@@ -1,11 +1,12 @@
 # A transcription session: the transcription software's connection to its
-# transcription service, kept track of in the page. The client talks only to
-# the session; its actions call the transcript's
-# operations, so everything that's kept is the transcript's. Its lifecycle is
-# communication-transcription-sessions-state-machine.yaml beside this file.
+# transcription service, kept track of for one conversation. The app calls the
+# session's actions; the session's adapter streams the audio and publishes
+# the session's events; everything that's kept is the transcript's. Its
+# lifecycle is communication-transcription-sessions-state-machine.yaml beside
+# this file.
 #
-# Designed to run in the page: a deployment keeps this API there with routing
-# and sends the transcripts API to its server. See
+# Where it runs is routing's: a deployment usually keeps it beside the app,
+# and the transcripts API elsewhere (patterns/routing.yaml). See
 # docs/architecture/domains/communication-transcripts.md, "How the parts work together" and
 # Decisions 14 to 17.
 openapi: 3.1.0
@@ -18,15 +19,20 @@ info:
   x-visibility: internal
   description: |
     The transcription software's connection to its transcription service,
-    for one browser tab. Designed to run in the page, beside the software,
-    while the transcript it writes to lives on the server.
+    for one conversation in one app. It lasts as long as the connection;
+    what's kept lasts in the transcript it writes to.
 
     Creating a session says which transcript it writes to: an existing one,
     to carry on after a session failed, or what to start a new one with. A
-    new transcript is started the first time the software asks how to
-    stream. The session's actions are what the client tells it — how do I stream, the connection is open or dropped, a line in
-    progress or finished, pause, resume, stop, close, give up — and each
-    sends an event, which is how the client follows it.
+    new transcript is started when the session starts.
+
+    The session's actions are what the app does: start, pause, resume and
+    stop. Its adapter
+    (communication-transcription-sessions-adapter-openapi.yaml) streams the
+    audio to the transcription service and publishes the session's events —
+    connected, disconnected, failed, each line, ended — and the session
+    follows them. The app follows the session the same way, by its events:
+    lines to show as they come, and where the connection is.
 servers:
   - url: https://api.example.com/communication
     description: Production server
@@ -37,6 +43,34 @@ tags:
     description: The transcription software's connection to its transcription service.
 paths:
   /transcription-sessions:
+    get:
+      summary: List transcription sessions
+      description: |
+        Retrieve a paginated list of sessions. Filter by `status` to find the
+        ones still running, or by `transcriptId` to find a transcript's.
+      operationId: listTranscriptionSessions
+      tags:
+        - Transcription sessions
+      x-sortable:
+        fields: [createdAt]
+        default: -createdAt
+        tieBreaker: id
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: A paginated collection of sessions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionSessionList"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
     post:
       summary: Start a transcription session
       description: |
@@ -44,8 +78,8 @@ paths:
         Name an existing transcript with `transcriptId` to carry on after a
         session failed; otherwise give what a new transcript is started with
         — `profileId`, `client` and `startedAt`, and `model` unless the
-        profile's service is `none` — and it's started the first time the
-        software asks how to stream. The session begins in `created`.
+        profile's service is `none` — and it's started when the session
+        starts. The session begins in `created`.
       operationId: createTranscriptionSession
       tags:
         - Transcription sessions
@@ -119,7 +153,7 @@ components:
       description: |
         Which transcript the session writes to: `transcriptId` for an existing
         one, or what to start a new one with, which the session passes to
-        `createTranscript` the first time the software asks how to stream.
+        `createTranscript` when it starts.
       properties:
         transcriptId:
           type: string
@@ -163,6 +197,35 @@ components:
           $ref: "./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectType"
         subjectId:
           $ref: "./communication-transcripts-openapi.yaml#/components/schemas/TranscriptWritable/properties/subjectId"
+    TranscriptionSessionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptionSession"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of sessions available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of sessions requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Whether more sessions are available beyond this page.
     TranscriptionSession:
       description: A transcription session, including server-managed fields.
       unevaluatedProperties: false

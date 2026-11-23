@@ -402,7 +402,7 @@ Each entry names exactly one of `domain`, `api` or `operation`, and one of `to` 
 
 ### Answering in a page
 
-A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcription session's `request-credentials` action calls its session adapter's `requestCredentials`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
+A page with no backend — a live demo running in the browser — answers an operation with a `handler`. A transcription session's adapter calls its credentials part's `requestCredentials`, which a state runs to issue a transcription service's short-lived credential. A demo that gets one from Amazon Cognito instead answers that operation in the page, echoing the request's `metadata` as every adapter does:
 
 ```js
 const mock = await createMockServer({

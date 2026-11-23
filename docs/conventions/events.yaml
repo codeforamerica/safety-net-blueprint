@@ -214,6 +214,52 @@ event_catalog:
       turns too (http.yaml, etags, one_change_at_a_time).
     details: docs/architecture/inter-domain-communication.md (Event ordering)
 
+  fact_ownership:
+    rule: |
+      An event states one fact, published by whoever owns it. When two parties
+      each have a fact about the same thing, they're two events: a session's
+      adapter publishes line_finished, "the adapter finished this line"; the
+      transcript, which decides whether to keep it, records an entry, and its
+      entry's created event says "the transcript kept this line". A consumer
+      that needs what was kept listens for the keeper's event, not the
+      reporter's. Link the two by causation: the keeper's event names the
+      reporter's as its cause in causationid, as a reaction's events do, so a
+      consumer matches them without the keeper copying the reporter's key.
+    rationale: |
+      Only the owner of a record can say what happened to it. An event that
+      claims another party's outcome is a guess, wrong whenever that party
+      refuses.
+    details: docs/architecture/inter-domain-communication.md (Who publishes an event)
+
+  published_from_outside:
+    rule: |
+      When something outside the server publishes events with publishEvent —
+      a running adapter in a browser, a partner's service — treat each as a
+      request that has to be checked, and give the publisher what it needs to
+      deliver reliably:
+
+      - The server accepts an event only from a publisher allowed to publish
+        its type, for a subject it may act on: the caller's token sets
+        authtype and authid, and a rule per event type says who may publish
+        it (security.yaml, authorization, event_publishing).
+      - The server checks the data against the event's declared schema and
+        refuses one that doesn't match with 422, naming the fields.
+      - The publisher sets partitionkey to the subject, so one subject's
+        events are handled in order.
+      - The publisher keeps unsent events and retries them in order after a
+        network error. Whatever keeps the result keeps it once, by a key the
+        event carries: the transcript keeps a line once for its session and
+        key.
+      - A refusal by whoever follows the event comes back as that party's own
+        event, not as the publish's response: publishing answers only that the
+        event was accepted. A publisher that needs to know follows the events.
+    rationale: |
+      A browser is no less trustworthy publishing an event than calling an
+      operation; the difference is that every type arrives through one
+      operation, so the checks an operation makes for itself have to be made
+      per event type instead.
+    details: docs/architecture/inter-domain-communication.md (Events from outside the server)
+
   type_naming:
     pattern: "{domain}.{resource}.{event}"
     rule: |

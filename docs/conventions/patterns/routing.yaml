@@ -44,6 +44,12 @@ rules:
     Route a domain's events with it: what its state machines react to is
     delivered to wherever it runs.
   - >-
+    Publish and subscribe in contracts; leave where the event bus runs to
+    routing. Publishing is the platform's publishEvent operation, routed like
+    any other: to an event bus in the page when everything that follows the
+    event runs there, to the state's event log when something on a service
+    does. A contract never names an emitter in the page.
+  - >-
     Pass on only the headers a request describes itself with, and a caller's
     credentials only where the configuration names them; a page holds no
     secrets, so what a page reaches must accept the user's own credential or
@@ -53,7 +59,10 @@ example: >
   For transcription, the communication domain is routed to the state's
   service except the session's API, which stays in the page; the session's
   actions call the transcript by operationId, so those calls reach the
-  service. A demo with no backend routes nothing, and answers the adapter's
-  operation in the page.
+  service. The session adapter's streaming operations stay in the page, and
+  its credentials operation goes to the service. What the adapter publishes
+  goes to the service's event log, where the transcript follows it. A demo
+  with no backend routes nothing: the session, its adapter and the transcript
+  all run in the page, and the events never leave it.
 
 rationale: docs/architecture/domains/communication-transcripts.md

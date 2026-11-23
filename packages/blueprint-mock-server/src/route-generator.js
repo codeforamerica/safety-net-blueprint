@@ -346,13 +346,15 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
         continue;
       }
-    } else if (!kind && method === 'post' && /\}\/[^/{}]+$/.test(endpoint.path)) {
+    } else if (!kind && method === 'post' && /\}\/[^/{}]+$/.test(endpoint.path) && !endpoint.external) {
       // A transition is served from its state machine, which is what
       // produced it (registerStateMachineRoutes), and the operation resolve
       // generated for it is skipped when the document is loaded. One
       // written by hand has no behavior of its own to serve; if a state
       // machine action produces the same route, that serves it, and resolve
-      // refuses the pair.
+      // refuses the pair. An operation something outside the contracts
+      // answers, such as an adapter's POST /streams/{id}/stop, isn't a
+      // transition: it's served below, by a stub or a routing handler.
       console.warn(`    Warning: POST ${endpoint.path} is written by hand, not generated from a state machine, so it is not served as written`);
       continue;
     } else if (isCollection && !parent) {

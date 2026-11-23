@@ -297,12 +297,18 @@ $defs:
                       transcript; validation refuses none or more than one.
         guards      — conditions that must pass before steps run.
         context     — data available to all steps; inherits machine context.
-        steps       — steps to execute.
+        steps       — steps to execute. A handler with a transition to a state
+                      may have none: moving the record is the reaction, as a
+                      session following what its adapter publishes.
     allOf:
       - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventRef'
       - type: object
-        required:
-          - steps
+        anyOf:
+          - required: [steps]
+          - required: [transition]
+            properties:
+              transition:
+                required: [to]
         properties:
           transition:
             $ref: "#/$defs/TransitionBlock"

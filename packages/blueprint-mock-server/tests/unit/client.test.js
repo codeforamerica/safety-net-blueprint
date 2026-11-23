@@ -69,11 +69,10 @@ test('an action\'s call made as the caller carries the caller\'s Authorization t
   }));
   const { id } = await created.json();
   reached.length = 0;
-  await client.fetch(new Request(`http://localhost/communication/transcription-sessions/${id}/request-credentials`, {
-    method: 'POST', headers: caller,
-    body: JSON.stringify({ audio: { encoding: 'linear16', sampleRateHertz: 16000, channelCount: 1 }, protocols: ['websocket'] }),
+  await client.fetch(new Request(`http://localhost/communication/transcription-sessions/${id}/start`, {
+    method: 'POST', headers: caller, body: JSON.stringify({}),
   }));
-  // request-credentials starts the transcript first, with runAs: caller.
+  // start creates the transcript first, with runAs: caller.
   const start = reached.find((r) => r.method === 'POST' && r.path === '/communication/transcripts');
   assert.ok(start, JSON.stringify(reached));
   assert.strictEqual(start.authorization, 'Bearer worker-token');

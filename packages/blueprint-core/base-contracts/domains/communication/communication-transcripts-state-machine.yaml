@@ -159,6 +159,47 @@ machines:
               - call:
                   PATCH: communication/transcripts/$this.data.transcriptId
                   requestBody: {payload: {lastActivityAt: $this.data.endedAt}}
+      # A session's adapter publishes the lines it hears, and the stretches
+      # it heard nothing, as the session's events; the transcript keeps them.
+      # The Idempotency-Key is the session and the line's key, so a line
+      # published again after a network error is added once. One the
+      # transcript doesn't accept, closed say, isn't kept. The entry's created
+      # event names the line_finished event as its cause (causationid), which
+      # is how a consumer finds the entry a line became.
+      - type: communication.transcription_session.line_finished
+        description: Keep a finished line.
+        steps:
+          - call:
+              operationId: addTranscriptEntry
+              parameters:
+                - {name: transcriptId, in: path, value: $this.data.transcriptId}
+                - {name: Idempotency-Key, in: header, value: "{$this.subject}.line.{$this.data.key}"}
+              requestBody:
+                payload:
+                  kind: line
+                  startedAt: $this.data.startedAt
+                  endedAt: $this.data.endedAt
+                  text: $this.data.text
+                  speaker: $this.data.speaker
+                  speakerLabel: $this.data.speakerLabel
+                  confidence: $this.data.confidence
+                  language: $this.data.language
+      - type: communication.transcription_session.connected
+        description: Keep the stretch nothing was captured in before the connection opened, as a gap.
+        steps:
+          - if: has(this.data.gap)
+            then:
+              - call:
+                  operationId: addTranscriptEntry
+                  parameters:
+                    - {name: transcriptId, in: path, value: $this.data.transcriptId}
+                    - {name: Idempotency-Key, in: header, value: "{$this.subject}.gap.{$this.data.gap.startedAt}"}
+                  requestBody:
+                    payload:
+                      kind: gap
+                      startedAt: $this.data.gap.startedAt
+                      endedAt: $this.data.gap.endedAt
+                      cause: connection
       - type: communication.transcript.idle_check
         description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
         transition: {from: recording}
