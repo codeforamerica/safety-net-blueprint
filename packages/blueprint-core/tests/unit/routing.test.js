@@ -62,3 +62,8 @@ test('a single operation routed apart from its API warns; an external one does n
   // Its API routed too: nothing is split.
   assert.deepEqual(check({ api: 'communication-transcripts', to: 'https://a.example' }, { operation: 'createTranscript', to: 'https://b.example' }).warnings, []);
 });
+
+test('a routing file can name its schema, for an editor', () => {
+  const { errors } = validateRouting({ $schema: 'https://blueprint.codeforamerica.org/schemas/routing-schema.yaml', routing: [{ api: 'communication-transcripts', to: 'https://x.example' }] }, docs);
+  assert.deepEqual(errors, []);
+});

@@ -20,6 +20,9 @@ required:
 - routing
 additionalProperties: false
 properties:
+  $schema:
+    description: This schema, so an editor checks the file as it is written.
+    type: string
   routing:
     type: array
     items:
