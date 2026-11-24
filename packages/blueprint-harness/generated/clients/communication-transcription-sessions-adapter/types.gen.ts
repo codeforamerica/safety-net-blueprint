@@ -133,27 +133,6 @@ export type CredentialsRequest = {
 };
 
 /**
- * A JSON Web Key Set (RFC 7517), public keys only.
- */
-export type JsonWebKeySet = {
-    keys: Array<{
-        /**
-         * The key type
-         */
-        kty: string;
-        /**
-         * The key's id
-         */
-        kid: string;
-        use?: 'sig';
-        /**
-         * The algorithm the key signs with
-         */
-        alg?: string;
-    }>;
-};
-
-/**
  * Where and how the streaming part connects, with metadata echoed back.
  */
 export type CredentialsResponse = {
@@ -177,10 +156,100 @@ export type CredentialsResponse = {
      */
     protocol: 'websocket' | 'webrtc';
     /**
-     * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
+     * Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
      *
      */
-    subprotocol?: string;
+    url: string;
+    /**
+     * The short-lived credential to present on connecting. Absent when the URL carries it.
+     *
+     */
+    accessToken?: string;
+    /**
+     * The kind of credential accessToken is, as OAuth names it.
+     */
+    tokenType?: string;
+    /**
+     * Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.
+     *
+     */
+    expiresIn: number;
+    /**
+     * Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.
+     *
+     */
+    connectionParameters?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+ *
+ */
+export const AudioEncoding = {
+    LINEAR16: 'linear16',
+    FLAC: 'flac',
+    MULAW: 'mulaw',
+    ALAW: 'alaw',
+    AMR: 'amr',
+    AMR_WB: 'amr_wb',
+    OGG_OPUS: 'ogg_opus',
+    WEBM_OPUS: 'webm_opus',
+    SPEEX_WITH_HEADER_BYTE: 'speex_with_header_byte',
+    MP3: 'mp3'
+} as const;
+
+/**
+ * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+ *
+ */
+export type AudioEncoding = typeof AudioEncoding[keyof typeof AudioEncoding];
+
+/**
+ * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
+ *
+ */
+export type AudioFormat = {
+    /**
+     * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+     *
+     */
+    encoding: 'linear16' | 'flac' | 'mulaw' | 'alaw' | 'amr' | 'amr_wb' | 'ogg_opus' | 'webm_opus' | 'speex_with_header_byte' | 'mp3';
+    /**
+     * Samples per second, e.g. 16000.
+     */
+    sampleRateHertz: number;
+    /**
+     * Channels in the audio. One means the service tells speakers apart by voice; more, that each speaker is on a channel of their own, as a phone call recorded with each side on its own channel is.
+     *
+     */
+    channelCount: number;
+};
+
+/**
+ * How the software connects to the service.
+ */
+export const StreamProtocol = { WEBSOCKET: 'websocket', WEBRTC: 'webrtc' } as const;
+
+/**
+ * How the software connects to the service.
+ */
+export type StreamProtocol = typeof StreamProtocol[keyof typeof StreamProtocol];
+
+/**
+ * How the software connects to its transcription service: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+ *
+ */
+export type StreamConnectionFields = {
+    /**
+     * The transcription service, as the transcript's profile names it.
+     */
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    /**
+     * How the software connects to the service.
+     */
+    protocol: 'websocket' | 'webrtc';
     /**
      * Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
      *
@@ -731,11 +800,6 @@ export type RequestCredentialsResponses = {
          */
         protocol: 'websocket' | 'webrtc';
         /**
-         * The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
-         *
-         */
-        subprotocol?: string;
-        /**
          * Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
          *
          */
@@ -765,78 +829,3 @@ export type RequestCredentialsResponses = {
 };
 
 export type RequestCredentialsResponse = RequestCredentialsResponses[keyof RequestCredentialsResponses];
-
-export type GetCredentialKeysData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/.well-known/jwks.json';
-};
-
-export type GetCredentialKeysErrors = {
-    /**
-     * The requested resource was not found.
-     */
-    404: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type GetCredentialKeysError = GetCredentialKeysErrors[keyof GetCredentialKeysErrors];
-
-export type GetCredentialKeysResponses = {
-    /**
-     * A JSON Web Key Set (RFC 7517), public keys only.
-     */
-    200: {
-        keys: Array<{
-            /**
-             * The key type
-             */
-            kty: string;
-            /**
-             * The key's id
-             */
-            kid: string;
-            use?: 'sig';
-            /**
-             * The algorithm the key signs with
-             */
-            alg?: string;
-        }>;
-    };
-};
-
-export type GetCredentialKeysResponse = GetCredentialKeysResponses[keyof GetCredentialKeysResponses];

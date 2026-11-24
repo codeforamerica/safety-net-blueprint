@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "description": "How the software connects to the service.",
+  "enum": [
+    "websocket",
+    "webrtc"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/StreamProtocol"
+}

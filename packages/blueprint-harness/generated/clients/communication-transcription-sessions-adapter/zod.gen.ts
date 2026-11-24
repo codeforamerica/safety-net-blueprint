@@ -89,18 +89,6 @@ export const zCredentialsRequest = z.object({
 }));
 
 /**
- * A JSON Web Key Set (RFC 7517), public keys only.
- */
-export const zJsonWebKeySet = z.object({
-    keys: z.array(z.object({
-        kty: z.string(),
-        kid: z.string(),
-        use: z.optional(z.literal('sig')),
-        alg: z.optional(z.string())
-    }))
-});
-
-/**
  * Where and how the streaming part connects, with metadata echoed back.
  */
 export const zCredentialsResponse = z.object({
@@ -123,13 +111,84 @@ export const zCredentialsResponse = z.object({
         'whisper'
     ]),
     protocol: z.enum(['websocket', 'webrtc']),
-    subprotocol: z.optional(z.string()),
     url: z.url(),
     accessToken: z.optional(z.string()),
     tokenType: z.optional(z.string()),
     expiresIn: z.int().gte(1),
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
+
+/**
+ * How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+ *
+ */
+export const zAudioEncoding = z.enum([
+    'linear16',
+    'flac',
+    'mulaw',
+    'alaw',
+    'amr',
+    'amr_wb',
+    'ogg_opus',
+    'webm_opus',
+    'speex_with_header_byte',
+    'mp3'
+]);
+
+/**
+ * The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
+ *
+ */
+export const zAudioFormat = z.object({
+    encoding: z.enum([
+        'linear16',
+        'flac',
+        'mulaw',
+        'alaw',
+        'amr',
+        'amr_wb',
+        'ogg_opus',
+        'webm_opus',
+        'speex_with_header_byte',
+        'mp3'
+    ]),
+    sampleRateHertz: z.int().gte(8000),
+    channelCount: z.int().gte(1)
+});
+
+/**
+ * How the software connects to the service.
+ */
+export const zStreamProtocol = z.enum(['websocket', 'webrtc']);
+
+/**
+ * How the software connects to its transcription service: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+ *
+ */
+export const zStreamConnectionFields = z.object({
+    provider: z.enum([
+        'assemblyai',
+        'aws-transcribe',
+        'azure-speech',
+        'deepgram',
+        'elevenlabs-scribe',
+        'fake-transcription',
+        'gladia',
+        'google-cloud-speech',
+        'google-gemini-live',
+        'none',
+        'openai-realtime',
+        'soniox',
+        'speechmatics',
+        'whisper'
+    ]),
+    protocol: z.enum(['websocket', 'webrtc']),
+    url: z.url(),
+    accessToken: z.optional(z.string()),
+    tokenType: z.optional(z.string()),
+    expiresIn: z.int().gte(1),
+    connectionParameters: z.optional(z.record(z.string(), z.unknown()))
+});
 
 /**
  * What to stream for: the session and its transcript, whose ids the adapter puts on the events it publishes, and what its credential is requested for, from the transcript and its profile.
@@ -311,28 +370,9 @@ export const zRequestCredentialsResponse = z.object({
         'whisper'
     ]),
     protocol: z.enum(['websocket', 'webrtc']),
-    subprotocol: z.optional(z.string()),
     url: z.url(),
     accessToken: z.optional(z.string()),
     tokenType: z.optional(z.string()),
     expiresIn: z.int().gte(1),
     connectionParameters: z.optional(z.record(z.string(), z.unknown()))
 }));
-
-export const zGetCredentialKeysData = z.object({
-    body: z.optional(z.never()),
-    path: z.optional(z.never()),
-    query: z.optional(z.never())
-});
-
-/**
- * A JSON Web Key Set (RFC 7517), public keys only.
- */
-export const zGetCredentialKeysResponse = z.object({
-    keys: z.array(z.object({
-        kty: z.string(),
-        kid: z.string(),
-        use: z.optional(z.literal('sig')),
-        alg: z.optional(z.string())
-    }))
-});

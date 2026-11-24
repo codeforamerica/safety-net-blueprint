@@ -12,14 +12,6 @@ profiles:
       languages:
         - en-US
       idleTimeout: PT30M
-    - id: 7a1e0c2d-0000-4000-8000-0000000000b2
-      name: english-or-spanish
-      description: An interview in English, Spanish, or both — the service tells which is being spoken.
-      provider: aws-transcribe
-      languages:
-        - en-US
-        - es-US
-      idleTimeout: PT30M
     - id: 7a1e0c2d-0000-4000-8000-0000000000b3
       name: typed
       description: A chat, or notes a person types. No transcription service.
@@ -38,12 +30,6 @@ profiles:
       languages:
         - en-US
       idleTimeout: PT30M
-    - id: 7a1e0c2d-0000-4000-8000-0000000000f3
-      name: english-google
-      description: An interview in English, transcribed by Google Cloud Speech-to-Text through the state's relay.
-      provider: google-cloud-speech
-      languages:
-        - en-US
     - id: 7a1e0c2d-0000-4000-8000-0000000000f4
       name: english-whisper
       description: An interview in English, transcribed by Whisper. The explorer runs Whisper in the page, so a session under it can be tried with no service or account.

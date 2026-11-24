@@ -21,11 +21,8 @@ info:
     for it.
 
     **The credentials part,** which holds the service's secret: it answers
-    with where the streaming part connects and a
-    short-lived credential — from the transcription service, or one it
-    signs for a relay the state runs in front of a service a client can't
-    reach — and publishes the public keys a relay checks those tokens with.
-    It's stateless: one request, one answer. It maps the languages and audio
+    with where the streaming part connects and a short-lived credential
+    from the transcription service. It's stateless: one request, one answer. It maps the languages and audio
     it's given to what its service takes, and holds everything that doesn't
     change from one call to the next — a region, a custom vocabulary,
     redaction — as its own configuration.
@@ -42,8 +39,6 @@ tags:
     description: The streaming part. Starting, pausing and stopping the stream, called by the session.
   - name: Credentials
     description: The credentials part. Issuing what the streaming part connects with.
-  - name: Keys
-    description: The public keys a relay checks the adapter's tokens with.
 paths:
   /streams:
     post:
@@ -157,9 +152,8 @@ paths:
         Answers with where the streaming part connects and a credential
         that starts one connection, for the service the request names. Every
         service fits the one answer: a URL that may carry the credential, as
-        Amazon Transcribe's presigned URL does; a token, as ElevenLabs,
-        Deepgram and AssemblyAI issue; or, for a service behind a relay, the
-        relay's URL, its subprotocol and a JWT the adapter signs for it.
+        Amazon Transcribe's presigned URL does, or a token, as ElevenLabs,
+        Deepgram and AssemblyAI issue.
 
         Called by the streaming part. Asked again, it issues a fresh
         credential: that is how the streaming part renews one, and how it
@@ -207,41 +201,6 @@ paths:
             application/json:
               schema:
                 $ref: ../../components/responses.yaml#/Error
-        "500":
-          $ref: ../../components/responses.yaml#/InternalError
-  /.well-known/jwks.json:
-    get:
-      summary: The public keys a relay checks tokens with
-      description: |
-        The public keys of the tokens the adapter signs for a relay, as a JSON
-        Web Key Set (RFC 7517). A relay reads them to check a token's
-        signature, choosing the key by the token's `kid`, and may cache them.
-        To change keys, publish the new one before signing with it, and keep
-        the old one until the tokens it signed have expired. An adapter that
-        signs no tokens, because no service it issues for sits behind a
-        relay, answers 404.
-      operationId: getCredentialKeys
-      security: []
-      tags:
-        - Keys
-      responses:
-        "200":
-          description: The adapter's public keys.
-          content:
-            application/jwk-set+json:
-              schema:
-                $ref: "#/components/schemas/JsonWebKeySet"
-              example:
-                keys:
-                  - kty: EC
-                    crv: P-256
-                    kid: relay-2026-11
-                    use: sig
-                    alg: ES256
-                    x: f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU
-                    "y": x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0
-        "404":
-          $ref: ../../components/responses.yaml#/NotFound
         "500":
           $ref: ../../components/responses.yaml#/InternalError
 components:
@@ -379,47 +338,123 @@ components:
                 - en-US
                 - es-US
             audio:
-              $ref: ./communication-transcripts-schema.yaml#/$defs/AudioFormat
+              $ref: "#/components/schemas/AudioFormat"
             protocols:
               type: array
               minItems: 1
               uniqueItems: true
               items:
-                $ref: ./communication-transcripts-schema.yaml#/$defs/StreamProtocol
+                $ref: "#/components/schemas/StreamProtocol"
               description: The protocols the streaming part can connect over. The adapter answers with one of them.
-    JsonWebKeySet:
-      description: A JSON Web Key Set (RFC 7517), public keys only.
-      type: object
-      required:
-        - keys
-      properties:
-        keys:
-          type: array
-          items:
-            type: object
-            required:
-              - kty
-              - kid
-            properties:
-              kty:
-                type: string
-                description: The key type
-                such as EC or RSA.: null
-              kid:
-                type: string
-                description: The key's id
-                which a token names in its header.: null
-              use:
-                type: string
-                const: sig
-              alg:
-                type: string
-                description: The algorithm the key signs with
-                such as ES256.: null
-            description: A public key, with the parameters its key type takes (RFC 7518).
     CredentialsResponse:
       description: Where and how the streaming part connects, with metadata echoed back.
       unevaluatedProperties: false
       allOf:
         - $ref: ../../components/adapter.yaml#/AdapterResponse
-        - $ref: ./communication-transcripts-schema.yaml#/$defs/StreamConnectionFields
+        - $ref: "#/components/schemas/StreamConnectionFields"
+    AudioEncoding:
+      type: string
+      description: |
+        How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+      enum:
+        - linear16
+        - flac
+        - mulaw
+        - alaw
+        - amr
+        - amr_wb
+        - ogg_opus
+        - webm_opus
+        - speex_with_header_byte
+        - mp3
+    AudioFormat:
+      type: object
+      description: |
+        The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
+      additionalProperties: false
+      required:
+        - encoding
+        - sampleRateHertz
+        - channelCount
+      properties:
+        encoding:
+          $ref: "#/components/schemas/AudioEncoding"
+        sampleRateHertz:
+          type: integer
+          minimum: 8000
+          description: Samples per second, e.g. 16000.
+          example: 16000
+        channelCount:
+          type: integer
+          minimum: 1
+          description: |
+            Channels in the audio. One means the service tells speakers apart by voice; more, that each speaker is on a channel of their own, as a phone call recorded with each side on its own channel is.
+          example: 1
+    StreamProtocol:
+      type: string
+      description: How the software connects to the service.
+      enum:
+        - websocket
+        - webrtc
+    StreamConnectionFields:
+      type: object
+      description: |
+        How the software connects to its transcription service: where, over what, and with what credential, named as OAuth 2.0's token response names it (RFC 6749 §5.1) in the blueprint's camelCase. The software's adapter for the service knows where the credential and the settings go on connecting.
+      required:
+        - provider
+        - protocol
+        - url
+        - expiresIn
+      dependentRequired:
+        accessToken:
+          - tokenType
+      properties:
+        provider:
+          type: string
+          description: The transcription service, as the transcript's profile names it.
+          example: elevenlabs-scribe
+          enum:
+            - assemblyai
+            - aws-transcribe
+            - azure-speech
+            - deepgram
+            - elevenlabs-scribe
+            - fake-transcription
+            - gladia
+            - google-cloud-speech
+            - google-gemini-live
+            - none
+            - openai-realtime
+            - soniox
+            - speechmatics
+            - whisper
+        protocol:
+          $ref: "#/components/schemas/StreamProtocol"
+        url:
+          type: string
+          format: uri
+          description: |
+            Where to connect. It may carry the credential itself, as Amazon Transcribe's presigned URL does.
+          example: wss://api.elevenlabs.io/v1/speech-to-text/realtime
+        accessToken:
+          type: string
+          description: |
+            The short-lived credential to present on connecting. Absent when the URL carries it.
+        tokenType:
+          type: string
+          description: The kind of credential accessToken is, as OAuth names it.
+          example: Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+          description: |
+            Seconds from now until the credential can no longer start a connection. Asking again before then is how a credential is renewed.
+          example: 900
+        connectionParameters:
+          type: object
+          additionalProperties: true
+          description: |
+            Settings the server chose that the software sends on connecting, in its service's own names — the model and language, say — for a service that takes them then rather than when the credential is issued.
+          example:
+            model_id: scribe_v2_realtime
+            language_code: en

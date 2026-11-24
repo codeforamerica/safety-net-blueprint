@@ -143,7 +143,7 @@
       <span style="font-size:0.9375rem;font-weight:800;">Transcription Session Adapter API</span>
       <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v0.1.0</span>
       <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;flex-shrink:0;background:rgba(194,192,232,0.12);color:#b0a8d8;border:1px solid rgba(194,192,232,0.2);">Alpha</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">5 endpoints</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">4 endpoints</span>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">communication-transcription-sessions-adapter-openapi.yaml</code></a></div>
   </div>
@@ -175,18 +175,12 @@
       <span class="nav-method nav-method-post">POST</span>
       <span class="nav-op-path"><span></span></span>
     </a>
-  </div><div class="nav-section">
-    <div class="nav-section-label nav-resource"><span></span>/<wbr><span>.well-known</span>/<wbr><span>jwks.json</span></div>
-    <a href="#op-get-.well-known-jwks.json" class="nav-link nav-op" title="The public keys a relay checks tokens with">
-      <span class="nav-method nav-method-get">GET</span>
-      <span class="nav-op-path"><span></span></span>
-    </a>
   </div>
       </div>
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The state's transcription session adapter: how a transcription session reaches one transcription service. It has two parts.</p><p style="margin:0 0 6px;"><strong>The streaming part,</strong> beside the session: the session calls it to start, pause and stop streaming. Started, it gets a credential from the server part, opens the connection, streams the audio, and reports what happens by publishing the session's events with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">publishEvent</code> — connected, disconnected, failed, a line in progress, a finished line, and ended. It never calls the session's operations, and the session's API has none for it.</p><p style="margin:0 0 6px;"><strong>The credentials part,</strong> which holds the service's secret: it answers with where the streaming part connects and a short-lived credential — from the transcription service, or one it signs for a relay the state runs in front of a service a client can't reach — and publishes the public keys a relay checks those tokens with. It's stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration.</p><p style="margin:0 0 6px;">Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The state's transcription session adapter: how a transcription session reaches one transcription service. It has two parts.</p><p style="margin:0 0 6px;"><strong>The streaming part,</strong> beside the session: the session calls it to start, pause and stop streaming. Started, it gets a credential from the server part, opens the connection, streams the audio, and reports what happens by publishing the session's events with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">publishEvent</code> — connected, disconnected, failed, a line in progress, a finished line, and ended. It never calls the session's operations, and the session's API has none for it.</p><p style="margin:0 0 6px;"><strong>The credentials part,</strong> which holds the service's secret: it answers with where the streaming part connects and a short-lived credential from the transcription service. It's stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration.</p><p style="margin:0 0 6px;">Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
       
     </div><section id="section-streaming" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -699,7 +693,7 @@
     </summary>
     <div class="op-body">
       <div class="op-docs">
-        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where the streaming part connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does; a token, as ElevenLabs, Deepgram and AssemblyAI issue; or, for a service behind a relay, the relay's URL, its subprotocol and a JWT the adapter signs for it.</p><p style="margin:0 0 6px;">Called by the streaming part. Asked again, it issues a fresh credential: that is how the streaming part renews one, and how it reconnects. Check the caller's sign-in before issuing one: the credential spends the state's account with the service.</p></div></div>
+        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Answers with where the streaming part connects and a credential that starts one connection, for the service the request names. Every service fits the one answer: a URL that may carry the credential, as Amazon Transcribe's presigned URL does, or a token, as ElevenLabs, Deepgram and AssemblyAI issue.</p><p style="margin:0 0 6px;">Called by the streaming part. Asked again, it issues a fresh credential: that is how the streaming part renews one, and how it reconnects. Check the caller's sign-in before issuing one: the credential spends the state's account with the service.</p></div></div>
         
         
         <div class="op-section request-body-section">
@@ -767,17 +761,23 @@
             <span class="fdesc">The audio the software will send. Some services fix it into the credential — Amazon Transcribe signs the sample rate into its URL — so the software says it before connecting, in a format its service takes.
 </span>
           </summary>
-          <div class="nested"><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">encoding</span>
-        <span class="ftype">enum</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
-</div>
-      <div class="values"><span class="values-label">Values</span><code class="value-chip">linear16</code><code class="value-chip">flac</code><code class="value-chip">mulaw</code><code class="value-chip">alaw</code><code class="value-chip">amr</code><code class="value-chip">amr_wb</code><code class="value-chip">ogg_opus</code><code class="value-chip">webm_opus</code><code class="value-chip">speex_with_header_byte</code><code class="value-chip">mp3</code></div>
-    </div><div class="field">
+          <div class="nested"><div style="padding:7px 0;">
+        <details>
+          <summary class="field-summary">
+            <span class="field-head">
+              <span class="chevron">&#x25B6;</span>
+              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">encoding</span>
+              <span class="ftype">AudioEncoding</span>
+              
+              <span class="freq">required</span>
+              
+            </span>
+            <span class="fdesc">How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.
+</span>
+          </summary>
+          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">sampleRateHertz</span>
         <span class="ftype">integer</span>
@@ -840,31 +840,15 @@
       </div>
       <div class="fdesc">The transcription service, as the transcript's profile names it.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">assemblyai</code><code class="value-chip">aws-transcribe</code><code class="value-chip">azure-speech</code><code class="value-chip">deepgram</code><code class="value-chip">elevenlabs-scribe</code><code class="value-chip">fake-transcription</code><code class="value-chip">gladia</code><code class="value-chip">google-cloud-speech</code><code class="value-chip">google-gemini-live</code><code class="value-chip">none</code><code class="value-chip">openai-realtime</code><code class="value-chip">soniox</code><code class="value-chip">speechmatics</code><code class="value-chip">whisper</code></div>
-    </div><div style="padding:7px 0;">
-        <details>
-          <summary class="field-summary">
-            <span class="field-head">
-              <span class="chevron">&#x25B6;</span>
-              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">protocol</span>
-              <span class="ftype">StreamProtocol</span>
-              
-              <span class="freq">required</span>
-              
-            </span>
-            <span class="fdesc">How the software connects to the service.</span>
-          </summary>
-          <div style="padding:6px 12px 6px 20px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
-        </details>
-      </div><div class="field">
+    </div><div class="field">
       <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">subprotocol</span>
-        <span class="ftype">string</span>
-        
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">protocol</span>
+        <span class="ftype">enum</span>
+        <span class="freq">required</span>
         
       </div>
-      <div class="fdesc">The WebSocket subprotocol the connection speaks, when it is the blueprint's own — `blueprint.transcripts.relay.v1`, which a relay speaks. The software asks for it on connecting. Absent, the connection speaks its service's protocol.
-</div>
-      
+      <div class="fdesc">How the software connects to the service.</div>
+      <div class="values"><span class="values-label">Values</span><code class="value-chip">websocket</code><code class="value-chip">webrtc</code></div>
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">url</span>
@@ -1007,157 +991,6 @@
       
     </div></div>
     </div><div class="resp-panel" data-resp="4" hidden>
-      <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
-      <div class="body-fields"><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">Machine-readable error code.</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">Human-readable error description.</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span class="ftype">array[object]</span>
-        
-        
-      </div>
-      <div class="fdesc">Additional error details.</div>
-      
-    </div></div>
-    </div>
-  </div></aside>
-    </div>
-  </details>
-</div>
-    </section><section id="section-keys" style="margin-bottom:2.5rem;">
-      <div style="margin-bottom:1rem;">
-        <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Keys</h2>
-        <p style="font-size:12px;color:#666;">The public keys a relay checks the adapter's tokens with.</p>
-      </div>
-      <div id="op-get-.well-known-jwks.json" class="content-item op-get" data-try-op="getCredentialKeys" data-try-file="base/domains/communication/communication-transcription-sessions-adapter-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
-  <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
-      <span class="op-line">
-        <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/.well-known/jwks.json</code>
-        <span class="op-name">The public keys a relay checks tokens with</span>
-      </span>
-      <code class="op-id" title="operationId">getCredentialKeys</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
-        <span style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#fff7ed;border-color:#fed7aa;color:#b45309;" title="Answered outside the contracts, such as by a state's adapter: the mock in the page answers it only with a stub, or sends it where the site routes it.">External</span>
-        <a href="#op-get-.well-known-jwks.json" class="permalink" title="Link to this endpoint">#</a>
-      </span>
-    </summary>
-    <div class="op-body">
-      <div class="op-docs">
-        <div class="op-desc" style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The public keys of the tokens the adapter signs for a relay, as a JSON Web Key Set (RFC 7517). A relay reads them to check a token's signature, choosing the key by the token's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">kid</code>, and may cache them. To change keys, publish the new one before signing with it, and keep the old one until the tokens it signed have expired. An adapter that signs no tokens, because no service it issues for sits behind a relay, answers 404.</p></div></div>
-        
-        
-        
-      </div>
-      <aside class="op-side"><div class="op-section responses-section">
-    <h4 class="op-h">Responses</h4>
-    <div class="resp-tabs" role="tablist"><button type="button" class="resp-tab resp-ok on" data-resp="0">200</button><button type="button" class="resp-tab resp-bad" data-resp="1">404</button><button type="button" class="resp-tab resp-bad" data-resp="2">500</button></div>
-    <div class="resp-panel" data-resp="0">
-      <div class="fdesc">The adapter's public keys. <span class="pill">application/jwk-set+json</span></div>
-      <div class="body-fields"><div class="field">
-        <details>
-          <summary class="field-summary">
-            <span class="field-head">
-              <span class="chevron">&#x25B6;</span>
-              <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">keys</span>
-              <span class="ftype">array[object]</span>
-              <span class="fpreview">{ alg, kid, kty, +1 }</span>
-              <span class="freq">required</span>
-              
-            </span>
-            
-          </summary>
-          
-          <div class="nested"><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">kty</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">The key type</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">kid</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">The key's id</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">use</span>
-        <span class="ftype">string</span>
-        
-        
-      </div>
-      
-      <div class="values"><span class="values-label">Values</span><code class="value-chip">sig</code></div>
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">alg</span>
-        <span class="ftype">string</span>
-        
-        
-      </div>
-      <div class="fdesc">The algorithm the key signs with</div>
-      
-    </div></div>
-        </details>
-      </div></div>
-    </div><div class="resp-panel" data-resp="1" hidden>
-      <div class="fdesc">The requested resource was not found. <span class="schema-name">NotFound</span> <span class="pill">application/json</span></div>
-      <div class="body-fields"><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">Machine-readable error code.</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">message</span>
-        <span class="ftype">string</span>
-        <span class="freq">required</span>
-        
-      </div>
-      <div class="fdesc">Human-readable error description.</div>
-      
-    </div><div class="field">
-      <div class="field-head">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">details</span>
-        <span class="ftype">array[object]</span>
-        
-        
-      </div>
-      <div class="fdesc">Additional error details.</div>
-      
-    </div></div>
-    </div><div class="resp-panel" data-resp="2" hidden>
       <div class="fdesc">An unexpected error occurred on the server. <span class="schema-name">InternalError</span> <span class="pill">application/json</span></div>
       <div class="body-fields"><div class="field">
       <div class="field-head">

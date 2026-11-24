@@ -1,0 +1,18 @@
+{
+  "type": "string",
+  "description": "How the audio is encoded, by Google Cloud Speech-to-Text's encoding names in the blueprint's casing, which fix the bit depth: linear16 is 16-bit signed little-endian PCM.\n",
+  "enum": [
+    "linear16",
+    "flac",
+    "mulaw",
+    "alaw",
+    "amr",
+    "amr_wb",
+    "ogg_opus",
+    "webm_opus",
+    "speex_with_header_byte",
+    "mp3"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/AudioEncoding"
+}
