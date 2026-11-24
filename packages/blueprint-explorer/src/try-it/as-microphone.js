@@ -1,57 +1,49 @@
 /**
- * Audio Try it chose for a transcription session, given as the microphone.
+ * What Try it gives an adapter that asks for the microphone.
  *
- * A session's adapter hears the way it would in an app, by asking the browser
- * for the microphone with getUserMedia. When the reader chose a recording, or
- * typed lines spoken first (kokoro.js), the next such request gets a stream
- * playing it instead, played aloud too so the reader hears what the adapter
- * hears. Choosing the microphone changes nothing. Test tools give a page a
- * fake microphone the same way.
+ * An adapter hears the way it would in an app, by asking the browser for the
+ * microphone with getUserMedia. Try it answers that request itself: it asks
+ * the reader what the adapter should hear — the microphone, a recording, or
+ * typed lines spoken (adapter-panel.js, audioPrompt) — and gives a stream of
+ * it, played aloud too, so the reader hears what the adapter hears. Only an
+ * adapter that asks is asked about, so one that never listens never shows the
+ * question. Test tools give a page a fake microphone the same way.
  */
-
-/** The request getUserMedia answers before Try it stepped in, if it has. */
-let waiting = null;
-
-/** Answer requests for the microphone as the browser does again. */
-function release() {
-  if (!waiting) return;
-  waiting = null;
-  // The browser's own is on the prototype; Try it's shadowed it on the object.
-  delete navigator.mediaDevices.getUserMedia;
-}
 
 /**
- * Give a recording as the microphone, to the next request for one only.
+ * Answer the page's requests for the microphone by asking the reader.
  *
- * @param {File|Blob} file
+ * @param {() => Promise<{ microphone: true } | { recording: Blob } | null>} ask -
+ *   What to give: the microphone itself, a recording, or null for nothing,
+ *   which refuses the request as a browser refuses one the user declined
  */
-export function playAsMicrophone(file) {
-  release();
+export function answerMicrophone(ask) {
   const devices = navigator.mediaDevices;
+  if (!devices?.getUserMedia) return;
   const browsers = devices.getUserMedia.bind(devices);
-  waiting = file;
   devices.getUserMedia = async (constraints) => {
-    if (!constraints?.audio || constraints.video || !waiting) return browsers(constraints);
-    const recording = waiting;
-    release();
-    const speakers = new AudioContext();
-    const source = speakers.createBufferSource();
-    source.buffer = await speakers.decodeAudioData(await recording.arrayBuffer());
-    const given = speakers.createMediaStreamDestination();
-    source.connect(speakers.destination);
-    source.connect(given);
-    // Stopping the stream, as an adapter does when it's done, stops the playing.
-    for (const track of given.stream.getTracks()) {
-      const stop = track.stop.bind(track);
-      track.stop = () => { stop(); source.onended = null; speakers.close().catch(() => {}); };
-    }
-    source.onended = () => speakers.close().catch(() => {});
-    source.start();
-    return given.stream;
+    if (!constraints?.audio || constraints.video) return browsers(constraints);
+    const given = await ask();
+    if (!given) throw new DOMException('No audio was given', 'NotAllowedError');
+    if (given.microphone) return browsers(constraints);
+    return playing(given.recording);
   };
 }
 
-/** The microphone itself, for the next request: what was chosen before is dropped. */
-export function useMicrophone() {
-  release();
+/** A stream playing a recording, aloud as well. */
+async function playing(recording) {
+  const speakers = new AudioContext();
+  const source = speakers.createBufferSource();
+  source.buffer = await speakers.decodeAudioData(await recording.arrayBuffer());
+  const given = speakers.createMediaStreamDestination();
+  source.connect(speakers.destination);
+  source.connect(given);
+  // Stopping the stream, as an adapter does when it's done, stops the playing.
+  for (const track of given.stream.getTracks()) {
+    const stop = track.stop.bind(track);
+    track.stop = () => { stop(); source.onended = null; speakers.close().catch(() => {}); };
+  }
+  source.onended = () => speakers.close().catch(() => {});
+  source.start();
+  return given.stream;
 }

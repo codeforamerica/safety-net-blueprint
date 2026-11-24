@@ -123,8 +123,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### Overlays
 
 **[`contracts/overlays/transcription-profiles.yaml`](contracts/overlays/transcription-profiles.yaml)**
-- Adds three profiles to the framework's profile catalog (`communication-transcripts-config.yaml`), with `append:`, as a state seeds its own: `english-interviews` (the fake service, in English, with no idle timeout), `english-interviews-30-minutes` (the same, closing after 30 minutes with nothing added) and `english-whisper` (Whisper, which the explorer runs in the page)
-- The profiles the spoken transcription scenarios start under, by their ids, so none of them begins by adding one. The chat scenario uses the framework's own `typed` profile
+- Adds one profile to the framework's profile catalog (`communication-transcripts-config.yaml`), with `append:`, as a state seeds its own: `fake-secured`, whose service asks you to sign in (`overlays/sign-in.yaml`)
+- The scenarios use the framework's own profiles: `whisper` for a spoken conversation, which the explorer runs in the page, and `typed` for a chat
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**
 - Extends the base `MetricCollection` enum to add `applications` and `determinations`

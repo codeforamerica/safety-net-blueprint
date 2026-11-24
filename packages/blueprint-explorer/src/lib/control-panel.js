@@ -14,13 +14,15 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, relative, sep } from 'path';
+import { loadConfig } from './config.js';
 
 const MARK = '<!-- the mock: control panel -->';
 
 /**
  * Forgetting what pages left for the next, on a reload: the keys records.js
  * keeps the mock's records, stubs and each page's results under, and
- * routing.js the routing switched to the page and the server chosen in it,
+ * routing.js the server chosen in the page, adapters.js what answers each adapter,
+ * sign-in.js who is signed in,
  * and activity.js the requests Try it sent.
  */
 const resetOnReload = (root) => `
@@ -32,7 +34,7 @@ const resetOnReload = (root) => `
   const scope = new URL('${root}mock/', location.href).href;
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-routing:\${scope}\`, \`blueprint-mock-server:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
+      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-server:\${scope}\`, \`blueprint-mock-adapters:\${scope}\`, \`blueprint-mock-sign-in:\${scope}\`, \`blueprint-mock-audio:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
         || key.startsWith(\`blueprint-try-results:\${scope}:\`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
@@ -113,22 +115,45 @@ const pagesUnder = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e
   return entry.name.endsWith('.html') ? [path] : [];
 });
 
+/** A page that asks to be left as it is, such as a stand-in sign-in page a site adds. */
+const OPT_OUT = /<meta\s+name="blueprint-try-it"\s+content="off"/;
+
+/** The page the sign-in popup returns to: it hands what it was given to the page that opened it. */
+export const SIGN_IN_RETURN = 'sign-in-return.html';
+const signInReturn = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="blueprint-try-it" content="off"><title>Signing in</title></head>
+<body><p>Signing in…</p>
+<script>
+// The provider sent the visitor here, with a token or a code after # or ?.
+// The page that opened this window finishes signing in (try-it/sign-in.js).
+if (window.opener) window.opener.postMessage({ blueprintSignIn: { hash: location.hash.slice(1), search: location.search.slice(1) } }, '*');
+window.close();
+</script>
+</body></html>
+`;
+
 /**
  * Put the Try it switch on the pages of a built explorer, and
  * starting over on a reload on every page, where they haven't them yet.
- * Nothing to do when the explorer was built without the mock.
+ * With sign_in in config.yaml, each page also carries it, for signing in
+ * where a call needs it, and the site gets the page the sign-in popup
+ * returns to. Nothing to do when the explorer was built without the mock.
  *
  * @param {string} contentDir - The built explorer
  */
 export function addControlPanel(contentDir) {
   if (!existsSync(join(contentDir, 'mock', 'mock.js'))) return;
+  const { sign_in: signIn } = loadConfig(contentDir);
+  // As data on the page, not code: the Try it scripts read it (try-it/sign-in.js).
+  const signInData = signIn ? `\n<script type="application/json" id="blueprint-sign-in">${JSON.stringify(signIn).replace(/</g, '\\u003c')}</script>` : '';
   for (const page of pagesUnder(contentDir)) {
     const html = readFileSync(page, 'utf8');
-    if (html.includes(MARK) || !html.includes('</body>')) continue;
+    if (html.includes(MARK) || !html.includes('</body>') || OPT_OUT.test(html)) continue;
     const parts = relative(contentDir, page).split(sep);
     const root = '../'.repeat(parts.length - 1);
-    const added = MARK + resetOnReload(root) + (parts[0] === 'authored' ? '' : launcher(root));
+    const added = MARK + signInData + resetOnReload(root) + (parts[0] === 'authored' ? '' : launcher(root));
     const at = html.lastIndexOf('</body>');
     writeFileSync(page, `${html.slice(0, at)}${added}\n${html.slice(at)}`);
   }
+  if (signIn) writeFileSync(join(contentDir, SIGN_IN_RETURN), signInReturn);
 }

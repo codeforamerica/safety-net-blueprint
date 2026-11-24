@@ -44,5 +44,13 @@ events:
     subscribers: []
 
 # The harness's own routing: sessions under a Whisper profile transcribe in
-# the page, with the explorer's example adapter.
+# the page; under fake-secured, they go to a fake service behind sign-in.
 routing: routing.yaml
+
+# Signing in, where a call needs it: the provider comes from the contracts'
+# security scheme (contracts/overlays/sign-in.yaml), and this is the client
+# the explorer signs in as. The harness's provider is a stand-in page in
+# pages/, which signs in anyone.
+sign_in:
+  client_id: blueprint-harness
+pages: pages

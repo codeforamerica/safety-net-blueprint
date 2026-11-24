@@ -1,6 +1,5 @@
-# A transcription service for the harness's scenarios, so they can show the
-# whole flow without naming a real service. The entries combine with the
-# framework's own.
+# Transcription services for the harness, so it can show signing in without
+# naming a real service. The entries combine with the framework's own.
 $schema: https://blueprint.codeforamerica.org/schemas/registry-schema.yaml
 version: "1.0.0"
 domain: communication
@@ -8,7 +7,8 @@ capability: transcripts
 type: transcription-services
 
 entries:
-  fake-transcription:
+  fake-secured:
     description: >
-      A fake service for demos and tests. The scenarios play its adapter, and
-      the mock answers its credentials with stubs.
+      A fake service behind sign-in, standing in for one a state hosts: its
+      credentials go only to a signed-in caller. Its adapter in the harness
+      site (explorer/adapters/fake-secured.js) sends a few set lines.

@@ -281,6 +281,9 @@ components:
       description: The request's metadata, echoed back.
       allOf:
         - $ref: "https://blueprint.codeforamerica.org/base/components/adapter.yaml#/AdapterResponse"
+      # The session sends none, so there is none to echo.
+      example:
+        metadata: {}
     CredentialsRequest:
       description: >
         What the service needs to issue a credential: the service, model and

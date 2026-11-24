@@ -45,8 +45,8 @@ const eventually = async (check, message) => {
 
 test('the entry a finished line became names the line_finished event as its cause, and the line is kept once', async () => {
   const { body: session } = await send('POST', '/communication/transcription-sessions', {
-    // english-interviews, seeded by the harness's overlays.
-    profileId: '7a1e0c2d-0000-4000-8000-0000000000f1', model: 'standard', client: 'test/1.0.0', startedAt: '2026-10-12T10:00:00Z',
+    // whisper, the framework's profile.
+    profileId: '7a1e0c2d-0000-4000-8000-0000000000b1', model: 'standard', client: 'test/1.0.0', startedAt: '2026-10-12T10:00:00Z',
   });
   assert.strictEqual((await send('POST', `/communication/transcription-sessions/${session.id}/start`, {})).status, 200);
   const { transcriptId } = (await send('GET', `/communication/transcription-sessions/${session.id}`)).body;

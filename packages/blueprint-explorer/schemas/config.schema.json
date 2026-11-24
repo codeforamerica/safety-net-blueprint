@@ -75,6 +75,17 @@
       "type": "string",
       "pattern": "^(?!/)(?!.*\\.\\.).+\\.(ya?ml|json)$"
     },
+    "sign_in": {
+      "description": "How the explorer signs in where a call needs it, as Swagger UI's initOAuth does: the client it signs in as. The provider and the flow come from the contracts' security scheme (OAuth 2.0 flows, or OpenID Connect's discovery URL); a call that needs one and leaves the mock, such as an adapter's, waits for the visitor to sign in, in a popup.",
+      "type": "object",
+      "required": ["client_id"],
+      "additionalProperties": false,
+      "properties": {
+        "client_id": { "type": "string", "minLength": 1, "description": "The client id the provider knows the site by." },
+        "scopes": { "type": "array", "items": { "type": "string" }, "description": "The scopes to ask for; with OpenID Connect, openid is always asked for." },
+        "parameters": { "type": "object", "additionalProperties": { "type": "string" }, "description": "More query parameters for the provider's sign-in page, such as an audience." }
+      }
+    },
     "pages": {
       "description": "A folder of the site's own pages, relative to config.yaml (e.g. pages). Each Markdown page is rendered in the explorer's layout as an HTML page of the same name, titled by its first heading; anything else is copied as it is. Link a page from featured_links (e.g. pages/getting-started.html).",
       "type": "string",

@@ -1,14 +1,14 @@
 /**
- * Where the mock in a page sends its calls: the site's routing, less the
- * entries someone switched to the mock in the page from the control panel.
+ * Where the mock in a page sends its calls: the site's routing, and what a
+ * server chosen in the control panel adds.
  *
  * The site's routing is what BlueprintExplorer.routing holds, in the mock
  * server's routing format: the routing file config.yaml names, bundled with
  * its handler modules (lib/site-routing.js), and whatever the site's script
- * adds (lib/site-script.js). With none, every call is answered in the page. A
- * switch holds for the browser tab, every page of it, and a reload forgets it
- * (lib/control-panel.js), as it does the records: the default is always what
- * the site says.
+ * adds (lib/site-script.js). With none, every call is answered in the page.
+ * Where an API has several implementations, such as a transcription session
+ * adapter for each service, each entry's match picks one per request: a
+ * session's profile chooses its adapter.
  */
 
 /** The site's routing entries, as its script set them. */
@@ -20,41 +20,21 @@ export const siteRouting = () => globalThis.BlueprintExplorer?.routing ?? [];
  */
 export const entryName = (entry) => entry.operation ?? entry.api ?? entry.domain;
 
-/** An entry, told apart from the others by what it covers. */
-const entryKey = (entry) => (entry.operation ? `operation:${entry.operation}` : entry.api ? `api:${entry.api}` : `domain:${entry.domain}`);
-
-// Forgotten on a reload by the same name (lib/control-panel.js).
-const keyFor = (scope) => `blueprint-mock-routing:${scope}`;
-
-const switched = ({ scope }) => {
-  try { return new Set(JSON.parse(sessionStorage.getItem(keyFor(scope)) ?? '[]')); } catch { return new Set(); }
-};
+/**
+ * An entry's match, in words: `provider: whisper`. Entries for the same API
+ * with different matches are different implementations of it.
+ */
+export const matchText = (entry) => Object.entries(entry.match ?? {})
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([path, value]) => `${path}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+  .join(', ');
 
 /**
- * Whether an entry was switched to the mock in the page.
- *
- * @param {{ scope: string }} where
- * @param {object} entry - One of siteRouting's
+ * The file a site's routing names as an entry's handler, which the build
+ * keeps beside the bundled module (lib/site-routing.js), so the control
+ * panel can say what answers each entry.
  */
-export const inPage = (where, entry) => switched(where).has(entryKey(entry));
-
-/**
- * Switch an entry to the mock in the page, or back to where the site sends it.
- * The mock takes it when it next starts (start-mock.js).
- *
- * @param {{ scope: string }} where
- * @param {object} entry - One of siteRouting's
- * @param {boolean} toPage
- */
-export function switchEntry(where, entry, toPage) {
-  setSwitch(where, entryKey(entry), toPage);
-}
-
-const setSwitch = (where, key, on) => {
-  const keys = switched(where);
-  if (on) keys.add(key); else keys.delete(key);
-  try { sessionStorage.setItem(keyFor(where.scope), JSON.stringify([...keys])); } catch { /* the switch lasts this page only */ }
-};
+export const HANDLER_FILE = Symbol.for('blueprint-explorer.handler-file');
 
 // ── A server chosen in the page ──────────────────────────────────────────────
 //
@@ -63,8 +43,8 @@ const setSwitch = (where, key, on) => {
 // server, a staging host serving every API), or to an environment the
 // contracts' `servers` name by description ("Production server"), which sends
 // each API to its own server for it. The site's own entries are narrower or
-// left as they are, so they still win, and one switched to the page stays in
-// the page. Kept for the tab, and forgotten on a reload, as the switches are.
+// left as they are, so they still win. Kept for the tab, and forgotten on a
+// reload, as the records are.
 
 const serverKeyFor = (scope) => `blueprint-mock-server:${scope}`;
 
@@ -156,11 +136,6 @@ export function environmentsOf(docs) {
   return [...byDescription.values()];
 }
 
-/** The APIs an entry covers, as an except names them. */
-const exceptFor = (entry, docs) => (entry.operation ? [{ operation: entry.operation }]
-  : entry.api ? [{ api: entry.api }]
-  : docs.filter((d) => d.type === 'openapi' && d.domain === entry.domain).map((d) => ({ api: d.api })));
-
 /**
  * A handler sending one API's calls to its server for an environment, with
  * the page's path for it taken off, and only the headers its contract declares.
@@ -184,43 +159,35 @@ const toServer = ({ server, localBase, headers: declared }, variables) => async 
 };
 
 /**
- * The routing the mock takes: the site's, less what was switched to the
- * page, and what the server chosen in the page adds; and the APIs switched
- * to the page while the page is the mock, for Whisper.
+ * The routing the mock takes: the site's, and what the server chosen in the
+ * page adds.
  *
  * @param {{ scope: string }} where
- * @param {object[]} [docs] - The contract set, which a chosen server and the session's adapter need
+ * @param {object[]} [docs] - The contract set, which a chosen server needs
  * @returns {object[]}
  */
 export function routingInUse(where, docs = []) {
-  return routingWithServer(where, docs);
-}
-
-/** The site's routing, less what was switched to the page, and what the server chosen in the page adds. */
-function routingWithServer(where, docs) {
   const site = siteRouting();
-  const kept = site.filter((entry) => !inPage(where, entry));
   const choice = chosenServer(where);
-  if (!choice) return kept;
+  if (!choice) return site;
   const narrower = site.filter((entry) => entry.domain !== '*');
   if (choice.url) {
-    // Every call, but what the site switched to the page.
-    const except = site.filter((entry) => entry.domain !== '*' && inPage(where, entry)).flatMap((entry) => exceptFor(entry, docs));
-    const everything = { domain: '*', to: choice.url, ...(except.length ? { except } : {}) };
+    // Every call the site's narrower entries leave.
+    const everything = { domain: '*', to: choice.url };
     everything[CHOSEN] = choice.url;
-    return [...kept.filter((entry) => entry.domain !== '*'), everything];
+    return [...narrower, everything];
   }
   const environment = environmentsOf(docs).find((e) => e.description === choice.environment);
-  if (!environment) return kept;
+  if (!environment) return site;
   const added = environment.apis
-    // An API the site routes, or switched to the page, stays as the site has it.
+    // An API the site routes stays as the site has it.
     .filter((a) => !entryFor(narrower, { api: a.api, domain: a.domain }))
     .map((a) => {
       const entry = { api: a.api, handler: toServer(a, choice.variables) };
       entry[CHOSEN] = expandServer(a.server, choice.variables);
       return entry;
     });
-  return [...kept, ...added];
+  return [...site, ...added];
 }
 
 /**
@@ -245,7 +212,7 @@ export function entryFor(routing, { operationId, api, domain }) {
 }
 
 /** Where an entry sends its calls, in words. */
-export const destinationOf = (entry) => entry[CHOSEN] ?? (entry.to ? entry.to : 'a handler of this site\'s');
+export const destinationOf = (entry) => entry[CHOSEN] ?? entry.to ?? entry[HANDLER_FILE] ?? 'a handler in the site\'s script';
 
 /** Whether an entry is one the server chosen in the page added. */
 export const fromChosenServer = (entry) => Boolean(entry?.[CHOSEN]);

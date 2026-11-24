@@ -14,6 +14,13 @@
  * It returns a new document set rather than mutating the one it was given, so
  * the pipeline is a fold and any pass can be run, reordered or tested alone.
  * `applied` is what a verbose caller reports; core does not print.
+ *
+ * Resolve fills in and never takes an annotation away. An `x-` extension an
+ * author wrote stays in the resolved document beside whatever a pass wrote
+ * from it, such as the `enum` an `x-enum-source` names, so a reader of the
+ * resolved set can still tell where something came from. The only things
+ * removed are those an author asked to remove: an overlay's `remove`, and the
+ * nodes of another environment when one is chosen.
  */
 
 import { applyOverlays } from './resolve/overlays.js';

@@ -26,8 +26,11 @@ import { tryView } from './try-view.js';
 import { hostMock, mockChanged } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf } from './routing.js';
-import { playAsMicrophone, useMicrophone } from './as-microphone.js';
-import { speakLines, VOICES } from './kokoro.js';
+import { answerMicrophone } from './as-microphone.js';
+import { stubChoices } from './stub-editor.js';
+import { adaptersCalledBy, chooseAdapter, chosenAdapter, recordAdapters, NONE, ROUTED } from './adapters.js';
+import { recordPicker, answerForm, reportForm, signInPrompt, audioPrompt, ADAPTER_STYLE } from './adapter-panel.js';
+import { signIn, schemeFor, signedIn } from './sign-in.js';
 
 const ORIGIN = 'http://mock.invalid';
 const MANAGED = new Set(['id', 'createdAt', 'updatedAt', 'status', '_links']);
@@ -214,6 +217,21 @@ const propertiesOf = (doc, schema, seen = new Set()) => {
   return Object.assign({}, ...(node.allOf ?? []).map((part) => propertiesOf(doc, part, seen)), node.properties ?? {});
 };
 
+/**
+ * The fields of a request body that name another record (x-relationship),
+ * across its allOf, oneOf and anyOf, each with the record's schema name.
+ */
+const relationshipFields = (doc, schema, seen = new Set()) => {
+  const node = local(doc, schema);
+  if (!node || typeof node !== 'object' || seen.has(node)) return [];
+  seen.add(node);
+  const own = Object.entries(node.properties ?? {})
+    .map(([name, property]) => ({ name, resource: local(doc, property)?.['x-relationship']?.resource }))
+    .filter((field) => field.resource);
+  const parts = [...(node.allOf ?? []), ...(node.oneOf ?? []), ...(node.anyOf ?? [])].flatMap((part) => relationshipFields(doc, part, seen));
+  return [...own, ...parts].filter((field, i, all) => all.findIndex((other) => other.name === field.name) === i);
+};
+
 /** A `$ref`, followed into another document of the set when it points there. */
 const followed = (doc, node, docs) => {
   const at = local(doc, node);
@@ -242,16 +260,6 @@ const operationFor = (docs, file, operationId, at = null) => {
   }
   return null;
 };
-
-/** What typed lines start as: an interview's opening. */
-const TYPED_LINES = `Who lives with you?
-My sister and her two kids.
-Does anyone in the household work?
-I do, at the grocery store. About two hundred dollars a week.`;
-
-/** The transcription sessions API, whose connect can stream a recording. */
-const SESSIONS_API = 'communication-transcription-sessions';
-const takesAudio = (op) => op.doc.api === SESSIONS_API && op.method === 'POST' && /\/(start|resume)$/.test(op.path);
 
 /**
  * The fields a request schema accepts, through `allOf`, `oneOf`, `anyOf`
@@ -346,11 +354,6 @@ const STYLE = `
   .try-docs { font: 600 12px system-ui, sans-serif; color: #2B1A78; background: none; border: 0; padding: 4px 0; cursor: pointer; }
   .try-params .row { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: 8px; align-items: center; padding: 3px 0; }
   .try-params label { font: 600 12px monospace; color: #333; }
-  .try-params .audio-boxes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .try-params .audio-boxes select { width: auto; }
-  .try-params .typed-lines textarea { width: 100%; box-sizing: border-box; min-height: 6rem; font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; margin: 4px 0; }
-  .try-params .typed-lines .voices { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #555; }
-  .try-params .typed-lines .voices select { width: auto; }
   .try-params label span { font: 400 11px sans-serif; color: #888; margin-left: 4px; }
   .try-params input, .try-body textarea, .try-body select { font: 12px monospace; padding: 4px 6px; border: 1px solid #c7c4ea; border-radius: 4px; width: 100%; box-sizing: border-box; background: #fff; }
   .try-body textarea { min-height: 9rem; resize: vertical; }
@@ -383,7 +386,7 @@ const STYLE = `
 export async function mountSendPanels({ contracts, version, scope }) {
   const holders = [...document.querySelectorAll('[data-try-op]')];
   if (!holders.length) return;
-  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE }));
+  document.head.append(Object.assign(el('style'), { textContent: STYLE + COMBO_STYLE + ADAPTER_STYLE }));
   // An operation's responses as its view has them: what was sent, in the Try
   // it view; the documented ones, in the doc view.
   const showAnswers = (holder) => {
@@ -409,6 +412,27 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   }
   const records = { scope, version };
+  // The external operations the state machines call, by who calls them (stub-editor.js).
+  const calledOut = stubChoices(docs).operations;
+  // Under None, a call an adapter gets waits for the developer's answer, on
+  // the panel last sent from: what it sent is what made the call.
+  let answerHere = null;
+  // A call that needs the visitor signed in waits on the same panel while they sign in.
+  let askHere = null;
+  const ask = (call) => new Promise((resolve) => (askHere ? askHere(call, resolve) : resolve(null)));
+  // An adapter that asks for the microphone waits there too, while the reader
+  // chooses what it hears. With no panel to ask on, it gets the microphone.
+  let audioHere = null;
+  answerMicrophone(() => new Promise((resolve) => (audioHere ? audioHere(resolve) : resolve({ microphone: true }))));
+  const hold = (call) => new Promise((resolve, reject) => {
+    if (!answerHere) {
+      reject(new Error(`${call.operation.operationId} was called, with nothing sent from this page to answer it on`));
+      return;
+    }
+    answerHere(call, (status, body) => resolve(new Response(body === undefined ? null : JSON.stringify(body), {
+      status, headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+    })));
+  });
   // What each operation last sent and got back, as this page was left.
   const results = loadResults(records);
   const roles = docs.find((d) => Array.isArray(d.content?.$defs?.RoleType?.enum))?.content.$defs.RoleType.enum ?? [];
@@ -465,7 +489,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   };
   const start = async ({ seed, restore }) => {
-    session = await startMock({ contracts, ...records, seed, restore });
+    session = await startMock({ contracts, ...records, seed, restore, hold, ask });
     mock = session.mock;
     markReal();
     await refreshPickers();
@@ -494,6 +518,22 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (!response.ok) return [];
       return (await response.json())?.items ?? [];
     } catch { return []; }
+  };
+
+  // Publishing an event as something outside the contracts would: through
+  // the platform's publishEvent, as a routed handler's publish does.
+  const publishPath = docs.filter((doc) => doc.type === 'openapi').flatMap((doc) => Object.entries(doc.content?.paths ?? {})
+    .filter(([, item]) => item?.post?.operationId === 'publishEvent').map(([path]) => basePathOf(doc) + path))[0] ?? null;
+  const publishEvent = async (event) => {
+    if (!publishPath) return { ok: false, status: 0, text: 'the contracts have no publishEvent' };
+    const sentAt = new Date().toISOString();
+    const response = await send('POST', publishPath, { body: JSON.stringify(event) });
+    const text = await response.text();
+    logRequest(records, { time: sentAt, method: 'POST', path: publishPath, body: JSON.stringify(event), status: response.status, ok: response.ok, ms: 0, shown: text, eventIds: response.ok ? [event.id] : [] });
+    await session.keep();
+    mockChanged();
+    await refreshPickers();
+    return { ok: response.ok, status: response.status, text };
   };
 
   // ── Comboboxes ───────────────────────────────────────────────────────────
@@ -586,51 +626,8 @@ export async function mountSendPanels({ contracts, version, scope }) {
       form.append(row);
       values.set(`${param.dataset.in}:${param.dataset.param}`, box);
     }
-    // A transcription session's start and resume take audio: the microphone,
-    // a recording, or typed lines, which the session's adapter hears when it
-    // asks for the microphone.
-    let audioChoice = null;
-    let recording = null;
-    let typed = null;
-    let typedText = null;
-    let typedVoices = [];
-    if (takesAudio(op)) {
-      audioChoice = el('select');
-      audioChoice.append(
-        Object.assign(el('option', 'The microphone'), { value: 'microphone' }),
-        Object.assign(el('option', 'A recording'), { value: 'recording' }),
-        Object.assign(el('option', 'Typed lines, spoken'), { value: 'typed' }),
-      );
-      recording = Object.assign(el('input'), { type: 'file', accept: 'audio/*', hidden: true });
-      // Lines to speak, the two voices taking turns.
-      typed = el('div', '', 'typed-lines');
-      typed.hidden = true;
-      typedText = el('textarea');
-      typedText.value = TYPED_LINES;
-      typedText.setAttribute('aria-label', 'Lines to speak, one a line');
-      const voicePicker = (chosen, label) => {
-        const pick = el('select');
-        pick.setAttribute('aria-label', label);
-        pick.append(...VOICES.map((voice) => Object.assign(el('option', voice.name), { value: voice.id })));
-        pick.value = chosen;
-        return pick;
-      };
-      typedVoices = [voicePicker('af_heart', 'First speaker\'s voice'), voicePicker('am_michael', 'Second speaker\'s voice')];
-      const voices = el('div', '', 'voices');
-      voices.append(el('span', 'Voices, taking turns'), ...typedVoices);
-      typed.append(typedText, voices);
-      audioChoice.onchange = () => {
-        recording.hidden = audioChoice.value !== 'recording';
-        typed.hidden = audioChoice.value !== 'typed';
-      };
-      const label = el('label', 'Audio');
-      label.title = 'What the session\'s adapter hears once this starts it: the adapter for the session\'s profile\'s service streams it, and its events show in the activity log. You hear it as it streams.';
-      const boxes = el('span', '', 'audio-boxes');
-      boxes.append(audioChoice, recording);
-      const row = el('div', '', 'row');
-      row.append(label, boxes);
-      form.append(row, typed);
-    }
+    // The adapters this operation's action calls, whose calls wait under None (adapters.js).
+    const adapters = adaptersCalledBy(op.operation, calledOut);
     form.prepend(el('h4', values.size ? 'Parameters' : 'Request', 'op-h'), callerRow());
     place(form);
     const searchExample = exampleSearch(op.doc, op, values.has('query:q'));
@@ -680,6 +677,40 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (row.childElementCount) editor.append(row);
       editor.append(bodyBox);
       if (editor.childElementCount) place(editor);
+    }
+
+    // A record the body names that chooses an adapter, such as a session's
+    // profile: picked from the records the site routes to an adapter, each
+    // saying which, or None. A record no adapter answers isn't offered.
+    for (const { name, resource } of bodyBox ? relationshipFields(op.doc, mediaTypeOf(op) && op.operation.requestBody.content[mediaTypeOf(op)]?.schema) : []) {
+      const chooses = recordAdapters(resource, docs);
+      if (!chooses.apis.length) continue;
+      const all = [...(examples.config[resource] ?? []), ...(examples.records[resource] ?? []).map((example) => example.data)]
+        .filter((record, i, every) => record?.id && every.findIndex((other) => other.id === record.id) === i);
+      if (!all.length) continue;
+      const choices = all.filter((record) => chooses.entryFor(record).some(({ entry }) => entry));
+      const bodyValue = () => { try { return JSON.parse(bodyBox.value)?.[name]; } catch { return undefined; } };
+      const none = !choices.length || chooses.apis.every((api) => chosenAdapter(records, api) === NONE);
+      form.append(recordPicker({
+        field: name,
+        records: choices,
+        answers: chooses.entryFor,
+        value: none ? NONE : (choices.some((record) => record.id === bodyValue()) ? bodyValue() : choices[0].id),
+        onPick: async (value) => {
+          // Under None, the request still names a record: the first one an adapter answers.
+          const record = value === NONE ? choices[0] ?? all[0] : choices.find((choice) => choice.id === value);
+          let body = {};
+          try { body = JSON.parse(bodyBox.value) ?? {}; } catch { /* started over */ }
+          bodyBox.value = JSON.stringify({ ...body, [name]: record.id }, null, 2);
+          refresh();
+          const wanted = value === NONE ? NONE : ROUTED;
+          if (chooses.apis.every((api) => chosenAdapter(records, api) === wanted)) return;
+          for (const api of chooses.apis) chooseAdapter(records, api, wanted);
+          // The mock takes the choice when it starts again, with the same records and stubs.
+          await session.keep();
+          await start({ seed: session.seeded, restore: true });
+        },
+      }));
     }
 
     // The request the form describes, read the same way for Send and the snippets.
@@ -767,6 +798,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     holder.addEventListener('change', refresh);
     refreshers.push(refresh);
     place(code);
+    // Under None, the calls the adapter gets, and then what it reports.
+    const adapterBox = el('div');
+    place(adapterBox);
 
     // Send, inside the code block, and what came back as the first of the
     // response tabs, beside the documented ones: one tab for what was sent,
@@ -829,14 +863,15 @@ export async function mountSendPanels({ contracts, version, scope }) {
         return;
       }
       if (!mock) return;
-      // The audio the session's adapter hears once this starts it.
-      let spoken = '';
-      if (audioChoice?.value) {
-        const chosen = await chooseAudio();
-        if (!chosen) return;
-        spoken = chosen.spoken;
-      }
       button.disabled = true;
+      adapterBox.replaceChildren();
+      answerHere = (call, answer) => adapterBox.append(answerForm({ call, docs, follow: followed, answer }));
+      askHere = (call, done) => adapterBox.append(signInPrompt({
+        call,
+        signIn: () => signIn(call.scheme, records),
+        done: (token) => { mockChanged(); done(token); },
+      }));
+      audioHere = (done) => adapterBox.append(audioPrompt({ where: records, done }));
       try {
         const request = requestFor();
         const path = op.path.replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(request.path[n] ?? ''));
@@ -868,7 +903,12 @@ export async function mountSendPanels({ contracts, version, scope }) {
           returnedEvent,
         };
         showResult(result);
-        if (spoken) holder.querySelector('.resp-panel[data-resp="sent"]')?.append(el('div', spoken, 'sent-status ok'));
+        if (response.ok) {
+          for (const api of adapters.filter((a) => chosenAdapter(records, a) === NONE)) {
+            const report = reportForm({ api, docs, record: returned, publish: publishEvent });
+            if (report) adapterBox.append(report);
+          }
+        }
         logRequest(records, {
           time: sentAt, method: op.method, path: query.size ? `${path}?${query}` : path, body: request.body,
           status: response.status, ok: response.ok, ms, shown, eventIds: (events ?? []).map((event) => event.id),
@@ -899,45 +939,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
         button.disabled = false;
       }
     };
-
-    /**
-     * The audio chosen for this start or resume, what the session's adapter
-     * hears when it asks for the microphone (as-microphone.js): the
-     * microphone itself, a recording, or typed lines, spoken first. Null,
-     * with why, when it can't be.
-     */
-    async function chooseAudio() {
-      const request = requestFor();
-      const sessionId = request.path.transcriptionSessionId;
-      const refuse = (why) => { showSent('audio · not sent', false, [el('div', `Not sent: ${why}`, 'sent-status bad')]); return null; };
-      if (!sessionId) return refuse('give transcriptionSessionId first, a session you started.');
-      if (audioChoice.value === 'recording') {
-        const file = recording.files[0];
-        if (!file) return refuse('choose a recording first.');
-        playAsMicrophone(file);
-        return { spoken: '' };
-      }
-      if (audioChoice.value === 'microphone') {
-        useMicrophone();
-        return { spoken: '' };
-      }
-      const lines = typedText.value.split('\n').map((line) => line.trim()).filter(Boolean);
-      if (!lines.length) return refuse('type a line to speak first.');
-      button.disabled = true;
-      const on = (device) => (device === 'webgpu' ? 'the GPU' : 'the CPU');
-      showSent('audio', true, [el('div', 'Loading the voices (Kokoro). The first time, this downloads the model…', 'sent-status ok')]);
-      try {
-        const speech = await speakLines(lines, typedVoices.map((pick) => pick.value), ({ line, of, device, speechSeconds, makingSeconds }) => showSent('audio', true, [
-          el('div', `Speaking line ${line} of ${of} on ${on(device)}: ${speechSeconds.toFixed(1)} s of speech in ${makingSeconds.toFixed(1)} s`, 'sent-status ok'),
-        ]));
-        playAsMicrophone(speech.recording);
-        return { spoken: `Typed lines spoken on ${on(speech.device)}: ${speech.speechSeconds.toFixed(1)} s of speech in ${speech.makingSeconds.toFixed(1)} s, after ${speech.loadingSeconds.toFixed(1)} s loading.` };
-      } catch (error) {
-        return refuse(`the lines weren't spoken: ${error.message}`);
-      } finally {
-        button.disabled = false;
-      }
-    }
 
     // Coming back to the page: as it was left, open, with what was sent and what came back.
     const kept = holder.id ? results[holder.id] : null;

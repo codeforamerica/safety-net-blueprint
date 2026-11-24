@@ -236,7 +236,7 @@ describe('resolve', () => {
     const props = spec().components.schemas.Application.properties;
     assert.deepEqual(props.status.enum, ['draft', 'submitted']);
     assert.deepEqual(props.slaTypeCode.enum, ['snap_standard']);
-    assert.equal('x-enum-source' in props.status, false, 'annotation consumed');
+    assert.ok('x-enum-source' in props.status, 'annotation kept beside the values');
   });
 
   test('prefixes every event type, in both the machine and the catalog', () => {
@@ -247,10 +247,10 @@ describe('resolve', () => {
     assert.ok('ca.intake.application.submitted' in events.channels);
   });
 
-  test('filters to the target environment and strips the marker', () => {
+  test('filters to the target environment and keeps the marker', () => {
     assert.equal(spec().servers.length, 1);
     assert.equal(spec().servers[0].url, 'https://api.example.com');
-    assert.equal('x-environments' in spec().servers[0], false);
+    assert.deepEqual(spec().servers[0]['x-environments'], ['production']);
   });
 
   test('substitutes variables', () => {

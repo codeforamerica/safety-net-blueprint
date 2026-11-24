@@ -25,7 +25,8 @@ import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPEN
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
-import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
+import { signInSettings, signedIn, signIn, signOut, anyScheme } from './sign-in.js';
+import { chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
 
@@ -103,16 +104,9 @@ const STYLE = `
   #mock-panel .mp-server .mp-rows .n { margin-left: 0; overflow-wrap: anywhere; }
   #mock-panel .mp-server-fields { display: flex; flex-direction: column; gap: .3rem; width: 100%; }
   #mock-panel .mp-server-var { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
-  #mock-panel .mp-route { padding: .35rem 0; border-bottom: 1px solid #f0eefb; font-size: .85rem; }
-  #mock-panel .mp-route:last-child { border-bottom: 0; }
+  #mock-panel .mp-sign-in { display: flex; gap: .6rem; align-items: center; margin: .4rem 0; font-size: .85rem; }
   #mock-panel .mp-route-head { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
-  #mock-panel .mp-route-head code { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; flex: 1; min-width: 0; }
-  #mock-panel .mp-route-to { color: #666; overflow-wrap: anywhere; margin: .15rem 0 0; }
-  #mock-panel .mp-switch { display: inline-flex; flex: none; border: 1px solid #2B1A78; border-radius: 4px; overflow: hidden; }
-  #mock-panel .mp-switch button { font: 600 11px system-ui, sans-serif; padding: 2px 8px; border: 0; background: #fff; color: #2B1A78; cursor: pointer; white-space: nowrap; }
-  #mock-panel .mp-switch button[aria-pressed="true"] { background: #2B1A78; color: #fff; cursor: default; }
-  #mock-panel .mp-route .mp-note { margin-top: .3rem; }
-  #mock-panel .mp-route .mp-edit { margin: .3rem 0 0; }
+  #mock-panel .mp-route-head code { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
 `;
 
 // How many events the log shows: the mock's list hands back at most this many at once.
@@ -294,7 +288,7 @@ function serverChooser(running) {
   pick.addEventListener('change', () => { apply.remove(); if (pick.value === 'url' || variableBoxes.size) box.insertBefore(apply, said); });
   box.append(said);
   if (chosen?.url) {
-    said.textContent = `Every call goes to ${chosen.url}, but what this site routes or you switched to this page. It has to allow calls from this page (CORS).`;
+    said.textContent = `Every call goes to ${chosen.url}, except what this site routes. It has to allow calls from this page (CORS).`;
   } else if (chosen) {
     // Where each API goes, so the addresses are here when wanted, not in the menu.
     said.textContent = 'Each API goes to its own server; one with none stays in this page. Each has to allow calls from this page (CORS).';
@@ -307,64 +301,31 @@ function serverChooser(running) {
     }
     said.append(list);
   } else {
-    said.textContent = 'Everything answers in your browser. A transcription session uses Whisper, in this page.';
+    said.textContent = 'Everything runs in your browser.';
   }
   return box;
 }
 
-/** A stub form for each call the mock can't answer itself, among those a row covers. */
-const stubOffers = (running, events, operations) => operations.flatMap((operation) => {
-  const add = Object.assign(el('button', 'Add an HTTP stub for it', 'mp-edit'), { type: 'button' });
-  add.onclick = () => openEditor(running, 'http', events, null, operation.key);
-  return [el('p', `The mock can't answer ${operation.key} itself: it answers 501 until a stub stands in for the service.`, 'mp-note'), add];
-});
-
-/** One of the site's routing entries: where it goes, with a switch back to the mock in this page. */
-function routeRow(running, events, { entry, callsOut }) {
-  const local = inPage(options, entry);
-  const row = el('div', '', 'mp-route');
-  const head = el('div', '', 'mp-route-head');
-  const name = entryName(entry);
-  const toggle = el('span', '', 'mp-switch');
-  toggle.setAttribute('role', 'group');
-  toggle.setAttribute('aria-label', `Where ${name} goes`);
-  for (const [text, toPage] of [['Real service', false], ['Mock in this page', true]]) {
-    const button = Object.assign(el('button', text), { type: 'button' });
-    button.setAttribute('aria-pressed', String(local === toPage));
-    button.onclick = async () => {
-      if (local === toPage) return;
-      for (const other of toggle.querySelectorAll('button')) other.disabled = true;
-      await running.keep();
-      switchEntry(options, entry, toPage);
-      await running.reroute();
-      render();
-    };
-    toggle.append(button);
-  }
-  head.append(el('code', name === '*' ? '* (every domain)' : name), toggle);
-  row.append(head, el('p', local ? 'Answered by the mock in this page.' : `Sent to ${destinationOf(entry)}.`, 'mp-route-to'));
-  if (local) row.append(...stubOffers(running, events, callsOut.filter((o) => entryFor([entry], { operationId: o.operationId, api: o.apiName, domain: o.domain }))));
-  return row;
-}
-
 /**
- * The server: the one picked in the page — this page's mock, a mock server,
- * or real services — and the site's own routing, each entry with a switch
- * back to the mock in this page.
+ * Who is signed in, with Sign out, or Sign in, when the site says how to
+ * sign in (sign_in in config.yaml) and the contracts have a scheme to sign
+ * in with (sign-in.js).
  */
-function routingSection(running, events) {
-  const docs = extract(options.contracts, 'docs');
-  const entries = siteRouting();
-  const callsOut = stubChoices(docs).operations;
-  const parts = [serverChooser(running)];
-  if (entries.length) {
-    const box = el('div');
-    for (const entry of entries) box.append(routeRow(running, events, { entry, callsOut }));
-    parts.push(el('p', 'This site sends these its own way, whatever server is chosen above:', 'mp-note'), box);
-  } else if (!chosenServer(options)) {
-    parts.push(el('p', 'Every call is answered by the mock in this page.', 'mp-none'));
-  }
-  return parts;
+function signInRow(docs) {
+  const scheme = signInSettings() ? anyScheme(docs) : null;
+  if (!scheme) return [];
+  const row = el('div', '', 'mp-sign-in');
+  const who = signedIn(options);
+  const button = Object.assign(el('button', who ? 'Sign out' : 'Sign in', 'mp-action'), { type: 'button' });
+  const said = el('span', who ? `Signed in as ${who.name}` : 'Not signed in');
+  button.onclick = async () => {
+    if (who) { signOut(options); render(); return; }
+    button.disabled = true;
+    try { await signIn(scheme, options); } catch (error) { said.textContent = `Not signed in: ${error.message}.`; }
+    render();
+  };
+  row.append(said, button);
+  return [row];
 }
 
 /** The timers waiting, each with Fire, pinned at the top of the activity log while there are any. */
@@ -602,8 +563,8 @@ async function render() {
   // What you can do, then what happened: one under the other, or side by
   // side when the panel is docked along the bottom.
   const settings = el('div', '', 'mp-settings');
-  settings.append(status, controls, about,
-    el('h3', 'Server'), ...routingSection(running, events),
+  settings.append(status, controls, ...signInRow(docs), about,
+    el('h3', 'Server'), serverChooser(running),
     el('h3', 'Stubs'), ...await stubsSection(running, events));
   const activity = el('div', '', 'mp-activity');
   activity.append(el('h3', 'Activity'), ...activitySection(running, events));

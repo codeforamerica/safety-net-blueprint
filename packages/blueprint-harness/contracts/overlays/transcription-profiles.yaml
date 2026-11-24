@@ -3,33 +3,21 @@ info:
   title: Harness transcription profiles
   version: 1.0.0
 
-# The profiles the harness's spoken transcription scenarios start their
-# sessions under, seeded as a state seeds its own: entries in the framework's
-# profile catalog. Two use the fake service the harness adds to the
-# transcription-services registry, for demos and tests; one names Whisper, which
-# the explorer runs in the page, and starting a session in the explorer uses
-# it. The chat scenario uses the framework's own `typed` profile.
+# The profile the harness adds to the framework's catalog, seeded as a state
+# seeds its own: one naming the fake service behind sign-in, which the
+# explorer signs in to. The scenarios and the explorer otherwise use the
+# framework's own profiles: `whisper` for a spoken conversation, which the
+# explorer runs in the page, and `typed` for a chat.
 
 actions:
   - target: "$.profiles.entries"
     files: base/domains/communication/communication-transcripts-config.yaml
-    description: The profiles the spoken transcription scenarios start under
+    description: A profile whose service needs signing in
     append:
-      - id: 7a1e0c2d-0000-4000-8000-0000000000f1
-        name: english-interviews
-        description: An interview in English, transcribed by the harness's fake service. No idle timeout, so a transcript under it never closes for being idle.
-        provider: fake-transcription
-        languages: [en-US]
-      - id: 7a1e0c2d-0000-4000-8000-0000000000f2
-        name: english-interviews-30-minutes
-        description: The same as english-interviews, but a transcript under it closes after 30 minutes with nothing added.
-        provider: fake-transcription
-        languages: [en-US]
-        idleTimeout: PT30M
-      - id: 7a1e0c2d-0000-4000-8000-0000000000f4
-        name: english-whisper
-        description: An interview in English, transcribed by Whisper. The explorer runs Whisper in the page, so a session under it can be tried with no service or account.
-        provider: whisper
+      - id: 7a1e0c2d-0000-4000-8000-0000000000f5
+        name: fake-secured
+        description: An interview in English, transcribed by the harness's fake service behind sign-in. Starting a session under it asks you to sign in first.
+        provider: fake-secured
         languages: [en-US]
 
   - target: "$.paths['/transcription-sessions'].post.requestBody.content['application/json']"
@@ -37,7 +25,7 @@ actions:
     description: Start a session under the Whisper profile, so trying it needs no service
     update:
       example:
-        profileId: 7a1e0c2d-0000-4000-8000-0000000000f4
+        profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
         model: whisper-tiny.en
         client: interview-assistant/0.1.0
         startedAt: "2026-01-15T14:00:00Z"

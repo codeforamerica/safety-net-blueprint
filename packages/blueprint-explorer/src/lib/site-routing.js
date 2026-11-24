@@ -52,7 +52,10 @@ export async function bundleSiteRouting({ configDir, outDir, resolvedDir }) {
   const imports = modules.map((path, i) => (path ? `import * as module${i} from ${JSON.stringify(path)};` : '')).join('\n');
   const routes = entries.map((entry, i) => {
     const { handler, ...rest } = entry;
-    return modules[i] ? `{ ...${JSON.stringify(rest)}, handler: module${i} }` : JSON.stringify(entry);
+    // The file as written, for the control panel to name (try-it/routing.js, HANDLER_FILE).
+    return modules[i]
+      ? `{ ...${JSON.stringify(rest)}, handler: module${i}, [Symbol.for('blueprint-explorer.handler-file')]: ${JSON.stringify(handler)} }`
+      : JSON.stringify(entry);
   }).join(',\n  ');
   const entry = `${imports}
 globalThis.BlueprintExplorer ??= {};

@@ -1,0 +1,34 @@
+overlay: '1.0.0'
+info:
+  title: Harness sign-in
+  version: 1.0.0
+
+# How a caller signs in to the harness's services, as a state says how to
+# sign in to its own: the shared bearer scheme becomes an OAuth 2.0 one,
+# naming the provider's sign-in page. The harness's provider is a stand-in,
+# a page in the harness site (explorer/pages/fake-sign-in.html) that signs in
+# anyone, by any name, so the explorer's sign-in can be tried with nothing
+# running. A state names its real provider here, by openIdConnectUrl or its
+# OAuth 2.0 flows.
+
+actions:
+  - target: "$.bearerAuth.scheme"
+    files: base/components/security-schemes.yaml
+    description: An OAuth 2.0 scheme has no HTTP scheme
+    remove: true
+
+  - target: "$.bearerAuth.bearerFormat"
+    files: base/components/security-schemes.yaml
+    description: An OAuth 2.0 scheme has no bearer format
+    remove: true
+
+  - target: "$.bearerAuth"
+    files: base/components/security-schemes.yaml
+    description: Sign in through the harness's stand-in provider
+    update:
+      type: oauth2
+      flows:
+        implicit:
+          # Relative: the explorer resolves it against the site it's in.
+          authorizationUrl: pages/fake-sign-in.html
+          scopes: {}

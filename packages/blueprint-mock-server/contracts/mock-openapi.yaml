@@ -138,10 +138,10 @@ paths:
                   response:
                     status: 200
                     body:
-                      provider: fake-transcription
+                      provider: whisper
                       protocol: websocket
-                      url: wss://fake-transcription.example/stream
-                      accessToken: fake-service-token
+                      url: wss://whisper.state.example/stream
+                      accessToken: whisper-token
                       tokenType: Bearer
                       expiresIn: 300
       responses:
