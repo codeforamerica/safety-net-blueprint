@@ -371,6 +371,8 @@ components:
             - earned-income-varies
             - missing-income
             - name-mismatch
+          x-enum-source:
+            registry: suggestion-categories
         message:
           type: string
           minLength: 1
@@ -402,6 +404,9 @@ components:
             - refused
             - dismissed
             - expired
+          x-enum-source:
+            source: states[].id
+            machine: Suggestion
         fingerprint:
           type: string
           readOnly: true

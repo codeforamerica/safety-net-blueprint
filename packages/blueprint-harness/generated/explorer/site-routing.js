@@ -206,10 +206,105 @@
     return Response.json({ metadata: body.metadata ?? {} }, { status: 202 });
   }
 
+  // packages/blueprint-harness/explorer/adapters/fake-secured.js
+  var fake_secured_exports = {};
+  __export(fake_secured_exports, {
+    pauseStream: () => pauseStream2,
+    requestCredentials: () => requestCredentials,
+    startStream: () => startStream2,
+    stopStream: () => stopStream2
+  });
+  var LINES = [
+    { speaker: "staff", text: "Can you tell me who lives with you?" },
+    { speaker: "client", text: "My sister and her two kids." },
+    { speaker: "staff", text: "Does anyone in the household work?" },
+    { speaker: "client", text: "I work at the grocery store, about thirty hours a week." }
+  ];
+  var EVERY_MS = 2e3;
+  var running2 = /* @__PURE__ */ new Map();
+  var transcripts2 = /* @__PURE__ */ new Map();
+  var publisher2 = (context, sessionId) => async (event, data = {}) => {
+    const answer = await context.publish(`transcription_session.${event}`, { transcriptId: transcripts2.get(sessionId), ...data }, { subject: sessionId });
+    if (answer.status >= 400) throw new Error(`publishing ${event} answered ${answer.status}: ${answer.body?.message ?? ""}`.trim());
+  };
+  var later2 = (work) => setTimeout(() => {
+    work().catch((error) => console.warn(`fake-secured: ${error.message}`));
+  }, 0);
+  function sendLines(sessionId, publish) {
+    const run = Date.now().toString(36);
+    let next = 0;
+    const timer = setInterval(() => {
+      if (next >= LINES.length) return;
+      const { speaker, text } = LINES[next];
+      const endedAt = (/* @__PURE__ */ new Date()).toISOString();
+      const startedAt = new Date(Date.now() - EVERY_MS / 2).toISOString();
+      next += 1;
+      publish("line_finished", { key: `${run}.l${next}`, text, speaker, startedAt, endedAt }).catch((error) => console.warn(`fake-secured: ${error.message}`));
+    }, EVERY_MS);
+    running2.set(sessionId, () => clearInterval(timer));
+  }
+  function halt2(sessionId) {
+    running2.get(sessionId)?.();
+    running2.delete(sessionId);
+  }
+  async function startStream2(request, context) {
+    const stream = await request.json();
+    const sessionId = stream.transcriptionSessionId;
+    transcripts2.set(sessionId, stream.transcriptId);
+    const publish = publisher2(context, sessionId);
+    later2(async () => {
+      try {
+        const credentials = await context.call("requestCredentials", {
+          body: {
+            metadata: { transcriptionSessionId: sessionId, transcriptId: stream.transcriptId },
+            provider: stream.provider,
+            ...stream.model ? { model: stream.model } : {},
+            ...stream.languages ? { languages: stream.languages } : {},
+            audio: { encoding: "linear16", sampleRateHertz: 16e3, channelCount: 1 },
+            protocols: ["websocket"]
+          }
+        });
+        if (credentials.status >= 400) throw new Error(`requestCredentials answered ${credentials.status}: ${credentials.body?.message ?? ""}`.trim());
+        await publish("connected", stream.lastActivityAt ? { gap: { startedAt: stream.lastActivityAt, endedAt: (/* @__PURE__ */ new Date()).toISOString() } } : {});
+        sendLines(sessionId, publish);
+      } catch (error) {
+        await publish("failed", { reason: error.message }).catch(() => {
+        });
+      }
+    });
+    return Response.json({ metadata: stream.metadata ?? {} }, { status: 202 });
+  }
+  async function pauseStream2(request, context) {
+    const body = await request.json().catch(() => ({}));
+    halt2(context.params.transcriptionSessionId);
+    return Response.json({ metadata: body.metadata ?? {} }, { status: 202 });
+  }
+  async function stopStream2(request, context) {
+    const sessionId = context.params.transcriptionSessionId;
+    const body = await request.json().catch(() => ({}));
+    halt2(sessionId);
+    later2(async () => {
+      if (!transcripts2.has(sessionId)) {
+        const session = await context.call("getTranscriptionSession", { params: { transcriptionSessionId: sessionId } });
+        transcripts2.set(sessionId, session.body?.transcriptId);
+      }
+      await publisher2(context, sessionId)("ended", { at: (/* @__PURE__ */ new Date()).toISOString() });
+    });
+    return Response.json({ metadata: body.metadata ?? {} }, { status: 202 });
+  }
+  async function requestCredentials(request) {
+    if (!/^Bearer \S+/.test(request.headers.get("authorization") ?? "")) {
+      return Response.json({ code: "UNAUTHORIZED", message: "Sign in first: a credential spends the service account." }, { status: 401 });
+    }
+    const { metadata, provider } = await request.json();
+    return Response.json({ metadata, provider, protocol: "websocket", url: "wss://fake-secured.invalid/stream", expiresIn: 900 });
+  }
+
   // packages/blueprint-harness/explorer/routing.yaml
   globalThis.BlueprintExplorer ??= {};
   globalThis.BlueprintExplorer.routing = [
     ...globalThis.BlueprintExplorer.routing ?? [],
-    { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "whisper" } }, handler: whisper_exports }
+    { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "whisper" } }, handler: whisper_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/whisper.js" },
+    { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "fake-secured" } }, handler: fake_secured_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/fake-secured.js" }
   ];
 })();

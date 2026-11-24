@@ -406,6 +406,7 @@ channels:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source: states[].id
                             submittedAt:
                               type:
                                 - string
@@ -427,6 +428,7 @@ channels:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             slaInfo:
                               type: array
                               readOnly: true
@@ -448,6 +450,7 @@ channels:
                                     enum:
                                       - snap_standard
                                       - medicaid_standard
+                                    x-enum-source: slaTypes[].id
                                   status:
                                     type: string
                                     enum:
@@ -728,6 +731,7 @@ channels:
                                               - scheduled
                                               - in_progress
                                               - completed
+                                            x-enum-source: states[].id
                                           programsAppliedFor:
                                             type: array
                                             items:
@@ -2000,6 +2004,9 @@ channels:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source:
+                                source: states[].id
+                                machine: Interview
                             startedAt:
                               type: string
                               format: date-time
@@ -2420,6 +2427,7 @@ channels:
                                     - scheduled
                                     - in_progress
                                     - completed
+                                  x-enum-source: states[].id
                                 programsAppliedFor:
                                   type: array
                                   items:
@@ -4153,6 +4161,7 @@ operations:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source: states[].id
                               submittedAt:
                                 type:
                                   - string
@@ -4174,6 +4183,7 @@ operations:
                                 enum:
                                   - snap_standard
                                   - medicaid_standard
+                                x-enum-source: slaTypes[].id
                               slaInfo:
                                 type: array
                                 readOnly: true
@@ -4195,6 +4205,7 @@ operations:
                                       enum:
                                         - snap_standard
                                         - medicaid_standard
+                                      x-enum-source: slaTypes[].id
                                     status:
                                       type: string
                                       enum:
@@ -4475,6 +4486,7 @@ operations:
                                                 - scheduled
                                                 - in_progress
                                                 - completed
+                                              x-enum-source: states[].id
                                             programsAppliedFor:
                                               type: array
                                               items:
@@ -5059,6 +5071,7 @@ operations:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source: states[].id
                             submittedAt:
                               type:
                                 - string
@@ -5080,6 +5093,7 @@ operations:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             slaInfo:
                               type: array
                               readOnly: true
@@ -5101,6 +5115,7 @@ operations:
                                     enum:
                                       - snap_standard
                                       - medicaid_standard
+                                    x-enum-source: slaTypes[].id
                                   status:
                                     type: string
                                     enum:
@@ -5381,6 +5396,7 @@ operations:
                                               - scheduled
                                               - in_progress
                                               - completed
+                                            x-enum-source: states[].id
                                           programsAppliedFor:
                                             type: array
                                             items:
@@ -7576,6 +7592,9 @@ operations:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source:
+                                  source: states[].id
+                                  machine: Interview
                               startedAt:
                                 type: string
                                 format: date-time
@@ -7776,6 +7795,9 @@ operations:
                                 - scheduled
                                 - in_progress
                                 - completed
+                              x-enum-source:
+                                source: states[].id
+                                machine: Interview
                             startedAt:
                               type: string
                               format: date-time
@@ -8198,6 +8220,7 @@ operations:
                                       - scheduled
                                       - in_progress
                                       - completed
+                                    x-enum-source: states[].id
                                   programsAppliedFor:
                                     type: array
                                     items:
@@ -8616,6 +8639,7 @@ operations:
                                     - scheduled
                                     - in_progress
                                     - completed
+                                  x-enum-source: states[].id
                                 programsAppliedFor:
                                   type: array
                                   items:
@@ -12419,6 +12443,7 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source: states[].id
                           submittedAt:
                             type:
                               - string
@@ -12440,6 +12465,7 @@ components:
                             enum:
                               - snap_standard
                               - medicaid_standard
+                            x-enum-source: slaTypes[].id
                           slaInfo:
                             type: array
                             readOnly: true
@@ -12461,6 +12487,7 @@ components:
                                   enum:
                                     - snap_standard
                                     - medicaid_standard
+                                  x-enum-source: slaTypes[].id
                                 status:
                                   type: string
                                   enum:
@@ -12741,6 +12768,7 @@ components:
                                             - scheduled
                                             - in_progress
                                             - completed
+                                          x-enum-source: states[].id
                                         programsAppliedFor:
                                           type: array
                                           items:
@@ -13995,6 +14023,9 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source:
+                              source: states[].id
+                              machine: Interview
                           startedAt:
                             type: string
                             format: date-time
@@ -14412,6 +14443,7 @@ components:
                                   - scheduled
                                   - in_progress
                                   - completed
+                                x-enum-source: states[].id
                               programsAppliedFor:
                                 type: array
                                 items:
@@ -16108,6 +16140,7 @@ components:
                           - scheduled
                           - in_progress
                           - completed
+                        x-enum-source: states[].id
                       submittedAt:
                         type:
                           - string
@@ -16129,6 +16162,7 @@ components:
                         enum:
                           - snap_standard
                           - medicaid_standard
+                        x-enum-source: slaTypes[].id
                       slaInfo:
                         type: array
                         readOnly: true
@@ -16150,6 +16184,7 @@ components:
                               enum:
                                 - snap_standard
                                 - medicaid_standard
+                              x-enum-source: slaTypes[].id
                             status:
                               type: string
                               enum:
@@ -16430,6 +16465,7 @@ components:
                                         - scheduled
                                         - in_progress
                                         - completed
+                                      x-enum-source: states[].id
                                     programsAppliedFor:
                                       type: array
                                       items:
@@ -17550,6 +17586,9 @@ components:
                           - scheduled
                           - in_progress
                           - completed
+                        x-enum-source:
+                          source: states[].id
+                          machine: Interview
                       startedAt:
                         type: string
                         format: date-time
@@ -17944,6 +17983,7 @@ components:
                               - scheduled
                               - in_progress
                               - completed
+                            x-enum-source: states[].id
                           programsAppliedFor:
                             type: array
                             items:

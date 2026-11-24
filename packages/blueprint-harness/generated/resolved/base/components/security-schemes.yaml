@@ -1,6 +1,8 @@
 bearerAuth:
-  type: http
-  scheme: bearer
-  bearerFormat: JWT
+  type: oauth2
   description: |
     The signed-in caller's token, a JWT from the state's identity provider. An operation that requires it answers 401 without a valid one.
+  flows:
+    implicit:
+      authorizationUrl: pages/fake-sign-in.html
+      scopes: {}

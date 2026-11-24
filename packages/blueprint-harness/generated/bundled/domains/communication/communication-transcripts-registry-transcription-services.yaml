@@ -4,6 +4,6 @@ domain: communication
 capability: transcripts
 type: transcription-services
 entries:
-  fake-transcription:
+  fake-secured:
     description: |
-      A fake service for demos and tests. The scenarios play its adapter, and the mock answers its credentials with stubs.
+      A fake service behind sign-in, standing in for one a state hosts: its credentials go only to a signed-in caller. Its adapter in the harness site (explorer/adapters/fake-secured.js) sends a few set lines.

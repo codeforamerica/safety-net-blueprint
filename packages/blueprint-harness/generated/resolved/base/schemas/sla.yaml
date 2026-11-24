@@ -22,6 +22,7 @@ $defs:
         enum:
           - snap_standard
           - medicaid_standard
+        x-enum-source: slaTypes[].id
       status:
         type: string
         enum:
@@ -58,6 +59,7 @@ $defs:
         enum:
           - snap_standard
           - medicaid_standard
+        x-enum-source: slaTypes[].id
   SlaDeadline:
     type:
       - string

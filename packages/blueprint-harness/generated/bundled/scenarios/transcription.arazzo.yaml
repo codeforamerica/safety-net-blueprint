@@ -69,7 +69,7 @@ workflows:
           Create a session
 
           - It says what to start a transcript with: the profile, the model, the client and when the conversation began. No transcript exists yet.
-          - The profile, `english-interviews`, is one the harness seeds, as a state seeds its own. It uses the harness's fake service, and has no limit on time with nothing added, so a transcript under it never closes on its own partway through.
+          - The profile, `whisper`, is the framework's: Whisper, which a state runs itself. A transcript under it closes after 30 minutes with nothing added; here nothing waits that long.
           - The session begins in `created`.
           - The staff member is already signed in. Signing in is outside this scenario.
         operationId: $sourceDescriptions.sessions.createTranscriptionSession
@@ -77,8 +77,8 @@ workflows:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            profileId: 7a1e0c2d-0000-4000-8000-0000000000f1
-            model: standard
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+            model: whisper-tiny.en
             client: interview-assistant/0.1.0
             startedAt: "2026-10-12T10:00:00Z"
         successCriteria:
@@ -158,10 +158,10 @@ workflows:
               status: 200
               body:
                 metadata: {}
-                provider: fake-transcription
+                provider: whisper
                 protocol: websocket
-                url: wss://fake-transcription.example/stream
-                accessToken: fake-service-token
+                url: wss://whisper.state.example/stream
+                accessToken: whisper-token
                 tokenType: Bearer
                 expiresIn: 300
         successCriteria:
@@ -180,8 +180,8 @@ workflows:
           payload:
             metadata:
               transcriptionSessionId: $steps.create.outputs.id
-            provider: fake-transcription
-            model: standard
+            provider: whisper
+            model: whisper-tiny.en
             languages:
               - en-US
             audio:
@@ -192,7 +192,7 @@ workflows:
               - websocket
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/provider == 'fake-transcription'
+          - condition: $response.body#/provider == 'whisper'
           - condition: $response.body#/expiresIn == 300
       - stepId: publishConnected
         x-actors:
@@ -438,7 +438,7 @@ workflows:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            profileId: 7a1e0c2d-0000-4000-8000-0000000000f1
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
             client: interview-assistant/0.1.0
             startedAt: "2026-10-12T11:00:00Z"
         successCriteria:
@@ -474,8 +474,8 @@ workflows:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            profileId: 7a1e0c2d-0000-4000-8000-0000000000f1
-            model: standard
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+            model: whisper-tiny.en
             client: interview-assistant/0.1.0
             startedAt: "2026-10-12T11:00:00Z"
         successCriteria:
@@ -693,10 +693,10 @@ workflows:
               status: 200
               body:
                 metadata: {}
-                provider: fake-transcription
+                provider: whisper
                 protocol: websocket
-                url: wss://fake-transcription.example/stream
-                accessToken: fake-service-token-2
+                url: wss://whisper.state.example/stream
+                accessToken: whisper-token-2
                 tokenType: Bearer
                 expiresIn: 300
         successCriteria:
@@ -714,8 +714,8 @@ workflows:
           payload:
             metadata:
               transcriptionSessionId: $steps.connected.outputs.sessionId
-            provider: fake-transcription
-            model: standard
+            provider: whisper
+            model: whisper-tiny.en
             languages:
               - en-US
             audio:
@@ -726,7 +726,7 @@ workflows:
               - websocket
         successCriteria:
           - condition: $statusCode == 200
-          - condition: $response.body#/accessToken == 'fake-service-token-2'
+          - condition: $response.body#/accessToken == 'whisper-token-2'
       - stepId: stillConnected
         x-actors:
           - staff
@@ -1028,10 +1028,10 @@ workflows:
               status: 200
               body:
                 metadata: {}
-                provider: fake-transcription
+                provider: whisper
                 protocol: websocket
-                url: wss://fake-transcription.example/stream
-                accessToken: fake-service-token
+                url: wss://whisper.state.example/stream
+                accessToken: whisper-token
                 tokenType: Bearer
                 expiresIn: 300
         successCriteria:
@@ -1046,8 +1046,8 @@ workflows:
           payload:
             metadata:
               transcriptionSessionId: $steps.connected.outputs.sessionId
-            provider: fake-transcription
-            model: standard
+            provider: whisper
+            model: whisper-tiny.en
             languages:
               - en-US
             audio:
@@ -1213,21 +1213,6 @@ workflows:
     description: A transcript nobody adds anything to closes itself once its profile's time limit passes, so one left open by mistake doesn't stay open forever. The transcript asks the platform's scheduler to check back, and closes if nothing was added when the check comes.
     x-branch: other
     steps:
-      - stepId: schedulerStub
-        x-actors:
-          - scheduler
-        description: |
-          Sends each check back at once, instead of when it's due
-
-          - Nobody waits 30 minutes in a demo. This stub answers the next request for an idle check at once, as if the time had passed.
-        operationId: $sourceDescriptions.mock.registerEventStub
-        requestBody:
-          payload:
-            "on": platform.timer.requested
-            match:
-              data.callback.event: communication.transcript.idle_check
-        successCriteria:
-          - condition: $statusCode == 201
       - stepId: start
         x-actors:
           - staff
@@ -1235,21 +1220,37 @@ workflows:
         description: |
           Start a transcript, then add nothing
 
-          - Under `english-interviews-30-minutes`, a profile the harness seeds: the same as `english-interviews`, but a transcript under it closes after 30 minutes with nothing added.
-          - In a conversation, the session starts the transcript when it starts. This starts it directly, because the scheduler's stub answers at once: through the session, the transcript would close before the session finished connecting.
+          - Under `whisper`, the framework's profile, a transcript closes after 30 minutes with nothing added. On starting, it asks the platform's scheduler to check back then.
+          - In a conversation, the session starts the transcript when it starts. This starts it directly, so nothing is added to it.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            profileId: 7a1e0c2d-0000-4000-8000-0000000000f2
-            model: standard
+            profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
+            model: whisper-tiny.en
             client: interview-assistant/0.1.0
             startedAt: "2026-10-12T12:00:00Z"
         successCriteria:
           - condition: $statusCode == 201
         outputs:
           transcriptId: $response.body#/id
+      - stepId: schedulerStub
+        x-actors:
+          - scheduler
+        description: |
+          Sends the transcript's check back now, instead of when it's due
+
+          - Nobody waits 30 minutes in a demo. This stub sends back the check this transcript asked for, as if the time had passed.
+          - It names the transcript's own timer, so it fires no other transcript's.
+        operationId: $sourceDescriptions.mock.registerEventStub
+        requestBody:
+          payload:
+            "on": platform.timer.requested
+            match:
+              data.timerId: communication.idle_check.{$steps.start.outputs.transcriptId}
+        successCriteria:
+          - condition: $statusCode == 201
       - stepId: idleCheck
         x-actors:
           - scheduler
@@ -1257,7 +1258,7 @@ workflows:
         description: |
           Check: has anything been added?
 
-          - When it started, the transcript asked the scheduler for this reminder, due after its profile's time limit. The stub sent it back at once.
+          - When it started, the transcript asked the scheduler for this reminder, due after its profile's time limit. The stub sent it back.
           - The reminder says when it was asked for. Nothing was added since, so the transcript closes.
         operationId: $sourceDescriptions.transcriptEvents.receiveCommunicationTranscriptIdleCheck
         action: receive
@@ -1322,10 +1323,10 @@ workflows:
               status: 200
               body:
                 metadata: {}
-                provider: fake-transcription
+                provider: whisper
                 protocol: websocket
-                url: wss://fake-transcription.example/stream
-                accessToken: fake-service-token
+                url: wss://whisper.state.example/stream
+                accessToken: whisper-token
                 tokenType: Bearer
                 expiresIn: 300
         successCriteria:
@@ -1340,8 +1341,8 @@ workflows:
           payload:
             metadata:
               transcriptionSessionId: $inputs.sessionId
-            provider: fake-transcription
-            model: standard
+            provider: whisper
+            model: whisper-tiny.en
             languages:
               - en-US
             audio:

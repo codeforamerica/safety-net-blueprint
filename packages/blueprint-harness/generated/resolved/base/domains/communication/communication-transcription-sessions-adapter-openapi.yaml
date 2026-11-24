@@ -255,7 +255,7 @@ components:
                 - azure-speech
                 - deepgram
                 - elevenlabs-scribe
-                - fake-transcription
+                - fake-secured
                 - gladia
                 - google-cloud-speech
                 - google-gemini-live
@@ -264,6 +264,8 @@ components:
                 - soniox
                 - speechmatics
                 - whisper
+              x-enum-source:
+                registry: transcription-services
             model:
               type: string
               description: The service's model, from the transcript.
@@ -296,6 +298,8 @@ components:
       description: The request's metadata, echoed back.
       allOf:
         - $ref: ../../components/adapter.yaml#/AdapterResponse
+      example:
+        metadata: {}
     CredentialsRequest:
       description: |
         What the service needs to issue a credential: the service, model and languages the adapter was started with, and the audio and protocols the streaming part streams with.
@@ -317,7 +321,7 @@ components:
                 - azure-speech
                 - deepgram
                 - elevenlabs-scribe
-                - fake-transcription
+                - fake-secured
                 - gladia
                 - google-cloud-speech
                 - google-gemini-live
@@ -326,6 +330,8 @@ components:
                 - soniox
                 - speechmatics
                 - whisper
+              x-enum-source:
+                registry: transcription-services
             model:
               type: string
               description: The service's model, for a service that fixes it when issuing the credential.
@@ -422,7 +428,7 @@ components:
             - azure-speech
             - deepgram
             - elevenlabs-scribe
-            - fake-transcription
+            - fake-secured
             - gladia
             - google-cloud-speech
             - google-gemini-live
@@ -431,6 +437,8 @@ components:
             - soniox
             - speechmatics
             - whisper
+          x-enum-source:
+            registry: transcription-services
         protocol:
           $ref: "#/components/schemas/StreamProtocol"
         url:

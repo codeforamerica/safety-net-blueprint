@@ -12,6 +12,7 @@ $defs:
       - eligibility
       - intake
       - platform
+    x-enum-source: domains
   MetricCollection:
     type: string
     description: |

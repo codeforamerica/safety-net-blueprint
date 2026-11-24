@@ -690,6 +690,9 @@ components:
                 - recording
                 - paused
                 - closed
+              x-enum-source:
+                source: states[].id
+                machine: Transcript
             startedAt:
               type: string
               format: date-time
@@ -1024,7 +1027,7 @@ components:
             - azure-speech
             - deepgram
             - elevenlabs-scribe
-            - fake-transcription
+            - fake-secured
             - gladia
             - google-cloud-speech
             - google-gemini-live
@@ -1033,6 +1036,8 @@ components:
             - soniox
             - speechmatics
             - whisper
+          x-enum-source:
+            registry: transcription-services
         languages:
           type: array
           minItems: 1

@@ -80,7 +80,7 @@ paths:
             schema:
               $ref: "#/components/schemas/TranscriptionSessionCreate"
             example:
-              profileId: 7a1e0c2d-0000-4000-8000-0000000000f4
+              profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
               model: whisper-tiny.en
               client: interview-assistant/0.1.0
               startedAt: "2026-01-15T14:00:00Z"
@@ -437,6 +437,9 @@ components:
                 - stopping
                 - closed
                 - failed
+              x-enum-source:
+                source: states[].id
+                machine: TranscriptionSession
             createdAt:
               type: string
               format: date-time

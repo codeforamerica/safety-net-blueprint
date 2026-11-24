@@ -567,7 +567,7 @@
               "query": [
                 {
                   "key": "q",
-                  "value": "*english*",
+                  "value": "*whisper*",
                   "description": "Search query (contains match)"
                 },
                 {
@@ -605,7 +605,7 @@
           ]
         },
         {
-          "name": "Get TranscriptionProfile english",
+          "name": "Get TranscriptionProfile whisper",
           "request": {
             "method": "GET",
             "header": [],
@@ -689,103 +689,19 @@
           ]
         },
         {
-          "name": "Get TranscriptionProfile english-interviews",
+          "name": "Get TranscriptionProfile fake-secured",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/communication/profiles/7a1e0c2d-0000-4000-8000-0000000000f1",
+              "raw": "{{baseUrl}}/communication/profiles/7a1e0c2d-0000-4000-8000-0000000000f5",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "communication",
                 "profiles",
-                "7a1e0c2d-0000-4000-8000-0000000000f1"
-              ],
-              "variables": [
-                "profileId"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON\", function () {",
-                  "    pm.response.to.be.json;",
-                  "});",
-                  "",
-                  "pm.test(\"Response has id property\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get TranscriptionProfile english-interviews-30-minutes",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/communication/profiles/7a1e0c2d-0000-4000-8000-0000000000f2",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "profiles",
-                "7a1e0c2d-0000-4000-8000-0000000000f2"
-              ],
-              "variables": [
-                "profileId"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON\", function () {",
-                  "    pm.response.to.be.json;",
-                  "});",
-                  "",
-                  "pm.test(\"Response has id property\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get TranscriptionProfile english-whisper",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/communication/profiles/7a1e0c2d-0000-4000-8000-0000000000f4",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "communication",
-                "profiles",
-                "7a1e0c2d-0000-4000-8000-0000000000f4"
+                "7a1e0c2d-0000-4000-8000-0000000000f5"
               ],
               "variables": [
                 "profileId"
@@ -877,7 +793,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"english\",\n  \"description\": \"An interview in English.\",\n  \"provider\": \"aws-transcribe\",\n  \"languages\": [\n    \"en-US\"\n  ],\n  \"idleTimeout\": \"PT30M\"\n}",
+              "raw": "{\n  \"name\": \"whisper\",\n  \"description\": \"An interview in English, transcribed by Whisper, which a state runs itself, or a page runs with no service or account.\",\n  \"provider\": \"whisper\",\n  \"languages\": [\n    \"en-US\"\n  ],\n  \"idleTimeout\": \"PT30M\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -994,14 +910,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"english\",\n  \"description\": \"An interview in English.\",\n  \"provider\": \"aws-transcribe\"\n}",
+              "raw": "{\n  \"name\": \"whisper\",\n  \"description\": \"An interview in English, transcribed by Whisper, which a state runs itself, or a page runs with no service or account.\",\n  \"provider\": \"whisper\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Update multiple fields of TranscriptionProfile english"
+            "description": "Update multiple fields of TranscriptionProfile whisper"
           },
           "event": [
             {

@@ -164,7 +164,7 @@ export type CommunicationTranscriptCreatedEvent = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -782,7 +782,7 @@ export type CommunicationTranscriptionProfileCreatedEvent = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.
@@ -1436,7 +1436,7 @@ export type CommunicationTranscriptCreatedEventWritable = {
              * lines a person types.
              *
              */
-            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+            provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
             /**
              * The languages the conversation may be in. One fixes the language;
              * several let the service tell which is being spoken among them.
@@ -1683,7 +1683,7 @@ export type CommunicationTranscriptionProfileCreatedEventWritable = {
          * lines a person types.
          *
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The languages the conversation may be in. One fixes the language;
          * several let the service tell which is being spoken among them.

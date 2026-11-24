@@ -31,7 +31,7 @@ export type StreamRequest = {
     /**
      * The transcription service, an entry of the transcription-services registry.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The service's model, from the transcript.
      */
@@ -96,7 +96,7 @@ export type CredentialsRequest = {
     /**
      * The transcription service, an entry of the transcription-services registry.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The service's model, for a service that fixes it when issuing the credential.
      */
@@ -150,7 +150,7 @@ export type CredentialsResponse = {
     /**
      * The transcription service, as the transcript's profile names it.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * How the software connects to the service.
      */
@@ -245,7 +245,7 @@ export type StreamConnectionFields = {
     /**
      * The transcription service, as the transcript's profile names it.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * How the software connects to the service.
      */
@@ -305,7 +305,7 @@ export type StreamRequestWritable = {
     /**
      * The transcription service, an entry of the transcription-services registry.
      */
-    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+    provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
     /**
      * The service's model, from the transcript.
      */
@@ -354,7 +354,7 @@ export type StartStreamData = {
         /**
          * The transcription service, an entry of the transcription-services registry.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The service's model, from the transcript.
          */
@@ -653,7 +653,7 @@ export type RequestCredentialsData = {
         /**
          * The transcription service, an entry of the transcription-services registry.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * The service's model, for a service that fixes it when issuing the credential.
          */
@@ -794,7 +794,7 @@ export type RequestCredentialsResponses = {
         /**
          * The transcription service, as the transcript's profile names it.
          */
-        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-transcription' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
+        provider: 'assemblyai' | 'aws-transcribe' | 'azure-speech' | 'deepgram' | 'elevenlabs-scribe' | 'fake-secured' | 'gladia' | 'google-cloud-speech' | 'google-gemini-live' | 'none' | 'openai-realtime' | 'soniox' | 'speechmatics' | 'whisper';
         /**
          * How the software connects to the service.
          */
