@@ -12,8 +12,9 @@
  *
  * It's the whole adapter, written as any adapter is, to copy for another
  * service. The session calls startStream, pauseStream and stopStream; each
- * answers 202 at once, and the work goes on after. The adapter asks for its
- * credentials, hears the microphone, and reports only by publishing the
+ * answers 202 at once, and the work goes on after. Whisper runs here and
+ * takes no credential, so the adapter has no credentials part and asks for
+ * none: it hears the microphone, and reports only by publishing the
  * session's events (communication-transcription-sessions-adapter-asyncapi.yaml):
  * connected, line_updated, line_finished, failed, and after a stop, ended.
  * Pausing stops it; the session starts it again to resume.
@@ -30,7 +31,6 @@
 
 import { loadWhisper, WHISPER_RATE } from './whisper-model.js';
 
-const FORMAT = { encoding: 'linear16', sampleRateHertz: WHISPER_RATE, channelCount: 1 };
 // Below this level (root mean square, full scale 1), a stretch of samples is silence.
 const SILENCE = 0.01;
 const PAUSE_MS = 700;
@@ -199,17 +199,6 @@ export async function startStream(request, context) {
   const publish = publisher(context, sessionId);
   later(async () => {
     try {
-      const credentials = await context.call('requestCredentials', {
-        body: {
-          metadata: { transcriptionSessionId: sessionId, transcriptId: stream.transcriptId },
-          provider: stream.provider,
-          ...(stream.model ? { model: stream.model } : {}),
-          ...(stream.languages ? { languages: stream.languages } : {}),
-          audio: FORMAT,
-          protocols: ['websocket'],
-        },
-      });
-      if (credentials.status >= 400) throw new Error(`requestCredentials answered ${credentials.status}: ${credentials.body?.message ?? ''}`.trim());
       running.set(sessionId, await transcribe(stream, publish));
     } catch (error) {
       await publish('failed', { reason: error.message }).catch(() => {});
@@ -237,14 +226,4 @@ export async function stopStream(request, context) {
     await publisher(context, sessionId)('ended', { at: new Date().toISOString() });
   });
   return Response.json({ metadata: body.metadata ?? {} }, { status: 202 });
-}
-
-/**
- * The credentials part: Whisper needs none, so where to connect names nothing
- * real. Another service's adapter leaves this to the state's server, which
- * holds the service's secret.
- */
-export async function requestCredentials(request) {
-  const { metadata, provider } = await request.json();
-  return Response.json({ metadata, provider, protocol: 'websocket', url: 'wss://whisper.invalid/in-this-page', expiresIn: 3600 });
 }

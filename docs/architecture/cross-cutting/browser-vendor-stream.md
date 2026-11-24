@@ -84,7 +84,8 @@ browsers connecting directly, with short-lived credentials, but issuing one
 takes the vendor's secret, which can't be in a page. The credentials part holds it
 and answers in one shape for every vendor, named as OAuth names a token
 response. The streaming part asks for one when it starts, and again to renew it or
-reconnect.
+reconnect. A vendor that takes no credential, such as a model running in the
+page, needs no credentials part.
 
 **Only the adapter says the connection opened.** The blueprint never touches
 the stream, so only the adapter knows whether the connection opened, and it
