@@ -24,10 +24,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  *
  * Called by the session when it starts, and again when it resumes.
  * Answers at once; the work goes on after it. The adapter gets a
- * credential from requestCredentials, connects to the service, streams
- * the audio, and publishes the session's events as things happen, each
- * with the session's id as its subject and partition key, so one
- * session's events stay in order. What it sends is
+ * credential from requestCredentials when its service takes one,
+ * connects to the service, streams the audio, and publishes the
+ * session's events as things happen, each with the session's id as its
+ * subject and partition key, so one session's events stay in order.
+ * What it sends is
  * communication-transcription-sessions-adapter-asyncapi.yaml:
  *
  * - `connected` when the connection opens, with the stretch nothing

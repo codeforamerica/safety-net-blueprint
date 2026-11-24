@@ -10,7 +10,6 @@
   var whisper_exports = {};
   __export(whisper_exports, {
     pauseStream: () => pauseStream,
-    requestCredentials: () => requestCredentials,
     startStream: () => startStream,
     stopStream: () => stopStream
   });
@@ -44,7 +43,6 @@
   }
 
   // packages/blueprint-harness/explorer/adapters/whisper.js
-  var FORMAT = { encoding: "linear16", sampleRateHertz: WHISPER_RATE, channelCount: 1 };
   var SILENCE = 0.01;
   var PAUSE_MS = 700;
   var IN_PROGRESS_EVERY_MS = 1500;
@@ -181,17 +179,6 @@
     const publish = publisher(context, sessionId);
     later(async () => {
       try {
-        const credentials = await context.call("requestCredentials", {
-          body: {
-            metadata: { transcriptionSessionId: sessionId, transcriptId: stream.transcriptId },
-            provider: stream.provider,
-            ...stream.model ? { model: stream.model } : {},
-            ...stream.languages ? { languages: stream.languages } : {},
-            audio: FORMAT,
-            protocols: ["websocket"]
-          }
-        });
-        if (credentials.status >= 400) throw new Error(`requestCredentials answered ${credentials.status}: ${credentials.body?.message ?? ""}`.trim());
         running.set(sessionId, await transcribe(stream, publish));
       } catch (error) {
         await publish("failed", { reason: error.message }).catch(() => {
@@ -217,10 +204,6 @@
       await publisher(context, sessionId)("ended", { at: (/* @__PURE__ */ new Date()).toISOString() });
     });
     return Response.json({ metadata: body.metadata ?? {} }, { status: 202 });
-  }
-  async function requestCredentials(request) {
-    const { metadata, provider } = await request.json();
-    return Response.json({ metadata, provider, protocol: "websocket", url: "wss://whisper.invalid/in-this-page", expiresIn: 3600 });
   }
 
   // packages/blueprint-harness/explorer/routing.yaml
