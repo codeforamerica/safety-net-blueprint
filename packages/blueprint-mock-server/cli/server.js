@@ -308,10 +308,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
-    const server = createNodeServer(createDispatcher(routes), { sockets: instance.ws });
-    for (const { paths } of instance.ws.sockets().values()) {
-      for (const path of paths) console.log(`  WS     ${path} - WebSocket`);
-    }
+    const server = createNodeServer(createDispatcher(routes));
 
     // Start the server — if the port is in use, kill the existing process and retry once.
     await new Promise((resolve, reject) => {

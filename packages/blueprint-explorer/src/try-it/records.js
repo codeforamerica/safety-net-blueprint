@@ -71,7 +71,7 @@ export function saveRecords(mock, { scope, version }) {
 // through its own routes: listed after each request, registered again when
 // the next page's mock starts.
 
-const STUB_KINDS = ['events', 'http', 'ws'];
+const STUB_KINDS = ['events', 'http'];
 const stubKeyFor = (scope) => `blueprint-mock-stubs:${scope}`;
 
 /**

@@ -1,5 +1,5 @@
-# JSON Schema for routing files: where each domain, API, socket and operation
-# is answered in one deployment. Configuration, not a contract: a contract says
+# JSON Schema for routing files: where each domain, API and operation is
+# answered in one deployment. Configuration, not a contract: a contract says
 # what an API is; routing says where it's answered. The blueprint's runtime
 # reads it (the mock server, the explorer, an app running the mock in its
 # page), and validateRouting checks a file against this schema and against the
@@ -12,7 +12,7 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
 title: Routing
-description: 'Where each domain, API, socket and operation is answered in one deployment, when something
+description: 'Where each domain, API and operation is answered in one deployment, when something
   other than the blueprint''s own runtime answers it: a service at a URL, or code. Per-environment configuration,
   read when the runtime starts; never part of a contract set. See docs/conventions/patterns/routing.yaml.'
 type: object
@@ -61,17 +61,12 @@ $defs:
       api:
         description: 'An API the contracts declare, by name: its OpenAPI file''s name without -openapi.yaml,
           which its events AsyncAPI shares. Every route it declares, and every event its state machines
-          receive, is routed. Overrides a domain entry for that API. Or a socket: an AsyncAPI document
-          reached over its own connection, which the mock serves at its localhost server, by its file
-          name without -asyncapi.yaml. Only an entry naming a socket routes it; it takes no except or
-          includeHeaders, and no operation entry names one of its operations, since its messages all travel
-          on one connection.'
+          receive, is routed. Overrides a domain entry for that API.'
         type: string
         pattern: ^[a-z0-9-]+$
         examples:
         - intake
         - communication-transcripts
-        - communication-transcripts-relay
       operation:
         description: 'One operation, by id: an OpenAPI operationId, or an AsyncAPI receive operation''s.
           Bare when one API declares it, $apis.<api>.<id> when more than one does. Overrides a domain
@@ -124,13 +119,10 @@ $defs:
       to:
         description: 'Absolute base URL of the service that answers. For a request, its path is a prefix:
           the request''s own path is appended to it. A received event is POSTed to it as written, in the
-          CloudEvents HTTP binding''s structured mode. A socket''s connections are opened to it as written,
-          passing on the subprotocols the client offered; it may be ws or wss, and http or https is taken
-          as ws or wss, as the WebSocket constructor takes it. Only a socket is routed to a ws or wss
-          URL. May not carry a username or password: this file is configuration, and a credential belongs
+          CloudEvents HTTP binding''s structured mode. May not carry a username or password: this file is configuration, and a credential belongs
           to the target, or to a header the caller sends and includeHeaders names.'
         type: string
-        pattern: ^(https?|wss?)://[^/@?#]+([/?#].*)?$
+        pattern: ^https?://[^/@?#]+([/?#].*)?$
       handler:
         description: 'Code that answers instead. In a file, a JavaScript module, by path relative to the
           file, that exports a handler for each operation it answers, by operationId; it needn''t answer
@@ -140,8 +132,7 @@ $defs:
           the request''s path parameters; publish(event, data, { subject }), to send an event the contracts
           declare; and call(operationId, { params, query, body }), to make another call, through routing.
           A received event reaches a handler as the request to would have been sent, and what it answers
-          is checked against the operation''s response schema. For a socket, a class used as new WebSocket(url,
-          protocols), in code only.'
+          is checked against the operation''s response schema.'
         if:
           type: string
         then:
@@ -150,17 +141,14 @@ $defs:
         - ./adapters/whisper.js
       includeHeaders:
         description: 'Headers to pass along beyond the default set, in either direction. Anything not
-          named here or in the default set is dropped, credentials included. Not on a socket: a browser''s
-          WebSocket sends no headers of its own, and its subprotocols, a token among them, are passed
-          on as offered.'
+          named here or in the default set is dropped, credentials included.'
         type: array
         uniqueItems: true
         items:
           type: string
           pattern: ^[A-Za-z0-9!#$%&'*+.^_`|~-]+$
       timeoutMs:
-        description: How long to wait for the service before answering 504, or, for a socket, for its
-          connection to open before closing the client's with 1014. Defaults to 10000.
+        description: How long to wait for the service before answering 504. Defaults to 10000.
         type: integer
         minimum: 1
     allOf:

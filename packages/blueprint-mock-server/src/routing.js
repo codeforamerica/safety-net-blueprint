@@ -14,13 +14,6 @@
  * means anything if the caller already addressed the real service. Forwarding
  * also keeps the caller unchanged when a route is switched.
  *
- * A socket — an AsyncAPI document reached over its own connection, such as a
- * relay's — is routed the same way, by naming its API: its connections go to
- * a URL, or to a handler with the WebSocket constructor's signature, as a
- * route's requests go to a URL or a function with fetch's (ws.js). Only an
- * entry naming it routes it: a domain's `to` is a base for requests, not a
- * socket's address, and its handler answers requests, not connections.
- *
  * Configuration arrives as data, never a file path, because this runs in a
  * browser as well as in Node. The CLI reads a file and passes the array; a
  * page passes it directly; a test passes a literal. Both are checked against
@@ -243,15 +236,14 @@ const narrowness = (entry) => (entry.operation ? 2 : entry.api ? 1 : entry.domai
  * @param {Map<string, object>} context.routes - Tagged with each route's domain, api and operationId
  * @param {object} context.operations - From extract(docs, 'operations')
  * @param {Map<string, string>} context.domainOfApi - API name → domain
- * @param {Map<string, { paths: string[] }>} [context.sockets] - APIs reached over their own connection, which the mock serves (ws.js)
- * @returns {{ byRoute: Map<string, object>, receives: Array<{ api: string, event: string, id: string, entry: object }>, sockets: Array<{ api: string, entry: object }> }}
+ * @returns {{ byRoute: Map<string, object>, receives: Array<{ api: string, event: string, id: string, entry: object }> }}
  */
-export function planRouting(routing, { routes, operations, domainOfApi, docs, sockets = new Map() }) {
+export function planRouting(routing, { routes, operations, domainOfApi, docs }) {
   // What routing names, checked against its schema and the contracts by core,
   // so the mock, the explorer and `blueprint validate` say the same thing.
   // Without the contract set, as in a test, what's known of it.
   const contracts = docs ?? {
-    operations, domainOfApi, sockets: new Set(sockets.keys()), requestFields: new Map(), external: new Set(),
+    operations, domainOfApi, requestFields: new Map(), external: new Set(),
   };
   const { errors, warnings, entries } = validateRouting({ routing }, contracts);
   if (errors.length) throw new Error(errors.join('\n'));
@@ -263,8 +255,6 @@ export function planRouting(routing, { routes, operations, domainOfApi, docs, so
    * between per request (byMatch).
    */
   const covering = ({ domain, api, id }) => {
-    // Only an entry naming a socket routes it.
-    if (sockets.has(api)) return null;
     const covers = entries.filter(({ entry, operation }) => (operation
       ? operation.api === api && operation.id === id
       : entry.api ? entry.api === api : entry.domain === EVERY_DOMAIN || entry.domain === domain));
@@ -307,8 +297,7 @@ export function planRouting(routing, { routes, operations, domainOfApi, docs, so
   }
   // A request for a route the mock doesn't have goes where every domain does.
   const everything = entries.find(({ entry }) => entry.domain === EVERY_DOMAIN)?.entry ?? null;
-  const routedSockets = entries.filter(({ entry }) => entry.api && sockets.has(entry.api)).map(({ entry }) => ({ api: entry.api, entry }));
-  return { byRoute, receives, sends, everything, sockets: routedSockets };
+  return { byRoute, receives, sends, everything };
 }
 
 /**
@@ -360,17 +349,14 @@ function checkedHandler(handler, responseSchema, name, schemas, context = {}) {
  * @param {Array} routing
  * @param {object} context - As for planRouting, and:
  * @param {(route: object, status: number) => { schema: object, key: string } | null} context.responseSchema
- * @param {object} context.instance - The mock being routed (instance.js),
- *   whose WebSockets (ws.js) say which APIs are reached over their own connection
+ * @param {object} context.instance - The mock being routed (instance.js)
  * @returns {{ routed: string[], receives: Array<{ api: string, event: string, id: string, entry: object }>, sends: Array<{ api: string, event: string, id: string, entry: object }>, unmatched: ((request: Request) => Promise<Response>) | null }}
  *   `unmatched` answers a request for a route the mock doesn't have, when an
- *   entry routes every domain. A routed socket is listed in `routed` as
- *   `WS <path>`.
+ *   entry routes every domain.
  */
 export function applyRouting(routes, routing = [], context) {
   if (routing.length === 0) return { routed: [], receives: [], sends: [], unmatched: null };
-  const sockets = context.instance?.ws?.sockets() ?? new Map();
-  const { byRoute, receives, sends, everything, sockets: routedSockets } = planRouting(routing, { ...context, routes, sockets });
+  const { byRoute, receives, sends, everything } = planRouting(routing, { ...context, routes });
   const reporting = handlerContext(routes, context);
 
   /**
@@ -424,9 +410,7 @@ export function applyRouting(routes, routing = [], context) {
   const unmatched = everything && (everything.handler
     ? async (request) => everything.handler(request, reporting)
     : forwardTo(everything.to, { includeHeaders: everything.includeHeaders, timeoutMs: everything.timeoutMs, stubs: context.instance.stubs }));
-  for (const { api, entry } of routedSockets) context.instance.ws.route(api, entry);
-  const routedPaths = routedSockets.flatMap(({ api }) => sockets.get(api).paths.map((path) => `WS ${path}`));
-  return { routed: [...byRoute.keys(), ...routedPaths], receives, sends, unmatched };
+  return { routed: [...byRoute.keys()], receives, sends, unmatched };
 }
 
 /**

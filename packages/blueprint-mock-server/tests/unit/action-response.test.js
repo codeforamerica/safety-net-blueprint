@@ -26,7 +26,6 @@ const CONNECTION = {
     provider: { type: 'string' },
     protocol: { type: 'string' },
     url: { type: 'string' },
-    subprotocol: { type: 'string' },
     accessToken: { type: 'string' },
     tokenType: { type: 'string' },
     expiresIn: { type: 'integer' },
@@ -111,14 +110,14 @@ test('a response leaves out what the call didn\'t send, and what its schema does
 
 test('a response leaves out a null the call sent where its schema takes none', async () => {
   const session = await created();
-  await adapterAnswers({ ...PRESIGNED, metadata: {}, subprotocol: null, accessToken: null });
+  await adapterAnswers({ ...PRESIGNED, metadata: {}, accessToken: null });
   const { body } = await askFor(session);
   assert.deepStrictEqual(body, PRESIGNED);
 });
 
 test('a response passes on every field the call sent that its schema takes', async () => {
   const session = await created();
-  const token = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://relay.example', subprotocol: 'blueprint.audio.v1', accessToken: 'jwt', tokenType: 'Bearer', expiresIn: 60 };
+  const token = { provider: 'aws-transcribe', protocol: 'websocket', url: 'wss://service.example', accessToken: 'jwt', tokenType: 'Bearer', expiresIn: 60 };
   await adapterAnswers({ ...token, metadata: {} });
   const { body } = await askFor(session);
   assert.deepStrictEqual(body, token);

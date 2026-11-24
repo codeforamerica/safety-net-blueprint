@@ -42,8 +42,9 @@ service mesh — and the rules carry over. The same routes, for a gateway:
 `handler` is code that answers a route. In a file, it's the path of a
 JavaScript module that exports a handler for each operation it answers, by
 operationId; in code, a function, or such a module itself. A module needn't
-answer every operation of the API it's routed for: an adapter whose service
-needs no relay has no key set to publish. The CLI imports the module; the
+answer every operation of the API it's routed for: a module for a session
+adapter's streaming part can leave `requestCredentials` to an entry that sends
+it to the state's server. The CLI imports the module; the
 explorer's build bundles it, with whatever it imports, since a page opened
 from disk can't import a module.
 

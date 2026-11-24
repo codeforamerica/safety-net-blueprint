@@ -152,7 +152,7 @@ const messaging = new Map([
   ['things-events-asyncapi.yaml#sendThingCreated', { async: true, action: 'send', address: 'demo.thing.created', reached: 'events' }],
   ['things-events-asyncapi.yaml#receiveThingNoticed', { async: true, action: 'receive', address: 'demo.thing.noticed', reached: 'events' }],
   ['things-events-asyncapi.yaml#/channels/demo.thing.created', { async: true, address: 'demo.thing.created', reached: 'events' }],
-  ['relay-asyncapi.yaml#/channels/audio', { async: true, address: 'audio', reached: 'servers' }],
+  ['socket-asyncapi.yaml#/channels/audio', { async: true, address: 'audio', reached: 'servers', document: 'socket-asyncapi.yaml' }],
 ]);
 
 /**
@@ -194,7 +194,7 @@ function eventServer() {
   return { fetch, published, listeners };
 }
 
-const sources = [{ name: 'things', url: './things-events-asyncapi.yaml', type: 'asyncapi' }, { name: 'relay', url: './relay-asyncapi.yaml', type: 'asyncapi' }];
+const sources = [{ name: 'things', url: './things-events-asyncapi.yaml', type: 'asyncapi' }, { name: 'socket', url: './socket-asyncapi.yaml', type: 'asyncapi' }];
 const messages = (steps) => ({ ...doc(steps), arazzo: '1.1.0', sourceDescriptions: sources });
 
 test('a receive step takes the event a step before it caused, and reads it as $message.payload', async () => {
@@ -242,7 +242,8 @@ test('a send step publishes the event, with the channel as its type', async () =
 test('refuses message steps it cannot run, by name', async () => {
   const server = eventServer();
   const refuse = (steps, pattern) => assert.rejects(runScenario(messages(steps), { fetch: server.fetch, operations: messaging }), pattern);
-  await refuse([{ stepId: 's', channelPath: '{$sourceDescriptions.relay.url}#/channels/audio', action: 'send' }], /by operationId, not channelPath/);
+  await refuse([{ stepId: 's', channelPath: '{$sourceDescriptions.socket.url}#/channels/audio', action: 'send' }], /socket-asyncapi.yaml is reached over its own servers/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'send', parameters: [{ name: 'x', in: 'header', value: 'y' }] }], /takes no parameters/);
   await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'publish' }], /action is send or receive/);
   await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.nothingLikeThis', action: 'receive' }], /no AsyncAPI document in the set declares/);
   await refuse([{ stepId: 's', operationId: 'createThing', action: 'receive' }], /is an HTTP operation/);

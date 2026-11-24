@@ -53,7 +53,7 @@ function schemaNames(docs) {
  * @returns {import('../types.js').Doc[]} Kept whole or cut, in the set's order
  */
 export function apiPart(docs, apis) {
-  // Its OpenAPI document and the events document named for it, or an AsyncAPI API of its own, such as a relay's.
+  // Its OpenAPI document and the events document named for it, or an AsyncAPI API of its own, such as one reached over a WebSocket.
   const own = docs.filter((doc) => apis.includes(doc.api) && (doc.type === 'openapi' || doc.type === 'asyncapi'));
   const openapis = own.filter((doc) => doc.type === 'openapi');
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://blueprint.codeforamerica.org/schemas/routing-schema.yaml",
   "title": "Routing",
-  "description": "Where each domain, API, socket and operation is answered in one deployment, when something other than the blueprint's own runtime answers it: a service at a URL, or code. Per-environment configuration, read when the runtime starts; never part of a contract set. See docs/conventions/patterns/routing.yaml.",
+  "description": "Where each domain, API and operation is answered in one deployment, when something other than the blueprint's own runtime answers it: a service at a URL, or code. Per-environment configuration, read when the runtime starts; never part of a contract set. See docs/conventions/patterns/routing.yaml.",
   "type": "object",
   "required": [
     "routing"
@@ -66,13 +66,12 @@
           ]
         },
         "api": {
-          "description": "An API the contracts declare, by name: its OpenAPI file's name without -openapi.yaml, which its events AsyncAPI shares. Every route it declares, and every event its state machines receive, is routed. Overrides a domain entry for that API. Or a socket: an AsyncAPI document reached over its own connection, which the mock serves at its localhost server, by its file name without -asyncapi.yaml. Only an entry naming a socket routes it; it takes no except or includeHeaders, and no operation entry names one of its operations, since its messages all travel on one connection.",
+          "description": "An API the contracts declare, by name: its OpenAPI file's name without -openapi.yaml, which its events AsyncAPI shares. Every route it declares, and every event its state machines receive, is routed. Overrides a domain entry for that API.",
           "type": "string",
           "pattern": "^[a-z0-9-]+$",
           "examples": [
             "intake",
-            "communication-transcripts",
-            "communication-transcripts-relay"
+            "communication-transcripts"
           ]
         },
         "operation": {
@@ -137,12 +136,12 @@
           }
         },
         "to": {
-          "description": "Absolute base URL of the service that answers. For a request, its path is a prefix: the request's own path is appended to it. A received event is POSTed to it as written, in the CloudEvents HTTP binding's structured mode. A socket's connections are opened to it as written, passing on the subprotocols the client offered; it may be ws or wss, and http or https is taken as ws or wss, as the WebSocket constructor takes it. Only a socket is routed to a ws or wss URL. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
+          "description": "Absolute base URL of the service that answers. For a request, its path is a prefix: the request's own path is appended to it. A received event is POSTed to it as written, in the CloudEvents HTTP binding's structured mode. May not carry a username or password: this file is configuration, and a credential belongs to the target, or to a header the caller sends and includeHeaders names.",
           "type": "string",
-          "pattern": "^(https?|wss?)://[^/@?#]+([/?#].*)?$"
+          "pattern": "^https?://[^/@?#]+([/?#].*)?$"
         },
         "handler": {
-          "description": "Code that answers instead. In a file, a JavaScript module, by path relative to the file, that exports a handler for each operation it answers, by operationId; it needn't answer every operation the entry covers, and one it doesn't answer is answered as if the entry weren't there. In code, a function, with fetch's signature, that answers every operation the entry covers, or such a module itself. A handler gets a second argument, { params, publish, call }: the request's path parameters; publish(event, data, { subject }), to send an event the contracts declare; and call(operationId, { params, query, body }), to make another call, through routing. A received event reaches a handler as the request to would have been sent, and what it answers is checked against the operation's response schema. For a socket, a class used as new WebSocket(url, protocols), in code only.",
+          "description": "Code that answers instead. In a file, a JavaScript module, by path relative to the file, that exports a handler for each operation it answers, by operationId; it needn't answer every operation the entry covers, and one it doesn't answer is answered as if the entry weren't there. In code, a function, with fetch's signature, that answers every operation the entry covers, or such a module itself. A handler gets a second argument, { params, publish, call }: the request's path parameters; publish(event, data, { subject }), to send an event the contracts declare; and call(operationId, { params, query, body }), to make another call, through routing. A received event reaches a handler as the request to would have been sent, and what it answers is checked against the operation's response schema.",
           "if": {
             "type": "string"
           },
@@ -154,7 +153,7 @@
           ]
         },
         "includeHeaders": {
-          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included. Not on a socket: a browser's WebSocket sends no headers of its own, and its subprotocols, a token among them, are passed on as offered.",
+          "description": "Headers to pass along beyond the default set, in either direction. Anything not named here or in the default set is dropped, credentials included.",
           "type": "array",
           "uniqueItems": true,
           "items": {
@@ -163,7 +162,7 @@
           }
         },
         "timeoutMs": {
-          "description": "How long to wait for the service before answering 504, or, for a socket, for its connection to open before closing the client's with 1014. Defaults to 10000.",
+          "description": "How long to wait for the service before answering 504. Defaults to 10000.",
           "type": "integer",
           "minimum": 1
         }

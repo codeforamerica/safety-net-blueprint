@@ -15,8 +15,7 @@
  * example; who publishes them and who subscribes, from the state machines. Only
  * the documents reached over no protocol of their own are: an events document
  * declares no servers, since the event bus carries it. One reached over a
- * protocol, such as the transcript relay's WebSocket, is an API, and its
- * messages belong to one connection, not the bus.
+ * protocol of its own isn't events, and isn't listed.
  */
 
 import { readdirSync, writeFileSync, mkdirSync, rmSync } from 'fs';

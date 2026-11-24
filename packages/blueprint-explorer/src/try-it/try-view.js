@@ -1,8 +1,7 @@
 /**
  * An operation card's Try it view (send-panel.js has its styles): with Try
  * it on, the card shows what to send and what came back in one column, and
- * its docs fold under its description, opened on asking. A REST operation's
- * card and a WebSocket page's cards each have one.
+ * its docs fold under its description, opened on asking.
  *
  * @param {HTMLElement} card - The card, with `.op-docs` and, in it, `.op-desc`
  */

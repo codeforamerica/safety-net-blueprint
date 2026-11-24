@@ -51,10 +51,9 @@
  *     the same type), waiting up to `timeout`
  *     milliseconds (2000 when not given); `$message.payload#/<pointer>` reads
  *     it. Sending publishes one with `publishEvent`. A step's `dependsOn` may
- *     name steps before it, which have run by then. A channel reached through
- *     its document's own servers, such as a relay's, is a frame on a
- *     WebSocket; the step that opens it may set its `Sec-WebSocket-Protocol`
- *     header parameter, the subprotocols it offers
+ *     name steps before it, which have run by then. A document with servers
+ *     of its own, reached over a connection rather than the event bus, isn't
+ *     run: a step on one is refused
  * Standard enough that Redocly's Respect runs the same documents against a
  * served mock.
  */
@@ -63,7 +62,7 @@ import { query as jsonPath } from 'jsonpath-rfc9535';
 import parseJsonPath from 'jsonpath-rfc9535/parser';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { CONTROL_OPERATIONS } from './platform-routes.js';
-import { operationsOf, messageChecker, recognize, socketPaths } from './asyncapi-messages.js';
+import { operationsOf } from './asyncapi-messages.js';
 
 /** The last part of a path or URL: what a source's URL and a document's path share. */
 const fileName = (path) => (path ?? '').split(/[?#]/)[0].split('/').pop();
@@ -119,26 +118,19 @@ export function operationIndex(docs) {
   // AsyncAPI operations, by key, with the channel's address: for an events
   // document, the event type. Only by their document's name, since AsyncAPI
   // makes a key unique within its document only. A document with servers is
-  // reached over its own connection, and its messages are recognized by
-  // checking them against the contract.
-  const check = messageChecker(docs ?? []);
+  // reached over its own connection, not the event bus.
   for (const doc of docs ?? []) {
     if (doc.type !== 'asyncapi') continue;
     const path = doc.relativePath ?? doc.path;
     const reached = (doc.content?.servers && Object.keys(doc.content.servers).length > 0) ? 'servers' : 'events';
     const described = operationsOf(doc.content);
-    // Where the mock serves each channel, for a document reached over its own server.
-    const sockets = reached === 'servers' ? socketPaths(doc.content) : null;
     for (const [key, operation] of Object.entries(doc.content?.operations ?? {})) {
       const channel = channelOf(doc.content, operation?.channel?.$ref);
       if (!channel) continue;
       const { messages } = described.get(key);
       index.set(inFile(path, key), {
         async: true, action: operation.action, address: channel.address, reached, document: path,
-        ...(reached === 'servers' && { socket: sockets?.get(described.get(key).channel) ?? null }),
         messages: messages.map((m) => m.name),
-        binary: messages.length > 0 && messages.every((m) => m.binary),
-        recognize: (data) => recognize(check, path, messages, data),
       });
     }
     for (const [name, channel] of Object.entries(doc.content?.channels ?? {})) {
@@ -474,7 +466,7 @@ function formOf(payload, files) {
  *   says what a step would send, from what the steps before it produced;
  *   `results` are each workflow's run so far.
  */
-export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep, WebSocket: Socket = globalThis.WebSocket, documents = [], workflows: chosen } = {}) {
+export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep, documents = [], workflows: chosen } = {}) {
   const own = documentOf(arazzo);
   const results = [];
   // The workflows to run: those named, with every one they depend on, in the
@@ -499,9 +491,6 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   const stopped = new Set(); // workflows a failed step stopped, or a failed dependency kept from running
   let position = 0;
   const events = eventReader({ fetch, origin, operations });
-  // Each section's connection to each document reached over its own server,
-  // opened by its first message step there.
-  const connections = new Map();
 
   const scopeOf = (workflow) => {
     if (!scopes.has(workflow.workflowId)) {
@@ -581,7 +570,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
    */
   async function execute(section, step, scope) {
     if (step.workflowId !== undefined) return workflowStep(section, step, scope);
-    if (isMessageStep(step)) return messageStep(step, scope, section);
+    if (isMessageStep(step)) return messageStep(step, scope);
     const request = requestOf(step, scope);
     const retry = retryOf(step);
 
@@ -710,11 +699,10 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
    * others' — waiting up to the step's `timeout`; sending publishes one (`publishEvent`), with the
    * channel's type unless the payload gives its own.
    */
-  async function messageStep(step, scope, workflow) {
+  async function messageStep(step, scope) {
     const request = messageOf(step, scope);
     const { sources } = scope.document;
     const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
-    if (operation.reached === 'servers') return socketStep(step, scope, workflow, operation, request);
     if (request.action === 'receive') {
       await events.open();
       const timeout = step.timeout ?? RECEIVE_TIMEOUT;
@@ -763,134 +751,15 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     const operation = step.channelPath ? channelPathOf(step, sources, operations) : operationOf(step, sources, operations);
     if (!operation) throw new Error(`Step ${step.stepId} names ${step.channelPath ?? step.operationId}, which no AsyncAPI document in the set declares`);
     if (!operation.async) throw new Error(`Step ${step.stepId} has an action, but ${step.operationId} is an HTTP operation`);
-    if (operation.reached === 'servers' && !operation.recognize) {
-      throw new Error(`Step ${step.stepId}: give a message step on a document reached over its own server by operationId, not channelPath, so the runner knows which message it is`);
+    if (operation.reached === 'servers') {
+      throw new Error(`Step ${step.stepId}: ${fileName(operation.document)} is reached over its own servers, not the event bus, and this runner sends and receives events only`);
     }
-    const protocols = handshakeProtocols(step, operation, scope);
+    if (step.parameters?.length) throw new Error(`Step ${step.stepId}: a message step takes no parameters`);
     const body = step.action === 'send' && step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
     return {
       action: step.action, channel: operation.address,
-      ...(operation.reached === 'servers' && { message: operation.messages.join(' or '), document: operation.document }),
-      ...(protocols && { protocols }),
       ...(body !== undefined && { body }),
     };
-  }
-
-  /**
-   * The subprotocols a message step offers when it opens a connection: its
-   * `Sec-WebSocket-Protocol` header parameter, the one header of a WebSocket's
-   * opening request that software sets, which a relay's token travels in
-   * (communication-transcripts-relay-asyncapi.yaml). The only parameter a
-   * message step takes, and only on a document reached over its own server.
-   */
-  function handshakeProtocols(step, operation, scope) {
-    if (!step.parameters?.length) return null;
-    const protocols = [];
-    for (const parameter of step.parameters) {
-      if (operation.reached !== 'servers' || parameter.in !== 'header' || String(parameter.name).toLowerCase() !== 'sec-websocket-protocol') {
-        throw new Error(`Step ${step.stepId}: a message step takes one parameter, the Sec-WebSocket-Protocol header of the connection it opens, on a document reached over its own server`);
-      }
-      protocols.push(...String(resolve(parameter.value, scope)).split(',').map((p) => p.trim()).filter(Boolean));
-    }
-    return protocols;
-  }
-
-  /**
-   * This section's connection to a document's server: the mock's WebSocket
-   * for its channel, where its localhost server puts it, opened by the first step that sends on
-   * it, and opened again by one that sends after it closed, as software
-   * reconnects, offering the subprotocols that step's header parameter gives. A step that receives reads the latest, closed or not. What
-   * arrives is kept in order, each frame taken once by a step that receives
-   * it.
-   */
-  function connectionFor(workflow, operation, { sending = false, protocols = null, stepId } = {}) {
-    const key = `${workflow.workflowId} ${operation.socket}`;
-    const latest = connections.get(key);
-    if (latest && !(sending && latest.closed)) {
-      if (protocols) throw new Error(`Step ${stepId} sets Sec-WebSocket-Protocol, but the connection is already open; set it on the step that opens one`);
-      return latest;
-    }
-    if (!Socket) throw new Error(`A step sends or receives on ${fileName(operation.document)}, and there's no WebSocket to connect with; pass one`);
-    if (!operation.socket) throw new Error(`${fileName(operation.document)} lists no localhost server, so the mock serves no WebSocket for it`);
-    const url = new URL(operation.socket, origin.replace(/^http/, 'ws'));
-    const socket = new Socket(url.href, protocols ?? []);
-    socket.binaryType = 'arraybuffer';
-    const connection = { socket, heard: [], taken: new Set(), waiting: new Set(), closed: null };
-    const wake = () => { for (const fn of connection.waiting) fn(); };
-    connection.opened = new Promise((settle) => {
-      socket.addEventListener('open', () => settle(true));
-      socket.addEventListener('close', () => settle(false));
-    });
-    // Kept as frames, not their text, so two alike are taken one at a time.
-    socket.addEventListener('message', (event) => { connection.heard.push({ data: event.data }); wake(); });
-    socket.addEventListener('close', (event) => { connection.closed = { code: event.code, reason: event.reason }; wake(); });
-    connections.set(key, connection);
-    return connection;
-  }
-
-  /** What a closed connection says, as a failed check. */
-  const closedCheck = (connection) => ({ condition: `the connection is open (it closed: ${connection.closed.code} ${connection.closed.reason})`.trim(), passed: false });
-
-  /**
-   * A message step on a document reached over its own server: sending writes
-   * a frame, binary for a binary message; receiving takes the first frame,
-   * not yet taken, that is one of the operation's messages and meets the
-   * step's successCriteria.
-   */
-  async function socketStep(step, scope, workflow, operation, request) {
-    const connection = connectionFor(workflow, operation, { sending: request.action === 'send', protocols: request.protocols ?? null, stepId: step.stepId });
-    const open = await connection.opened;
-    if (!open) return { request, stepScope: scope, checks: [closedCheck(connection)], passed: false };
-    const payloadOf = (data) => (typeof data === 'string' ? JSON.parse(data) : null);
-
-    if (request.action === 'send') {
-      const data = operation.binary ? new TextEncoder().encode(String(request.body ?? '')) : JSON.stringify(request.body ?? {});
-      const heardBefore = connection.heard.length;
-      connection.socket.send(data);
-      // Give the far end its turn. A message answered only by closing the
-      // connection was refused; one answered and then closed, as a drop is,
-      // was taken, and the steps that receive say what came.
-      await new Promise((settle) => setTimeout(settle, 0));
-      const refused = connection.closed && connection.heard.length === heardBefore;
-      const message = { payload: operation.binary ? null : request.body ?? {}, headers: {} };
-      const stepScope = { ...scope, message };
-      const checks = [
-        ...(refused ? [closedCheck(connection)] : []),
-        ...(step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) })),
-      ];
-      return { request, stepScope, checks, passed: checks.every((c) => c.passed), message };
-    }
-
-    const timeout = step.timeout ?? RECEIVE_TIMEOUT;
-    const checksOn = (data) => {
-      const stepScope = { ...scope, message: { payload: payloadOf(data), headers: {} } };
-      return { stepScope, checks: (step.successCriteria ?? []).map((criterion) => ({ condition: criterion.condition, passed: meets(criterion, stepScope, step) })) };
-    };
-    const fits = (data) => {
-      if (!operation.recognize(data).message) return false;
-      try { return checksOn(data).checks.every((c) => c.passed); } catch { return false; }
-    };
-    const find = () => connection.heard.find((frame) => !connection.taken.has(frame) && fits(frame.data));
-    let frame = find();
-    if (frame === undefined && !connection.closed) {
-      frame = await new Promise((settle) => {
-        const wake = () => {
-          const found = find();
-          if (found !== undefined || connection.closed) { done(); settle(found); }
-        };
-        const timer = setTimeout(() => { done(); settle(undefined); }, timeout);
-        const done = () => { clearTimeout(timer); connection.waiting.delete(wake); };
-        connection.waiting.add(wake);
-      });
-    }
-    if (frame === undefined) {
-      const checks = [{ condition: `received ${request.message} within ${timeout} ms`, passed: false }];
-      if (connection.closed) checks.push(closedCheck(connection));
-      return { request, stepScope: scope, checks, passed: false };
-    }
-    connection.taken.add(frame);
-    const { stepScope, checks } = checksOn(frame.data);
-    return { request, stepScope, checks, passed: checks.every((c) => c.passed), message: stepScope.message };
   }
 
   /** A step's `dependsOn` names steps before it in its workflow, which have run by the time it does. */
@@ -965,10 +834,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
   }
 
   return { results, next, runUntil, preview, finished: () => position >= queue.length,
-    close: () => {
-      events.close();
-      for (const { socket } of connections.values()) socket.close();
-    },
+    close: () => events.close(),
   };
 }
 

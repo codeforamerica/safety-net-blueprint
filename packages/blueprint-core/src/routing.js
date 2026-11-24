@@ -1,5 +1,5 @@
 /**
- * Checking routing: where each domain, API, socket and operation is answered
+ * Checking routing: where each domain, API and operation is answered
  * in one deployment (schemas/routing-schema.yaml). Routing is configuration,
  * not a contract, but it's checked like one: against its schema, and against
  * the contracts it routes, so a typo fails before anything runs rather than
@@ -63,9 +63,8 @@ function schemaProblems(document) {
 
 /**
  * What the contracts declare that routing names: operations, which API is in
- * which domain, which APIs are reached over their own connection, each
- * operation's request fields, and which operations something outside the
- * contracts answers.
+ * which domain, each operation's request fields, and which operations
+ * something outside the contracts answers.
  *
  * @param {import('../types.js').Doc[]} docs
  */
@@ -73,9 +72,8 @@ export function routingFacts(docs) {
   const operations = readOperations(docs);
   const domainOfFile = new Map(docs.map((doc) => [doc.relativePath, doc.domain ?? doc.content?.domain ?? doc.content?.info?.['x-domain']]));
   const domainOfApi = new Map((operations?.all ?? []).map((operation) => [operation.api, domainOfFile.get(operation.file)]).filter(([, domain]) => domain));
-  const sockets = new Set(docs.filter((doc) => doc.type === 'asyncapi' && doc.protocols?.includes('ws')).map((doc) => doc.api));
   const { requestFields, external } = operationFacts(docs);
-  return { operations, domainOfApi, sockets, requestFields, external };
+  return { operations, domainOfApi, requestFields, external };
 }
 
 /**
@@ -140,7 +138,7 @@ export function validateRouting(document, contracts) {
   const errors = schemaProblems(document);
   const warnings = [];
   if (errors.length) return { errors, warnings, entries: [] };
-  const { operations, domainOfApi, sockets, requestFields = new Map(), external = new Set() } = Array.isArray(contracts) ? routingFacts(contracts) : contracts;
+  const { operations, domainOfApi, requestFields = new Map(), external = new Set() } = Array.isArray(contracts) ? routingFacts(contracts) : contracts;
   const apis = new Set(domainOfApi.keys());
   const domains = new Set(domainOfApi.values());
   const routing = document.routing;
@@ -163,7 +161,7 @@ export function validateRouting(document, contracts) {
     const answers = ['to', 'handler'].filter((key) => entry[key] !== undefined);
     if (answers.length !== 1) errors.push(`${name} needs exactly one of "to" or "handler"`);
     if (entry.handler !== undefined && !['function', 'string', 'object'].includes(typeof entry.handler)) {
-      errors.push(`${name}'s handler is a module's path in a file; in code, a function, (request) => response, a module, or for an API reached over its own connection, a class used as new WebSocket(url, protocols)`);
+      errors.push(`${name}'s handler is a module's path in a file; in code, a function, (request) => response, or a module`);
     }
 
     let operation = null;
@@ -173,23 +171,12 @@ export function validateRouting(document, contracts) {
     if (entry.api && !apis.has(entry.api)) {
       errors.push(`${name} is no API the contracts declare. APIs: ${[...apis].sort().join(', ')}`);
     }
-    if (entry.api && sockets.has(entry.api)) {
-      if (entry.except) errors.push(`${name} is reached over its own connection, which goes one place, so it takes no except`);
-      if (entry.includeHeaders) errors.push(`${name} is reached over its own connection, which passes on the subprotocols the client offered and no headers, so it takes no includeHeaders`);
-      if (entry.match) errors.push(`${name} is reached over its own connection, which goes one place, so it takes no match`);
-    }
     if (entry.operation) {
       operation = find(entry.operation, name);
-      if (operation && sockets.has(operation.api)) {
-        errors.push(`${name} is an operation of ${operation.api}, which is reached over its own connection; its messages all travel on it, so route the API instead`);
-      }
       if (operation?.kind === 'asyncapi' && operation.action !== 'receive') {
         errors.push(`${name} is a send operation; an API sends its own events. Route the receive operation that hears it instead.`);
       }
       if (entry.except) errors.push(`${name} is one operation, so it takes no except`);
-    }
-    if (!(entry.api && sockets.has(entry.api)) && /^wss?:/.test(entry.to ?? '')) {
-      errors.push(`${name} is routed to a WebSocket URL, ${entry.to}; only an API reached over its own connection is. Use an http or https URL`);
     }
 
     if (entry.match) {

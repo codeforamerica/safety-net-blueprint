@@ -24,9 +24,6 @@ info:
     - id: transcript
       name: Transcript
       description: Keeps the transcript and its rules, on the server. In this demo, the mock runs it.
-    - id: service
-      name: Service
-      description: Turns the audio into text. In this demo, a fake the mock stands in for with stubs.
     - id: adapterServer
       name: Adapter's credentials part
       description: The adapter's credentials part, on the state's server, which holds the service's secret and gives the streaming part a short-lived credential. In this demo, the mock stands in for it with stubs.
@@ -56,12 +53,7 @@ sourceDescriptions:
   - name: transcriptEvents
     url: ../base/domains/communication/communication-transcripts-events-asyncapi.yaml
     type: asyncapi
-  # The relay contract. This demo's fake service uses its messages, so the mock
-  # can stand in for it.
-  - name: audio
-    url: ../base/domains/communication/communication-transcripts-relay-asyncapi.yaml
-    type: asyncapi
-  # The mock's own routes, to stand in for the adapter, the service and the
+  # The mock's own routes, to stand in for the adapter's parts and the
   # scheduler. This makes the scenario one to run against the mock.
   - name: mock
     url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
@@ -168,7 +160,6 @@ workflows:
                 provider: fake-transcription
                 protocol: websocket
                 url: wss://fake-transcription.example/stream
-                subprotocol: blueprint.transcripts.relay.v1
                 accessToken: fake-service-token
                 tokenType: Bearer
                 expiresIn: 300
@@ -181,7 +172,7 @@ workflows:
           Ask for credentials
 
           - The adapter asks its credentials part, with the service, model and languages the session started it with, and the audio it will send.
-          - The answer says where to connect, which messages the connection uses (`subprotocol`), and the credential. The audio goes straight to the service; it never passes through the server.
+          - The answer says where to connect and the credential. The adapter opens the connection to the service with it and sends the audio straight there; it never passes through the server.
         operationId: $sourceDescriptions.adapter.requestCredentials
         requestBody:
           payload:
@@ -195,52 +186,6 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/provider == 'fake-transcription'
           - condition: $response.body#/expiresIn == 300
-        outputs:
-          subprotocol: $response.body#/subprotocol
-          accessToken: $response.body#/accessToken
-
-      - stepId: serviceStub
-        x-actors: [service]
-        description: |
-          Answers a new connection with ready
-
-          - This stub answers the next `start` with `started`, as the service would.
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': start
-            send: [{type: started}]
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendStart
-        x-actors: [adapter, service]
-        description: |
-          Open the connection, with the audio format
-
-          - The service here is a fake that uses the relay contract's messages, so the mock can stand in for it. A real service uses its own messages, such as Deepgram's or Amazon's; an adapter for it speaks them. The session and the transcript work the same either way.
-          - The adapter opens a WebSocket to where its credentials part said, with the credential in the `Sec-WebSocket-Protocol` header rather than the URL, since URLs get logged. Its first message says what audio is coming.
-        operationId: $sourceDescriptions.audio.receiveStart
-        action: send
-        parameters:
-          - name: Sec-WebSocket-Protocol
-            in: header
-            value: '{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}'
-        requestBody:
-          payload:
-            type: start
-            audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}
-            languages: [en-US]
-
-      - stepId: started
-        x-actors: [service, adapter]
-        description: |
-          Ready
-
-          - The service is ready for audio.
-        operationId: $sourceDescriptions.audio.sendStarted
-        action: receive
 
       - stepId: publishConnected
         x-actors: [adapter, session]
@@ -282,54 +227,12 @@ workflows:
     x-branch: main
     dependsOn: [startAndConnect]
     steps:
-      - stepId: serviceStub
-        x-actors: [service]
-        description: |
-          Answers the audio with text in progress, then the final text
-
-          - What's said is the one thing no contract can tell the mock. This stub answers the next audio with two results for one stretch of speech: one still in progress, then the final one.
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': audio
-            send:
-              - {type: result, id: r1, isFinal: false, startOffsetMs: 5000, endOffsetMs: 5600, speaker: spk_0, alternatives: [{transcript: Can you tell me who}]}
-              - {type: result, id: r1, isFinal: true, startOffsetMs: 5000, endOffsetMs: 6000, speaker: spk_0, alternatives: [{transcript: Can you tell me who lives with you?, confidence: 0.94}]}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendAudio
-        x-actors: [adapter, service]
-        description: |
-          Audio
-
-          - Binary frames, in the format the adapter gave when it opened the connection. It sends them as it captures them, about ten a second.
-        operationId: $sourceDescriptions.audio.receiveAudio
-        action: send
-        requestBody:
-          payload: (16-bit PCM audio)
-
-      - stepId: textInProgress
-        x-actors: [service, adapter]
-        description: |
-          Text in progress
-
-          - `isFinal` is false: the service may still change it. A later result with the same `id` replaces it.
-        operationId: $sourceDescriptions.audio.sendResult
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/isFinal == false
-        outputs:
-          key: $message.payload#/id
-          text: $message.payload#/alternatives/0/transcript
-
       - stepId: publishLineUpdated
         x-actors: [adapter, staff]
         description: |
           Publish the line in progress
 
-          - With the result's `id` as the line's key. The page shows it. Nothing is kept.
+          - The service's text so far, which it may still change. The adapter gives the line a key; a later line with the same key replaces it. The page shows it. Nothing is kept.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineUpdated
         action: send
         requestBody:
@@ -338,31 +241,17 @@ workflows:
             partitionkey: $workflows.startAndConnect.outputs.sessionId
             data:
               transcriptId: $workflows.startAndConnect.outputs.transcriptId
-              key: $steps.textInProgress.outputs.key
-              text: $steps.textInProgress.outputs.text
+              key: r1
+              text: Can you tell me who
               speaker: staff
               startedAt: '2026-10-12T10:00:05Z'
-
-      - stepId: finalText
-        x-actors: [service, adapter]
-        description: |
-          Final text
-
-          - `isFinal` is true, with the same `id`. This is what the transcript keeps.
-        operationId: $sourceDescriptions.audio.sendResult
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/isFinal == true
-        outputs:
-          key: $message.payload#/id
-          text: $message.payload#/alternatives/0/transcript
 
       - stepId: publishLineFinished
         x-actors: [adapter, transcript]
         description: |
           Publish the finished line
 
-          - With the same key. Its times are the result's offsets added to when the conversation began, by the browser's clock.
+          - Once the service's text for the line is final, with the same key. Its times are by the browser's clock.
           - The transcript keeps it, once for the session and the key, so if it's published again after a network error, it's still kept once. The page swaps the line in progress for it.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
@@ -372,8 +261,8 @@ workflows:
             partitionkey: $workflows.startAndConnect.outputs.sessionId
             data:
               transcriptId: $workflows.startAndConnect.outputs.transcriptId
-              key: $steps.finalText.outputs.key
-              text: $steps.finalText.outputs.text
+              key: r1
+              text: Can you tell me who lives with you?
               speaker: staff
               startedAt: '2026-10-12T10:00:05Z'
               endedAt: '2026-10-12T10:00:06Z'
@@ -428,68 +317,19 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'stopping'
 
-      - stepId: serviceStub
-        x-actors: [service]
-        description: |
-          Answers the end of the audio with the last text and done, then closes the connection
-
-          - A last line, said just before Stop, then `ended`. The service closes the connection after `ended`, as the contract says.
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': end
-            send:
-              - {type: result, id: r2, isFinal: true, startOffsetMs: 8500, endOffsetMs: 10200, speaker: spk_0, alternatives: [{transcript: "Thank you, that's everything."}]}
-              - {type: ended}
-            close: {code: 1000}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendEnd
-        x-actors: [adapter, service]
-        description: |
-          End of the audio
-
-          - The service sends any text it still has, then says it's done.
-        operationId: $sourceDescriptions.audio.receiveEnd
-        action: send
-        requestBody:
-          payload: {type: end}
-
-      - stepId: lastText
-        x-actors: [service, adapter]
-        description: Last text
-        operationId: $sourceDescriptions.audio.sendResult
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/id == 'r2'
-        outputs:
-          key: $message.payload#/id
-          text: $message.payload#/alternatives/0/transcript
-
       - stepId: publishLastLine
         x-actors: [adapter, transcript]
         description: |
           Publish the last line
 
-          - Still kept: the transcript is still recording, and the line began before it closes.
+          - The last text the service sends after the end of the audio. Still kept: the transcript is still recording, and the line began before it closes.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
         requestBody:
           payload:
             subject: $workflows.startAndConnect.outputs.sessionId
             partitionkey: $workflows.startAndConnect.outputs.sessionId
-            data: {transcriptId: $workflows.startAndConnect.outputs.transcriptId, key: $steps.lastText.outputs.key, text: $steps.lastText.outputs.text, speaker: staff, startedAt: '2026-10-12T10:00:08Z', endedAt: '2026-10-12T10:00:10Z'}
-
-      - stepId: ended
-        x-actors: [service, adapter]
-        description: |
-          Done
-
-          - No more text is coming, and the service closes the connection.
-        operationId: $sourceDescriptions.audio.sendEnded
-        action: receive
+            data: {transcriptId: $workflows.startAndConnect.outputs.transcriptId, key: r2, text: "Thank you, that's everything.", speaker: staff, startedAt: '2026-10-12T10:00:08Z', endedAt: '2026-10-12T10:00:10Z'}
 
       - stepId: publishEnded
         x-actors: [adapter, session]
@@ -674,46 +514,12 @@ workflows:
         successCriteria:
           - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
 
-      - stepId: serviceStubFinalize
-        x-actors: [service]
-        description: Answers a request for the final text so far
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': finalize
-            send:
-              - {type: result, id: r1, isFinal: true, startOffsetMs: 7000, endOffsetMs: 9800, speaker: spk_0, alternatives: [{transcript: "My two kids and my mother."}]}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendFinalize
-        x-actors: [adapter, service]
-        description: |
-          Ask for the final text so far
-
-          - On pause, the adapter stops sending audio and asks for what the service still has, so a line said just before the pause still reaches the transcript.
-        operationId: $sourceDescriptions.audio.receiveFinalize
-        action: send
-        requestBody:
-          payload: {type: finalize}
-
-      - stepId: finalText
-        x-actors: [service, adapter]
-        description: Final text
-        operationId: $sourceDescriptions.audio.sendResult
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/isFinal == true
-        outputs:
-          key: $message.payload#/id
-          text: $message.payload#/alternatives/0/transcript
-
       - stepId: publishLineBeforeThePause
         x-actors: [adapter, transcript]
         description: |
           Publish the line said before the pause
 
+          - On pause, the adapter stops sending audio and asks the service for the text it still has, then closes the connection, so a line said just before the pause still reaches the transcript.
           - The transcript keeps it, though it's paused, because the line started before the pause.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
@@ -721,7 +527,7 @@ workflows:
           payload:
             subject: $steps.connected.outputs.sessionId
             partitionkey: $steps.connected.outputs.sessionId
-            data: {transcriptId: $steps.connected.outputs.transcriptId, key: $steps.finalText.outputs.key, text: $steps.finalText.outputs.text, speaker: client, startedAt: '2026-10-12T10:00:07Z', endedAt: '2026-10-12T10:00:09Z'}
+            data: {transcriptId: $steps.connected.outputs.transcriptId, key: r1, text: My two kids and my mother., speaker: client, startedAt: '2026-10-12T10:00:07Z', endedAt: '2026-10-12T10:00:09Z'}
 
       - stepId: lineKept
         x-actors: [transcript, staff]
@@ -730,37 +536,6 @@ workflows:
         action: receive
         successCriteria:
           - condition: $message.payload#/data/transcriptId == $steps.connected.outputs.transcriptId && $message.payload#/data/kind == 'line'
-
-      - stepId: serviceStubEnd
-        x-actors: [service]
-        description: Answers the end of the audio with done, then closes the connection
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': end
-            send:
-              - {type: ended}
-            close: {code: 1000}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendEnd
-        x-actors: [adapter, service]
-        description: End of the audio
-        operationId: $sourceDescriptions.audio.receiveEnd
-        action: send
-        requestBody:
-          payload: {type: end}
-
-      - stepId: ended
-        x-actors: [service, adapter]
-        description: |
-          Done
-
-          - The service closes the connection. No audio leaves the browser until the staff member resumes.
-        operationId: $sourceDescriptions.audio.sendEnded
-        action: receive
 
       - stepId: stillPaused
         x-actors: [staff, session]
@@ -842,7 +617,7 @@ workflows:
             match: {method: POST, url: /credentials}
             response:
               status: 200
-              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token-2, tokenType: Bearer, expiresIn: 300}
+              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', accessToken: fake-service-token-2, tokenType: Bearer, expiresIn: 300}
         successCriteria:
           - condition: $statusCode == 201
 
@@ -950,34 +725,6 @@ workflows:
         successCriteria:
           - condition: $message.payload#/subject == $steps.connected.outputs.sessionId
 
-      - stepId: serviceStubEnd
-        x-actors: [service]
-        description: Answers the end of the audio with done, then closes the connection
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': end
-            send:
-              - {type: ended}
-            close: {code: 1000}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendEnd
-        x-actors: [adapter, service]
-        description: End of the audio
-        operationId: $sourceDescriptions.audio.receiveEnd
-        action: send
-        requestBody:
-          payload: {type: end}
-
-      - stepId: ended
-        x-actors: [service, adapter]
-        description: Done
-        operationId: $sourceDescriptions.audio.sendEnded
-        action: receive
-
       - stepId: adapterStubStart
         x-actors: [adapter]
         description: Takes the session's call to start streaming again
@@ -1033,55 +780,19 @@ workflows:
           sessionId: $outputs.sessionId
           transcriptId: $outputs.transcriptId
 
-      - stepId: serviceStub
-        x-actors: [service]
-        description: |
-          Answers the audio with the final text, then drops the connection
-
-          - The connection closes with `1006`: closed with no goodbye, as when a network fails.
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': audio
-            send:
-              - {type: result, id: r1, isFinal: true, startOffsetMs: 2000, endOffsetMs: 3500, speaker: spk_0, alternatives: [{transcript: "I work at the grocery store."}]}
-            close: {code: 1006}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendAudio
-        x-actors: [adapter, service]
-        description: Audio
-        operationId: $sourceDescriptions.audio.receiveAudio
-        action: send
-        requestBody:
-          payload: (16-bit PCM audio)
-
-      - stepId: finalText
-        x-actors: [service, adapter]
-        description: Final text
-        operationId: $sourceDescriptions.audio.sendResult
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/isFinal == true
-        outputs:
-          key: $message.payload#/id
-          text: $message.payload#/alternatives/0/transcript
-
       - stepId: publishLineFinished
         x-actors: [adapter, transcript]
         description: |
           Publish the finished line
 
-          - What arrived before the drop is kept.
+          - What the service sent before the connection dropped is kept.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
             partitionkey: $steps.connected.outputs.sessionId
-            data: {transcriptId: $steps.connected.outputs.transcriptId, key: $steps.finalText.outputs.key, text: $steps.finalText.outputs.text, speaker: client, startedAt: '2026-10-12T10:00:02Z', endedAt: '2026-10-12T10:00:03Z'}
+            data: {transcriptId: $steps.connected.outputs.transcriptId, key: r1, text: I work at the grocery store., speaker: client, startedAt: '2026-10-12T10:00:02Z', endedAt: '2026-10-12T10:00:03Z'}
 
       - stepId: lineKept
         x-actors: [transcript, staff]
@@ -1158,34 +869,12 @@ workflows:
           sessionId: $outputs.sessionId
           transcriptId: $outputs.transcriptId
 
-      - stepId: serviceStubDrop
-        x-actors: [service]
-        description: Drops the connection
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': audio
-            send:
-              - {type: result, id: r1, isFinal: false, startOffsetMs: 2000, endOffsetMs: 2600, speaker: spk_0, alternatives: [{transcript: "I work"}]}
-            close: {code: 1006}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendAudio
-        x-actors: [adapter, service]
-        description: |
-          Audio
-
-          - The connection closes under it.
-        operationId: $sourceDescriptions.audio.receiveAudio
-        action: send
-        requestBody:
-          payload: (16-bit PCM audio)
-
       - stepId: publishDisconnected
         x-actors: [adapter, session]
-        description: Publish disconnected
+        description: |
+          Publish disconnected
+
+          - The connection to the service drops.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
         action: send
         requestBody:
@@ -1203,7 +892,7 @@ workflows:
             match: {method: POST, url: /credentials}
             response:
               status: 200
-              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
+              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
         successCriteria:
           - condition: $statusCode == 201
 
@@ -1221,53 +910,13 @@ workflows:
             protocols: [websocket]
         successCriteria:
           - condition: $statusCode == 200
-        outputs:
-          subprotocol: $response.body#/subprotocol
-          accessToken: $response.body#/accessToken
-
-      - stepId: serviceStubError
-        x-actors: [service]
-        description: |
-          Rejects a new connection with an error
-
-          - The contract says the service answers `start` with `error` when it can't, then closes the connection.
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': start
-            send:
-              - {type: error, code: network, message: The service is unavailable.}
-            close: {code: 1011}
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendStartAgain
-        x-actors: [adapter, service]
-        description: Open the connection, with the audio format
-        operationId: $sourceDescriptions.audio.receiveStart
-        action: send
-        parameters:
-          - name: Sec-WebSocket-Protocol
-            in: header
-            value: '{$steps.requestCredentialsAgain.outputs.subprotocol}, {$steps.requestCredentialsAgain.outputs.accessToken}'
-        requestBody:
-          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
-
-      - stepId: refused
-        x-actors: [service, adapter]
-        description: Error
-        operationId: $sourceDescriptions.audio.sendError
-        action: receive
-        successCriteria:
-          - condition: $message.payload#/code == 'network'
 
       - stepId: publishFailed
         x-actors: [adapter, session]
         description: |
           Publish failed
 
-          - After as many tries as it allows, the adapter gives up. The session follows it to `failed`.
+          - The adapter connects again with the new credential, and the service refuses. After as many tries as it allows, the adapter gives up. The session follows it to `failed`.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionFailed
         action: send
         requestBody:
@@ -1495,7 +1144,7 @@ workflows:
             match: {method: POST, url: /credentials}
             response:
               status: 200
-              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', subprotocol: blueprint.transcripts.relay.v1, accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
+              body: {metadata: {}, provider: fake-transcription, protocol: websocket, url: 'wss://fake-transcription.example/stream', accessToken: fake-service-token, tokenType: Bearer, expiresIn: 300}
         successCriteria:
           - condition: $statusCode == 201
 
@@ -1513,42 +1162,6 @@ workflows:
             protocols: [websocket]
         successCriteria:
           - condition: $statusCode == 200
-        outputs:
-          subprotocol: $response.body#/subprotocol
-          accessToken: $response.body#/accessToken
-
-      - stepId: serviceStub
-        x-actors: [service]
-        description: Answers a new connection with ready
-        operationId: $sourceDescriptions.mock.registerWsStub
-        requestBody:
-          payload:
-            channel: communication-transcripts-relay-asyncapi.yaml#/channels/audio
-            'on': start
-            send: [{type: started}]
-        successCriteria:
-          - condition: $statusCode == 201
-
-      - stepId: sendStart
-        x-actors: [adapter, service]
-        description: |
-          Open the connection, with the audio format
-
-          - The last connection closed, so this opens another.
-        operationId: $sourceDescriptions.audio.receiveStart
-        action: send
-        parameters:
-          - name: Sec-WebSocket-Protocol
-            in: header
-            value: '{$steps.requestCredentials.outputs.subprotocol}, {$steps.requestCredentials.outputs.accessToken}'
-        requestBody:
-          payload: {type: start, audio: {encoding: linear16, sampleRateHertz: 16000, channelCount: 1}, languages: [en-US]}
-
-      - stepId: started
-        x-actors: [service, adapter]
-        description: Ready
-        operationId: $sourceDescriptions.audio.sendStarted
-        action: receive
 
       - stepId: publishConnected
         x-actors: [adapter, session]

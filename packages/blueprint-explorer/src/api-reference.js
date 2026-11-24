@@ -3,9 +3,7 @@
  * API Reference Explorer build
  *
  * Generates a static, no-server-required API reference from all resolved
- * *-openapi.yaml files, and from the AsyncAPI documents of APIs reached over a
- * WebSocket (doc.protocols), such as the transcript relay: where to connect,
- * then the messages each way. Uses @apidevtools/json-schema-ref-parser to
+ * *-openapi.yaml files. Uses @apidevtools/json-schema-ref-parser to
  * fully dereference external $refs before rendering.
  *
  * Output:
@@ -107,26 +105,6 @@ const specs = (
           // resolves them against.
           const fileMap = doc.externalRefs(docs);
           return { slug, spec, raw, fileMap, doc };
-        } catch {
-          return null;
-        }
-      })
-  )
-).filter(Boolean);
-
-// An API reached over a WebSocket, such as the transcript relay, is an API
-// too: a page of its own, beside the OpenAPI ones. An events AsyncAPI
-// document, reached over no protocol of its own, is the event catalog's.
-const sockets = (
-  await Promise.all(
-    docs
-      .filter((d) => d.type === 'asyncapi' && d.protocols.includes('ws'))
-      .sort((a, b) => a.path.localeCompare(b.path))
-      .map(async (doc) => {
-        try {
-          const spec = await $RefParser.dereference(doc.path);
-          if (!spec?.info) return null;
-          return { slug: doc.api, spec, raw: doc.content, fileMap: doc.externalRefs(docs), doc, socket: true };
         } catch {
           return null;
         }
@@ -722,8 +700,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 /**
  * One operation's card, as the API reference lays every one out: a row that
  * opens, naming it, and under it the docs and, beside them, the side column,
- * where Send and the documented answers go (try-it/send-panel.js). A REST
- * operation and a WebSocket page's items are each one.
+ * where Send and the documented answers go (try-it/send-panel.js).
  *
  * @param {object} card
  * @param {string} card.id - The element id, for links and the sidebar
@@ -1056,121 +1033,6 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   return withNav.replace('</body>', () => `${MOUNT_SEND_PANELS}\n</body>`);
 }
 
-// ── WebSocket page ────────────────────────────────────────────────────────
-
-/** The element id a message's card has, for links and the sidebar. */
-const messageId = (key) => `msg-${key.replace(/[^A-Za-z0-9_-]+/g, '-')}`;
-
-/** The name a `$ref` ends with: `#/channels/audio/messages/start` → `start`. */
-const refName = (ref) => (typeof ref?.$ref === 'string' ? ref.$ref.split('/').pop() : null);
-
-/**
- * The messages of a WebSocket document by direction, read from its
- * operations: what the server receives, which the software sends, and what
- * the server sends, replies among them. Each once, in the document's order,
- * with the replies a received message is answered with.
- */
-function messagesByDirection(spec, raw) {
-  const sentTo = [];
-  const sentBy = [];
-  const replies = new Map();
-  const add = (list, channel, key) => {
-    const message = spec.channels?.[channel]?.messages?.[key];
-    if (key && message && !list.some((m) => m.key === key)) list.push({ key, message });
-  };
-  const operations = Object.values(raw.operations ?? {});
-  for (const operation of operations) {
-    const channel = refName(operation?.channel);
-    const answers = (operation?.reply?.messages ?? []).map(refName).filter(Boolean);
-    for (const key of (operation?.messages ?? []).map(refName)) {
-      add(operation.action === 'receive' ? sentTo : sentBy, channel, key);
-      if (operation.action === 'receive' && answers.length) replies.set(key, answers);
-    }
-  }
-  // A reply the server has no send operation for, after the ones it has.
-  for (const operation of operations) {
-    for (const key of (operation?.reply?.messages ?? []).map(refName)) add(sentBy, refName(operation.reply.channel) ?? refName(operation.channel), key);
-  }
-  return { sentTo, sentBy, replies };
-}
-
-/** Whether a message travels as binary frames rather than JSON. */
-const isBinary = (message) => message.contentType === 'application/octet-stream' || message.payload?.format === 'binary';
-
-/** A list of messages, each linked to its card. */
-const messageLinks = (keys) => keys.map((k) => `<a href="#${messageId(k)}"><code>${esc(k)}</code></a>`).join(' or ');
-
-/** The "Comes back" section of an item's side column, where REST shows its responses. */
-const comesBack = (html) => `<div class="op-section socket-back"><h4 class="op-h">Comes back</h4><div class="fdesc">${html}</div></div>`;
-
-/** A message's payload, as a request body's is shown. */
-function renderPayload(message, fileMap, defaultType) {
-  const type = message.contentType ?? defaultType;
-  return isBinary(message)
-    ? `<div class="op-section"><h4 class="op-h">Payload <span class="pill">${esc(type)}</span></h4>
-        <div class="fdesc">Binary WebSocket frames, not JSON.</div></div>`
-    : `<div class="op-section request-body-section"><h4 class="op-h">Payload <span class="pill">${esc(type)}</span></h4>
-        <div class="body-fields">${renderSchema(message.payload, null, null, fileMap)}</div></div>`;
-}
-
-/**
- * One message, as an operation's card: what it is and its payload, and beside
- * them, for one the server receives, where Try it sends it from and what
- * comes back; for one the server sends, what it answers, and its example.
- */
-function renderMessage({ key, message }, { replies, repliedBy, fileMap, defaultType, received }) {
-  const example = message.examples?.[0]?.payload;
-  const exampleHtml = example === undefined ? '' : `<div class="op-section"><h4 class="op-h">Example</h4>
-      <pre style="font-size:11.5px;background:#fafafa;border:1px solid #eee;border-radius:4px;padding:8px 10px;overflow:auto;">${esc(JSON.stringify(example, null, 2))}</pre></div>`;
-  const answers = replies.get(key);
-  const sideHtml = received
-    // Try it fills the holder in (try-it/socket-panel.js).
-    ? `<div data-socket-send="${esc(key)}"></div>${comesBack(answers ? messageLinks(answers) : 'Nothing in reply.')}`
-    : exampleHtml;
-  const answering = repliedBy.get(key);
-  const whenHtml = received ? '' : `<div class="op-returns">${answering ? `In reply to ${messageLinks(answering)}` : 'Sent on its own, not in reply to a message.'}</div>`;
-  return operationCard({
-    id: messageId(key),
-    open: true,
-    linkTitle: 'Link to this message',
-    lineHtml: `<code class="op-path">${esc(message.name ?? key)}</code>
-        ${message.summary ? `<span class="op-name">${esc(message.summary)}</span>` : ''}`,
-    badgesHtml: `<span class="pill">${isBinary(message) ? 'binary' : 'JSON'}</span>`,
-    docsHtml: `${message.description ? `<div class="op-desc" style="padding-top:12px;">${renderMarkdown(message.description)}</div>` : ''}
-        ${whenHtml}
-        ${renderPayload(message, fileMap, defaultType)}`,
-    sideHtml,
-  });
-}
-
-/**
- * Where to connect: each server's URL, its variables, and how it's
- * authenticated, from the document's servers and security schemes.
- */
-function renderServers(spec, raw) {
-  return Object.entries(spec.servers ?? {}).map(([name, server]) => {
-    const url = `${server.protocol}://${server.host}${server.pathname ?? ''}`;
-    const variables = Object.entries(server.variables ?? {}).map(([variable, v]) => `<div class="param">
-        <div class="field-head"><code class="fname">{${esc(variable)}}</code></div>
-        ${v?.description ? `<div class="fdesc">${renderMarkdown(v.description)}</div>` : ''}
-      </div>`).join('');
-    const schemes = (raw.servers?.[name]?.security ?? []).map((ref, i) => {
-      const scheme = server.security?.[i] ?? {};
-      const kind = [scheme.type, scheme.scheme, scheme.bearerFormat].filter(Boolean).join(', ');
-      return `<div class="param">
-        <div class="field-head"><code class="fname">${esc(refName(ref) ?? 'security')}</code>${kind ? ` <span class="pill">${esc(kind)}</span>` : ''}</div>
-        ${scheme.description ? `<div class="fdesc">${renderMarkdown(scheme.description)}</div>` : ''}
-      </div>`;
-    }).join('');
-    return `<div class="op-section">
-      <h4 class="op-h">${esc(name)} <code style="font-size:12px;font-weight:400;color:#555;background:#f0f0f0;padding:1px 6px;border-radius:3px;">${esc(url)}</code></h4>
-      ${server.description ? `<div class="fdesc">${renderMarkdown(server.description)}</div>` : ''}
-      ${variables ? `<div style="margin-top:6px;">${variables}</div>` : ''}
-      ${schemes ? `<div style="margin-top:6px;"><div class="fdesc"><b>Authentication</b></div>${schemes}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
 /**
  * An adapter's page, marked: it's built, for whoever implements it, but Try
  * it lists it rather than the API reference, and the home page skips it by
@@ -1179,113 +1041,6 @@ function renderServers(spec, raw) {
 const markedAdapter = (page, doc) => (doc?.adapter
   ? page.replace('</head>', () => '<meta name="blueprint-adapter" content="true"/>\n</head>')
   : page);
-
-/** Connecting and closing, as cards beside the messages: they're sent to the server too. */
-function connectCard(spec, raw) {
-  return operationCard({
-    id: 'op-connect',
-    open: true,
-    linkTitle: 'Link to connecting',
-    lineHtml: `<code class="op-path">Connect</code><span class="op-name">Open the connection, at one of the servers.</span>`,
-    badgesHtml: '<span class="pill">handshake</span>',
-    docsHtml: `<div class="op-desc" style="padding-top:12px;">An HTTP request asking to upgrade to a WebSocket (RFC 6455), with the subprotocols the client offers in <code>Sec-WebSocket-Protocol</code>.</div>
-        ${renderServers(spec, raw)}`,
-    sideHtml: `<div data-socket-connect></div>${comesBack('The connection opens (<code>101</code>), speaking one of the subprotocols offered, or is refused.')}`,
-  });
-}
-
-function closeCard() {
-  return operationCard({
-    id: 'op-disconnect',
-    open: true,
-    linkTitle: 'Link to closing',
-    lineHtml: `<code class="op-path">Disconnect</code><span class="op-name">Close the connection.</span>`,
-    badgesHtml: '<span class="pill">close</span>',
-    docsHtml: `<div class="op-desc" style="padding-top:12px;">A close frame with a code and a reason (RFC 6455): <code>1000</code> for a normal close. The server can close the connection too; the log shows its code and reason.</div>`,
-    sideHtml: `<div data-socket-close></div>${comesBack('The connection closes.')}`,
-  });
-}
-
-// The description's first paragraph, and the rest under More.
-const SOCKET_PAGE_STYLE = `
-  .socket-intro { max-width: 720px; margin-bottom: 1.5rem; }
-  .socket-intro details > summary { cursor: pointer; color: ${COLORS.darkBlue}; font-size: 13px; }
-`;
-
-function buildSocketPage({ slug, spec, raw, fileMap = new Map(), doc }) {
-  const info = spec.info ?? {};
-  const title = info.title ?? slug;
-  const { sentTo, sentBy, replies } = messagesByDirection(spec, raw);
-  const total = sentTo.length + sentBy.length;
-  const defaultType = spec.defaultContentType ?? 'application/json';
-  const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, resolvedDir, { include: ['asyncapi'] }, repo));
-  // What each message the server sends answers.
-  const repliedBy = new Map();
-  for (const [asked, answers] of replies) for (const answer of answers) repliedBy.set(answer, [...(repliedBy.get(answer) ?? []), asked]);
-  const context = { replies, repliedBy, fileMap, defaultType };
-
-  // Named for the server, so the direction reads the same from either end.
-  const toHeading = `Sent to ${title}`;
-  const byHeading = `Sent by ${title}`;
-  const navLink = (href, name, kind, summary = '') => `<a href="#${href}" class="nav-link nav-op" title="${esc(summary)}">
-      <span class="nav-op-path">${esc(name)}</span> <span style="font-size:10px;opacity:.6;">${esc(kind)}</span>
-    </a>`;
-  const navHtml = `<div class="nav-section">
-    <div class="nav-section-label">${esc(toHeading)}</div>
-    ${navLink('op-connect', 'Connect', 'handshake')}
-    ${sentTo.map(({ key, message }) => navLink(messageId(key), message.name ?? key, isBinary(message) ? 'binary' : 'JSON', message.summary)).join('')}
-    ${navLink('op-disconnect', 'Disconnect', 'close')}
-  </div>${sentBy.length ? `<div class="nav-section">
-    <div class="nav-section-label">${esc(byHeading)}</div>
-    ${sentBy.map(({ key, message }) => navLink(messageId(key), message.name ?? key, isBinary(message) ? 'binary' : 'JSON', message.summary)).join('')}
-  </div>` : ''}`;
-
-  const heading = (text) => `<h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:1rem;">${esc(text)}</h2>`;
-  const sections = `<section id="section-sent-to" style="margin-bottom:2.5rem;">
-      ${heading(toHeading)}
-      ${connectCard(spec, raw)}
-      ${sentTo.map((m) => renderMessage(m, { ...context, received: true })).join('')}
-      ${closeCard()}
-    </section>${sentBy.length ? `<section id="section-sent-by" style="margin-bottom:2.5rem;">
-      ${heading(byHeading)}
-      ${sentBy.map((m) => renderMessage(m, { ...context, received: false })).join('')}
-    </section>` : ''}`;
-
-  const headerHtml = `<div style="background:${COLORS.darkBlue};color:${COLORS.white};">
-    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:0.9375rem;font-weight:800;">${esc(title)}</span>
-      <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v${esc(info.version ?? '')}</span>
-      <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0 6px;border-radius:3px;">WebSocket</span>
-      ${statusBadge(info['x-status'])}
-      <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">${total} message${total !== 1 ? 's' : ''}</span>
-    </div>
-    ${metaSubtitle}
-  </div>`;
-
-  // The description's first paragraph, and the rest under More.
-  const [first, ...rest] = String(info.description ?? '').trim().split(/\n\s*\n/);
-  const intro = first
-    ? `<div class="socket-intro">${renderMarkdown(first)}${rest.length ? `<details><summary>More</summary>${renderMarkdown(rest.join('\n\n'))}</details>` : ''}</div>`
-    : '';
-
-  const page = twoColumnPage({
-    title: `${projectName} — ${esc(title)}`,
-    breadcrumbs: [
-      { label: 'Explorer',      href: hubHref },
-      { label: 'API Reference', href: 'index.html' },
-      { label: title },
-    ],
-    headerHtml,
-    navHtml,
-    // Try it fills in each card's controls (try-it/socket-panel.js); what goes each
-    // way is in the control panel's activity log.
-    mainHtml: `${intro}<div data-try-socket="${esc(doc.relativePath)}">${sections}</div>`,
-    navWidth: 260,
-    navSearch: true,
-    extraStyle: OPERATION_STYLE + SOCKET_PAGE_STYLE,
-  });
-  return markedAdapter(page, doc).replace('</body>', () => `<script>${OPERATION_SCRIPT}</script>\n${MOUNT_SEND_PANELS}\n</body>`);
-}
 
 // ── Index (landing) page ──────────────────────────────────────────────────
 
@@ -1318,7 +1073,7 @@ function buildIndexPage(entries) {
 
   const cards = [...byDomain.entries()].map(([domain, domainEntries]) => {
     // Use the "primary" spec (non-adapter, or first) for title/description/status
-    const primary = domainEntries.find(e => !e.doc?.adapter && !e.socket) ?? domainEntries[0];
+    const primary = domainEntries.find(e => !e.doc?.adapter) ?? domainEntries[0];
     const info    = primary.spec.info ?? {};
     const totalEndpoints = domainEntries.reduce((n, e) => n + countEndpoints(e.spec), 0);
     // The description's first sentence, however its lines wrap.
@@ -1326,13 +1081,12 @@ function buildIndexPage(entries) {
 
     const domainLabel = titleCase(domain);
 
-    const apiLinks = domainEntries.map(({ slug, spec, socket }) => {
+    const apiLinks = domainEntries.map(({ slug, spec }) => {
       const apiTitle = spec.info?.title ?? slug;
       const version  = spec.info?.version ?? '';
       const badge    = statusBadge(spec.info?.['x-status']);
       return `<a href="${esc(slug)}.html" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;text-decoration:none;color:${COLORS.text};" onmouseover="this.style.background='${COLORS.paleBlue}'" onmouseout="this.style.background=''">
-        <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};flex:1;">${esc(apiTitle)}</span>${socket ? `
-        <span style="font-size:9px;font-weight:700;color:#666;border:1px solid #ddd;border-radius:3px;padding:0 5px;flex-shrink:0;">WebSocket</span>` : ''}
+        <span style="font-size:12px;font-weight:600;color:${COLORS.midBlue};flex:1;">${esc(apiTitle)}</span>
         <span style="font-size:10px;font-family:monospace;color:#aaa;flex-shrink:0;">v${esc(version)}</span>
         ${badge}
       </a>`;
@@ -1395,12 +1149,7 @@ for (const entry of specs) {
   console.log(`  Written: ${entry.slug}.html`);
 }
 
-for (const entry of sockets) {
-  writeFileSync(resolve(outDir, `${entry.slug}.html`), buildSocketPage(entry), 'utf8');
-  console.log(`  Written: ${entry.slug}.html`);
-}
-
-const indexHtml = buildIndexPage([...specs, ...sockets]);
+const indexHtml = buildIndexPage(specs);
 writeFileSync(resolve(outDir, 'index.html'), indexHtml, 'utf8');
 console.log(`  Written: index.html`);
 } // end build()

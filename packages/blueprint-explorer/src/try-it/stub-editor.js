@@ -11,9 +11,6 @@
  *   - an HTTP stub answers a request the mock would otherwise handle, such as
  *     a call to an adapter: which operation, its path's values, and the
  *     status and body to answer with, started from the documented example.
- *   - a WebSocket stub answers a message on a connection, such as the
- *     relay's: the channel, the message, and what to send back, each started
- *     from the message's schema, with an optional delay and a close.
  *
  * Every form shows the stub as JSON, and edits it as written for anything the
  * form doesn't cover.
@@ -211,12 +208,11 @@ function formShell({ stub, opensAsJson, fields, built, ready, save, cancel }) {
 // The envelope's own attributes, the same on every event or never repeated: not worth matching on.
 const ENVELOPE = new Set(['specversion', 'id', 'type', 'time', 'datacontenttype', 'traceparent', 'partitionkey', 'authid', 'authtype', 'causationid']);
 
-/** Whether an AsyncAPI document describes events, which no protocol of its own carries, or an API such as a WebSocket's. */
+/** Whether an AsyncAPI document describes events, which no protocol of its own carries. */
 const ofEvents = (doc) => doc.type === 'asyncapi' && !doc.protocols.length;
-const overWebSocket = (doc) => doc.type === 'asyncapi' && doc.protocols.includes('ws');
 
 /**
- * What the contracts offer the three kinds of stub.
+ * What the contracts offer the two kinds of stub.
  *
  * @param {object[]} docs - From `extract(contracts, 'docs')`
  * @param {Record<string, { data: object }[]>} records - The sample records by
@@ -241,7 +237,7 @@ export function stubChoices(docs, records = {}) {
     for (const value of Object.values(node)) walk(value);
   };
   for (const doc of docs.filter((d) => d.type === 'state-machine')) walk(doc.content);
-  return { events, callbacks: [...callbacks].sort(), operations: calledOperations(docs, operationsIn(docs, records)), channels: channelsIn(docs) };
+  return { events, callbacks: [...callbacks].sort(), operations: calledOperations(docs, operationsIn(docs, records)) };
 }
 
 /**
@@ -459,19 +455,14 @@ const operationFor = (operations, method, url) => {
  * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, save: (stub: object) => Promise<string|null>, cancel: () => void }} options
  * @returns {HTMLElement}
  */
-export function httpStubForm({ choices, stub = null, preset = null, save, cancel }) {
+export function httpStubForm({ choices, stub = null, save, cancel }) {
   const { operations } = choices;
-  // Started on an operation the control panel names, with its first answer.
-  const first = (key) => {
-    const operation = operations.find((o) => o.key === key);
-    return operation?.answers.find((answer) => answer.status < 300) ?? operation?.answers[0];
-  };
   const written = stub ? operationFor(operations, stub.match?.method, (stub.match?.domain ? `/${stub.match.domain}` : '') + (stub.match?.url ?? '')) : null;
   const state = {
-    key: written?.operation.key ?? (preset && operations.some((o) => o.key === preset) ? preset : ''),
+    key: written?.operation.key ?? '',
     values: written?.values ?? {},
-    status: stub?.response?.status ?? (preset ? first(preset)?.status ?? '' : ''),
-    body: pretty(stub ? stub.response?.body : preset ? first(preset)?.body : undefined),
+    status: stub?.response?.status ?? '',
+    body: pretty(stub?.response?.body),
   };
   const chosen = () => operations.find((operation) => operation.key === state.key);
   const url = () => (chosen()?.template ?? '').replace(/\{([^}]+)\}/g, (_, name) => encodeURIComponent(state.values[name] ?? '') || `{${name}}`);
@@ -547,152 +538,6 @@ export function httpStubForm({ choices, stub = null, preset = null, save, cancel
   });
 }
 
-// ── WebSocket stubs ───────────────────────────────────────────────────────────
-
-/** A message's payload, filled in as far as its schema says: constants, then empty values by type. */
-const skeleton = (schema, content, depth = 0) => {
-  const resolved = local(schema, content) ?? {};
-  if (resolved.const !== undefined) return resolved.const;
-  if (resolved.default !== undefined) return resolved.default;
-  if (Array.isArray(resolved.enum)) return resolved.enum[0];
-  if (resolved.type === 'object' || resolved.properties) {
-    if (depth > 3) return {};
-    return Object.fromEntries((resolved.required ?? Object.keys(resolved.properties ?? {}).slice(0, 1))
-      .map((name) => [name, skeleton(resolved.properties?.[name], content, depth + 1)]));
-  }
-  if (resolved.type === 'array') {
-    return Array.from({ length: resolved.minItems ?? 0 }, () => skeleton(resolved.items, content, depth + 1));
-  }
-  return { string: '', number: 0, integer: 0, boolean: false }[resolved.type] ?? null;
-};
-
-/** Each WebSocket channel, with the messages the mock receives and sends on it. */
-function channelsIn(docs) {
-  const channels = [];
-  for (const doc of docs.filter(overWebSocket)) {
-    const content = doc.content ?? {};
-    const file = String(doc.relativePath ?? '').split('/').pop();
-    for (const [key, channel] of Object.entries(content.channels ?? {})) {
-      const named = (ref) => (typeof ref?.$ref === 'string' ? ref.$ref.split('/').pop() : null);
-      const receives = new Set();
-      const sends = new Set();
-      const replies = new Map();
-      for (const operation of Object.values(content.operations ?? {})) {
-        if (operation?.channel?.$ref !== `#/channels/${key}`) continue;
-        for (const message of operation.messages ?? []) (operation.action === 'receive' ? receives : sends).add(named(message));
-        for (const message of operation.reply?.messages ?? []) sends.add(named(message));
-        if (operation.action === 'receive' && operation.reply) {
-          for (const message of operation.messages ?? []) replies.set(named(message), (operation.reply.messages ?? []).map(named).filter(Boolean));
-        }
-      }
-      const payloadOf = (name) => local(channel.messages?.[name], content)?.payload;
-      channels.push({
-        value: `${file}#/channels/${key}`,
-        label: `${content.info?.title ?? file} › ${key}`,
-        receives: [...receives].filter(Boolean),
-        sends: [...sends].filter(Boolean),
-        repliesTo: (name) => replies.get(name) ?? [],
-        summaryOf: (name) => local(channel.messages?.[name], content)?.summary ?? '',
-        fieldsOf: (name) => Object.keys(local(payloadOf(name), content)?.properties ?? {}).filter((field) => field !== 'type'),
-        exampleOf: (name) => skeleton(payloadOf(name), content),
-      });
-    }
-  }
-  return channels;
-}
-
-const CLOSES = [['', 'Leave it open'], ['1006', 'Drop it (1006)'], ['1008', 'Refuse it (1008)'], ['1000', 'Close it normally (1000)']];
-
-/**
- * The form for one WebSocket stub.
- *
- * Started on a message the Try it panel names (`preset`), it sends back the
- * first reply the contract gives that message, such as `started` for `start`.
- *
- * @param {{ choices: ReturnType<typeof stubChoices>, stub?: object, preset?: { channel: string, on: string },
- *   save: (stub: object) => Promise<string|null>, cancel: () => void }} options
- * @returns {HTMLElement}
- */
-export function wsStubForm({ choices, stub = null, preset = null, save, cancel }) {
-  const { channels } = choices;
-  const presetChannel = !stub && preset ? channels.find((channel) => channel.value === preset.channel) : null;
-  const presetOn = presetChannel?.receives.includes(preset.on) ? preset.on : '';
-  const presetReply = presetOn ? presetChannel.repliesTo(presetOn)[0] : null;
-  const state = {
-    channel: stub?.channel ?? presetChannel?.value ?? '',
-    on: stub?.on ?? presetOn,
-    match: Object.entries(stub?.match ?? {}).map(([path, value]) => [path, typeof value === 'string' ? value : JSON.stringify(value)]),
-    send: stub
-      ? (stub.send ?? []).map((message, i) => ({ name: message?.type ?? '', body: pretty(message), at: stub.atMs?.[i] ?? '' }))
-      : presetReply ? [{ name: presetReply, body: pretty(presetChannel.exampleOf(presetReply)), at: '' }] : [],
-    close: stub?.close ? String(stub.close.code) : '',
-  };
-  const chosen = () => channels.find((channel) => channel.value === state.channel);
-  const built = () => {
-    const out = { channel: state.channel, on: state.on };
-    const match = matchOf(state);
-    if (Object.keys(match).length) out.match = match;
-    if (state.send.length) {
-      out.send = state.send.map((message) => typed(message.body));
-      if (state.send.some((message) => message.at !== '')) out.atMs = state.send.map((message) => Number(message.at || 0));
-    }
-    if (state.close) out.close = { code: Number(state.close) };
-    return out;
-  };
-  return formShell({
-    stub,
-    opensAsJson: Boolean(stub && (stub.protocols || stub.close?.reason || stub.close?.atMs !== undefined
-      || !channels.some((channel) => channel.value === stub.channel))),
-    built,
-    ready: () => Boolean(chosen() && state.on),
-    save,
-    cancel,
-    fields: (box, redraw, preview) => {
-      box.append(el('label', 'On this connection'));
-      const channel = select(state.channel, channels.map((c) => [c.value, c.label]), channels.length ? 'Pick a channel…' : 'The contracts declare none');
-      channel.onchange = () => { state.channel = channel.value; state.on = ''; state.match = []; state.send = []; redraw(); };
-      box.append(channel);
-      if (!chosen()) return;
-
-      box.append(el('label', 'When the mock receives'));
-      const on = select(state.on, chosen().receives, 'Pick a message…');
-      on.onchange = () => { state.on = on.value; state.match = []; redraw(); };
-      box.append(on);
-      if (!state.on) return;
-      if (chosen().summaryOf(state.on)) box.append(el('p', chosen().summaryOf(state.on), 'se-hint'));
-
-      box.append(el('label', 'Only if'));
-      conditionRows(box, state, { paths: chosen().fieldsOf(state.on), redraw, preview });
-
-      box.append(el('label', 'Send back'));
-      for (const [index, message] of state.send.entries()) {
-        const part = el('div', '', 'se-message');
-        const row = el('div', '', 'se-row');
-        const name = select(message.name, chosen().sends, 'Pick a message…');
-        name.onchange = () => { state.send[index] = { name: name.value, body: pretty(chosen().exampleOf(name.value)), at: message.at }; redraw(); };
-        const at = Object.assign(el('input', '', 'se-ms'), { value: message.at, placeholder: 'after ms', type: 'number', min: 0 });
-        at.oninput = () => { state.send[index].at = at.value; preview(); };
-        const remove = Object.assign(el('button', '×', 'se-x'), { type: 'button', title: 'Remove this message' });
-        remove.onclick = () => { state.send.splice(index, 1); redraw(); };
-        row.append(name, at, remove);
-        const body = el('textarea');
-        body.value = message.body;
-        body.oninput = () => { state.send[index].body = body.value; preview(); };
-        part.append(row, body);
-        box.append(part);
-      }
-      const add = Object.assign(el('button', '+ Add a message', 'se-link'), { type: 'button' });
-      add.onclick = () => { state.send.push({ name: '', body: '', at: '' }); redraw(); };
-      box.append(add, el('p', 'Each starts from the message\'s schema. A time sends it that many milliseconds after the stub matches; none sends them all at once.', 'se-hint'));
-
-      box.append(el('label', 'Then'));
-      const close = select(state.close, CLOSES, null);
-      close.onchange = () => { state.close = close.value; preview(); };
-      box.append(close, el('p', 'It answers one such message, then it\'s used up.', 'se-hint'));
-    },
-  });
-}
-
 // ── In words ──────────────────────────────────────────────────────────────────
 
 const where = (match) => {
@@ -705,11 +550,6 @@ export function describeStub(kind, stub) {
   if (kind === 'http') {
     const path = `${stub.match?.domain ? `/${stub.match.domain}` : ''}${stub.match?.url ?? ''}`;
     return `${stub.match?.method ?? 'Any method'} ${path}: answer ${stub.response?.status ?? 200}`;
-  }
-  if (kind === 'ws') {
-    const sends = (stub.send ?? []).map((message) => message?.type ?? 'a message');
-    return `On ${String(stub.channel).split('#/channels/').pop()}, when ${stub.on} is received${where(stub.match)}, `
-      + `${sends.length ? `send ${sends.join(', ')}` : 'send nothing'}${stub.close ? `, then close (${stub.close.code})` : ''}`;
   }
   if (stub.on === TIMER_REQUESTED) return `Fire a timer${where(stub.match)}`;
   return `When ${stub.on}${where(stub.match)}, ${stub.response?.type ? `publish ${stub.response.type}` : 'do nothing'}`;

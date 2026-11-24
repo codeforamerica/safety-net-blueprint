@@ -203,10 +203,9 @@ function routingWithServer(where, docs) {
   const choice = chosenServer(where);
   if (!choice) return kept;
   const narrower = site.filter((entry) => entry.domain !== '*');
-  const sockets = docs.filter((d) => d.type === 'asyncapi' && d.protocols?.includes('ws')).map((d) => ({ api: d.api }));
   if (choice.url) {
-    // Every call, but what the site switched to the page and the sockets, which go where their own server says.
-    const except = [...site.filter((entry) => entry.domain !== '*' && inPage(where, entry)).flatMap((entry) => exceptFor(entry, docs)), ...sockets];
+    // Every call, but what the site switched to the page.
+    const except = site.filter((entry) => entry.domain !== '*' && inPage(where, entry)).flatMap((entry) => exceptFor(entry, docs));
     const everything = { domain: '*', to: choice.url, ...(except.length ? { except } : {}) };
     everything[CHOSEN] = choice.url;
     return [...kept.filter((entry) => entry.domain !== '*'), everything];

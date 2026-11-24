@@ -6,8 +6,7 @@ info:
 # The profiles the harness's spoken transcription scenarios start their
 # sessions under, seeded as a state seeds its own: entries in the framework's
 # profile catalog. Two use the fake service the harness adds to the
-# transcription-services registry, for demos and tests; one names Google Cloud
-# Speech-to-Text, for the scenario through a relay; one names Whisper, which
+# transcription-services registry, for demos and tests; one names Whisper, which
 # the explorer runs in the page, and starting a session in the explorer uses
 # it. The chat scenario uses the framework's own `typed` profile.
 
@@ -27,11 +26,6 @@ actions:
         provider: fake-transcription
         languages: [en-US]
         idleTimeout: PT30M
-      - id: 7a1e0c2d-0000-4000-8000-0000000000f3
-        name: english-google
-        description: An interview in English, transcribed by Google Cloud Speech-to-Text through the state's relay.
-        provider: google-cloud-speech
-        languages: [en-US]
       - id: 7a1e0c2d-0000-4000-8000-0000000000f4
         name: english-whisper
         description: An interview in English, transcribed by Whisper. The explorer runs Whisper in the page, so a session under it can be tried with no service or account.

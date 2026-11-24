@@ -50,7 +50,6 @@ describe('a server chosen in the page', () => {
   const docs = [
     api('intake', 'intake', [{ url: 'https://api.example.org/intake', description: 'Production server' }, { url: 'http://localhost:1080/intake', description: 'Local development server' }]),
     api('communication-transcription-sessions-adapter', 'communication', [{ url: 'https://{state}.adapter.example.org', description: 'Production server', variables: { state: { default: 'ca' } } }, { url: 'http://localhost:9090', description: 'Local development server' }]),
-    { type: 'asyncapi', api: 'communication-transcripts-relay', domain: 'communication', protocols: ['ws'], content: {} },
   ];
   const reset = () => { stored.clear(); globalThis.BlueprintExplorer = { routing: [] }; };
 
@@ -59,7 +58,7 @@ describe('a server chosen in the page', () => {
     assert.deepEqual(routingInUse(where, docs), []);
   });
 
-  it('sends every call to a URL typed in, but sockets, and leaves the site\'s narrower entries to win', () => {
+  it('sends every call to a URL typed in, and leaves the site\'s narrower entries to win', () => {
     reset();
     const site = { api: 'communication-transcription-sessions-adapter', to: 'https://adapter.example.org' };
     globalThis.BlueprintExplorer.routing = [site];
@@ -67,7 +66,7 @@ describe('a server chosen in the page', () => {
     const routing = routingInUse(where, docs);
     const everything = routing.find((entry) => entry.domain === '*');
     assert.equal(everything.to, 'http://localhost:1081');
-    assert.deepEqual(everything.except, [{ api: 'communication-transcripts-relay' }]);
+    assert.equal(everything.except, undefined);
     assert.equal(entryFor(routing, { api: 'communication-transcription-sessions-adapter', domain: 'communication' }), site);
     assert.equal(entryFor(routing, { api: 'intake', domain: 'intake' }), everything);
   });

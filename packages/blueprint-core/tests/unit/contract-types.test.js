@@ -278,7 +278,7 @@ describe('apiNameOf', () => {
     assert.equal(apiNameOf('domains/workflow/workflow-events-asyncapi.yaml'), 'workflow');
   });
   test('a hand-written AsyncAPI document is named without -asyncapi.yaml', () => {
-    assert.equal(apiNameOf('base/domains/communication/communication-transcripts-relay-asyncapi.yaml'), 'communication-transcripts-relay');
+    assert.equal(apiNameOf('base/domains/communication/communication-transcripts-socket-asyncapi.yaml'), 'communication-transcripts-socket');
   });
   test('a Doc carries it as api, and only an OpenAPI or AsyncAPI document', () => {
     const api = toDoc({ relativePath: 'domains/intake/intake-openapi.yaml', type: 'openapi', content: { info: { 'x-domain': 'intake' } } });
@@ -293,8 +293,8 @@ describe('protocolsOf', () => {
     assert.deepEqual(protocolsOf('openapi', {}), ['http']);
   });
   test('an AsyncAPI document over what its servers declare, a secure variant read as the plain one', () => {
-    const relay = { servers: { relay: { host: '{relayHost}', protocol: 'wss' }, local: { host: 'localhost:1080', protocol: 'ws' } } };
-    assert.deepEqual(protocolsOf('asyncapi', relay), ['ws']);
+    const socket = { servers: { production: { host: '{host}', protocol: 'wss' }, local: { host: 'localhost:1080', protocol: 'ws' } } };
+    assert.deepEqual(protocolsOf('asyncapi', socket), ['ws']);
   });
   test('an events AsyncAPI document, with no servers, over none: the event bus carries it', () => {
     assert.deepEqual(protocolsOf('asyncapi', { channels: {} }), []);
@@ -316,8 +316,8 @@ describe('doc.adapter', () => {
     const { toDoc } = await import('../../src/doc.js');
     const adapter = toDoc({ relativePath: 'domains/x/x-adapter-openapi.yaml', type: 'openapi', content: { 'x-relationship': { type: 'external' }, info: {} } });
     const api = toDoc({ relativePath: 'domains/x/x-openapi.yaml', type: 'openapi', content: { info: {} } });
-    const relay = toDoc({ relativePath: 'domains/x/x-relay-asyncapi.yaml', type: 'asyncapi', content: { 'x-relationship': { type: 'external' } } });
+    const socket = toDoc({ relativePath: 'domains/x/x-socket-asyncapi.yaml', type: 'asyncapi', content: { 'x-relationship': { type: 'external' } } });
     const rules = toDoc({ relativePath: 'domains/x/x-rules.yaml', type: 'rules', content: { 'x-relationship': { type: 'external' } } });
-    assert.deepEqual([adapter.adapter, api.adapter, relay.adapter, rules.adapter], [true, false, true, false]);
+    assert.deepEqual([adapter.adapter, api.adapter, socket.adapter, rules.adapter], [true, false, true, false]);
   });
 });

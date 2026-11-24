@@ -23,7 +23,7 @@ import { extract } from '@codeforamerica/blueprint-core/browser';
 import { startMock } from './start-mock.js';
 import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPENED_STYLE } from './event-trail.js';
 import { activityOf, clearActivity } from './activity.js';
-import { stubChoices, eventStubForm, httpStubForm, wsStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
+import { stubChoices, eventStubForm, httpStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
 import { siteRouting, entryName, entryFor, inPage, switchEntry, destinationOf, chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
 
@@ -117,11 +117,11 @@ const STYLE = `
 
 // How many events the log shows: the mock's list hands back at most this many at once.
 const LOG_SIZE = 100;
-const STUB_KINDS = ['events', 'http', 'ws'];
-const KIND_NAMES = { events: 'Event', http: 'HTTP', ws: 'WebSocket' };
-const ADD_LABELS = { events: 'Add an event stub', http: 'Add an HTTP stub', ws: 'Add a WebSocket stub' };
+const STUB_KINDS = ['events', 'http'];
+const KIND_NAMES = { events: 'Event', http: 'HTTP' };
+const ADD_LABELS = { events: 'Add an event stub', http: 'Add an HTTP stub' };
 
-const FORMS = { events: eventStubForm, http: httpStubForm, ws: wsStubForm };
+const FORMS = { events: eventStubForm, http: httpStubForm };
 
 /**
  * The stub being written, if any: its kind, a new one or the id of one being
@@ -407,40 +407,6 @@ function requestLine(request) {
 }
 
 /**
- * A connection Try it opened, opening to its messages in order, as a
- * browser's developer tools show one: ↑ sent, ↓ received, each opening to
- * its payload, and how it closed.
- */
-function connectionLine(connection) {
-  const row = el('details', '', 'happened-event');
-  row.dataset.request = connection.time;
-  const state = connection.close
-    ? `closed ${connection.close.code}${connection.close.reason ? `: ${connection.close.reason}` : ''}`
-    : 'open';
-  const normal = !connection.close || connection.close.code === 1000;
-  const summary = el('summary');
-  summary.append(el('span', `WS ${connection.path}`, 'happened-type'),
-    el('span', `  → ${state} · ${connection.messages.length} message${connection.messages.length === 1 ? '' : 's'}`, normal ? 'happened-subject' : 'happened-bad'));
-  row.append(summary);
-  if (connection.protocols?.length) row.append(el('div', `Subprotocols: ${connection.protocols.join(', ')}`, 'happened-subscribers'));
-  const messages = el('div', '', 'happened-under');
-  for (const message of connection.messages) {
-    const arrow = message.sent ? '↑' : '↓';
-    if (message.payload === undefined) {
-      messages.append(el('div', `${arrow} ${message.said ?? message.name}`, 'happened-event'));
-      continue;
-    }
-    const line = el('details', '', 'happened-event');
-    const head = el('summary');
-    head.append(el('span', `${arrow} ${message.name}`, 'happened-type'));
-    line.append(head, el('pre', JSON.stringify(message.payload, null, 2), 'happened-body'));
-    messages.append(line);
-  }
-  if (connection.messages.length) row.append(messages);
-  return row;
-}
-
-/**
  * Everything that happened in the mock, the latest first: each request Try
  * it sent with the events it set off under it, and the events nothing logged
  * set off, such as a timer firing, on their own. Clear empties it.
@@ -489,7 +455,7 @@ function activitySection(running, events) {
         box.append(...eventLines(item.events, { trail }));
         continue;
       }
-      box.append(item.request.kind === 'socket' ? connectionLine(item.request) : requestLine(item.request));
+      box.append(requestLine(item.request));
       if (shownKinds === 'all' && item.events.length) {
         const under = el('div', '', 'happened-under');
         under.append(...eventLines(item.events, { trail }));
@@ -510,7 +476,7 @@ async function register(running, kind, stub) {
 }
 
 /** The form for a stub of a kind, new or replacing one. */
-function openEditor(running, kind, events, stub = null, preset = null) {
+function openEditor(running, kind, events, stub = null) {
   editing = {
     kind,
     id: stub?.id ?? null,
@@ -521,7 +487,6 @@ function openEditor(running, kind, events, stub = null, preset = null) {
       })(),
       waiting: waitingTimers(events),
       stub,
-      preset,
       // Registered first, so a refused edit leaves the one it would replace.
       save: async (value) => {
         const { refused } = await register(running, kind, value);
@@ -536,35 +501,6 @@ function openEditor(running, kind, events, stub = null, preset = null) {
     }),
   };
   render();
-}
-
-/** A stub another part of the page asked to add, waiting for the drawer to open. */
-let asked = null;
-
-/** Open the asked-for stub's form, scrolled to. */
-async function openAsked() {
-  const running = host ?? own;
-  if (!asked || !running) return;
-  const { kind, preset } = asked;
-  asked = null;
-  openEditor(running, kind, [], null, preset);
-  await render();
-  editing?.form.scrollIntoView({ block: 'nearest' });
-}
-
-/**
- * Open the drawer on a new stub's form, started on what the page names, as
- * the Try it panel does when the mock closes a connection for want of a stub.
- *
- * @param {string} kind - 'events', 'http' or 'ws'
- * @param {object} preset - What the form starts on: an operation's key for
- *   'http'; `{ channel, on }` for 'ws'
- */
-export function addStub(kind, preset) {
-  asked = { kind, preset };
-  if (panel?.classList.contains('open')) openAsked();
-  // The page's button opens it, with the contracts the page loaded.
-  else document.getElementById('mock-panel-toggle')?.click();
 }
 
 /** The stubs registered, each said in words, with Edit and Remove; and adding one. */
@@ -716,5 +652,4 @@ export async function setTryIt(on, given) {
     await startOwn({ seed: true, restore: true });
     render();
   }
-  await openAsked();
 }
