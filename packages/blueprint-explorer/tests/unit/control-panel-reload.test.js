@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { runInNewContext } from 'node:vm';
 import { addControlPanel } from '../../src/lib/control-panel.js';
 
-test('a reload forgets what the tab chose and made: records, stubs, the server, the adapters chosen and the activity log', () => {
+test('a reload forgets what the tab chose and made: records, stubs, the server and the activity log', () => {
   const dir = mkdtempSync(join(tmpdir(), 'explorer-reload-'));
   try {
     mkdirSync(join(dir, 'mock'));
@@ -18,7 +18,7 @@ test('a reload forgets what the tab chose and made: records, stubs, the server, 
 
     const scope = 'file:///site/mock/';
     const stored = new Map([
-      ...['records', 'stubs', 'server', 'adapters', 'activity'].map((kind) => [`blueprint-mock-${kind}:${scope}`, 'x']),
+      ...['records', 'stubs', 'server', 'activity'].map((kind) => [`blueprint-mock-${kind}:${scope}`, 'x']),
       [`blueprint-try-results:${scope}:intake`, 'x'],
       ['blueprint-mock-server:file:///other/mock/', 'x'],
     ]);
@@ -39,17 +39,17 @@ test('a reload forgets what the tab chose and made: records, stubs, the server, 
   }
 });
 
-test('only a page with operations, or one asking for the Activity view, gets the Try it switch', () => {
+test('only a page with operations gets the Try it switch', () => {
   const dir = mkdtempSync(join(tmpdir(), 'explorer-switch-'));
   try {
     mkdirSync(join(dir, 'mock'));
     writeFileSync(join(dir, 'mock', 'mock.js'), '');
     writeFileSync(join(dir, 'index.html'), '<html><body><h1>Overview</h1></body></html>');
     writeFileSync(join(dir, 'intake.html'), '<html><body><section id="op-post-applications"></section></body></html>');
-    writeFileSync(join(dir, 'scenarios.html'), '<html><head><meta name="blueprint-try-it" content="activity"></head><body></body></html>');
+    writeFileSync(join(dir, 'scenarios.html'), '<html><head></head><body><main id="tours"></main></body></html>');
     addControlPanel(dir);
     const hasSwitch = (page) => readFileSync(join(dir, page), 'utf8').includes("toggle.id = 'try-it-switch'");
-    assert.deepEqual(['index.html', 'intake.html', 'scenarios.html'].map(hasSwitch), [false, true, true]);
+    assert.deepEqual(['index.html', 'intake.html', 'scenarios.html'].map(hasSwitch), [false, true, false]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -93,7 +93,7 @@ export function build({ contentDir, resolvedDir }) {
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
  * @returns {{ path: string, title: string }[]}
  */
-function toursIn(docs) {
+export function toursIn(docs) {
   const fileName = (path) => String(path ?? '').split(/[?#]/)[0].split('/').pop();
   const arazzo = docs.filter((doc) => doc.type === 'arazzo');
   const runIn = new Set(arazzo.flatMap((doc) => (doc.content.sourceDescriptions ?? [])

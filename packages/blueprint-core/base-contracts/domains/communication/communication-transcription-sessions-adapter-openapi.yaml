@@ -18,28 +18,10 @@ info:
   x-status: alpha
   x-visibility: external
   description: |
-    The state's transcription session adapter: how a transcription session
-    reaches one transcription service. It has two parts.
-
-    **The streaming part,** beside the session: the session calls it to start,
-    pause and stop streaming. Started, it gets a credential from the
-    credentials part when its service takes one, opens the connection,
-    streams the audio, and reports what happens by publishing the session's
-    events with `publishEvent` — connected, disconnected, failed, a line in
-    progress, a finished line, and ended. It never calls the session's
-    operations, and the session's API has none for it.
-
-    **The credentials part,** which holds the service's secret: it answers
-    with where the streaming part connects and a short-lived credential from
-    the transcription service. It's stateless: one request, one answer. It
-    maps the languages and audio it's given to what its service takes, and
-    holds everything that doesn't change from one call to the next — a
-    region, a custom vocabulary, redaction — as its own configuration. An
-    adapter whose service takes no credential, such as a model running in
-    the page, has none.
-
-    Requests extend AdapterRequest, so the adapter echoes metadata back
-    unchanged.
+    How a transcription session reaches one transcription service: the
+    session calls it to start, pause and stop streaming, and it publishes the
+    session's events with `publishEvent`. Requests extend AdapterRequest, so
+    the adapter echoes metadata back unchanged.
 servers:
   - url: https://adapter.example.com
     description: Production server

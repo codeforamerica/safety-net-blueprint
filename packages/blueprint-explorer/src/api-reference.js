@@ -25,6 +25,7 @@ import { resolvedSourcePairs } from './lib/paths.js';
 import { discover, load } from '@codeforamerica/blueprint-core';
 import { loadConfig } from './lib/config.js';
 import { OPERATION_STYLE, OPERATION_SCRIPT, MOUNT_SEND_PANELS } from './lib/operation-page.js';
+import { toursIn } from './try-it/build.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 
@@ -60,6 +61,20 @@ function resolveDefRef(ref, fileMap) {
 
 export async function build({ contentDir, resolvedDir }) {
 const docs = discover(resolvedDir).map(load);
+
+// The scenarios that show how each API works, by its file name, for its page
+// to link to: each API a scenario lists in sourceDescriptions, except one it
+// marks x-internal, which it only uses along the way.
+const fileOf = (path) => String(path ?? '').split(/[?#]/)[0].split('/').pop();
+const scenariosByFile = new Map();
+for (const tour of toursIn(docs)) {
+  const arazzo = docs.find((d) => d.relativePath === tour.path);
+  for (const source of arazzo?.content?.sourceDescriptions ?? []) {
+    if (source.type !== 'openapi' || source['x-internal'] === true) continue;
+    const listed = scenariosByFile.get(fileOf(source.url)) ?? [];
+    scenariosByFile.set(fileOf(source.url), [...listed, tour]);
+  }
+}
 const outDir = resolve(contentDir, 'api-reference');
 const hubHref = relative(outDir, join(contentDir, 'index.html'));
 const { name: projectName, repo, organization } = loadConfig(contentDir);
@@ -1009,9 +1024,15 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   const baseUrl = serverUrl && !tryFile
     ? `<div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">${esc(serverUrl)}</code></div>`
     : '';
-  const intro = info.description || baseUrl
+  // Links to the scenarios that call this API, to see it work.
+  const scenarios = doc ? (scenariosByFile.get(fileOf(doc.relativePath)) ?? []) : [];
+  const scenarioLinks = scenarios.length
+    ? `<p style="margin:.5rem 0 0;font-size:14px;">See it work: ${scenarios.map(({ path, title }) => `<a href="../scenarios/index.html#tour=${encodeURIComponent(path)}">${esc(title)}</a>`).join(', ')}</p>`
+    : '';
+  const intro = info.description || baseUrl || scenarioLinks
     ? `<div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid ${COLORS.sandDark};">
       ${info.description ? `<div style="max-width:720px;">${renderMarkdown(info.description)}</div>` : ''}
+      ${scenarioLinks}
       ${baseUrl}
     </div>`
     : '';

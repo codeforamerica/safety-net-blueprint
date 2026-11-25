@@ -51,6 +51,9 @@ export function chooseEnvironment(scope, name) {
 let applied = null;
 export const currentEnvironment = () => applied;
 
+/** Whether the page runs against the mock: the site's first environment, or a site that lists none. */
+export const inSandbox = () => !applied || applied === environments()[0];
+
 /**
  * The site as the picked environment has it: the contracts with its release
  * applied, a version and a scope of its own, so its records, stubs and

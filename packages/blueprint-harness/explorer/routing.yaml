@@ -1,5 +1,5 @@
 $schema: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
-# Local's routing: sessions under the whisper profile transcribe in the page,
+# Mock's routing: sessions under the whisper profile transcribe in the page,
 # with Whisper (adapters/whisper.js).
 routing:
   - api: communication-transcription-sessions-adapter

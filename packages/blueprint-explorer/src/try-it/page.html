@@ -2,8 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- The page is already interactive: its switch opens the mock's Activity only (lib/control-panel.js). -->
-<meta name="blueprint-try-it" content="activity">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scenarios</title>
 <!--
@@ -307,6 +305,10 @@
   .tour-picker { display: block; margin: 0 0 .8rem; }
   .tour-picker span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .25rem; }
   .tour-picker select { width: 100%; }
+  .tour-choice { margin: 0 0 .8rem; }
+  .tour-choice .tour-picker { margin-bottom: .4rem; }
+  .start-over { font: 600 12px system-ui, sans-serif; padding: .3rem .7rem; border-radius: 4px; border: 1px solid #2B1A78; background: #fff; color: #2B1A78; cursor: pointer; }
+  .start-over:disabled { opacity: .5; cursor: default; }
   ul.checks { list-style: none; padding: 0; margin: .5rem 0 0; font-family: var(--mono); font-size: .78rem; }
   ul.checks .passed { color: var(--ok); }
   ul.checks .failed { color: var(--bad); }
@@ -337,7 +339,7 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom, inEnvironment } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, awayFrom, inEnvironment } =
   globalThis.BlueprintMock;
 
 // The site as the picked environment has it (environments.js), and where this
@@ -368,7 +370,6 @@ const pageConfig = (() => {
 
 let docs;          // every document in the set
 let mock;          // the server derived from them
-let session;       // how it was started, and how to save it for the next page
 // What the page is showing: the application walk-through, or one of the
 // contract set's Arazzo scenarios by path — which step of it, and what its
 // last run answered, by workflow and step.
@@ -669,23 +670,12 @@ const valueFor = (declared, doc) => {
  * the contract set, and the time it takes is printed because it is the
  * claim: an entire backend, in about as long as a keystroke.
  */
-let derivedFrom;   // the contract set the server was derived from
-const derive = async ({ seed = true, artifact, restore = false, keepWalk = false } = {}) => {
-  const set = artifact ?? contracts;
-  derivedFrom = set;
+const derive = async ({ seed = true } = {}) => {
+  const set = contracts;
   docs = extract(set, 'docs');
-  // Restored, with what an earlier page left; this page leaves what it holds for the next.
-  session = await startMock({ contracts: set, ...records, seed, restore, basePath });
-  mock = session.mock;
-  // The control panel shows this mock, and starts it over.
-  hostMock({
-    ...session,
-    mock: () => mock,
-    restart: derive,
-    // Routing changed: the same records and stubs, and the walk carries on.
-    reroute: () => derive({ seed: session.seeded, artifact: derivedFrom, restore: true, keepWalk: true }),
-  });
-  if (keepWalk) return;
+  // A mock of the page's own, fresh each time: nothing from the API reference
+  // pages' mock comes in, and nothing this one does goes back to them.
+  ({ mock } = await startMock({ contracts: set, ...records, seed, basePath, shared: false }));
 
   // The system is new, so nothing the walk did to the old one still holds:
   // the records it made are gone with the store that held them.
@@ -1057,28 +1047,9 @@ const sectionIntroOf = (workflow) => {
 /** The run of the tour on this server, started at its first step. */
 const runnerFor = (doc) => {
   if (!tourRunner) {
-    // Each call a step makes goes in the control panel's activity log, with
-    // its response and the events it set off, as Send's do.
-    const fetchHere = async (request) => {
+    const fetchHere = (request) => {
       const { pathname, search } = new URL(request.url);
-      const time = new Date().toISOString();
-      const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().text();
-      const started = performance.now();
-      const response = await mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
-      const ms = Math.round(performance.now() - started);
-      // A stream doesn't end, so its body is left out.
-      let shown = '';
-      if (!(response.headers.get('content-type') ?? '').includes('text/event-stream')) {
-        const text = await response.clone().text();
-        try { shown = JSON.stringify(JSON.parse(text), null, 2); } catch { shown = text; }
-      }
-      let eventIds = [];
-      if (request.method !== 'GET' && response.ok) {
-        const listed = await mock.fetch(new Request(new URL(`${basePath}/platform/events?start=${encodeURIComponent(time)}&sort=time&limit=100`, location.origin)));
-        if (listed.ok) eventIds = ((await listed.json())?.items ?? []).map((event) => event.id);
-      }
-      logRequest(records, { time, method: request.method, path: pathname + search, body: body || undefined, status: response.status, ok: response.ok, ms, shown, eventIds });
-      return response;
+      return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
     };
     // A branched scenario runs one branch's workflows, from where the run
     // started; another runs every workflow no step runs.
@@ -1293,8 +1264,14 @@ const tourPicker = () => {
   picker.value = currentScenario()?.relativePath ?? '';
   // Another tour starts on fresh data, so nothing the last one made is in its way.
   picker.onchange = async () => { tour = picker.value; tourBranch = 'main'; await derive({ seed: true }); };
+  // The same, for the scenario showing: a fresh mock with the sample data, and the run from the top.
+  const over = Object.assign(el('button', 'Start over', 'start-over'), { type: 'button' });
+  over.title = 'Start the scenario again on a fresh mock with the sample data';
+  over.onclick = async () => { over.disabled = true; tourBranch = 'main'; await derive({ seed: true }); over.disabled = false; };
   field.append(picker);
-  return field;
+  const wrap = el('div', '', 'tour-choice');
+  wrap.append(field, over);
+  return wrap;
 };
 
 /**
@@ -2260,9 +2237,6 @@ const renderStage = async () => {
   stage.replaceChildren();
   const doc = currentScenario();
   if (doc) renderTourStage(stage, doc);
-  // A step run changes what the mock holds: the next page gets it, and the control panel shows it.
-  session?.keep();
-  mockChanged();
 };
 
 let contracts;
@@ -2273,7 +2247,7 @@ const boot = async () => {
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.has('tour')) tour = hash.get('tour');
 
-  await derive({ seed: true, restore: true });
+  await derive({ seed: true });
   // After the first derive, never before: this renders, and there is
   // nothing to render until the server exists.
   renderGroups();

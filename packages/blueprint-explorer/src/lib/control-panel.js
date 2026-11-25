@@ -6,9 +6,8 @@
  * loads the mock, if the page hasn't, and docks the control panel beside the
  * page (try-it/control-panel.js).
  *
- * Only pages where you can send something get the switch: an API reference
- * page with operations, and the Scenarios page, which asks for the Activity
- * view with <meta name="blueprint-try-it" content="activity">. Every page
+ * Only API reference pages with operations get the switch: they're where you
+ * send something. The Scenarios page runs a mock of its own. Every page
  * starts the mock's records over when it's reloaded, as a page running the
  * mock does (try-it/records.js): a reload anywhere starts again from the
  * sample records.
@@ -23,7 +22,7 @@ const MARK = '<!-- the mock: control panel -->';
 /**
  * Forgetting what pages left for the next, on a reload: the keys records.js
  * keeps the mock's records, stubs and each page's results under, and
- * routing.js the server chosen in the page, adapters.js what answers each adapter,
+ * routing.js the server chosen in the page,
  * sign-in.js who is signed in,
  * and activity.js the requests Try it sent, for every environment
  * (try-it/environments.js). Switching environments reloads the page too, so it
@@ -48,7 +47,7 @@ const resetOnReload = (root) => `
   const ours = (key, kind) => key === \`\${kind}:\${scope}\` || key.startsWith(\`\${kind}:\${scope}#\`);
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
         || key.startsWith(\`blueprint-try-results:\${scope}\`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
@@ -61,8 +60,8 @@ const resetOnReload = (root) => `
  *
  * Like a browser's developer tools: off, the page is the reference alone;
  * on, the control panel docks beside it (try-it/control-panel.js), and the
- * page narrows to make room. The choice holds for the browser tab, every
- * page of it, and is set on the page before it's drawn, so it doesn't jump.
+ * page narrows to make room. The choice is stored in sessionStorage, so it
+ * holds for every page in the browser tab.
  */
 const launcher = (root) => `
 <style>
@@ -100,33 +99,33 @@ const launcher = (root) => `
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
-  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
-  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = activityOnly
-      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
-      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
     // In the environment the reader picked (try-it/environments.js).
-    return ready().then(() => BlueprintMock.setTryIt(on, {
-      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
-      ...(activityOnly ? { views: ['activity'] } : {}),
-    }));
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>`;
 
@@ -140,8 +139,8 @@ const pagesUnder = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e
 /** A page that asks to be left as it is, such as a stand-in sign-in page a site adds. */
 const OPT_OUT = /<meta\s+name="blueprint-try-it"\s+content="off"/;
 
-/** A page with something to send: an operation (api-reference.js), or a page asking for the Activity view. */
-const INTERACTIVE = /id="op-|<meta\s+name="blueprint-try-it"\s+content="activity"/;
+/** A page with something to send: an operation (api-reference.js). */
+const INTERACTIVE = /id="op-/;
 
 /** The page the sign-in popup returns to: it hands what it was given to the page that opened it. */
 export const SIGN_IN_RETURN = 'sign-in-return.html';

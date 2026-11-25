@@ -18,7 +18,7 @@
 import { createMockServer } from '@codeforamerica/blueprint-mock-server/server';
 import { restoreRecords, saveRecords, restoreStubs, saveStubs, forgetStubs } from './records.js';
 import { routingInUse } from './routing.js';
-import { withAdapterChoices } from './adapters.js';
+import { answeredFromExamples } from './adapters.js';
 import { schemeFor, signedIn } from './sign-in.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { logRequest } from './activity.js';
@@ -127,32 +127,36 @@ let current = null;
 let saving = false;
 
 /**
- * @param {{ contracts: object, scope: string, version: string, seed?: boolean, restore?: boolean, basePath?: string,
- *   hold?: (call: object) => Promise<Response>, ask?: (call: object) => Promise<object|null> }} options -
+ * @param {{ contracts: object, scope: string, version: string, seed?: boolean, restore?: boolean, shared?: boolean, basePath?: string,
+ *   standIn?: boolean, ask?: (call: object) => Promise<object|null> }} options -
  *   The contract set; where records are kept (the mock's folder) and the
  *   set's version; whether to load the sample records; whether to put back
- *   what the last page left, or start over; the path the mock serves
- *   under, if not the top; and, on a page where the developer can answer an
- *   adapter's calls, how a call waits for their answer, so each adapter is
- *   answered as chosen in the page (adapters.js); and how a call that needs
+ *   what the last page left, or start over; whether it shares records with
+ *   the other pages at all (false for the Scenarios page, whose every run
+ *   starts fresh and leaves nothing behind); the path the mock serves
+ *   under, if not the top; whether every adapter answers with its contract's
+ *   example, as on an API reference page against the mock (adapters.js); and how a call that needs
  *   the visitor signed in waits for them to sign in (sign-in.js)
  * @returns {Promise<{ mock: object, seeded: boolean, ms: number, keep: () => Promise<void> }>}
  *   The mock; whether it started with the sample records, and how long it
  *   took to build; and `keep`, which saves what it holds for the next page
  */
-export async function startMock({ contracts, scope, version, seed = true, restore = false, basePath = '', hold = null, ask = null }) {
+export async function startMock({ contracts, scope, version, seed = true, restore = false, shared = true, basePath = '', standIn = false, ask = null }) {
   const where = { scope, version };
   const started = performance.now();
   // The site's routing, any server chosen in the page, and what answers each adapter.
   const docs = extract(contracts, 'docs');
   const routed = routingInUse({ scope }, docs);
   const site = ask ? signedInHandlers(routed, docs, where, ask) : routed;
-  const routing = loggingHandlers(hold ? withAdapterChoices(site, docs, where, hold) : site, docs, where);
+  const routing = loggingHandlers(standIn ? answeredFromExamples(site, docs) : site, docs, where);
   const mock = await createMockServer({ contracts, seed, basePath, routing });
   // Only to read and register stubs, through the mock's own routes.
   const send = (method, path, { body } = {}) => mock.fetch(new Request(ORIGIN + basePath + path, {
     method, body, headers: body ? { 'Content-Type': 'application/json' } : {},
   }));
+  if (!shared) {
+    return { mock, seeded: seed, ms: Math.round(performance.now() - started), keep: async () => {} };
+  }
   if (restore) {
     restoreRecords(mock, where);
     await restoreStubs(send, where);

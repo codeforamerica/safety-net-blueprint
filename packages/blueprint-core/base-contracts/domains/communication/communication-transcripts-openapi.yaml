@@ -23,23 +23,8 @@ info:
   x-status: alpha
   x-visibility: internal
   description: |
-    The written record of a conversation. Starting a transcript opens it for
-    recording; pausing takes the conversation off the record; closing ends it.
-    A transcript refers to what it records — an interview, a call — and names
-    the profile it was started under, which says the transcription service,
-    and the client and model that produced its lines. Updating corrects what
-    it records; deleting removes it, and the event left behind says which one
-    and by whom.
-
-    A profile is a state's choice of transcription service and languages for
-    a kind of conversation. The deployment's config seeds them; they can be
-    added and changed here, never deleted, so every transcript's profile
-    still exists.
-
-    Its entries are its timeline, in the order things happened: lines, gaps
-    where nothing was captured, and pauses. Every time on a transcript and its
-    entries is the client's — when it started, paused, resumed and closed, and
-    when each line was said — so they are compared on one clock.
+    The written record of a conversation, and the profiles that say which
+    transcription service and languages to use for each kind of conversation.
 servers:
   - url: https://api.example.com/communication
     description: Production server

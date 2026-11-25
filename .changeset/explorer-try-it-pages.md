@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-explorer": minor
 ---
 
-Before, every page but the authored ones had the Try it switch, including pages with nothing to send, such as the data dictionaries and the event catalog. Now only API reference pages with operations have Try it, and the Scenarios page has Activity. The panel explains environments and the None adapter in short notes that open on click.
+An API reference page links to the scenarios that list it in `sourceDescriptions`, under "See it work"; a scenario marks an API it only uses along the way `x-internal: true`, and isn't linked from that API's page.

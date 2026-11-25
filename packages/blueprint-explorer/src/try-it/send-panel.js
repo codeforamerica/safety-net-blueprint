@@ -23,13 +23,11 @@ import { loadResults, saveResults } from './records.js';
 import { startMock } from './start-mock.js';
 import { logRequest } from './activity.js';
 import { tryView } from './try-view.js';
-import { hostMock, mockChanged } from './control-panel.js';
+import { hostMock, mockChanged, showInActivity } from './control-panel.js';
 import { combobox, COMBO_STYLE } from './combobox.js';
 import { routingInUse, entryFor, destinationOf } from './routing.js';
-import { answerMicrophone } from './as-microphone.js';
-import { stubChoices } from './stub-editor.js';
-import { adaptersCalledBy, chooseAdapter, chosenAdapter, recordAdapters, NONE, ROUTED } from './adapters.js';
-import { recordPicker, answerForm, reportForm, signInPrompt, audioPrompt, ADAPTER_STYLE } from './adapter-panel.js';
+import { inSandbox } from './environments.js';
+import { signInPrompt, ADAPTER_STYLE } from './adapter-panel.js';
 import { signIn, schemeFor, signedIn } from './sign-in.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -217,21 +215,6 @@ const propertiesOf = (doc, schema, seen = new Set()) => {
   return Object.assign({}, ...(node.allOf ?? []).map((part) => propertiesOf(doc, part, seen)), node.properties ?? {});
 };
 
-/**
- * The fields of a request body that name another record (x-relationship),
- * across its allOf, oneOf and anyOf, each with the record's schema name.
- */
-const relationshipFields = (doc, schema, seen = new Set()) => {
-  const node = local(doc, schema);
-  if (!node || typeof node !== 'object' || seen.has(node)) return [];
-  seen.add(node);
-  const own = Object.entries(node.properties ?? {})
-    .map(([name, property]) => ({ name, resource: local(doc, property)?.['x-relationship']?.resource }))
-    .filter((field) => field.resource);
-  const parts = [...(node.allOf ?? []), ...(node.oneOf ?? []), ...(node.anyOf ?? [])].flatMap((part) => relationshipFields(doc, part, seen));
-  return [...own, ...parts].filter((field, i, all) => all.findIndex((other) => other.name === field.name) === i);
-};
-
 /** A `$ref`, followed into another document of the set when it points there. */
 const followed = (doc, node, docs) => {
   const at = local(doc, node);
@@ -365,6 +348,7 @@ const STYLE = `
   .try-code .foot { gap: 8px; align-items: center; }
   .try-code .real { font: 600 11px system-ui, sans-serif; color: #fff; background: #b45309; padding: 2px 8px; border-radius: 3px; }
   .resp-tab.sent { font-family: sans-serif; }
+  .resp-panel .sent-activity { margin: 2px 0 6px; font-size: 12px; color: #555; } .resp-panel .sent-activity a { color: #5650BE; }
   .resp-panel .sent-status { font-weight: 700; } .resp-panel .sent-status.ok { color: #15803d; } .resp-panel .sent-status.bad { color: #b42318; }
   .resp-panel .sent-headers { margin: 4px 0 0; font: 11px monospace; color: #555; }
   .resp-panel .sent-headers div { white-space: pre-wrap; word-break: break-all; }
@@ -412,27 +396,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   }
   const records = { scope, version };
-  // The external operations the state machines call, by who calls them (stub-editor.js).
-  const calledOut = stubChoices(docs).operations;
-  // Under None, a call an adapter gets waits for the developer's answer, on
-  // the panel last sent from: what it sent is what made the call.
-  let answerHere = null;
   // A call that needs the visitor signed in waits on the same panel while they sign in.
   let askHere = null;
   const ask = (call) => new Promise((resolve) => (askHere ? askHere(call, resolve) : resolve(null)));
-  // An adapter that asks for the microphone waits there too, while the reader
-  // chooses what it hears. With no panel to ask on, it gets the microphone.
-  let audioHere = null;
-  answerMicrophone(() => new Promise((resolve) => (audioHere ? audioHere(resolve) : resolve({ microphone: true }))));
-  const hold = (call) => new Promise((resolve, reject) => {
-    if (!answerHere) {
-      reject(new Error(`${call.operation.operationId} was called, with nothing sent from this page to answer it on`));
-      return;
-    }
-    answerHere(call, (status, body) => resolve(new Response(body === undefined ? null : JSON.stringify(body), {
-      status, headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-    })));
-  });
   // What each operation last sent and got back, as this page was left.
   const results = loadResults(records);
   const roles = docs.find((d) => Array.isArray(d.content?.$defs?.RoleType?.enum))?.content.$defs.RoleType.enum ?? [];
@@ -489,7 +455,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     }
   };
   const start = async ({ seed, restore }) => {
-    session = await startMock({ contracts, ...records, seed, restore, hold, ask });
+    session = await startMock({ contracts, ...records, seed, restore, standIn: inSandbox(), ask });
     mock = session.mock;
     markReal();
     await refreshPickers();
@@ -518,22 +484,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (!response.ok) return [];
       return (await response.json())?.items ?? [];
     } catch { return []; }
-  };
-
-  // Publishing an event as something outside the contracts would: through
-  // the platform's publishEvent, as a routed handler's publish does.
-  const publishPath = docs.filter((doc) => doc.type === 'openapi').flatMap((doc) => Object.entries(doc.content?.paths ?? {})
-    .filter(([, item]) => item?.post?.operationId === 'publishEvent').map(([path]) => basePathOf(doc) + path))[0] ?? null;
-  const publishEvent = async (event) => {
-    if (!publishPath) return { ok: false, status: 0, text: 'the contracts have no publishEvent' };
-    const sentAt = new Date().toISOString();
-    const response = await send('POST', publishPath, { body: JSON.stringify(event) });
-    const text = await response.text();
-    logRequest(records, { time: sentAt, method: 'POST', path: publishPath, body: JSON.stringify(event), status: response.status, ok: response.ok, ms: 0, shown: text, eventIds: response.ok ? [event.id] : [] });
-    await session.keep();
-    mockChanged();
-    await refreshPickers();
-    return { ok: response.ok, status: response.status, text };
   };
 
   // ── Comboboxes ───────────────────────────────────────────────────────────
@@ -626,8 +576,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
       form.append(row);
       values.set(`${param.dataset.in}:${param.dataset.param}`, box);
     }
-    // The adapters this operation's action calls, whose calls wait under None (adapters.js).
-    const adapters = adaptersCalledBy(op.operation, calledOut);
     form.prepend(el('h4', values.size ? 'Parameters' : 'Request', 'op-h'), callerRow());
     place(form);
     const searchExample = exampleSearch(op.doc, op, values.has('query:q'));
@@ -677,40 +625,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
       if (row.childElementCount) editor.append(row);
       editor.append(bodyBox);
       if (editor.childElementCount) place(editor);
-    }
-
-    // A record the body names that chooses an adapter, such as a session's
-    // profile: picked from the records the site routes to an adapter, each
-    // saying which, or None. A record no adapter answers isn't offered.
-    for (const { name, resource } of bodyBox ? relationshipFields(op.doc, mediaTypeOf(op) && op.operation.requestBody.content[mediaTypeOf(op)]?.schema) : []) {
-      const chooses = recordAdapters(resource, docs);
-      if (!chooses.apis.length) continue;
-      const all = [...(examples.config[resource] ?? []), ...(examples.records[resource] ?? []).map((example) => example.data)]
-        .filter((record, i, every) => record?.id && every.findIndex((other) => other.id === record.id) === i);
-      if (!all.length) continue;
-      const choices = all.filter((record) => chooses.entryFor(record).some(({ entry }) => entry));
-      const bodyValue = () => { try { return JSON.parse(bodyBox.value)?.[name]; } catch { return undefined; } };
-      const none = !choices.length || chooses.apis.every((api) => chosenAdapter(records, api) === NONE);
-      form.append(recordPicker({
-        field: name,
-        records: choices,
-        answers: chooses.entryFor,
-        value: none ? NONE : (choices.some((record) => record.id === bodyValue()) ? bodyValue() : choices[0].id),
-        onPick: async (value) => {
-          // Under None, the request still names a record: the first one an adapter answers.
-          const record = value === NONE ? choices[0] ?? all[0] : choices.find((choice) => choice.id === value);
-          let body = {};
-          try { body = JSON.parse(bodyBox.value) ?? {}; } catch { /* started over */ }
-          bodyBox.value = JSON.stringify({ ...body, [name]: record.id }, null, 2);
-          refresh();
-          const wanted = value === NONE ? NONE : ROUTED;
-          if (chooses.apis.every((api) => chosenAdapter(records, api) === wanted)) return;
-          for (const api of chooses.apis) chooseAdapter(records, api, wanted);
-          // The mock takes the choice when it starts again, with the same records and stubs.
-          await session.keep();
-          await start({ seed: session.seeded, restore: true });
-        },
-      }));
     }
 
     // The request the form describes, read the same way for Send and the snippets.
@@ -798,9 +712,9 @@ export async function mountSendPanels({ contracts, version, scope }) {
     holder.addEventListener('change', refresh);
     refreshers.push(refresh);
     place(code);
-    // Under None, the calls the adapter gets, and then what it reports.
-    const adapterBox = el('div');
-    place(adapterBox);
+    // Where a call that needs the visitor signed in asks them to.
+    const askBox = el('div');
+    place(askBox);
 
     // Send, inside the code block, and what came back as the first of the
     // response tabs, beside the documented ones: one tab for what was sent,
@@ -835,12 +749,19 @@ export async function mountSendPanels({ contracts, version, scope }) {
       for (const other of tabs.querySelectorAll('.resp-tab')) other.classList.toggle('on', other === tab);
       for (const other of section.querySelectorAll('.resp-panel')) other.hidden = other !== panel;
     };
-    // A response, as Send shows it. What the call set off is in the control panel's activity log.
-    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming }) => {
+    // A response, as Send shows it. What the call set off is in the control
+    // panel's activity log; a link under the response opens it at this send.
+    const showResult = ({ status, statusText, ok, ms, headers, shown, streaming, events, since }) => {
       const headerList = el('div', '', 'sent-headers');
       for (const [name, value] of headers) headerList.append(el('div', `${name}: ${value}`));
+      const count = events?.length ?? 0;
+      const activity = el('p', count ? `Set off ${count} event${count === 1 ? '' : 's'} · ` : '', 'sent-activity');
+      const link = Object.assign(el('a', 'see in Activity'), { href: '#' });
+      link.onclick = (event) => { event.preventDefault(); showInActivity(since); };
+      activity.append(link);
       showSent(String(status), ok, [
         el('div', `${status}${statusText ? ` ${statusText}` : ''} · ${ms} ms`, `sent-status ${ok ? 'ok' : 'bad'}`),
+        ...(since ? [activity] : []),
         headerList,
         el('pre', streaming ? `${shown || '(nothing yet)'}\n\n(a stream: shown for its first ${STREAM_MS / 1000} seconds, then closed)` : (shown || '(no body)'), 'sent-body'),
       ]);
@@ -864,14 +785,12 @@ export async function mountSendPanels({ contracts, version, scope }) {
       }
       if (!mock) return;
       button.disabled = true;
-      adapterBox.replaceChildren();
-      answerHere = (call, answer) => adapterBox.append(answerForm({ call, docs, follow: followed, answer }));
-      askHere = (call, done) => adapterBox.append(signInPrompt({
+      askBox.replaceChildren();
+      askHere = (call, done) => askBox.append(signInPrompt({
         call,
         signIn: () => signIn(call.scheme, records),
         done: (token) => { mockChanged(); done(token); },
       }));
-      audioHere = (done) => adapterBox.append(audioPrompt({ where: records, done }));
       try {
         const request = requestFor();
         const path = op.path.replace(/\{([^}]+)\}/g, (_, n) => encodeURIComponent(request.path[n] ?? ''));
@@ -903,12 +822,6 @@ export async function mountSendPanels({ contracts, version, scope }) {
           returnedEvent,
         };
         showResult(result);
-        if (response.ok) {
-          for (const api of adapters.filter((a) => chosenAdapter(records, a) === NONE)) {
-            const report = reportForm({ api, docs, record: returned, publish: publishEvent });
-            if (report) adapterBox.append(report);
-          }
-        }
         logRequest(records, {
           time: sentAt, method: op.method, path: query.size ? `${path}?${query}` : path, body: request.body,
           status: response.status, ok: response.ok, ms, shown, eventIds: (events ?? []).map((event) => event.id),
