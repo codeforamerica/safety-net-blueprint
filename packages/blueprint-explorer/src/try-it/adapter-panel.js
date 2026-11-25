@@ -31,7 +31,31 @@ export const ADAPTER_STYLE = `
   .try-adapter select { font: 12px sans-serif; padding: 2px 4px; }
   .try-adapter .voices { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #555; margin-top: 4px; }
   .try-adapter .bad { color: #b42318; font-weight: 700; }
+  .try-about { margin: 2px 0 8px; font-size: 12px; color: #555; }
+  .try-about > summary { cursor: pointer; color: #2B1A78; }
+  .try-about > p { margin: 4px 0 0; }
 `;
+
+/** The explorer's README, for the longer explanation behind a "What's this?" note. */
+export const README = 'https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-explorer/README.md';
+
+/**
+ * A short explanation folded away under a question, with a link to more.
+ *
+ * @param {string} question - The summary, such as "What's None?"
+ * @param {string} text
+ * @param {string} anchor - The README section to link to
+ * @param {string} [className]
+ * @returns {HTMLDetailsElement}
+ */
+export function aboutNote(question, text, anchor, className = 'try-about') {
+  const about = el('details', '', className);
+  const more = Object.assign(el('a', 'More'), { href: `${README}#${anchor}`, target: '_blank', rel: 'noopener' });
+  const p = el('p', `${text} `);
+  p.append(more);
+  about.append(el('summary', question), p);
+  return about;
+}
 
 /** An adapter's API document. */
 const adapterDoc = (docs, api) => docs.find((doc) => doc.type === 'openapi' && doc.api === api);
@@ -60,7 +84,11 @@ export function recordPicker({ field, records, answers, value, onPick }) {
   label.title = 'The record this names chooses the adapter, through the site\'s routing. Under None, you answer the adapter\'s calls and publish what it reports.';
   const row = el('div', '', 'row');
   row.append(label, select);
-  return row;
+  const wrapper = el('div');
+  wrapper.append(row, aboutNote('What\'s None?', 'Pick None to act as the adapter yourself, instead of the code the environment routes to. '
+    + 'Each call the session makes to the adapter waits here for your response, and then you can publish the events the adapter would send.',
+  'transcription-session-adapters'));
+  return wrapper;
 }
 
 /** An example body for one of an operation's responses, from the contract. */

@@ -6,10 +6,12 @@
  * loads the mock, if the page hasn't, and docks the control panel beside the
  * page (try-it/control-panel.js).
  *
- * The authored pages, written for state leadership rather than developers,
- * have no switch. Every page, those too, starts the mock's records over when
- * it is reloaded, as a page running the mock does (try-it/records.js): a
- * reload anywhere starts again from the sample records.
+ * Only pages where you can send something get the switch: an API reference
+ * page with operations, and the Scenarios page, which asks for the Activity
+ * view with <meta name="blueprint-try-it" content="activity">. Every page
+ * starts the mock's records over when it's reloaded, as a page running the
+ * mock does (try-it/records.js): a reload anywhere starts again from the
+ * sample records.
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
@@ -138,6 +140,9 @@ const pagesUnder = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e
 /** A page that asks to be left as it is, such as a stand-in sign-in page a site adds. */
 const OPT_OUT = /<meta\s+name="blueprint-try-it"\s+content="off"/;
 
+/** A page with something to send: an operation (api-reference.js), or a page asking for the Activity view. */
+const INTERACTIVE = /id="op-|<meta\s+name="blueprint-try-it"\s+content="activity"/;
+
 /** The page the sign-in popup returns to: it hands what it was given to the page that opened it. */
 export const SIGN_IN_RETURN = 'sign-in-return.html';
 const signInReturn = `<!doctype html>
@@ -172,7 +177,7 @@ export function addControlPanel(contentDir) {
     if (html.includes(MARK) || !html.includes('</body>') || OPT_OUT.test(html)) continue;
     const parts = relative(contentDir, page).split(sep);
     const root = '../'.repeat(parts.length - 1);
-    const added = MARK + signInData + resetOnReload(root) + (parts[0] === 'authored' ? '' : launcher(root));
+    const added = MARK + signInData + resetOnReload(root) + (INTERACTIVE.test(html) ? launcher(root) : '');
     const at = html.lastIndexOf('</body>');
     writeFileSync(page, `${html.slice(0, at)}${added}\n${html.slice(at)}`);
   }

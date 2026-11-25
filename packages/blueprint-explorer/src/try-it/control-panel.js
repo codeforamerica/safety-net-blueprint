@@ -27,6 +27,7 @@ import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPEN
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
+import { aboutNote } from './adapter-panel.js';
 import { chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -86,6 +87,8 @@ const STYLE = `
   #mock-panel .mp-about { margin: 1rem 0 0; }
   #mock-panel .mp-about > summary { cursor: pointer; font-weight: 700; font-size: .95rem; }
   #mock-panel .mp-about > .mp-lede { margin-top: .5rem; }
+  #mock-panel .mp-environment-about { margin: .5rem 0 1rem; }
+  #mock-panel .mp-environment-about > p { margin: .35rem 0 0; }
   #mock-panel .mp-lede { color: #555; margin: 0 0 1rem; }
   #mock-panel .mp-stats { border: 1px solid #e2e2e2; border-radius: 6px; padding: .7rem .9rem; margin: 0 0 1rem; }
   #mock-panel .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .1rem 1.2rem; }
@@ -662,6 +665,10 @@ function environmentRow() {
     label.htmlFor = picker.id;
     row.append(label, picker);
   }
+  const about = listed.length ? [aboutNote('What\'s an environment?', 'Each environment is a place these APIs run, such as Local, the mock in this page, '
+    + 'or Production, with its own servers and sign-in. Switching reloads the page in the one you pick. Each keeps its own records and stubs.',
+  'environments', 'mp-about mp-environment-about')] : [];
+  if (about[0]) about[0].open = Boolean(panel?.querySelector('details.mp-environment-about[open]'));
   if (scheme) {
     const who = signedIn(options);
     const button = Object.assign(el('button', who ? 'Sign out' : 'Sign in', 'mp-action'), { type: 'button' });
@@ -674,7 +681,7 @@ function environmentRow() {
     };
     row.append(said, button);
   }
-  return [row];
+  return [row, ...about];
 }
 
 /**
