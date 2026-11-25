@@ -50,7 +50,9 @@
  *     `successCriteria` (which is how it tells its event from another's of
  *     the same type), waiting up to `timeout`
  *     milliseconds (2000 when not given); `$message.payload#/<pointer>` reads
- *     it. Sending publishes one with `publishEvent`. A step's `dependsOn` may
+ *     it. Sending publishes one with `publishEvent`, sending the step's
+ *     `header` parameters as the request's headers, such as `X-Caller-Id` to
+ *     publish as a caller. A step's `dependsOn` may
  *     name steps before it, which have run by then. A document with servers
  *     of its own, reached over a connection rather than the event bus, isn't
  *     run: a step on one is refused
@@ -729,7 +731,7 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     if (!publish) throw new Error(`Step ${step.stepId} sends a message, but no API in the set declares publishEvent to send it by`);
     const payload = { specversion: '1.0', source: 'arazzo', type: request.channel, ...request.body };
     const response = await fetch(new Request(`${origin}${publish.path}`, {
-      method: publish.method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+      method: publish.method, headers: { 'content-type': 'application/json', ...request.headers }, body: JSON.stringify(payload),
     }));
     const text = await response.text();
     let body = text;
@@ -754,10 +756,22 @@ export function startScenario(arazzo, { fetch, operations, inputs = {}, origin =
     if (operation.reached === 'servers') {
       throw new Error(`Step ${step.stepId}: ${fileName(operation.document)} is reached over its own servers, not the event bus, and this runner sends and receives events only`);
     }
-    if (step.parameters?.length) throw new Error(`Step ${step.stepId}: a message step takes no parameters`);
+    // A send step's header parameters are sent with publishEvent's request.
+    const headers = {};
+    for (const raw of step.parameters ?? []) {
+      const parameter = raw.reference
+        ? scope.document.components?.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')]
+        : raw;
+      if (!parameter) throw new Error(`Step ${step.stepId} references ${raw.reference}, which the document's components do not declare`);
+      if (step.action !== 'send' || parameter.in !== 'header') {
+        throw new Error(`Step ${step.stepId}: parameter ${parameter.name} is in ${parameter.in}; a message step takes only header parameters, when it sends`);
+      }
+      headers[parameter.name] = String(resolve(raw.value ?? parameter.value, scope));
+    }
     const body = step.action === 'send' && step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
     return {
       action: step.action, channel: operation.address,
+      ...(Object.keys(headers).length && { headers }),
       ...(body !== undefined && { body }),
     };
   }

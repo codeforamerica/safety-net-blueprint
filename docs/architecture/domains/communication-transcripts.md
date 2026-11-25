@@ -1111,7 +1111,11 @@ what the session's API is and who can tell what happened.
 session calls its adapter's `startStream`, `pauseStream` and `stopStream`,
 which answer at once (`202`) and work on after. The adapter publishes the
 session's events with `publishEvent`, each with the session's id as its
-subject and partition key, so one session's events stay in order.
+subject and partition key, so one session's events stay in order. The
+adapter runs in the browser of the caller who started or resumed the session,
+so it publishes as them. `start` and `resume` record that caller as
+`startedById`, and the session and the transcript ignore an adapter event
+whose `authid` is anyone else's.
 
 | What happens | Who | How | State | What else follows |
 |---|---|---|---|---|

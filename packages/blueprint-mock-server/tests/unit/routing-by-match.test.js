@@ -78,6 +78,46 @@ test('the profile\'s provider chooses the implementation, and stopping goes to t
   assert.deepEqual(heard, ['aws-transcribe start', 'aws-transcribe stop', 'aws-transcribe saw connected']);
 });
 
+test('the session records who started it, and follows only the events that caller publishes', async () => {
+  const { log, warn } = console;
+  console.log = () => {}; console.warn = () => {};
+  let quiet;
+  try {
+    quiet = await createMockServer({
+      contracts,
+      routing: [{ api: ADAPTER, handler: {
+        async startStream(request) { const stream = await request.json(); return Response.json({ metadata: stream.metadata ?? {} }, { status: 202 }); },
+      } }],
+    });
+  } finally { console.log = log; console.warn = warn; }
+  const as = async (caller, method, path, body) => {
+    const response = await quiet.fetch(new Request(`http://localhost${path}`, {
+      method, headers: { 'content-type': 'application/json', 'x-caller-id': caller },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }));
+    const text = await response.text();
+    return { status: response.status, body: text ? JSON.parse(text) : null };
+  };
+  const { body: profile } = await as('worker-1', 'POST', '/communication/profiles', { name: 'english-quiet', provider: 'whisper', languages: ['en-US'] });
+  const { body: session } = await as('worker-1', 'POST', '/communication/transcription-sessions', {
+    profileId: profile.id, model: 'standard', client: 'test/1.0.0', startedAt: '2026-10-12T10:00:00Z',
+  });
+  const path = `/communication/transcription-sessions/${session.id}`;
+  assert.equal((await as('worker-1', 'POST', `${path}/start`, {})).status, 200);
+  const started = (await as('worker-1', 'GET', path)).body;
+  assert.equal(started.startedById, 'worker-1');
+
+  const connected = (caller) => as(caller, 'POST', '/platform/events', {
+    specversion: '1.0', id: crypto.randomUUID(), source: '/communication', type: 'communication.transcription_session.connected',
+    subject: session.id, partitionkey: session.id, data: { transcriptId: started.transcriptId },
+  });
+  assert.equal((await connected('worker-2')).status, 201);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal((await as('worker-1', 'GET', path)).body.status, 'connecting', 'an event someone else published is ignored');
+  assert.equal((await connected('worker-1')).status, 201);
+  await eventually(async () => (await as('worker-1', 'GET', path)).body.status === 'connected', 'the session never followed its starter\'s connected');
+});
+
 test('a module that implements none of what it is routed for stops the mock from starting', async () => {
   const { log, warn } = console;
   console.log = () => {}; console.warn = () => {};

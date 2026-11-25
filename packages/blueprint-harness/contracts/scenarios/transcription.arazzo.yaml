@@ -194,8 +194,11 @@ workflows:
 
           - The adapter opened the connection to the service itself, so only it knows it worked. It publishes that as the session's event, with the session's id as the subject and the partition key, so the session's events stay in order.
           - The session follows it to `connected`.
+          - The adapter runs in the staff member's browser, so it publishes as them. The session and the transcript ignore an event published by anyone other than the caller who started the session.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.create.outputs.id
@@ -235,6 +238,8 @@ workflows:
           - The service's text so far, which it may still change. The adapter gives the line a key; a later line with the same key replaces it. The page shows it. Nothing is kept.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineUpdated
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $workflows.startAndConnect.outputs.sessionId
@@ -255,6 +260,8 @@ workflows:
           - The transcript keeps it, once for the session and the key, so if it's published again after a network error, it's still kept once. The page swaps the line in progress for it.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $workflows.startAndConnect.outputs.sessionId
@@ -325,6 +332,8 @@ workflows:
           - The last text the service sends after the end of the audio. Still kept: the transcript is still recording, and the line began before it closes.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $workflows.startAndConnect.outputs.sessionId
@@ -340,6 +349,8 @@ workflows:
           - It's published after the last line with the same partition key, so the transcript keeps the line before it closes.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionEnded
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $workflows.startAndConnect.outputs.sessionId
@@ -523,6 +534,8 @@ workflows:
           - The transcript keeps it, though it's paused, because the line started before the pause.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
@@ -788,6 +801,8 @@ workflows:
           - What the service sent before the connection dropped is kept.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionLineFinished
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
@@ -810,6 +825,8 @@ workflows:
           - The adapter saw the connection close. The session follows it to `disconnected`, and the adapter tries again.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
@@ -877,6 +894,8 @@ workflows:
           - The connection to the service drops.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionDisconnected
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
@@ -919,6 +938,8 @@ workflows:
           - The adapter connects again with the new credential, and the service refuses. After as many tries as it allows, the adapter gives up. The session follows it to `failed`.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionFailed
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $steps.connected.outputs.sessionId
@@ -1172,6 +1193,8 @@ workflows:
           - With a gap, if one is given: how long nothing was captured, which the transcript keeps.
         operationId: $sourceDescriptions.sessionEvents.sendCommunicationTranscriptionSessionConnected
         action: send
+        parameters:
+          - reference: $components.parameters.caller
         requestBody:
           payload:
             subject: $inputs.sessionId

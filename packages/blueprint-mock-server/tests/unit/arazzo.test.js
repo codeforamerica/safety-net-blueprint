@@ -162,6 +162,7 @@ const messaging = new Map([
 function eventServer() {
   const listeners = new Set();
   const published = [];
+  const publishedBy = [];
   const encoder = new TextEncoder();
   const send = (event) => { for (const listen of listeners) listen(event); };
   const fetch = async (request) => {
@@ -181,6 +182,7 @@ function eventServer() {
     if (pathname === '/platform/events') {
       const event = await request.json();
       published.push(event);
+      publishedBy.push(request.headers.get('x-caller-id'));
       send({ id: `e${published.length}`, ...event });
       return Response.json(event, { status: 201 });
     }
@@ -191,7 +193,7 @@ function eventServer() {
     }
     return Response.json({ id: 't1' });
   };
-  return { fetch, published, listeners };
+  return { fetch, published, publishedBy, listeners };
 }
 
 const sources = [{ name: 'things', url: './things-events-asyncapi.yaml', type: 'asyncapi' }, { name: 'socket', url: './socket-asyncapi.yaml', type: 'asyncapi' }];
@@ -239,11 +241,23 @@ test('a send step publishes the event, with the channel as its type', async () =
   assert.strictEqual(server.published[0].specversion, '1.0');
 });
 
+test('a send step sends its header parameters with publishEvent, to publish as a caller', async () => {
+  const server = eventServer();
+  const [run] = await runScenario(messages([
+    { stepId: 'notice', operationId: '$sourceDescriptions.things.receiveThingNoticed', action: 'send',
+      parameters: [{ name: 'X-Caller-Id', in: 'header', value: 'worker-1' }],
+      requestBody: { payload: { subject: 't1' } } },
+  ]), { fetch: server.fetch, operations: messaging });
+  assert.ok(run.passed, JSON.stringify(run.steps.map((s) => s.checks)));
+  assert.deepStrictEqual(server.publishedBy, ['worker-1']);
+});
+
 test('refuses message steps it cannot run, by name', async () => {
   const server = eventServer();
   const refuse = (steps, pattern) => assert.rejects(runScenario(messages(steps), { fetch: server.fetch, operations: messaging }), pattern);
   await refuse([{ stepId: 's', channelPath: '{$sourceDescriptions.socket.url}#/channels/audio', action: 'send' }], /socket-asyncapi.yaml is reached over its own servers/);
-  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'send', parameters: [{ name: 'x', in: 'header', value: 'y' }] }], /takes no parameters/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'send', parameters: [{ name: 'x', in: 'query', value: 'y' }] }], /takes only header parameters/);
+  await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'receive', parameters: [{ name: 'x', in: 'header', value: 'y' }] }], /takes only header parameters, when it sends/);
   await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.sendThingCreated', action: 'publish' }], /action is send or receive/);
   await refuse([{ stepId: 's', operationId: '$sourceDescriptions.things.nothingLikeThis', action: 'receive' }], /no AsyncAPI document in the set declares/);
   await refuse([{ stepId: 's', operationId: 'createThing', action: 'receive' }], /is an HTTP operation/);

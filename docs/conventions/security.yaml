@@ -118,8 +118,10 @@ authorization:
       the environment's sign-in like every domain API; don't add security to
       AsyncAPI documents for it. AsyncAPI security describes connecting to a
       broker, and its scheme types differ from OpenAPI's, so it can't refer to
-      the shared schemes. Which records a caller may publish for, such as only their own session's events, is a guard on
-      the reaction that follows the event. The server sets authtype and authid
+      the shared schemes. Limit which records a caller may publish for with a
+      guard on the reaction that follows the event, comparing this.authid with
+      a field the record keeps: the transcription session records startedById
+      and ignores an adapter event whose authid isn't that caller. The server sets authtype and authid
       on the envelope from the caller, as the scheme identifies them (CloudEvents'
       authcontext extension), ignoring what the publisher put there; nobody
       identified is authtype unauthenticated. See events.yaml, published_from_outside.

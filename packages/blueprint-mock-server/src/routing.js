@@ -313,7 +313,7 @@ export function planRouting(routing, { routes, operations, domainOfApi, docs }) 
  */
 function checkedHandler(handler, responseSchema, name, schemas, context = {}) {
   return async function routed(request, matched = {}) {
-    const response = await handler(request, { ...context, params: matched.params ?? {} });
+    const response = await handler(request, { ...asCallerOf(request, context), params: matched.params ?? {} });
     if (!(response instanceof Response)) {
       const message = `The handler routed for ${name} returned ${response === null ? 'null' : typeof response}, not a Response.`;
       console.warn(message);
@@ -479,6 +479,29 @@ function byMatch(answers, memory, key) {
   };
 }
 
+/** The request headers that identify the caller, which a handler's calls pass on. */
+const IDENTITY_HEADERS = ['authorization', 'x-caller-id', 'x-caller-roles'];
+
+/**
+ * A handler's `call` and `publish`, sending the identity headers of the
+ * request it's handling, so they're made as the same caller, as an adapter
+ * running in the caller's browser would make them. Headers the handler
+ * passes itself take precedence.
+ */
+function asCallerOf(request, { call, publish, ...rest } = {}) {
+  if (!call) return { call, publish, ...rest };
+  const identity = Object.fromEntries(IDENTITY_HEADERS.map((name) => [name, request.headers.get(name)]).filter(([, value]) => value));
+  const withIdentity = (headers = {}) => {
+    const own = new Set(Object.keys(headers).map((name) => name.toLowerCase()));
+    return { ...Object.fromEntries(Object.entries(identity).filter(([name]) => !own.has(name))), ...headers };
+  };
+  return {
+    ...rest,
+    call: (operationId, args = {}) => call(operationId, { ...args, headers: withIdentity(args.headers) }),
+    publish: (event, data, options = {}) => publish(event, data, { ...options, headers: withIdentity(options.headers) }),
+  };
+}
+
 /**
  * What a routed handler gets besides the request: `call`, to make another
  * call by operationId, through routing; and `publish`, to send an event,
@@ -505,7 +528,7 @@ function handlerContext(routes, context) {
     return { status: response.status, body: parsed };
   };
   const eventTypes = [...new Set((context.operations?.all ?? []).map((operation) => operation.event).filter(Boolean))];
-  const publish = async (event, data = {}, { subject, partitionkey = subject } = {}) => {
+  const publish = async (event, data = {}, { subject, partitionkey = subject, headers } = {}) => {
     const types = eventTypes.filter((type) => type === event || type.endsWith(`.${event}`));
     if (types.length !== 1) {
       throw new Error(types.length ? `publish: "${event}" could be ${types.join(' or ')}; name more of it` : `publish: no event the contracts declare is "${event}"`);
@@ -516,6 +539,7 @@ function handlerContext(routes, context) {
         specversion: '1.0', id: crypto.randomUUID(), source: `/${type.split('.')[0]}`, type, subject, partitionkey,
         time: new Date().toISOString(), datacontenttype: 'application/json', data,
       },
+      headers,
     });
   };
   return { call, publish };
