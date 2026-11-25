@@ -147,6 +147,15 @@ export type CommunicationTranscriptionSessionCreatedEvent = {
          */
         status: 'created' | 'connecting' | 'connected' | 'disconnected' | 'paused' | 'stopping' | 'closed' | 'failed';
         /**
+         * The id of the caller who last started or resumed the session,
+         * set by start and resume. Its adapter runs for that caller, so
+         * the session and the transcript accept the adapter's events
+         * only when that caller published them (their `authid`).
+         * Absent when the session was started with no caller identified.
+         *
+         */
+        readonly startedById?: string;
+        /**
          * When the session was started.
          */
         readonly createdAt: string;

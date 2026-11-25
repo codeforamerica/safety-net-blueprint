@@ -273,7 +273,7 @@
               <span class="chevron">&#x25B6;</span>
               <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
               <span class="ftype">array[TranscriptionSession]</span>
-              <span class="fpreview">{ client, createdAt, id, +9 }</span>
+              <span class="fpreview">{ client, createdAt, id, +10 }</span>
               <span class="freq">required</span>
               
             </span>
@@ -403,6 +403,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -803,6 +817,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -1114,6 +1142,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -1361,6 +1403,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
@@ -1749,6 +1805,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -2135,6 +2205,20 @@ subject can't be found that way.
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
     </div><div class="field">
       <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
+    </div><div class="field">
+      <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span class="ftype">string · date-time</span>
         
@@ -2519,6 +2603,20 @@ subject can't be found that way.
       </div>
       <div class="fdesc">Where the connection is; see the session's state machine.</div>
       <div class="values"><span class="values-label">Values</span><code class="value-chip">created</code><code class="value-chip">connecting</code><code class="value-chip">connected</code><code class="value-chip">disconnected</code><code class="value-chip">paused</code><code class="value-chip">stopping</code><code class="value-chip">closed</code><code class="value-chip">failed</code></div>
+    </div><div class="field">
+      <div class="field-head">
+        <a href="../data-dictionaries/communication.html#field-transcriptionSession.startedById" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">startedById</a>
+        <span class="ftype">string</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+      </div>
+      <div class="fdesc">The id of the caller who last started or resumed the session,
+set by start and resume. Its adapter runs for that caller, so
+the session and the transcript accept the adapter's events
+only when that caller published them (their `authid`).
+Absent when the session was started with no caller identified.
+</div>
+      
     </div><div class="field">
       <div class="field-head">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>

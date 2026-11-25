@@ -440,6 +440,15 @@ components:
               x-enum-source:
                 source: states[].id
                 machine: TranscriptionSession
+            startedById:
+              type: string
+              readOnly: true
+              description: |
+                The id of the caller who last started or resumed the session,
+                set by start and resume. Its adapter runs for that caller, so
+                the session and the transcript accept the adapter's events
+                only when that caller published them (their `authid`).
+                Absent when the session was started with no caller identified.
             createdAt:
               type: string
               format: date-time

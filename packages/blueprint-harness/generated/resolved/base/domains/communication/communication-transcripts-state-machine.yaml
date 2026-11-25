@@ -29,6 +29,9 @@ machines:
       - id: atAfterPauseBegan
         description: the time given is not before the open pause began
         condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
+      - id: publishedByStarter
+        description: the session's event was published by the caller who started it, or the session was started with no caller identified
+        condition: session != null && (!has(session.startedById) || (has(this.authid) && this.authid == session.startedById))
       - id: profileExists
         description: the profile it names exists
         condition: profile != null
@@ -154,6 +157,13 @@ machines:
                       lastActivityAt: $this.data.endedAt
       - type: communication.transcription_session.line_finished
         description: Keep a finished line.
+        context:
+          - session:
+              from: communication/transcription-sessions
+              where: item.id == this.subject
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - call:
               operationId: addTranscriptEntry
@@ -176,6 +186,13 @@ machines:
                   language: $this.data.language
       - type: communication.transcription_session.connected
         description: Keep the stretch nothing was captured in before the connection opened, as a gap.
+        context:
+          - session:
+              from: communication/transcription-sessions
+              where: item.id == this.subject
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - if: has(this.data.gap)
             then:

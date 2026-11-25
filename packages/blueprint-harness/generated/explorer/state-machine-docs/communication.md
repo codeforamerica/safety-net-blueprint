@@ -10,6 +10,7 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
 
 - **start** — Start streaming. A new transcript is started, unless the session names one to carry on.
   - Transition: `created` → `connecting`
+  - sets `startedById`
   - If `has(object.transcriptId)`:
     - `getTranscript`
     - `getTranscriptionProfile`
@@ -27,6 +28,7 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
   - Emit: `communication.transcription_session.paused`
 - **resume** — Put the conversation back on the record, and start the adapter streaming again. From created, a new session carries on a paused transcript.
   - Transition: `created`/`paused` → `connecting`
+  - sets `startedById`
   - `resumeTranscript`
   - `getTranscript`
   - `getTranscriptionProfile`
@@ -86,8 +88,10 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
   - If `this.data.kind is not "pause"`:
     - `PATCH communication/transcripts/$this.data.transcriptId`
 - **`communication.transcription_session.line_finished`**
+  - Look up: session
   - `addTranscriptEntry`
 - **`communication.transcription_session.connected`**
+  - Look up: session
   - If `has(this.data.gap)`:
     - `addTranscriptEntry`
 - **`communication.transcript.idle_check`**

@@ -12,6 +12,7 @@ transcriptionSession.links: { type: object }
 transcriptionSession.links.transcript: { type: string }
 transcriptionSession.links.profile: { type: string }
 transcriptionSession.status: { type: enum, values: [created, connecting, connected, disconnected, paused, stopping, closed, failed] }
+transcriptionSession.startedById: { type: string }
 
 # ── Transcript ──────────────────────────────────────────────────────────────────
 

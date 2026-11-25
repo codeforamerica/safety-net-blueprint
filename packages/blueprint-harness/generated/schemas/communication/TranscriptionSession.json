@@ -92,6 +92,11 @@
             "failed"
           ]
         },
+        "startedById": {
+          "type": "string",
+          "readOnly": true,
+          "description": "The id of the caller who last started or resumed the session,\nset by start and resume. Its adapter runs for that caller, so\nthe session and the transcript accept the adapter's events\nonly when that caller published them (their `authid`).\nAbsent when the session was started with no caller identified.\n"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

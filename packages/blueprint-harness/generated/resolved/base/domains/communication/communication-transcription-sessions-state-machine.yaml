@@ -40,6 +40,9 @@ machines:
       - id: hasTranscript
         description: the session has a transcript to carry on
         condition: has(object.transcriptId)
+      - id: publishedByStarter
+        description: the event was published by the caller who started the session, or the session was started with no caller identified
+        condition: "!has(object.startedById) || (has(this.authid) && this.authid == object.startedById)"
     emits:
       - id: connecting
         description: The session started or resumed; its adapter is getting a credential and opening the connection.
@@ -218,6 +221,9 @@ machines:
           from: created
           to: connecting
         steps:
+          - set:
+              field: startedById
+              value: $caller.id
           - if: has(object.transcriptId)
             then:
               - call:
@@ -327,6 +333,9 @@ machines:
           - conditions:
               - hasTranscript
         steps:
+          - set:
+              field: startedById
+              value: $caller.id
           - call:
               operationId: resumeTranscript
               parameters:
@@ -397,11 +406,17 @@ machines:
             - connecting
             - disconnected
           to: connected
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.disconnected
         description: Follow the adapter's connection dropping.
         transition:
           from: connected
           to: disconnected
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.failed
         description: Follow the adapter giving up.
         transition:
@@ -409,11 +424,17 @@ machines:
             - connecting
             - disconnected
           to: failed
+        guards:
+          - conditions:
+              - publishedByStarter
       - type: communication.transcription_session.ended
         description: The last line is in; close the transcript.
         transition:
           from: stopping
           to: closed
+        guards:
+          - conditions:
+              - publishedByStarter
         steps:
           - call:
               operationId: closeTranscript
