@@ -239,9 +239,10 @@ event_catalog:
       deliver reliably:
 
       - The server accepts an event only from a publisher allowed to publish
-        its type, for a subject it may act on: the caller's token sets
-        authtype and authid, and a rule per event type says who may publish
-        it (security.yaml, authorization, event_publishing).
+        its type, for a subject it may act on: publishEvent requires sign-in,
+        the caller's sign-in sets authtype and authid, and a
+        guard on the reaction checks the subject (security.yaml,
+        authorization, event_publishing).
       - The server checks the data against the event's declared schema and
         refuses one that doesn't match with 422, naming the fields.
       - The publisher sets partitionkey to the subject, so one subject's

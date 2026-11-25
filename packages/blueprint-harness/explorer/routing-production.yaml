@@ -1,0 +1,12 @@
+$schema: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
+# Production's routing, as the harness stands in for a deployment that
+# requires signing in: sessions under whisper transcribe in the page, and
+# under fake-secured go to a fake service whose credentials need the caller
+# signed in (adapters/fake-secured.js). A state routes to its own services.
+routing:
+  - api: communication-transcription-sessions-adapter
+    match: { provider: whisper }
+    handler: ./adapters/whisper.js
+  - api: communication-transcription-sessions-adapter
+    match: { provider: fake-secured }
+    handler: ./adapters/fake-secured.js

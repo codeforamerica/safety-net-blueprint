@@ -17,6 +17,7 @@ import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
   registerRulesRoutes, buildRulesIndex,
 } from './route-generator.js';
+import { callerReader, identify } from './auth-context.js';
 import { createDispatcher, overrideByOperationId, wrapRoute, routeKey } from './http/route-table.js';
 import { jsonBody } from './http/request.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
@@ -155,8 +156,17 @@ export function assembleServer(
   // The events routed services send that reactions here need, read from them.
   const following = followRoutedEvents(eventsToFollow(stateMachines, sends, receives, apiOfFile), { instance });
 
+  // Who's calling: read each request the way the environment's shared
+  // schemes say (auth-context.js).
+  const schemes = docs.find((doc) => doc.relativePath === 'base/components/security-schemes.yaml')?.content ?? {};
+  const readCaller = callerReader(schemes);
+  const identifyCaller = (request) => identify(request, readCaller(request));
+
+  // Every request is identified before it's routed.
+  const identifying = (dispatch) => (request) => dispatch(identifyCaller(request));
+
   // An action calling an operation as its caller sends the call through here.
-  dispatcher = createDispatcher(routes, { unmatched });
+  dispatcher = identifying(createDispatcher(routes, { unmatched }));
   stepCalls.serve(dispatcher);
-  return { routes, fetch: createDispatcher(routes, { basePath, unmatched }), endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
+  return { routes, fetch: identifying(createDispatcher(routes, { basePath, unmatched })), identifying, schemes, endpoints, rpcEndpoints, overridden, routed, receives, stopFollowing: following.stop, instance };
 }

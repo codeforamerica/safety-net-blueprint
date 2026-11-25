@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { rmSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 
@@ -61,11 +62,21 @@ console.log('  [5/8] Building explorer...');
 run(resolve(__dirname, '../../blueprint-rules-engine/scripts/build-browser.js'), []);
 // The same for the mock server the explorer's pages run.
 run(resolve(__dirname, '../../blueprint-explorer/scripts/build-browser.js'), []);
+// The explorer switches environments (explorer/config.yaml), so it's built
+// from the contracts resolved without one, and applies each itself.
+const BUILT = join(HARNESS, 'generated/.built');
+run(join(CLI, 'resolve.js'), [
+  `--spec=${join(HARNESS, 'contracts')}`,
+  `--overlay=${join(HARNESS, 'contracts/overlays')}`,
+  `--out=${BUILT}`,
+  '--build',
+]);
 run(join(CLI, 'build-explorer.js'), [
-  `--spec=${join(HARNESS, 'generated/resolved')}`,
+  `--spec=${BUILT}`,
   `--out=${join(HARNESS, 'generated/explorer')}`,
   `--config=${join(HARNESS, 'explorer')}`,
 ]);
+rmSync(BUILT, { recursive: true, force: true });
 
 console.log('  [6/8] Generating Postman collection...');
 run(join(CLI, 'generate-postman-collection.js'), [

@@ -17,8 +17,12 @@
  * and got back is kept the same way, per page.
  */
 
-/** Whether this page was reached by reloading it. */
+/**
+ * Whether this page was reached by reloading it: not by switching
+ * environments, which reloads it too, marked as such (lib/control-panel.js).
+ */
 const reloaded = () => {
+  if (globalThis.document?.documentElement?.dataset?.environmentSwitched !== undefined) return false;
   try { return performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { return false; }
 };
 

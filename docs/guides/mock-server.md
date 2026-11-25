@@ -98,7 +98,7 @@ You can also use `$now` tokens in event stub `response.data` fields — there, t
 
 ## Caller context
 
-State machine operations use two headers to identify who is making the request:
+The mock identifies the caller the way the contract set's security scheme says (`base/components/security-schemes.yaml`, see [API security declarations](../architecture/cross-cutting/identity-access.md#api-security-declarations)). With a token scheme (a bearer JWT, OAuth 2.0 or OpenID Connect), it reads the caller from the token's claims that the scheme's `x-caller` names, `sub` and `roles` by default, without checking the signature. With the framework's default, or when a request has no token, it reads two headers:
 
 | Header | Description |
 |--------|-------------|
@@ -110,6 +110,12 @@ curl -X POST http://localhost:1080/workflow/tasks/<id>/claim \
   -H "X-Caller-Id: 00000002-0000-0000-0000-000000000001" \
   -H "X-Caller-Roles: caseworker"
 ```
+
+Guards read the caller as `$caller.id` and `$caller.roles`, and any other field the scheme's `x-caller` names, such as `$caller.counties`.
+
+An event published with `POST /platform/events` gets `authid` and `authtype` from the caller (CloudEvents' authcontext extension), whatever the event says; with nobody identified, `authtype` is `unauthenticated`.
+
+Run as a server (`blueprint-mock`), when the scheme is OpenID Connect, the mock checks a token a request sends against the identity provider's published keys, found through its discovery document: the signature, the issuer and the expiry. A bad token gets `401` with `WWW-Authenticate: Bearer error="invalid_token"`. A request with no token is still identified by the headers above. The mock in a page never checks tokens.
 
 **Response codes from RPC endpoints:**
 - `403` — the caller's roles don't satisfy the operation's actor requirements

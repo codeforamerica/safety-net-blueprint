@@ -19,7 +19,7 @@
 import { applyPatch } from 'rfc6902';
 import { openUndoLog } from './undo-log.js';
 import { operationsOf } from './operation-calls.js';
-import { extractAuthContext, extractCallerRoles, callerHeader, causationOf } from './auth-context.js';
+import { callerHeader, causationOf, callerOf } from './auth-context.js';
 import {
   extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields,
 } from './handlers/expand-utils.js';
@@ -350,7 +350,7 @@ export function createEditablePatchHandler(composition, { resources, store, inst
     const planned = plan(composition, before, after, { resources, params, primaryParam });
     if (planned.refused) return planned.refused;
 
-    const caller = { id: extractAuthContext(request).userId ?? null, roles: extractCallerRoles(request) };
+    const caller = callerOf(request);
     // The patch's events name what caused it, such as the acceptance of a
     // suggestion that carried it, or the patch itself when nothing did.
     const patchId = causationOf(request) ?? crypto.randomUUID();

@@ -1076,6 +1076,17 @@ test('Pattern Validator Tests', async (t) => {
     assert.deepStrictEqual(rules(marked, 'eligibility-openapi.yaml'), ['warning'], 'marked but not named');
   });
 
+  await t.test('validateSpec - a domain API\'s top-level security is the shared schemes, written by resolve', () => {
+    const rules = (spec) => validateSpec(spec, 'intake-openapi.yaml').filter((e) => e.rule === 'top-level-security').map((e) => e.severity);
+    const info = { 'x-domain': 'intake' };
+    const shared = { securitySchemes: { bearerAuth: { $ref: '../../components/security-schemes.yaml#/bearerAuth' } } };
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', info, security: [{ bearerAuth: [] }], components: shared }), [], 'as resolve writes it');
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', info }), [], 'none written');
+    const own = { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } };
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', info, security: [{ bearerAuth: [] }], components: own }), ['error'], 'a scheme of its own');
+    assert.deepStrictEqual(rules({ openapi: '3.1.0', 'x-relationship': { type: 'external' }, info, security: [{ x: [] }] }), [], 'an adapter\'s');
+  });
+
   await t.test('validateOperationRelationships - no error when no paths', () => {
     const errors = [];
     validateOperationRelationships({}, errors);

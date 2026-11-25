@@ -15,7 +15,8 @@
  */
 
 import { createSseHandler } from './handlers/sse-handler.js';
-import { emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope, authContext } from './emit-event.js';
+import { callerOf } from './auth-context.js';
 import { fireWaitingTimer } from './mock-stub-engine.js';
 import { seedConfigs } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
@@ -210,7 +211,11 @@ export function contractOverrides({ store, instance, registries = {} }) {
 
     // Publishing fires the event bus so event-triggered rules respond to it,
     // which is the point of injecting one — storing a row would not. Accepts a
-    // CloudEvents 1.0 envelope.
+    // CloudEvents 1.0 envelope. Who published it is the caller, as the
+    // contracts' scheme identifies them, not what the envelope says: authid
+    // and authtype (CloudEvents' authcontext extension) are set from the
+    // caller, and an unidentified one is unauthenticated (security.yaml,
+    // event_publishing).
     publishEvent: async (request) => {
       const parsed = await readJsonBody(request);
       if (!parsed.ok) return invalidJson();
@@ -225,7 +230,10 @@ export function contractOverrides({ store, instance, registries = {} }) {
         }, { status: 422 });
       }
 
-      return Response.json(emitEventEnvelope(event, instance), { status: 201 });
+      const { authid, authtype, ...sent } = event;
+      const caller = callerOf(request);
+      const auth = caller.id ? authContext(caller.id, caller.roles) : { authtype: 'unauthenticated' };
+      return Response.json(emitEventEnvelope({ ...sent, ...auth }, instance), { status: 201 });
     },
   };
 }

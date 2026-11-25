@@ -294,7 +294,7 @@ export function eventStubForm({ choices, waiting, stub = null, save, cancel }) {
         preview,
       });
       if (!state.match.length) {
-        box.append(el('p', timer() ? 'With no condition, it fires a waiting timer, or else the next one asked for.'
+        box.append(el('p', timer() ? 'With no condition, it fires the next timer.'
           : 'With no condition, it answers any event of this type.', 'se-hint'));
       }
 
@@ -531,7 +531,7 @@ export function httpStubForm({ choices, stub = null, save, cancel }) {
       };
       const body = el('textarea');
       body.value = state.body;
-      body.placeholder = 'The body, as JSON. Empty answers {}.';
+      body.placeholder = 'The response body, as JSON. Leave it empty to answer {}.';
       body.oninput = () => { state.body = body.value; preview(); };
       box.append(status, body, el('p', 'Started from the response\'s example, or a sample record of what it answers with. It answers one such call, then it\'s used up.', 'se-hint'));
     },

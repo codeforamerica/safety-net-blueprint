@@ -19,6 +19,6 @@ export {
   replaceAtPath,
   appendAtPath,
   addAtPath,
-  loadReplacementRef,
   applyOverlay,
 } from './overlay/overlay-resolver.js';
+export { loadReplacementRef } from './overlay/load-ref.js';

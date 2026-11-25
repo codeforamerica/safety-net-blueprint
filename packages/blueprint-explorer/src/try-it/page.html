@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- The page is already interactive: its switch opens the mock's Activity only (lib/control-panel.js). -->
+<meta name="blueprint-try-it" content="activity">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scenarios</title>
 <!--
@@ -335,12 +337,17 @@
 
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom, inEnvironment } =
   globalThis.BlueprintMock;
 
-// Where this explorer keeps the mock's records between its pages: under the
-// mock's own folder, which every page that runs it shares.
-const records = { scope: new URL('../mock/', location.href).href, version: globalThis.BlueprintContractsVersion };
+// The site as the picked environment has it (environments.js), and where this
+// explorer keeps the mock's records between its pages: under the mock's own
+// folder, which every page that runs it shares, apart for each environment.
+// Scenarios run against the mock, so always in the site's first environment, the sandbox.
+const site = inEnvironment({
+  contracts: globalThis.BlueprintContracts, version: globalThis.BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+}, { first: true });
+const records = { scope: site.scope, version: site.version };
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, text = '', className = '') => {
@@ -377,10 +384,10 @@ let tourScope = null;           // the workflows the run covers, when it started
 let tourLast = null;            // the last step this run ran, by workflow/step
 let branchClosed = false;       // the branch being walked, closed in the list down the side
 
-/** The contract set, which contracts.js beside the page defines. */
+/** The contract set, which contracts.js beside the page defines, in the picked environment. */
 const loadContracts = async () => {
   if (!globalThis.BlueprintContracts) throw new Error('contracts.js did not load');
-  return globalThis.BlueprintContracts;
+  return site.contracts;
 };
 
 // ── Reading the contracts ───────────────────────────────────────────────────

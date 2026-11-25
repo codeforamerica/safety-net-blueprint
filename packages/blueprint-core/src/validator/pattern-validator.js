@@ -1005,6 +1005,32 @@ export function validateOperationRelationships(spec, errors) {
 }
 
 /**
+ * A domain API's top-level `security` is resolve's to write: every scheme it
+ * names is one of the shared ones (base/components/security-schemes.yaml),
+ * which each state and environment chooses. A requirement written by hand
+ * would be replaced, or would name a scheme of the API's own that no
+ * environment can change, so it's an error. An operation can still set its
+ * own; an adapter's API, answered outside the contracts, is left alone.
+ *
+ * @param {object} spec
+ * @param {object[]} errors
+ */
+export function validateTopLevelSecurity(spec, errors) {
+  if (spec['x-relationship']?.type === 'external' || !spec.info?.['x-domain']) return;
+  if (!Array.isArray(spec.security) || !spec.security.length) return;
+  const schemes = spec.components?.securitySchemes ?? {};
+  const shared = (name) => /(^|\/)security-schemes\.yaml#\/[^/]+$/.test(String(schemes[name]?.$ref ?? ''));
+  const own = [...new Set(spec.security.flatMap((requirement) => Object.keys(requirement ?? {})))].filter((name) => !shared(name));
+  if (!own.length) return;
+  errors.push({
+    path: 'security',
+    rule: 'top-level-security',
+    message: `The API's top-level security names ${own.join(', ')}, which isn't one of the shared schemes in base/components/security-schemes.yaml. Resolve sets every domain API's security from those, as each state and environment chooses; remove it, change the shared schemes with an overlay, or set security on the operations that differ.`,
+    severity: 'error',
+  });
+}
+
+/**
  * Main validation function for a single spec
  * @param {Object} spec - The OpenAPI spec object
  * @param {string} specName - Name of the spec file
@@ -1033,6 +1059,8 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
       severity: 'warning',
     });
   }
+
+  validateTopLevelSecurity(spec, errors);
 
   // Runs before the paths guard below: a misplaced extension at the document
   // root or in info is worth reporting whether or not the spec has paths.

@@ -551,7 +551,7 @@ export async function mountSendPanels({ contracts, version, scope }) {
     return `created ${today ? date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : date.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
   };
   const withPicker = (row, box, choicesOf) => {
-    const { setChoices } = combobox(box, { none: 'none held' });
+    const { setChoices } = combobox(box, { none: 'No records yet. Create one first.' });
     comboboxes.push(async () => setChoices(await choicesOf()));
   };
 

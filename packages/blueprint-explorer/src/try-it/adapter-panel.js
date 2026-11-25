@@ -86,7 +86,7 @@ export function answerForm({ call, docs, follow, answer }) {
   const path = call.path.replace(/\{([^}]+)\}/g, (_, name) => call.params[name] ?? `{${name}}`);
   box.append(
     el('h5', `${title}: ${call.operation.operationId}`),
-    el('p', 'Called, and waiting for your answer, as the adapter would give it.'),
+    el('p', 'Waiting for your response, as the adapter.'),
     el('pre', `${call.method} ${path}${call.body === undefined ? '' : `\n${JSON.stringify(call.body, null, 2)}`}`),
   );
   const responses = Object.entries(call.operation.responses ?? {});
@@ -134,7 +134,7 @@ export function reportForm({ api, docs, record, publish }) {
   const title = adapterDoc(docs, api)?.content?.info?.title ?? api;
   box.append(
     el('h5', `What ${title} reports`),
-    el('p', 'Under None, nothing reports for the adapter. Publish what it would, when it would.'),
+    el('p', 'With None, nothing publishes the adapter\'s events. Publish them yourself, when the adapter would.'),
   );
   const pick = el('select');
   pick.append(...events.map((event, i) => Object.assign(el('option', event.type), { value: String(i), title: event.summary })));
@@ -189,7 +189,7 @@ export function reportForm({ api, docs, record, publish }) {
  */
 export function signInPrompt({ call, signIn, done }) {
   const box = el('div', '', 'try-adapter');
-  box.append(el('h5', 'Sign in to continue'), el('p', `${call.operationId} needs you signed in.`));
+  box.append(el('h5', 'Sign in required'), el('p', `${call.operationId} requires you to sign in.`));
   const result = el('p');
   const go = el('button', 'Sign in');
   const cancel = el('button', 'Cancel');
@@ -198,7 +198,7 @@ export function signInPrompt({ call, signIn, done }) {
     go.disabled = true;
     try {
       const token = await signIn();
-      box.replaceChildren(el('h5', 'Signed in'), el('p', `As ${token.name}. ${call.operationId} goes on.`, 'done'));
+      box.replaceChildren(el('h5', 'Signed in'), el('p', `Signed in as ${token.name}.`, 'done'));
       done(token);
     } catch (error) {
       result.className = 'bad';
@@ -207,7 +207,7 @@ export function signInPrompt({ call, signIn, done }) {
     }
   };
   cancel.onclick = () => {
-    box.replaceChildren(el('h5', 'Not signed in'), el('p', `${call.operationId} was answered 401.`, 'bad'));
+    box.replaceChildren(el('h5', 'Not signed in'), el('p', `${call.operationId}: 401 Unauthorized.`, 'bad'));
     done(null);
   };
   const buttons = el('div', '', 'pick');
@@ -353,7 +353,7 @@ export function audioPrompt({ where, done }) {
     }
   };
   cancel.onclick = () => {
-    box.replaceChildren(el('h5', 'No audio'), el('p', 'The adapter was refused the microphone.', 'bad'));
+    box.replaceChildren(el('h5', 'No audio'), el('p', 'The adapter didn\'t get the microphone.', 'bad'));
     done(null);
   };
   const buttons = el('div', '', 'pick');

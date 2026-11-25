@@ -16,28 +16,28 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { dirname, join, relative, resolve, sep } from 'path';
 import yaml from 'js-yaml';
 import { discover, load, validateRouting } from '@codeforamerica/blueprint-core';
+import { applyEnvironment } from '@codeforamerica/blueprint-core/browser';
 import { loadConfig } from './config.js';
+import { readEnvironments } from './environments.js';
 
 /** The bundled routing, in the built site. */
 export const SITE_ROUTING = 'site-routing.js';
 const MARK = '<!-- the site\'s routing -->';
 
 /**
- * Check the routing file config.yaml names and bundle it, with its modules,
- * into the built site. Nothing to do when config.yaml names none.
+ * A routing file, checked against contracts, as code: its entries, each module
+ * it names imported once (as `module<n>`, numbered from `first`), in place of
+ * its path.
  *
- * @param {{ configDir: string, outDir: string, resolvedDir: string }} options
- * @throws {Error} Naming every problem, when the file or a module is missing or the routing is wrong
+ * @returns {{ imports: string[], routes: string, modules: number }}
+ * @throws {Error} Naming every problem
  */
-export async function bundleSiteRouting({ configDir, outDir, resolvedDir }) {
-  const { routing: named } = loadConfig(configDir);
-  if (!named) return;
-  const file = join(configDir, named);
+function routingCode(file, named, docs, first) {
   if (!existsSync(file)) throw new Error(`config.yaml names routing: ${named}, but ${file} doesn't exist.`);
   const text = readFileSync(file, 'utf8');
   const document = file.endsWith('.json') ? JSON.parse(text) : yaml.load(text);
 
-  const { errors, warnings } = validateRouting(document, discover(resolvedDir).map(load));
+  const { errors, warnings } = validateRouting(document, docs);
   const entries = Array.isArray(document?.routing) ? document.routing : [];
   for (const entry of entries) {
     if (typeof entry?.handler === 'string' && !existsSync(resolve(dirname(file), entry.handler))) {
@@ -49,22 +49,70 @@ export async function bundleSiteRouting({ configDir, outDir, resolvedDir }) {
 
   // One import per module, and the entries as written, each module in place of its path.
   const modules = entries.map((entry) => (typeof entry.handler === 'string' ? resolve(dirname(file), entry.handler) : null));
-  const imports = modules.map((path, i) => (path ? `import * as module${i} from ${JSON.stringify(path)};` : '')).join('\n');
+  let n = first;
+  const names = modules.map((path) => (path ? `module${n++}` : null));
+  const imports = modules.map((path, i) => (path ? `import * as ${names[i]} from ${JSON.stringify(path)};` : '')).filter(Boolean);
   const routes = entries.map((entry, i) => {
     const { handler, ...rest } = entry;
     // The file as written, for the control panel to name (try-it/routing.js, HANDLER_FILE).
     return modules[i]
-      ? `{ ...${JSON.stringify(rest)}, handler: module${i}, [Symbol.for('blueprint-explorer.handler-file')]: ${JSON.stringify(handler)} }`
+      ? `{ ...${JSON.stringify(rest)}, handler: ${names[i]}, [Symbol.for('blueprint-explorer.handler-file')]: ${JSON.stringify(handler)} }`
       : JSON.stringify(entry);
   }).join(',\n  ');
-  const entry = `${imports}
+  return { imports, routes: `[${routes}]`, modules: n - first };
+}
+
+/**
+ * Check the routing config.yaml names and bundle it, with its modules, into
+ * the built site. For a site that lists environments, each one's: its
+ * routing, checked against its release of the contracts, with its config,
+ * overlays and sign-in, as BlueprintExplorer.environments for the page to
+ * apply the one picked (try-it/environments.js). Nothing to do when
+ * config.yaml names no routing and lists no environments.
+ *
+ * @param {{ configDir: string, outDir: string, resolvedDir: string }} options -
+ *   resolvedDir is the contracts the site is built from: resolved without an
+ *   environment, when it lists environments
+ * @throws {Error} Naming every problem, when a file or a module is missing or the routing is wrong
+ */
+export async function bundleSiteRouting({ configDir, outDir, resolvedDir }) {
+  const config = loadConfig(configDir);
+  const environments = readEnvironments(configDir);
+  if (!config.routing && !environments.length) return;
+  const docs = discover(resolvedDir).map(load);
+
+  let entry;
+  let named = config.routing;
+  if (environments.length) {
+    const imports = [];
+    const listed = environments.map((environment) => {
+      const { routing, ...rest } = environment;
+      let routes = '[]';
+      if (routing) {
+        const released = applyEnvironment(docs, { overlays: environment.overlays, envTarget: environment.name, envVariables: environment.variables }).docs;
+        const code = routingCode(join(configDir, routing), routing, released, imports.length);
+        imports.push(...code.imports);
+        routes = code.routes;
+      }
+      return `{ ...${JSON.stringify(rest)}, routing: ${routes} }`;
+    });
+    named = 'config.yaml\'s environments';
+    entry = `${imports.join('\n')}
+globalThis.BlueprintExplorer ??= {};
+globalThis.BlueprintExplorer.environments = [
+  ${listed.join(',\n  ')}];
+`;
+  } else {
+    const code = routingCode(join(configDir, named), named, docs, 0);
+    entry = `${code.imports.join('\n')}
 globalThis.BlueprintExplorer ??= {};
 globalThis.BlueprintExplorer.routing = [...(globalThis.BlueprintExplorer.routing ?? []),
-  ${routes}];
+  ...${code.routes}];
 `;
+  }
   const { build } = await import('esbuild');
   await build({
-    stdin: { contents: entry, resolveDir: dirname(file), sourcefile: named },
+    stdin: { contents: entry, resolveDir: configDir, sourcefile: 'site-routing-entry.js' },
     bundle: true,
     format: 'iife',
     platform: 'browser',

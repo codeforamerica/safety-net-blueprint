@@ -14,6 +14,7 @@ import { performSetup } from '../src/setup.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { createDispatcher } from '../src/http/route-table.js';
+import { tokenVerifier } from '../src/http/verify-token.js';
 import { routingFromDocument } from '../src/routing.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
@@ -298,7 +299,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       console.error(`Error: ${err.message}`);
       process.exit(1);
     }
-    const { routes, endpoints: allEndpoints, rpcEndpoints, overridden, routed, receives } = assembled;
+    const { routes, identifying, schemes, endpoints: allEndpoints, rpcEndpoints, overridden, routed, receives } = assembled;
     for (const key of overridden.applied) console.log(`  ${key} - contract route, custom handler`);
     if (overridden.unmatched.length > 0) {
       console.warn(`  Note: no contract route declares ${overridden.unmatched.join(', ')} — not overridden`);
@@ -308,7 +309,17 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
-    const server = createNodeServer(createDispatcher(routes));
+    // As a server, a token the caller sends is checked against the
+    // environment's OpenID Connect provider, and a bad one refused (verify-token.js).
+    const dispatch = identifying(createDispatcher(routes));
+    const verify = tokenVerifier(schemes);
+    const server = createNodeServer(verify ? async (request) => {
+      const why = await verify(request).catch((error) => `the sign-in provider couldn't be reached: ${error.message}`);
+      if (!why) return dispatch(request);
+      return Response.json({ code: 'UNAUTHORIZED', message: `Not signed in: ${why}.` }, {
+        status: 401, headers: { 'WWW-Authenticate': 'Bearer error="invalid_token"' },
+      });
+    } : dispatch);
 
     // Start the server — if the port is in use, kill the existing process and retry once.
     await new Promise((resolve, reject) => {

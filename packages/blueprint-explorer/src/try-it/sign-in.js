@@ -19,8 +19,17 @@
 
 const keyFor = (scope) => `blueprint-mock-sign-in:${scope}`;
 
-/** The site's sign_in settings, from the page, or null when it has none. */
+import { extract } from '@codeforamerica/blueprint-core/browser';
+import { currentEnvironment } from './environments.js';
+
+/**
+ * The site's sign_in settings: the picked environment's, for a site that
+ * lists environments (environments.js); otherwise from the page. Null when it
+ * has none.
+ */
 export function signInSettings() {
+  const environment = currentEnvironment();
+  if (environment) return environment.sign_in ?? null;
   try {
     const node = document.getElementById('blueprint-sign-in');
     return node ? JSON.parse(node.textContent) : null;
@@ -40,10 +49,13 @@ export function signedIn({ scope }) {
 /** Sign out, for the tab. */
 export function signOut({ scope }) {
   try { sessionStorage.removeItem(keyFor(scope)); } catch { /* nothing kept */ }
+  dispatchEvent(new Event('blueprint-sign-in'));
 }
 
 const keep = ({ scope }, token) => {
   try { sessionStorage.setItem(keyFor(scope), JSON.stringify(token)); } catch { /* kept for this page only */ }
+  // The page's header says who's signed in (lib/control-panel.js).
+  dispatchEvent(new Event('blueprint-sign-in'));
 };
 
 /** A same-document `$ref` followed, or one into another document of the set. */
@@ -184,4 +196,27 @@ export async function signIn(scheme, where) {
   } finally {
     if (!popup.closed) popup.close();
   }
+}
+
+/**
+ * The scheme the environment's contracts say how to sign in with, or null:
+ * the page's header offers Sign in only when there's one.
+ *
+ * @param {{ contracts: object }} site - As inEnvironment gave it
+ */
+export function canSignIn(site) {
+  return anyScheme(extract(site.contracts, 'docs'));
+}
+
+/**
+ * Sign in from the page's header, for the environment the page is in: with
+ * the first scheme its contracts say how to sign in with, as Swagger UI's
+ * Authorize does. Opened from a click.
+ *
+ * @param {{ contracts: object, scope: string }} site - As inEnvironment gave it
+ */
+export function signInFromHeader(site) {
+  const scheme = canSignIn(site);
+  if (!scheme) return Promise.reject(new Error('the contracts say no way to sign in'));
+  return signIn(scheme, { scope: site.scope });
 }

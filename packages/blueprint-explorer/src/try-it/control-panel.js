@@ -19,13 +19,14 @@
  * holds for the next.
  */
 
+import { environments, chosenEnvironment, chooseEnvironment } from './environments.js';
+import { signedIn, signOut, signInFromHeader, canSignIn } from './sign-in.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { startMock } from './start-mock.js';
 import { trailFor, eventLines, followedFrom, waitingTimers, waitingLines, HAPPENED_STYLE } from './event-trail.js';
 import { activityOf, clearActivity } from './activity.js';
 import { stubChoices, eventStubForm, httpStubForm, describeStub, STUB_STYLE } from './stub-editor.js';
 import { COMBO_STYLE } from './combobox.js';
-import { signInSettings, signedIn, signIn, signOut, anyScheme } from './sign-in.js';
 import { chosenServer, chooseServer, environmentsOf, expandServer, isLocal } from './routing.js';
 
 const ORIGIN = 'http://mock.invalid';
@@ -48,16 +49,38 @@ const STYLE = `
     #mock-panel.open { display: flex; }
     #mock-panel .mp-head { position: static; flex: none; }
     /* Side by side, each scrolling on its own. */
-    #mock-panel .mp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0 20px; padding: 0 16px; }
-    #mock-panel .mp-settings, #mock-panel .mp-activity { overflow: auto; padding: 12px 0; }
-    #mock-panel .mp-activity > h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-    #mock-panel .mp-body.mp-editing { grid-template-columns: minmax(0, 1fr); }
+    #mock-panel .mp-body { flex: 1; min-height: 0; overflow: auto; }
   }
+  /* Drag handle on the panel's edge, like the sash between VS Code's panes. Fixed, so scrolling the panel doesn't move it. */
+  #mock-panel-resize { position: fixed; top: 0; bottom: 0; right: calc(var(--mock-panel-width, 30rem) - 4px); width: 8px;
+    cursor: col-resize; z-index: 1001; display: none; }
+  #mock-panel-resize.open { display: block; }
+  #mock-panel-resize::after { content: ''; position: absolute; top: 50%; left: 2px; width: 4px; height: 36px; margin-top: -18px;
+    border-radius: 2px; background: #b9b3e3; }
+  #mock-panel-resize:hover, #mock-panel-resize.dragging { background: rgba(43,26,120,.18); }
+  #mock-panel-resize:hover::after, #mock-panel-resize.dragging::after { background: #2B1A78; }
+  @media (max-width: 1200px) {
+    #mock-panel-resize { top: auto; left: 0; right: 0; bottom: calc(var(--mock-panel-height, 40vh) - 4px); width: auto; height: 8px; cursor: row-resize; }
+    #mock-panel-resize::after { top: 2px; left: 50%; width: 36px; height: 4px; margin-top: 0; margin-left: -18px; }
+  }
+  #mock-panel .mp-stubs-about summary { font-size: .8rem; font-weight: 600; color: #555; }
+  #mock-panel .mp-stubs-about { margin-bottom: .5rem; }
+  #mock-panel .mp-stubs-about summary { font-size: .8rem; font-weight: 600; color: #555; }
+  #mock-panel .mp-stubs-about { margin-bottom: .5rem; }
+  #mock-panel .mp-environment { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: 0 0 .6rem; font-size: .85rem; }
+  #mock-panel .mp-environment label { font-weight: 700; color: #2B1A78; }
+  #mock-panel .mp-environment select { font: inherit; padding: 2px 6px; }
+  #mock-panel .mp-environment .mp-who { color: #555; }
   #mock-panel .mp-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
     padding: 12px 16px; background: #2B1A78; color: #fff; font-weight: 700; }
   #mock-panel .mp-close { background: none; border: 0; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
   #mock-panel .mp-body { padding: 16px; }
-  #mock-panel .mp-body.mp-editing .mp-activity { display: none; }
+  /* Tabs, as developer tools have: one view at a time. */
+  #mock-panel .mp-tabs { display: flex; gap: 2px; margin-left: 16px; flex: 1; }
+  #mock-panel .mp-tab { font: 600 12px system-ui, sans-serif; color: rgba(255,255,255,.75); background: none; border: 0;
+    border-bottom: 2px solid transparent; padding: 4px 10px; cursor: pointer; }
+  #mock-panel .mp-tab[aria-selected="true"] { color: #fff; border-bottom-color: #fff; }
+  #mock-panel .mp-view > h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
   #mock-panel .mp-waiting { border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; padding: 6px 10px; margin: 0 0 .6rem; }
   #mock-panel .mp-waiting .mp-note { font: 12px system-ui, sans-serif; margin-top: 4px; }
   #mock-panel .mp-about { margin: 1rem 0 0; }
@@ -104,7 +127,6 @@ const STYLE = `
   #mock-panel .mp-server .mp-rows .n { margin-left: 0; overflow-wrap: anywhere; }
   #mock-panel .mp-server-fields { display: flex; flex-direction: column; gap: .3rem; width: 100%; }
   #mock-panel .mp-server-var { display: flex; gap: .5rem; align-items: center; font-size: .85rem; }
-  #mock-panel .mp-sign-in { display: flex; gap: .6rem; align-items: center; margin: .4rem 0; font-size: .85rem; }
   #mock-panel .mp-route-head { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
   #mock-panel .mp-route-head code { font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
 `;
@@ -146,6 +168,14 @@ const CONTRACTS = [
 let host = null;
 let own = null;
 let options = null;
+
+// The panel's views, as developer tools have tabs: Activity, the log of
+// requests and events, and Setup, for the environment, data and stubs. A page
+// can show only some, as the Scenarios page shows only Activity.
+const VIEWS = [['activity', 'Activity'], ['setup', 'Setup']];
+const VIEW_KEY = 'blueprint-mock-panel-view';
+let views = VIEWS.map(([id]) => id);
+let view = (() => { try { return sessionStorage.getItem(VIEW_KEY) ?? 'activity'; } catch { return 'activity'; } })();
 let panel = null;
 
 /**
@@ -306,28 +336,6 @@ function serverChooser(running) {
   return box;
 }
 
-/**
- * Who is signed in, with Sign out, or Sign in, when the site says how to
- * sign in (sign_in in config.yaml) and the contracts have a scheme to sign
- * in with (sign-in.js).
- */
-function signInRow(docs) {
-  const scheme = signInSettings() ? anyScheme(docs) : null;
-  if (!scheme) return [];
-  const row = el('div', '', 'mp-sign-in');
-  const who = signedIn(options);
-  const button = Object.assign(el('button', who ? 'Sign out' : 'Sign in', 'mp-action'), { type: 'button' });
-  const said = el('span', who ? `Signed in as ${who.name}` : 'Not signed in');
-  button.onclick = async () => {
-    if (who) { signOut(options); render(); return; }
-    button.disabled = true;
-    try { await signIn(scheme, options); } catch (error) { said.textContent = `Not signed in: ${error.message}.`; }
-    render();
-  };
-  row.append(said, button);
-  return [row];
-}
-
 /** The timers waiting, each with Fire, pinned at the top of the activity log while there are any. */
 function waitingSection(running, events) {
   // With calls going to a server, its timers are its own: the page's are beside the point.
@@ -345,7 +353,7 @@ function waitingSection(running, events) {
       render();
     },
   }));
-  box.append(el('p', 'Fire stands in for the timer service: a stub matching the timer sends its callback now.', 'mp-note'));
+  box.append(el('p', 'Fire sends a timer\'s callback now, instead of waiting until it\'s due.', 'mp-note'));
   return [box];
 }
 
@@ -425,7 +433,7 @@ function activitySection(running, events) {
     }
   }
   const empty = !box.childElementCount;
-  return [bar, ...waitingSection(running, events), empty ? el('p', 'Nothing yet. Send a request from an operation, and it shows here with what it set off.', 'mp-none') : box];
+  return [bar, ...waitingSection(running, events), empty ? el('p', 'No activity yet.', 'mp-none') : box];
 }
 
 /** A stub registered, or why the mock refused it. */
@@ -487,7 +495,13 @@ async function stubsSection(running, events) {
       if (editing?.id === stub.id) rows.append(editing.form);
     }
   }
-  const parts = [rows.children.length ? rows : el('p', 'None.', 'mp-none')];
+  // What a stub is, folded away until asked.
+  const what = el('details', '', 'mp-about');
+  what.open = Boolean(panel.querySelector('details.mp-stubs-about[open]'));
+  what.classList.add('mp-stubs-about');
+  what.append(el('summary', 'What\'s a stub?'), el('p', 'A stub makes the mock do what something outside the system would: '
+    + 'answer an event with another, fire a timer, or answer a call to another service. Each answers once.', 'mp-note'));
+  const parts = [what];
   if (editing && editing.id === null) parts.push(editing.form);
   else {
     const adds = el('div', '', 'mp-controls');
@@ -498,8 +512,7 @@ async function stubsSection(running, events) {
     }
     parts.push(adds);
   }
-  parts.push(el('p', 'A stub makes the mock do what something outside the system would: answer an event with another, fire a timer, '
-    + 'answer a call to another service, or answer a message on a connection.', 'mp-note'));
+  if (rows.children.length) parts.push(rows);
   return parts;
 }
 
@@ -560,22 +573,108 @@ async function render() {
   const logged = (await json(await send(running, 'GET', '/platform/events?limit=1')))?.total ?? 0;
   const listed = await json(await send(running, 'GET', `/platform/events?sort=time&offset=${Math.max(0, logged - LOG_SIZE)}&limit=${LOG_SIZE}`));
   const events = listed?.items ?? [];
-  // What you can do, then what happened: one under the other, or side by
-  // side when the panel is docked along the bottom.
-  const settings = el('div', '', 'mp-settings');
-  settings.append(status, controls, ...signInRow(docs), about,
-    el('h3', 'Server'), serverChooser(running),
+  // Two views, shown one at a time: Activity, and Setup.
+  const settings = el('div', '', 'mp-settings mp-view');
+  // A site with environments switches them above, instead of choosing a server.
+  const servers = environments().length ? [] : [el('h3', 'Server'), serverChooser(running)];
+  settings.append(...environmentRow(), status, controls, about, ...servers,
     el('h3', 'Stubs'), ...await stubsSection(running, events));
-  const activity = el('div', '', 'mp-activity');
-  activity.append(el('h3', 'Activity'), ...activitySection(running, events));
+  const activity = el('div', '', 'mp-activity mp-view');
+  activity.append(...activitySection(running, events));
   // Drawn again, an event opened stays open.
   const opened = new Set([...body.querySelectorAll('details[open][data-event]')].map((row) => row.dataset.event));
   const openedRequests = new Set([...body.querySelectorAll('details[open][data-request]')].map((row) => row.dataset.request));
-  // A stub being written takes the room the log had, until it's registered or cancelled.
-  body.classList.toggle('mp-editing', Boolean(editing));
-  body.replaceChildren(settings, activity);
+  // Editing a stub is in Setup.
+  if (editing && views.includes('setup')) view = 'setup';
+  if (!views.includes(view)) view = views[0];
+  for (const tab of panel.querySelectorAll('.mp-tab')) tab.setAttribute('aria-selected', String(tab.dataset.view === view));
+  body.replaceChildren(view === 'setup' ? settings : activity);
   for (const row of body.querySelectorAll('details[data-event]')) row.open = opened.has(row.dataset.event);
   for (const row of body.querySelectorAll('details[data-request]')) row.open = openedRequests.has(row.dataset.request);
+}
+
+// The panel's size, kept for this browser, as an editor keeps its side bar's.
+const SIZE_KEY = 'blueprint-mock-panel-size';
+const docked = () => matchMedia('(max-width: 1200px)').matches;
+const storedSize = () => { try { return JSON.parse(localStorage.getItem(SIZE_KEY) ?? 'null') ?? {}; } catch { return {}; } };
+
+/**
+ * The edge the page meets, dragged to resize the panel: its width beside the
+ * page, or its height docked along the bottom.
+ */
+function resizeHandle() {
+  const handle = el('div');
+  handle.id = 'mock-panel-resize';
+  handle.setAttribute('role', 'separator');
+  handle.setAttribute('aria-label', 'Resize the mock server panel');
+  for (const property of ['--mock-panel-width', '--mock-panel-height']) {
+    const size = storedSize()[property];
+    if (size) document.documentElement.style.setProperty(property, size);
+  }
+  handle.onpointerdown = (down) => {
+    down.preventDefault();
+    handle.setPointerCapture(down.pointerId);
+    handle.classList.add('dragging');
+    const bottom = docked();
+    const move = (event) => {
+      const size = bottom
+        ? `${Math.round(Math.min(Math.max(innerHeight - event.clientY, 160), innerHeight * 0.9))}px`
+        : `${Math.round(Math.min(Math.max(innerWidth - event.clientX, 280), innerWidth * 0.85))}px`;
+      document.documentElement.style.setProperty(bottom ? '--mock-panel-height' : '--mock-panel-width', size);
+    };
+    const up = () => {
+      handle.classList.remove('dragging');
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      const property = bottom ? '--mock-panel-height' : '--mock-panel-width';
+      try { localStorage.setItem(SIZE_KEY, JSON.stringify({ ...storedSize(), [property]: document.documentElement.style.getPropertyValue(property) })); } catch { /* this page only */ }
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  };
+  return handle;
+}
+
+/**
+ * The environment the page is in, with the site's others to switch to, and
+ * who's signed in to it, with Sign in where its contracts say how
+ * (environments.js, sign-in.js). Nothing for a site that lists none and has
+ * no way to sign in.
+ */
+function environmentRow() {
+  const listed = environments();
+  const scheme = canSignIn(options);
+  if (!listed.length && !scheme) return [];
+  const row = el('div', '', 'mp-environment');
+  if (listed.length) {
+    const base = options.scope.split('#')[0];
+    const picker = el('select');
+    picker.id = 'mp-environment-picker';
+    for (const { name } of listed) picker.append(Object.assign(el('option', name), { value: name }));
+    picker.value = chosenEnvironment(base)?.name ?? listed[0].name;
+    // The page reloads in the one picked, with its own records, as a portal's switch does.
+    picker.onchange = () => {
+      chooseEnvironment(base, picker.value);
+      try { sessionStorage.setItem(`blueprint-mock-switching:${base}`, '1'); } catch { /* this page only */ }
+      location.reload();
+    };
+    const label = el('label', 'Environment');
+    label.htmlFor = picker.id;
+    row.append(label, picker);
+  }
+  if (scheme) {
+    const who = signedIn(options);
+    const button = Object.assign(el('button', who ? 'Sign out' : 'Sign in', 'mp-action'), { type: 'button' });
+    const said = el('span', who ? `Signed in as ${who.name}` : 'Not signed in', 'mp-who');
+    button.onclick = async () => {
+      if (who) { signOut(options); render(); return; }
+      button.disabled = true;
+      try { await signInFromHeader(options); } catch (error) { said.textContent = `Not signed in: ${error.message}.`; }
+      render();
+    };
+    row.append(said, button);
+  }
+  return [row];
 }
 
 /**
@@ -588,6 +687,7 @@ async function render() {
  */
 export async function setTryIt(on, given) {
   options ??= given;
+  if (given?.views) views = given.views;
   if (!panel) {
     document.head.append(Object.assign(el('style'), { textContent: STYLE + HAPPENED_STYLE + STUB_STYLE + COMBO_STYLE }));
     panel = el('aside');
@@ -602,11 +702,25 @@ export async function setTryIt(on, given) {
       setTryIt(false);
       dispatchEvent(new CustomEvent('try-it', { detail: { on: false } }));
     };
-    head.append(el('span', 'Mock server'), close);
+    const tabs = el('div', '', 'mp-tabs');
+    tabs.setAttribute('role', 'tablist');
+    for (const [id, label] of VIEWS.filter(([id]) => views.includes(id))) {
+      const tab = Object.assign(el('button', label, 'mp-tab'), { type: 'button' });
+      tab.dataset.view = id;
+      tab.setAttribute('role', 'tab');
+      tab.onclick = () => {
+        view = id;
+        try { sessionStorage.setItem(VIEW_KEY, id); } catch { /* this page only */ }
+        render();
+      };
+      tabs.append(tab);
+    }
+    head.append(el('span', views.length > 1 ? 'Mock server' : 'Activity'), ...(views.length > 1 ? [tabs] : []), close);
     panel.append(head, el('div', '', 'mp-body'));
-    document.body.append(panel);
+    document.body.append(panel, resizeHandle());
   }
   panel.classList.toggle('open', on);
+  document.getElementById('mock-panel-resize')?.classList.toggle('open', on);
   if (!on) return;
   render();
   if (!host && !own) {

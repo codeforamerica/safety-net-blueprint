@@ -107,7 +107,10 @@ function substituteNode(node, variables, handlers) {
     return node.map((item) => substituteNode(item, variables, handlers));
   }
 
+  // Keys too, as a text substitution such as envsubst's or a Helm template's
+  // reaches them: an event type prefix lands in the keys of an annotations
+  // file's events.
   return Object.fromEntries(
-    Object.entries(node).map(([key, value]) => [key, substituteNode(value, variables, handlers)])
+    Object.entries(node).map(([key, value]) => [substituteNode(key, variables, handlers), substituteNode(value, variables, handlers)])
   );
 }

@@ -86,6 +86,46 @@ routing:
 
 A `handler` is a JavaScript module that exports a handler for each operation it answers, by operationId, as the mock server guide's [handlers](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#handlers) describes. The build checks the routing against the contracts and fails, listing each problem, when it's wrong. It then bundles the file with the modules it names, and whatever they import, into `site-routing.js`, which every page loads after the site's own script, since a page opened from disk can't import a module.
 
+### Environments
+
+A site can switch between environments, as a developer portal switches between a sandbox and production. List them in `config.yaml`, the first being the default:
+
+```yaml
+environments:
+  - name: Local
+    variables: ../environments/local.env
+    routing: routing.yaml
+  - name: Production
+    variables: ../environments/production.env
+    overlays: [../environments/production.overlay.yaml]
+    routing: routing-production.yaml
+    sign_in:
+      client_id: my-portal
+```
+
+Each environment has its config: a `.env` file of `${VAR}` values, as `blueprint-resolve --env-variables` takes, and overlays, as `--env-overlay` takes, for what differs in shape, such as how callers sign in. Each also has its own routing, and its own sign-in client.
+
+Build the site from contracts resolved without an environment, `blueprint-resolve --build`, which keeps the `${VAR}`s:
+
+```bash
+blueprint-resolve --spec=contracts --overlay=contracts/overlays --out=built --build
+blueprint-build-explorer --spec=built --out=site --config=explorer
+```
+
+The reference pages show the first environment. The Try it panel has an Environment menu; picking one reloads the page in it, with that environment's values, routing and sign-in applied in the browser, the release step of the Twelve-Factor App's build, release, run (https://12factor.net/build-release-run). Each environment keeps its own records, stubs and sign-in for the browser tab.
+
+### Signing in
+
+When the environment's contracts have a security scheme that says how to sign in (OAuth 2.0's implicit or authorization code flow, or OpenID Connect), the Try it panel has Sign in, and a call that requires it asks you to sign in before it's sent, as Swagger UI's Authorize does. Signing in opens the provider's page in a popup, which returns to the site's `sign-in-return.html`. The token is kept for the browser tab and sent with each call that requires it. The site names the client it signs in as with `sign_in`:
+
+```yaml
+sign_in:
+  client_id: my-portal
+  scopes: [openid, profile]
+```
+
+With environments, put `sign_in` on each environment instead. An environment whose scheme is a header, such as the framework's default `X-Caller-Id`, has nothing to sign in to.
+
 ### A site's own script
 
 Name a JavaScript file in `config.yaml`, relative to it, and every page loads it before the mock starts:
@@ -104,9 +144,9 @@ BlueprintExplorer.routing = [{
 }];
 ```
 
-The control panel lists the routing under "Server", and each entry has a switch between the real service and the mock in the page, for the browser tab: the mock restarts without that entry, keeping records and stubs. A call the mock can't answer itself, such as an adapter's, then needs a stub, and the panel offers the HTTP stub form for it. On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
+On the API reference, an operation whose call leaves the page has a "Real service" tag beside Send.
 
-The reader can also choose a server for the tab, as Swagger's server list does: at the top of "Server", an environment the contracts' `servers` name by `description`, such as "Production server", which sends each API to its own server for it, or a URL they type, which takes every call, such as a local `blueprint-mock`. The site's own routing still wins, and a reload puts every call back in the page. Record pickers list the chosen server's records; Restart, Start empty and timers, which are the page's own, are hidden; and Scenarios asks once before running against a server that isn't this machine. A server has to allow calls from the site's address (CORS); a refused call says so. To list real servers, set them in an overlay ([overlay guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md#set-an-apis-servers)).
+For a site without [environments](#environments), the reader can also choose a server for the tab, as Swagger's server list does: under "Server" in the Try it panel, a server the contracts' `servers` name by `description`, such as "Production server", which sends each API to its own server, or a URL they type, which takes every call, such as a local `blueprint-mock`. The site's own routing still wins, and a reload puts every call back in the page. Record pickers list the chosen server's records; Restart, Start empty and timers, which are the page's own, are hidden; and Scenarios asks once before running against a server that isn't this machine. A server has to allow calls from the site's address (CORS); a refused call says so. To list real servers, set them in an overlay ([overlay guide](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/overlay-guide.md#set-an-apis-servers)).
 
 The mock server guide's [routing section](https://github.com/codeforamerica/safety-net-blueprint/blob/main/docs/guides/mock-server.md#answering-in-a-page) shows a handler that forwards a call. A real service has to accept requests from the site's address (CORS).
 
@@ -114,9 +154,9 @@ Output is written to the `--content` directory as static HTML files. The API ref
 
 #### Transcription session adapters
 
-A transcription session's start and resume, on the API reference, take audio: the microphone, a recording, or typed lines, which the page speaks with Kokoro, an open speech model loaded from a CDN the first time. Send sends the one call. The session then calls its adapter, which runs in the page through the site's routing, and the adapter streams the audio and publishes the session's events — connected, each line, ended — which the session and the transcript follow. The adapter's calls and events show in the activity log.
+Creating a session, on the API reference, has a profile menu: each profile the site routes to an adapter, showing which adapter, and **None**. A profile names a transcription service, and the environment's routing says which adapter handles it. Under None, you act as the adapter: its calls wait for your response in the operation's panel, and then the events the adapter's AsyncAPI document lists are offered for you to publish, with the session's ids and the current time filled in.
 
-An adapter hears audio as it would in an app, by asking the browser for the microphone (`getUserMedia`). When the reader chose a recording or typed lines, Try it answers the adapter's next request for the microphone with a stream playing them, aloud too, so you hear what the adapter hears.
+When an adapter asks the browser for the microphone (`getUserMedia`), the page asks you what it should hear, once per tab: the microphone, an audio file, or typed lines, which the page speaks with Kokoro, an open speech model loaded from a CDN the first time. You hear what the adapter hears. Change it from the "Hearing …" line under the response. An adapter that never asks for the microphone never prompts. The adapter's calls and events show in the activity log.
 
 An adapter is a module of routing handlers, named in the site's [routing](#a-sites-routing). The blueprint's harness site has one, [`packages/blueprint-harness/explorer/adapters/whisper.js`](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/explorer/adapters/whisper.js), which transcribes in the page with Whisper, with no service or account: the whole adapter, to copy into a site and to write one for another service from. A contract set offers it with a profile naming `whisper` in its config, and a site routes to it:
 

@@ -235,9 +235,28 @@ API_BASE_URL=https://api.example.gov
 blueprint-resolve --spec=... --overlay=... --out=./resolved --env-variables=.env
 ```
 
-Environment variables (`process.env`) take precedence over `.env` file values. Unresolved placeholders produce warnings but don't fail the build.
+Environment variables (`process.env`) take precedence over `.env` file values. Placeholders in keys are substituted as well as values. A placeholder left without a value stops the command, so a forgotten `--env-variables` doesn't write `${VAR}` into the output, unless `--build` is given (see below).
 
-### 9. Output
+### 9. Environment Overlays and Sign-in
+
+`--env-overlay` applies an environment's own overlay, for what differs in shape between environments, such as how callers sign in: for example, OpenID Connect in production and none locally. It's applied after the steps above, with `--env-variables`, so its `${VAR}`s are filled in too:
+
+```bash
+blueprint-resolve --spec=... --overlay=... --out=./resolved \
+  --env-variables=environments/production.env --env-overlay=environments/production.overlay.yaml
+```
+
+Then every domain API is made to require the schemes in `base/components/security-schemes.yaml` that the environment leaves: a top-level `security` listing each, and a `$ref` to each in `components.securitySchemes`. See [API security declarations](cross-cutting/identity-access.md#api-security-declarations).
+
+### Build and release
+
+The environment's steps (environment filtering, placeholder substitution, environment overlays and the sign-in requirement) run last, together. Everything before them is the same for every environment. This is the split the Twelve-Factor App calls build, release, run (https://12factor.net/build-release-run): build once, then apply each environment's config. `--build` stops before the environment and writes the build, keeping its `${VAR}`s as placeholders. It checks the build as if each placeholder were empty, the way `helm lint` renders a chart with values to check it. The explorer is built from the build and applies each environment in the browser with core's `applyEnvironment`.
+
+```bash
+blueprint-resolve --spec=... --overlay=... --out=./built --build
+```
+
+### 10. Output
 
 Resolved specs are written to the path specified by `--out` (default: `packages/generated/contracts/`). The resolved directory mirrors the domain structure of the source specs but contains fully-merged, canonical-URI-rewritten, relationship-resolved artifacts alongside the copied `base/` directory.
 

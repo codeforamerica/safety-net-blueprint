@@ -23,6 +23,8 @@
  *   --out        Output directory for resolved specs (required)
  *   --env-target     Environment to filter x-environments down to (optional)
  *   --env-variables  Path to a file of key=value pairs for ${VAR} substitution (optional)
+ *   --env-overlay    Path to an overlay of the environment's own, applied last (optional; repeatable)
+ *   --build          Resolve without an environment, keeping ${VAR}s as placeholders for a later release
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync, realpathSync, statSync } from 'fs';
@@ -37,6 +39,7 @@ import {
   generate,
   resolve as coreResolve,
   validate,
+  applyEnvironment,
 } from '@codeforamerica/blueprint-core';
 
 
@@ -55,6 +58,8 @@ function parseArgs() {
     out: null,
     envTarget: null,
     envVariables: null,
+    envOverlays: [],
+    build: false,
     apis: [],
     domains: [],
     capabilities: [],
@@ -91,6 +96,10 @@ function parseArgs() {
       options.envTarget = arg.split('=')[1];
     } else if (arg.startsWith('--env-variables=')) {
       options.envVariables = arg.split('=')[1];
+    } else if (arg === '--build') {
+      options.build = true;
+    } else if (arg.startsWith('--env-overlay=')) {
+      options.envOverlays.push(arg.slice('--env-overlay='.length));
     } else if (arg.startsWith('--api=')) {
       options.apis.push(arg.slice('--api='.length));
     } else if (arg.startsWith('--domain=')) {
@@ -125,6 +134,12 @@ Flags:
   --resolve          Run relationship resolution even without an overlay
   --env-target=<env>      Environment to filter x-environments down to (optional)
   --env-variables=<file>  File of key=value pairs for \${VAR} substitution (optional)
+  --env-overlay=<file>    An overlay of the environment's own, for what differs in
+                          shape between environments, such as how callers sign in.
+                          Applied last, with --env-variables (optional; repeatable)
+  --build            The build alone, without an environment: \${VAR}s are kept as
+                     placeholders for a release to fill in later, as the explorer
+                     does when it switches environments. Takes no --env-* flag.
   --api=<name>       Keep only this API (its file name without -openapi.yaml),
                      with what it needs to stand on its own. Repeatable, and
                      adds to --domain and --capability.
@@ -141,6 +156,11 @@ Without --overlay, base specs are copied to --out unchanged (unless --resolve is
 With --bundle, every $ref is dereferenced inline, within a file as well as across files.
 With --env-target, nodes whose x-environments array doesn't include it are removed.
 With --env-variables, \${VAR} placeholders are substituted (process.env overrides file values).
+With --env-overlay, the environment's overlay is applied after everything else.
+Resolving is the build and these three are the release, as the Twelve-Factor
+App puts it (https://12factor.net/build-release-run): without them, \${VAR}s
+are left as placeholders only with --build; otherwise one left without a
+value stops the command.
 With --api, --domain or --capability, only what's chosen is written: the documents
 declaring it, everything they $ref or extend, the parts of platform they use
 (events, timers, registries), and the scenarios whose every document is kept.
@@ -369,6 +389,10 @@ function copyBaseSpecs(baseDir, outDir) {
 
 async function main() {
   const options = parseArgs();
+  if (options.build && (options.envVariables || options.envOverlays.length || options.envTarget)) {
+    console.error('Error: --build resolves without an environment, so it takes no --env-variables, --env-overlay or --env-target.');
+    process.exit(1);
+  }
 
   if (options.help) {
     showHelp();
@@ -401,7 +425,7 @@ async function main() {
   const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
   const hasRules = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-rules.yaml'));
 
-  if (options.overlays.length === 0 && !options.envTarget && !options.envVariables && !options.apis.length && !options.domains.length && !options.capabilities.length && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
+  if (options.overlays.length === 0 && !options.envTarget && !options.envVariables && !options.envOverlays.length && !options.apis.length && !options.domains.length && !options.capabilities.length && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -461,6 +485,17 @@ async function main() {
     console.log(`Overlay: ${overlayInput} (${count} document(s))`);
   }
 
+  // The environment's own overlays, applied last, as the release.
+  const envOverlays = options.envOverlays.map((overlayPath) => {
+    const file = resolve(overlayPath);
+    if (!existsSync(file) || !statSync(file).isFile()) {
+      console.error(`Error: Environment overlay is not a file: ${file}`);
+      process.exit(1);
+    }
+    console.log(`Environment overlay: ${file}`);
+    return load({ path: file, relativePath: basename(file) }).content;
+  });
+
   // blueprint-core's base contracts. Shared schemas, components and the
   // platform domain — infrastructure every set needs — declare no capability
   // and always come along. Every other framework file declares the capability
@@ -495,6 +530,7 @@ async function main() {
     overlays: authoredOverlays,
     envTarget: options.envTarget,
     envVariables: options.envVariables ? readEnvVariables(options.envVariables) : {},
+    envOverlays,
     apis: options.apis,
     domains: options.domains,
     capabilities: options.capabilities,
@@ -522,13 +558,21 @@ async function main() {
   // not: the literal reaches an artifact, and `${EVENT_PREFIX}` stamped onto
   // every event type still matches the channel it was stamped onto, so
   // validation passes and the failure surfaces on a message bus instead.
-  if (resolved.unresolved.length > 0) {
+  // A build is meant to keep them, for the release to fill in.
+  if (resolved.unresolved.length > 0 && !options.build) {
     console.error(`\nUnresolved placeholder(s): ${resolved.unresolved.map((n) => '${' + n + '}').join(', ')}`);
     console.error('Supply them with --env-variables=<file>, or remove the references.');
     process.exit(1);
   }
 
-  const validation = validate(resolved.docs);
+  // A build keeps its placeholders, and one in a name, as the event prefix
+  // is, can't match the name's pattern, so it's checked as a release with
+  // each filled in as empty would be, as `helm lint` renders a chart's
+  // templates with values to check them. The build is written as it is.
+  const checked = options.build
+    ? applyEnvironment(resolved.docs, { envVariables: Object.fromEntries(resolved.unresolved.map((name) => [name, ''])) }).docs
+    : resolved.docs;
+  const validation = validate(checked);
   console.log('');
   console.log(validation.report);
 

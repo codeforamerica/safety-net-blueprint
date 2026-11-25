@@ -275,19 +275,69 @@ by principal type.
 
 ## API security declarations
 
-Every domain API spec declares `security: - bearerAuth: []` at the spec level, referencing the
-shared security scheme in `components/auth.yaml`. Operations that use a different auth method
-(e.g., the `/token/claims/{sub}` endpoint using an API key) declare their scheme at the
-operation level, overriding the spec-level default. See
+How callers sign in is defined once, in `base/components/security-schemes.yaml`. The
+framework's default is `callerId`: the caller's id in the `X-Caller-Id` header and their roles
+in `X-Caller-Roles`, which identifies a caller without verifying them, as the mock does. A
+state replaces it with an overlay, for example with OpenID Connect pointing at its identity
+provider.
+
+Resolve adds the requirement to every domain API: a top-level `security` listing each shared
+scheme as an alternative, and a `$ref` to each in `components.securitySchemes`. Don't write
+top-level `security` in a domain API yourself; validation reports it as an error
+(`top-level-security`). An operation that needs something different declares its own
+`security`: `[]` for a public operation, or its own scheme, like the `/token/claims/{sub}` API
+key. An operation of an adapter's API that needs the caller signed in, such as the
+transcription session adapter's `requestCredentials`, names `callerId`, and resolve replaces
+it with the environment's schemes. Events from outside the server need nothing more: they
+arrive through `publishEvent`, an OpenAPI operation that already requires sign-in. AsyncAPI
+documents carry no security, since AsyncAPI's describes connecting to a broker and its scheme
+types differ from OpenAPI's.
+
+Each scheme can name the token claims, or headers, that identify the caller with `x-caller`:
+
+```yaml
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  x-caller:
+    id: userId      # the id the records hold, not the identity provider's sub
+    roles: roles
+    counties: counties
+```
+
+Guards read these as `$caller.id`, `$caller.roles` and so on, whatever the scheme. With no
+`x-caller`, a token scheme reads `sub` and `roles`. See
 [Decision 4](#decision-4-api-security-declarations).
+
+### Per environment
+
+How callers sign in can differ between environments, for example none locally and OpenID
+Connect in production. This follows the Twelve-Factor App's build, release, run
+(https://12factor.net/build-release-run): values that differ, like the identity provider's
+address, go in each environment's `.env` file as `${VAR}`s; a scheme of a different kind goes in
+that environment's own overlay, as Helm takes a values file per environment and Kustomize an
+overlay per environment:
+
+```bash
+blueprint-resolve --spec=contracts --overlay=contracts/overlays \
+  --env-variables=environments/production.env \
+  --env-overlay=environments/production.overlay.yaml --out=resolved
+```
+
+Resolve applies the environment last, then requires the schemes it leaves on every domain API.
+`blueprint-resolve --build` stops before the environment, keeping the `${VAR}`s, so the
+explorer can apply each environment itself.
 
 ## Customization
 
 States can override the following via overlay:
 
-- **Security scheme** — Replace `bearerAuth` with `cookieAuth`, SAML, or a custom scheme.
-  States not using JWT must also remove `/token/claims/{sub}` from the User Service spec;
-  domain APIs will need runtime authorization calls without embedded JWT claims.
+- **Security scheme** — Replace `callerId` in `base/components/security-schemes.yaml` with
+  any scheme OpenAPI supports (OpenID Connect, OAuth 2.0, a bearer JWT, a cookie), for every
+  environment or per environment (see [Per environment](#per-environment)). Every domain API
+  follows. States not using JWT must also remove `/token/claims/{sub}` from the User Service
+  spec; domain APIs will need runtime authorization calls without embedded JWT claims.
 - **BackendAuthContext scope fields** — Add state-specific organizational scope claims
   (`counties`, `districts`, `regions`, `programs`). The base BackendAuthContext has no scope
   fields — states define what they need via overlay. Example: California adds `counties`; a
@@ -314,7 +364,7 @@ States can override the following via overlay:
 | 1 | [OAuth scope granularity](#decision-1-oauth-scope-granularity) | Coarse per-domain scopes at IdP; fine-grained enforcement via JWT `permissions` claims |
 | 2 | [Service-to-service authentication](#decision-2-service-to-service-authentication) | Client Credentials grant; service account `userId` in JWT |
 | 3 | [Event actor provenance](#decision-3-event-actor-provenance) | CloudEvents Auth Context extension (`authid` + `authtype`); required for FTI events |
-| 4 | [API security declarations](#decision-4-api-security-declarations) | Shared scheme in components; `security: - bearerAuth: []` per domain spec |
+| 4 | [API security declarations](#decision-4-api-security-declarations) | Shared schemes in components, chosen per state and environment; resolve requires them on every domain API |
 
 ---
 
@@ -426,11 +476,26 @@ domain API specs.
 - A shared base spec (option C) is non-standard and increases tooling complexity without
   benefit.
 
+- The scheme differs by state and by environment. A requirement written into each domain spec
+  by hand names one scheme, and changing it means editing every spec.
+- OpenAPI reads a requirement's scheme names from the same document's
+  `components.securitySchemes`, so each spec needs a `$ref` to the shared schemes too.
+
 **Options:**
-- **(A)** ✓ Shared scheme in `components/auth.yaml`; `security: - bearerAuth: []` at the top
-  of each domain spec; operation-level overrides for endpoints using different auth
+- **(A)** Shared scheme in `components/security-schemes.yaml`; `security: - bearerAuth: []`
+  written at the top of each domain spec; operation-level overrides for endpoints using
+  different auth
 - **(B)** Security scheme declared independently in each domain spec (no shared component)
 - **(C)** Global security in a shared base spec that all domain specs reference
+- **(D)** ✓ Shared schemes in `components/security-schemes.yaml`, which a state and each
+  environment change with overlays; resolve adds `security` and the `$ref`s to every domain
+  spec, as it adds the endpoints state machines generate. Operation-level `security` still
+  overrides it.
+
+**Decision:** D. A, written by hand, can't follow a state's or an environment's choice of
+scheme. D keeps one place to change, and the resolved specs, generated docs and clients all
+show what a caller must send. The framework's default scheme is the `X-Caller-Id` header, which
+the mock already used, so nothing changes for a set that doesn't overlay it.
 
 ---
 
@@ -472,7 +537,7 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Security declarations on all domain API specs | All major platforms declare auth requirements per-spec | **Planned** — follow-on implementation issue; 10 of 11 domain specs missing `security: - bearerAuth: []` |
+| Security declarations on all domain API specs | All major platforms declare auth requirements per-spec | **Implemented** — resolve requires the shared schemes on every domain API, per environment |
 
 ## References
 

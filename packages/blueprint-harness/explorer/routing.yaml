@@ -1,12 +1,7 @@
-# Where the harness explorer's calls are answered besides the mock in the page:
-# a session whose profile's provider is whisper streams to the Whisper
-# adapter beside this file, which transcribes in the page with no service;
-# one whose provider is fake-secured goes to the fake service behind sign-in.
 $schema: https://blueprint.codeforamerica.org/schemas/routing-schema.yaml
+# Local's routing: sessions under the whisper profile transcribe in the page,
+# with Whisper (adapters/whisper.js).
 routing:
   - api: communication-transcription-sessions-adapter
     match: { provider: whisper }
     handler: ./adapters/whisper.js
-  - api: communication-transcription-sessions-adapter
-    match: { provider: fake-secured }
-    handler: ./adapters/fake-secured.js

@@ -23,19 +23,31 @@ const MARK = '<!-- the mock: control panel -->';
  * keeps the mock's records, stubs and each page's results under, and
  * routing.js the server chosen in the page, adapters.js what answers each adapter,
  * sign-in.js who is signed in,
- * and activity.js the requests Try it sent.
+ * and activity.js the requests Try it sent, for every environment
+ * (try-it/environments.js). Switching environments reloads the page too, so it
+ * says so first, and nothing is forgotten then.
  */
 const resetOnReload = (root) => `
 <script>
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('${root}mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === \`\${kind}:\${scope}\` || key.startsWith(\`\${kind}:\${scope}#\`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([\`blueprint-mock-records:\${scope}\`, \`blueprint-mock-stubs:\${scope}\`, \`blueprint-mock-server:\${scope}\`, \`blueprint-mock-adapters:\${scope}\`, \`blueprint-mock-sign-in:\${scope}\`, \`blueprint-mock-audio:\${scope}\`, \`blueprint-mock-activity:\${scope}\`].includes(key)
-        || key.startsWith(\`blueprint-try-results:\${scope}:\`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(\`blueprint-try-results:\${scope}\`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -86,19 +98,27 @@ const launcher = (root) => `
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
+  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
+  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = activityOnly
+      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
+      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on, {
+      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
+      ...(activityOnly ? { views: ['activity'] } : {}),
+    }));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
@@ -143,7 +163,8 @@ window.close();
  */
 export function addControlPanel(contentDir) {
   if (!existsSync(join(contentDir, 'mock', 'mock.js'))) return;
-  const { sign_in: signIn } = loadConfig(contentDir);
+  const { sign_in: signIn, environments = [] } = loadConfig(contentDir);
+
   // As data on the page, not code: the Try it scripts read it (try-it/sign-in.js).
   const signInData = signIn ? `\n<script type="application/json" id="blueprint-sign-in">${JSON.stringify(signIn).replace(/</g, '\\u003c')}</script>` : '';
   for (const page of pagesUnder(contentDir)) {
@@ -155,5 +176,5 @@ export function addControlPanel(contentDir) {
     const at = html.lastIndexOf('</body>');
     writeFileSync(page, `${html.slice(0, at)}${added}\n${html.slice(at)}`);
   }
-  if (signIn) writeFileSync(join(contentDir, SIGN_IN_RETURN), signInReturn);
+  if (signIn || environments.some((environment) => environment.sign_in)) writeFileSync(join(contentDir, SIGN_IN_RETURN), signInReturn);
 }

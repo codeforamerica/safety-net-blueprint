@@ -34,19 +34,44 @@ authentication:
         - Federal system connections
       note: Certificate management is state responsibility
 
-  # OpenAPI security scheme definitions (for spec files)
+  # OpenAPI security schemes: how callers sign in
   openapi_security_schemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: OAuth 2.0 Bearer token
+    description: |
+      Define how callers sign in once, in base/components/security-schemes.yaml.
+      The framework's default is callerId, the X-Caller-Id header, which
+      identifies a caller without verifying them. Replace it with an overlay:
+      OpenID Connect or OAuth 2.0 pointing at the state's identity provider, a
+      bearer JWT, or a cookie. Where environments differ, put values in each
+      environment's .env file (${SIGN_IN_URL}) and a scheme of a different
+      kind in that environment's overlay (blueprint-resolve --env-overlay).
+      Name the claims, or headers, that identify the caller with x-caller, so
+      guards can read $caller.id and $caller.roles.
+
+      Don't write top-level security in a domain API: resolve requires the
+      shared schemes on every one. Declare operation-level security only where
+      an operation differs: [] for a public one, its own scheme, or callerId on
+      an adapter's operation that needs the caller signed in, which resolve
+      replaces with the environment's schemes. See
+      docs/architecture/cross-cutting/identity-access.md, API security declarations.
+    example: |
+      # overlays/sign-in.yaml
+      actions:
+        - target: "$"
+          files: base/components/security-schemes.yaml
+          update:
+            bearerAuth:
+              type: openIdConnect
+              openIdConnectUrl: ${SIGN_IN_URL}
+              x-caller: {id: userId, roles: roles}
+        - target: "$.callerId"
+          files: base/components/security-schemes.yaml
+          remove: true
 
     apiKeyAuth:
       type: apiKey
       in: header
       name: X-API-Key
-      description: API key for server-to-server calls
+      description: API key for server-to-server calls, declared on the operations that take it
 
   # Token validation requirements
   token_validation:
@@ -89,14 +114,15 @@ authorization:
   # Who may publish an event with publishEvent
   event_publishing:
     description: |
-      publishEvent takes every event type through one operation, so the checks
-      an operation would make for itself are made per event type. For each
-      type that something outside the server may publish, declare who may
-      publish it and for which subjects: the session's adapter, signed in as
-      the staff member, may publish that session's events and no one else's.
-      The server sets authtype and authid on the envelope from the caller's
-      token, ignoring what the publisher put there, and refuses a type with no
-      rule (403). See events.yaml, published_from_outside.
+      publishEvent is an OpenAPI operation on the platform API, so it requires
+      the environment's sign-in like every domain API; don't add security to
+      AsyncAPI documents for it. AsyncAPI security describes connecting to a
+      broker, and its scheme types differ from OpenAPI's, so it can't refer to
+      the shared schemes. Which records a caller may publish for, such as only their own session's events, is a guard on
+      the reaction that follows the event. The server sets authtype and authid
+      on the envelope from the caller, as the scheme identifies them (CloudEvents'
+      authcontext extension), ignoring what the publisher put there; nobody
+      identified is authtype unauthenticated. See events.yaml, published_from_outside.
 
   # OAuth scopes (coarse-grained API access)
   scopes:

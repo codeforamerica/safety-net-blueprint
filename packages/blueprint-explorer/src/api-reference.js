@@ -707,6 +707,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
  * @param {string} [card.className] - More classes for the card
  * @param {string} [card.attrs] - More attributes, starting with a space
  * @param {string} card.lineHtml - What names it, in the row
+ * @param {string} [card.nameHtml] - After the request, such as its summary
  * @param {string} [card.idHtml] - Beside that, such as its operationId
  * @param {string} [card.badgesHtml] - At the row's end, before the link
  * @param {string} card.docsHtml
@@ -714,18 +715,21 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
  * @param {boolean} [card.open] - Open from the start
  * @param {string} [card.linkTitle]
  */
-function operationCard({ id, className = '', attrs = '', lineHtml, idHtml = '', badgesHtml = '', docsHtml, sideHtml = '', open = false, linkTitle = 'Link to this endpoint' }) {
+function operationCard({ id, className = '', attrs = '', lineHtml, nameHtml = '', idHtml = '', badgesHtml = '', docsHtml, sideHtml = '', open = false, linkTitle = 'Link to this endpoint' }) {
   return `<div id="${id}" class="content-item${className ? ` ${className}` : ''}"${attrs} style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details${open ? ' open' : ''}>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         ${lineHtml}
       </span>
-      ${idHtml}
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        ${badgesHtml}
-        <a href="#${id}" class="permalink" title="${linkTitle}">#</a>
+      <span class="op-meta">
+        ${nameHtml}
+        ${idHtml}
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          ${badgesHtml}
+          <a href="#${id}" class="permalink" title="${linkTitle}">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -781,8 +785,8 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     className: `op-${esc(method.toLowerCase())}`,
     attrs: tryAttrs,
     lineHtml: `${methodBadge(method)}
-        <code class="op-path">${esc(path)}</code>
-        ${op.summary ? `<span class="op-name">${esc(op.summary)}</span>` : ''}`,
+        <code class="op-path">${path.split('/').map((segment) => `<span>${esc(segment)}</span>`).join('/<wbr>')}</code>`,
+    nameHtml: op.summary ? `<span class="op-name">${esc(op.summary)}</span>` : '',
     idHtml: op.operationId ? `<code class="op-id" title="operationId">${esc(op.operationId)}</code>` : '',
     badgesHtml: `${op.deprecated ? `<span style="font-size:9px;font-weight:700;color:#7A4800;background:${COLORS.lightYellow};border:1px solid ${COLORS.warmYellow};border-radius:3px;padding:1px 6px;">DEPRECATED</span>` : ''}
         ${relBadge}`,

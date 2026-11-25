@@ -212,7 +212,7 @@ export const whatHappened = (events, { trail, shown }) => {
   const box = el('div', '', 'happened');
   box.append(el('div', 'What happened', 'happened-title'));
   if (!events.length) {
-    box.append(el('div', 'No events: nothing others are told about changed.', 'happened-none'));
+    box.append(el('div', 'No events were published.', 'happened-none'));
     return box;
   }
   box.append(...eventLines(events, { trail, shown }));

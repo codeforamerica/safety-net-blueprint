@@ -264,7 +264,7 @@ export interface ResolveOptions {
    * from the contracts as these overlays leave them.
    */
   overlays?: Overlay[];
-  /** Keep only nodes whose `x-environments` lists this, and strip the marker. */
+  /** Keep only nodes whose `x-environments` lists this; the marker stays. */
   envTarget?: string | null;
   /** Values for `${VAR}` placeholders. Unresolved ones are left literal. */
   envVariables?: Record<string, string>;
@@ -287,6 +287,12 @@ export interface ResolveOptions {
    * is cut to the entries about these.
    */
   apis?: string[];
+  /**
+   * The environment's own overlays, for what differs in shape between
+   * environments, such as how callers sign in. Applied after everything else,
+   * with the environment's `envVariables`, as `applyEnvironment` does.
+   */
+  envOverlays?: Overlay[];
 }
 
 export interface ResolveResult {
@@ -488,6 +494,26 @@ export function validateRouting(
   document: { routing: Route[] },
   docs: Doc[],
 ): { errors: string[]; warnings: string[] };
+
+/**
+ * Apply one environment to contracts `resolve` built without one: the release
+ * step of the Twelve-Factor App's build, release, run, as Helm fills in a
+ * chart from an environment's values. Applies the environment's overlays,
+ * keeps the nodes its `x-environments` lists, fills in its `${VAR}` values,
+ * and makes every domain API require the sign-in it has left — what `resolve`
+ * does last for an environment it's given. Runs in a browser too.
+ */
+export function applyEnvironment(
+  docs: Doc[],
+  environment?: {
+    /** Its overlays, for what differs in shape. */
+    overlays?: Overlay[];
+    /** The name `x-environments` lists it by. */
+    envTarget?: string | null;
+    /** Its config: the values of the `${VAR}` placeholders. */
+    envVariables?: Record<string, string>;
+  },
+): { docs: Doc[]; warnings: string[]; applied: string[]; unresolved: string[] };
 
 /**
  * Read out a fact the documents already state.

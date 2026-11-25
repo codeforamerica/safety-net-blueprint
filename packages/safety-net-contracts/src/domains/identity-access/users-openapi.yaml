@@ -35,9 +35,6 @@ tags:
   - name: Token
     description: JWT enrichment (called by IdP).
 
-security:
-  - bearerAuth: []
-
 paths:
   # ─────────────────────────────────────────────────────────────────────────────
   # User Management
@@ -257,16 +254,9 @@ paths:
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: |
-        JWT from Identity Provider with embedded permissions.
-
-        Expected claims structure: see schemas/domain/identity-access.yaml#/$defs/JwtClaims
-        Documentation: docs/architecture/cross-cutting/identity-access.md
-
+    # The identity provider's own call, before anyone is signed in. Every other
+    # operation requires the shared sign-in (base/components/security-schemes.yaml,
+    # overlays/sign-in.yaml), which resolve applies.
     apiKeyAuth:
       type: apiKey
       in: header

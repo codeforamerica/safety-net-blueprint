@@ -93,6 +93,15 @@ describe('applyOverlay add: action', () => {
     assert.equal(warnings.length, 0);
   });
 
+  test('an update on $ merges into the whole document', () => {
+    // A state adding a second sign-in scheme beside the framework's, say, as
+    // the Overlay specification writes it.
+    const overlay = { overlay: '1.0.0', actions: [{ target: '$', update: { cookieAuth: { type: 'apiKey', in: 'cookie', name: 'session' } } }] };
+    const { result, warnings } = applyOverlay({ callerId: { type: 'apiKey' } }, overlay, { silent: true });
+    assert.deepEqual(Object.keys(result), ['callerId', 'cookieAuth']);
+    assert.equal(warnings.length, 0);
+  });
+
   test('warns and skips when add: targets an existing key', () => {
     const doc = makeDoc();
     const overlay = {

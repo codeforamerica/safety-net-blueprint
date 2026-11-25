@@ -1,11 +1,22 @@
-# How callers authenticate, shared by every API that requires it: an API
-# names a scheme in its components' securitySchemes with a $ref here, and an
-# operation requires it with `security`. See
-# docs/architecture/cross-cutting/identity-access.md.
-bearerAuth:
-  type: http
-  scheme: bearer
-  bearerFormat: JWT
+# How callers identify themselves, shared by every domain API: resolve makes
+# each one require the schemes here, as alternatives, in whichever environment
+# it's resolved for. A state overlays this file with how its callers sign in,
+# such as OpenID Connect with its identity provider; a scheme that differs by
+# environment carries x-environments, and values that differ, such as the
+# provider's address, come from each environment's ${VAR}s. An operation that
+# needs the caller signed in when its API otherwise doesn't, such as an
+# adapter's, names callerId in its own security, and gets the same schemes.
+# See docs/architecture/cross-cutting/identity-access.md.
+callerId:
+  type: apiKey
+  in: header
+  name: X-Caller-Id
   description: >
-    The signed-in caller's token, a JWT from the state's identity provider.
-    An operation that requires it answers 401 without a valid one.
+    Who's calling, by the id the records hold, with their roles in
+    X-Caller-Roles. It identifies the caller without proving anything, as
+    the mock does; a deployment overlays it with a scheme that does.
+  # Where the caller's fields come from: for a scheme in a header, the
+  # header's value is the id and roles come from the header named here; for
+  # a token, the claims named.
+  x-caller:
+    roles: X-Caller-Roles

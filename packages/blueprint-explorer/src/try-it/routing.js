@@ -11,8 +11,13 @@
  * session's profile chooses its adapter.
  */
 
-/** The site's routing entries, as its script set them. */
-export const siteRouting = () => globalThis.BlueprintExplorer?.routing ?? [];
+import { currentEnvironment } from './environments.js';
+
+/**
+ * The site's routing entries: the picked environment's, for a site that lists
+ * environments (environments.js); otherwise as its script set them.
+ */
+export const siteRouting = () => currentEnvironment()?.routing ?? globalThis.BlueprintExplorer?.routing ?? [];
 
 /**
  * What an entry covers, in routing's own terms: an operation, an API, or a

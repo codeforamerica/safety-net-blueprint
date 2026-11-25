@@ -120,11 +120,19 @@ export function recordAdapters(resource, docs) {
   const fields = registryFields(schemaNamed(resource, docs));
   // The entries matching on a request field drawn from a registry, by registry and value.
   const byValue = new Map();
+  // An entry with no match answers the adapter for every record, as a whole
+  // API routed to a service does, where no matching entry answers first.
+  const everyRecord = new Map();
   const apis = new Set();
   for (const doc of adapterDocs(docs)) {
     const request = requestFields(doc);
+    const related = [...request.values()].some((registry) => fields.some((field) => field.registry === registry));
     for (const entry of entriesFor(doc.api)) {
-      for (const [path, value] of Object.entries(entry.match ?? {})) {
+      if (!entry.match) {
+        if (related && !everyRecord.has(doc.api)) { apis.add(doc.api); everyRecord.set(doc.api, entry); }
+        continue;
+      }
+      for (const [path, value] of Object.entries(entry.match)) {
         const registry = request.get(path);
         if (!registry || !fields.some((field) => field.registry === registry)) continue;
         apis.add(doc.api);
@@ -136,7 +144,7 @@ export function recordAdapters(resource, docs) {
     apis: [...apis],
     entryFor: (record) => [...apis].map((api) => ({
       api,
-      entry: fields.map((field) => byValue.get(`${api} ${field.registry} ${record?.[field.name]}`)).find(Boolean) ?? null,
+      entry: fields.map((field) => byValue.get(`${api} ${field.registry} ${record?.[field.name]}`)).find(Boolean) ?? everyRecord.get(api) ?? null,
     })),
   };
 }

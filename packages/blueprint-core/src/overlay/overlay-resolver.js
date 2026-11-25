@@ -17,9 +17,6 @@
  * warning among many.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import yaml from 'js-yaml';
 
 // =============================================================================
 // Path Parsing
@@ -480,46 +477,6 @@ export function addAtPath(obj, path, value) {
 }
 
 /**
- * Load a replacement schema from a $ref path
- * @param {string} refPath - The $ref path (e.g., "./replacements/expenses.yaml#/CaliforniaExpenses")
- * @param {string} baseDir - The base directory to resolve relative paths from
- * @returns {{ value: Object | null, error: string | null }}
- */
-export function loadReplacementRef(refPath, baseDir) {
-  // Parse the $ref: "./path/to/file.yaml#/SchemaName"
-  const [filePath, pointer] = refPath.split('#');
-
-  if (!filePath) {
-    return { value: null, error: 'Invalid $ref: missing file path' };
-  }
-
-  const fullPath = join(baseDir, filePath);
-
-  if (!existsSync(fullPath)) {
-    return { value: null, error: `Replacement file not found: ${fullPath}` };
-  }
-
-  try {
-    const content = readFileSync(fullPath, 'utf8');
-    const parsed = yaml.load(content);
-
-    if (pointer) {
-      // Extract the specific schema from the file
-      const schemaName = pointer.startsWith('/') ? pointer.slice(1) : pointer;
-      if (!parsed[schemaName]) {
-        return { value: null, error: `Schema '${schemaName}' not found in ${filePath}` };
-      }
-      return { value: parsed[schemaName], error: null };
-    }
-
-    // Return entire file contents if no pointer
-    return { value: parsed, error: null };
-  } catch (err) {
-    return { value: null, error: `Failed to load replacement: ${err.message}` };
-  }
-}
-
-/**
  * Apply overlay actions to a spec.
  * Supports: update, remove, rename, replace (with optional $ref), append.
  *
@@ -528,12 +485,16 @@ export function loadReplacementRef(refPath, baseDir) {
  * @param {Object} options - Options for applying overlay
  * @param {boolean} options.silent - Suppress console output
  * @param {string} options.overlayDir - Directory containing the overlay file (for resolving $ref in replace)
+ * @param {(refPath: string, baseDir: string) => { value: object|null, error: string|null }} [options.loadRef] -
+ *   Reads a `$ref`'s file, for `replace` and `add`; Node passes
+ *   loadReplacementRef (load-ref.js). Without it, as in a page, a `$ref` is
+ *   reported and its action skipped.
  * @returns {{ result: Object, warnings: string[] }}
  */
 export function applyOverlay(spec, overlay, options = {}) {
   const result = JSON.parse(JSON.stringify(spec)); // Deep clone
   const warnings = [];
-  const { silent = false, overlayDir = null } = options;
+  const { silent = false, overlayDir = null, loadRef = null } = options;
 
   if (!overlay.actions || !Array.isArray(overlay.actions)) {
     return { result, warnings };
@@ -545,6 +506,18 @@ export function applyOverlay(spec, overlay, options = {}) {
     if (!target) {
       if (!silent) {
         console.warn('Overlay action missing target, skipping');
+      }
+      continue;
+    }
+
+    // The whole document, as the Overlay specification's `$` means: an update
+    // merges into it, as one on any object does.
+    if (parsePath(target).length === 0) {
+      if (update && typeof update === 'object' && !Array.isArray(update)) {
+        Object.assign(result, update);
+        if (!silent && action.description) console.log(`  - Applied: ${action.description}`);
+      } else {
+        warnings.push(`Target $ is the whole document; only an update with an object applies to it (action: "${action.description || target}")`);
       }
       continue;
     }
@@ -590,7 +563,7 @@ export function applyOverlay(spec, overlay, options = {}) {
           warnings.push(`Cannot resolve $ref in replace action: overlayDir not provided (action: "${action.description || target}")`);
           continue;
         }
-        const { value, error } = loadReplacementRef(replace.$ref, overlayDir);
+        const { value, error } = loadRef ? loadRef(replace.$ref, overlayDir) : { value: null, error: `Cannot read ${replace.$ref} here: no file to read it from` };
         if (error) {
           warnings.push(`${error} (action: "${action.description || target}")`);
           continue;
@@ -622,7 +595,7 @@ export function applyOverlay(spec, overlay, options = {}) {
           warnings.push(`Cannot resolve $ref in add action: overlayDir not provided (action: "${action.description || target}")`);
           continue;
         }
-        const { value, error } = loadReplacementRef(add.$ref, overlayDir);
+        const { value, error } = loadRef ? loadRef(add.$ref, overlayDir) : { value: null, error: `Cannot read ${add.$ref} here: no file to read it from` };
         if (error) {
           warnings.push(`${error} (action: "${action.description || target}")`);
           continue;
