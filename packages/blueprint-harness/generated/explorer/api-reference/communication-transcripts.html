@@ -223,7 +223,8 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The written record of a conversation. Starting a transcript opens it for recording; pausing takes the conversation off the record; closing ends it. A transcript refers to what it records — an interview, a call — and names the profile it was started under, which says the transcription service, and the client and model that produced its lines. Updating corrects what it records; deleting removes it, and the event left behind says which one and by whom.</p><p style="margin:0 0 6px;">A profile is a state's choice of transcription service and languages for a kind of conversation. The deployment's config seeds them; they can be added and changed here, never deleted, so every transcript's profile still exists.</p><p style="margin:0 0 6px;">Its entries are its timeline, in the order things happened: lines, gaps where nothing was captured, and pauses. Every time on a transcript and its entries is the client's — when it started, paused, resumed and closed, and when each line was said — so they are compared on one clock.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The written record of a conversation, and the profiles that say which transcription service and languages to use for each kind of conversation.</p></div></div>
+      <p style="margin:.5rem 0 0;font-size:14px;">See it work: <a href="../scenarios/index.html#tour=scenarios%2Ftranscription-chat.arazzo.yaml">Transcribing a typed conversation (a chat)</a>, <a href="../scenarios/index.html#tour=scenarios%2Ftranscription.arazzo.yaml">Transcribing a spoken conversation</a></p>
       
     </div><section id="section-transcripts" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -6396,7 +6397,7 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
         || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
@@ -6437,33 +6438,33 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
-  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
-  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = activityOnly
-      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
-      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
     // In the environment the reader picked (try-it/environments.js).
-    return ready().then(() => BlueprintMock.setTryIt(on, {
-      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
-      ...(activityOnly ? { views: ['activity'] } : {}),
-    }));
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
 <!-- the site's routing -->

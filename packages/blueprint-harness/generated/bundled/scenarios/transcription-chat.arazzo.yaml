@@ -31,6 +31,7 @@ sourceDescriptions:
   - name: mock
     url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
     type: openapi
+    x-internal: true
 components:
   parameters:
     caller:

@@ -9,15 +9,6 @@ info:
   description: |
     Suggestions put in front of a person, and their decisions on them. A
     suggestion can come from an assistant, a rule or another person.
-
-    An `operation` suggestion proposes a call to an operation the contracts
-    declare; accepting it makes the call, as the person accepting. An
-    `informing` suggestion points something out about a record, in a category
-    the contract set declares; accepting it means the person took it up.
-
-    Evidence refers to where a suggestion came from — a transcript's lines, a
-    document — without quoting it, so the source's own access rules apply when
-    it is shown.
 servers:
   - url: https://api.example.com/decision-support
     description: Production server

@@ -187,7 +187,8 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Suggestions put in front of a person, and their decisions on them. A suggestion can come from an assistant, a rule or another person.</p><p style="margin:0 0 6px;">An <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">operation</code> suggestion proposes a call to an operation the contracts declare; accepting it makes the call, as the person accepting. An <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">informing</code> suggestion points something out about a record, in a category the contract set declares; accepting it means the person took it up.</p><p style="margin:0 0 6px;">Evidence refers to where a suggestion came from — a transcript's lines, a document — without quoting it, so the source's own access rules apply when it is shown.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Suggestions put in front of a person, and their decisions on them. A suggestion can come from an assistant, a rule or another person.</p></div></div>
+      <p style="margin:.5rem 0 0;font-size:14px;">See it work: <a href="../scenarios/index.html#tour=scenarios%2Fsuggestion-lifecycle.arazzo.yaml">A suggestion, from proposal to decision</a></p>
       
     </div><section id="section-suggestions" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -5785,7 +5786,7 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
         || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
@@ -5826,33 +5827,33 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
-  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
-  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = activityOnly
-      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
-      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
     // In the environment the reader picked (try-it/environments.js).
-    return ready().then(() => BlueprintMock.setTryIt(on, {
-      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
-      ...(activityOnly ? { views: ['activity'] } : {}),
-    }));
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
 <!-- the site's routing -->

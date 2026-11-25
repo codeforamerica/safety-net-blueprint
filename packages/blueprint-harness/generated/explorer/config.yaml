@@ -50,14 +50,14 @@ events:
 environments:
   # The sandbox: everything in the page, and nobody signs in. Sessions under
   # the whisper profile transcribe in it.
-  - name: Local
+  - name: Mock
     variables: ../environments/local.env
     routing: routing.yaml
   # A stand-in for a deployment that requires signing in: the contracts
   # require it (production.overlay.yaml), through the stand-in sign-in page in
   # pages/. Sessions under fake-secured go to a fake service whose
   # credentials need it.
-  - name: Production
+  - name: Live
     variables: ../environments/production.env
     overlays: [../environments/production.overlay.yaml]
     routing: routing-production.yaml

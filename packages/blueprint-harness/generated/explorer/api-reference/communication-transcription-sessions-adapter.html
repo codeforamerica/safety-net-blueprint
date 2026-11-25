@@ -185,7 +185,8 @@
     </nav>
     <main id="content">
       <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">The state's transcription session adapter: how a transcription session reaches one transcription service. It has two parts.</p><p style="margin:0 0 6px;"><strong>The streaming part,</strong> beside the session: the session calls it to start, pause and stop streaming. Started, it gets a credential from the credentials part when its service takes one, opens the connection, streams the audio, and reports what happens by publishing the session's events with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">publishEvent</code> — connected, disconnected, failed, a line in progress, a finished line, and ended. It never calls the session's operations, and the session's API has none for it.</p><p style="margin:0 0 6px;"><strong>The credentials part,</strong> which holds the service's secret: it answers with where the streaming part connects and a short-lived credential from the transcription service. It's stateless: one request, one answer. It maps the languages and audio it's given to what its service takes, and holds everything that doesn't change from one call to the next — a region, a custom vocabulary, redaction — as its own configuration. An adapter whose service takes no credential, such as a model running in the page, has none.</p><p style="margin:0 0 6px;">Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">How a transcription session reaches one transcription service: the session calls it to start, pause and stop streaming, and it publishes the session's events with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">publishEvent</code>. Requests extend AdapterRequest, so the adapter echoes metadata back unchanged.</p></div></div>
+      <p style="margin:.5rem 0 0;font-size:14px;">See it work: <a href="../scenarios/index.html#tour=scenarios%2Ftranscription.arazzo.yaml">Transcribing a spoken conversation</a></p>
       
     </div><section id="section-streaming" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
@@ -1271,7 +1272,7 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
   try {
     for (const key of Object.keys(sessionStorage)) {
-      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-sign-in', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
         || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
@@ -1312,33 +1313,33 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
-  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
-  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = activityOnly
-      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
-      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
+    toggle.title = on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page';
   };
   const turn = (on) => {
     remember(on);
     show(on);
     // In the environment the reader picked (try-it/environments.js).
-    return ready().then(() => BlueprintMock.setTryIt(on, {
-      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
-      ...(activityOnly ? { views: ['activity'] } : {}),
-    }));
+    return ready().then(() => BlueprintMock.setTryIt(on,
+      BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope })));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.
   addEventListener('try-it', (event) => { remember(event.detail.on); show(event.detail.on); });
   show(stored());
-  if (stored()) turn(true);
+  // Wait until every script on the page has run: site-routing.js, which lists
+  // the environments, comes after this one, so the panel would otherwise read
+  // and write the records of no environment.
+  if (stored()) {
+    if (document.readyState === 'loading') addEventListener('DOMContentLoaded', () => turn(true), { once: true });
+    else turn(true);
+  }
 })();
 </script>
 <!-- the site's routing -->
