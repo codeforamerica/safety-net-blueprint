@@ -2190,3 +2190,8 @@ components:
             - "null"
           format: date
           description: The date the document itself bears, which is not the date it arrived.
+  securitySchemes:
+    callerId:
+      $ref: ../../base/components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

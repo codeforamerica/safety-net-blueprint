@@ -30,6 +30,7 @@ export const listRegistryTypes = <ThrowOnError extends boolean = false>(options?
     requestValidator: async (data) => await zListRegistryTypesData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListRegistryTypesResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/registry',
     ...options
 });
@@ -45,6 +46,7 @@ export const listRegistryEntries = <ThrowOnError extends boolean = false>(option
     requestValidator: async (data) => await zListRegistryEntriesData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListRegistryEntriesResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/registry/{type}',
     ...options
 });
@@ -58,6 +60,7 @@ export const getRegistryEntry = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zGetRegistryEntryData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetRegistryEntryResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/registry/{type}/{entryId}',
     ...options
 });

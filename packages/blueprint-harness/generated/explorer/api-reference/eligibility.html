@@ -76,10 +76,15 @@
   /* An operation's sections: plain headings and lists, one box only, the card. */
   /* Closed, an operation is one line tinted by its method, as Swagger lists
      them: method, path, name. Open, it's the two columns. */
-  .op-line { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .op-path { font: 600 13px monospace; color: #1a1a1a; word-break: break-all; }
+  /* The request (method and path) on its own line, the card's full width;
+     the summary, operationId and links on the line below. */
+  .op-line { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .op-meta { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 20px; }
+  /* The path keeps its room and breaks only after a slash; the operationId shrinks first. */
+  .op-path { font: 600 13px monospace; color: #1a1a1a; min-width: 0; overflow-wrap: anywhere; }
+  .op-path > span { white-space: nowrap; }
   .op-name { font-size: 13px; color: #555; }
-  .op-id { font-size: 11px; color: #999; flex-shrink: 0; }
+  .op-id { font-size: 11px; color: #999; flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .content-item.op-get    { border-color: #00AD93 !important; }    .op-get > details > summary    { background: #E2F9F666; }
   .content-item.op-post   { border-color: #5650BE !important; }   .op-post > details > summary   { background: #E6EBF988; }
   .content-item.op-patch, .content-item.op-put { border-color: #FFB446 !important; } .op-patch > details > summary, .op-put > details > summary { background: #FFF3E088; }
@@ -194,18 +199,20 @@
       </div>
       <div id="op-get-determinations" class="content-item op-get" data-try-op="listDeterminations" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/determinations</code>
-        <span class="op-name">List determinations</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span></code>
       </span>
-      <code class="op-id" title="operationId">listDeterminations</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List determinations</span>
+        <code class="op-id" title="operationId">listDeterminations</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-determinations" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-determinations" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -483,18 +490,20 @@
   </details>
 </div><div id="op-post-determinations" class="content-item op-post" data-try-op="createDetermination" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/determinations</code>
-        <span class="op-name">Create a determination</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span></code>
       </span>
-      <code class="op-id" title="operationId">createDetermination</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Create a determination</span>
+        <code class="op-id" title="operationId">createDetermination</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-post-determinations" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-determinations" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -775,18 +784,20 @@
   </details>
 </div><div id="op-get-determinations-determinationId" class="content-item op-get" data-try-op="getDetermination" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/determinations/{determinationId}</code>
-        <span class="op-name">Get a determination</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDetermination</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a determination</span>
+        <code class="op-id" title="operationId">getDetermination</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-determinations-determinationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-determinations-determinationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -968,18 +979,20 @@
   </details>
 </div><div id="op-patch-determinations-determinationId" class="content-item op-patch" data-try-op="updateDetermination" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-        <code class="op-path">/determinations/{determinationId}</code>
-        <span class="op-name">Update a determination</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span></code>
       </span>
-      <code class="op-id" title="operationId">updateDetermination</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Update a determination</span>
+        <code class="op-id" title="operationId">updateDetermination</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-patch-determinations-determinationId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-patch-determinations-determinationId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1263,18 +1276,20 @@
   </details>
 </div><div id="op-post-determinations-determinationId-complete" class="content-item op-post" data-try-op="completeDetermination" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-        <code class="op-path">/determinations/{determinationId}/complete</code>
-        <span class="op-name">Complete</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span>/<wbr><span>complete</span></code>
       </span>
-      <code class="op-id" title="operationId">completeDetermination</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-        
+      <span class="op-meta">
+        <span class="op-name">Complete</span>
+        <code class="op-id" title="operationId">completeDetermination</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         <a href="../state-machine-docs/eligibility.html#action-determination-complete" title="State machine action: complete" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;">State machine →</a>
-        <a href="#op-post-determinations-determinationId-complete" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-post-determinations-determinationId-complete" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1552,18 +1567,20 @@
       </div>
       <div id="op-get-determinations-determinationId-decisions" class="content-item op-get" data-try-op="listDecisions" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/determinations/{determinationId}/decisions</code>
-        <span class="op-name">List decisions</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span>/<wbr><span>decisions</span></code>
       </span>
-      <code class="op-id" title="operationId">listDecisions</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">List decisions</span>
+        <code class="op-id" title="operationId">listDecisions</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-determinations-determinationId-decisions" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-determinations-determinationId-decisions" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -1835,18 +1852,20 @@
   </details>
 </div><div id="op-get-determinations-determinationId-decisions-decisionId" class="content-item op-get" data-try-op="getDecision" data-try-file="domains/eligibility/eligibility-openapi.yaml" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:6px;overflow:hidden;">
   <details>
-    <summary class="op-row" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
+    <summary class="op-row" style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;">
       <span class="op-line">
+        <span style="font-size:10px;color:#aaa;width:10px;flex-shrink:0;" class="chevron">▶</span>
         <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-        <code class="op-path">/determinations/{determinationId}/decisions/{decisionId}</code>
-        <span class="op-name">Get a decision</span>
+        <code class="op-path"><span></span>/<wbr><span>determinations</span>/<wbr><span>{determinationId}</span>/<wbr><span>decisions</span>/<wbr><span>{decisionId}</span></code>
       </span>
-      <code class="op-id" title="operationId">getDecision</code>
-      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <span class="op-meta">
+        <span class="op-name">Get a decision</span>
+        <code class="op-id" title="operationId">getDecision</code>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+          
         
-        
-        <a href="#op-get-determinations-determinationId-decisions-decisionId" class="permalink" title="Link to this endpoint">#</a>
+          <a href="#op-get-determinations-determinationId-decisions-decisionId" class="permalink" title="Link to this endpoint">#</a>
+        </span>
       </span>
     </summary>
     <div class="op-body">
@@ -2253,23 +2272,33 @@
 <script src="../mock/contracts.js" defer></script>
 <script type="module">
 if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
-  BlueprintMock.mountSendPanels({
+  // In the environment the reader picked (try-it/environments.js).
+  BlueprintMock.mountSendPanels(BlueprintMock.inEnvironment({
     contracts: BlueprintContracts, version: BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
-  });
+  }));
 }
 </script>
 <!-- the mock: control panel -->
-<script type="application/json" id="blueprint-sign-in">{"client_id":"blueprint-harness"}</script>
 <script>
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-adapters:${scope}`, `blueprint-mock-sign-in:${scope}`, `blueprint-mock-audio:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -2309,19 +2338,27 @@ if (globalThis.BlueprintMock && globalThis.BlueprintContracts) {
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
+  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
+  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = activityOnly
+      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
+      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on, {
+      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
+      ...(activityOnly ? { views: ['activity'] } : {}),
+    }));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.

@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- The page is already interactive: its switch opens the mock's Activity only (lib/control-panel.js). -->
+<meta name="blueprint-try-it" content="activity">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scenarios</title>
 <!--
@@ -339,12 +341,17 @@
 <script src="../mock/contracts.js"></script>
 <script type="module">
 // Classic scripts beside the page define both, so it works opened from disk.
-const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom } =
+const { startMock, extract, generate, startScenario, operationIndex, controlOperations, hostMock, mockChanged, logRequest, awayFrom, inEnvironment } =
   globalThis.BlueprintMock;
 
-// Where this explorer keeps the mock's records between its pages: under the
-// mock's own folder, which every page that runs it shares.
-const records = { scope: new URL('../mock/', location.href).href, version: globalThis.BlueprintContractsVersion };
+// The site as the picked environment has it (environments.js), and where this
+// explorer keeps the mock's records between its pages: under the mock's own
+// folder, which every page that runs it shares, apart for each environment.
+// Scenarios run against the mock, so always in the site's first environment, the sandbox.
+const site = inEnvironment({
+  contracts: globalThis.BlueprintContracts, version: globalThis.BlueprintContractsVersion, scope: new URL('../mock/', location.href).href,
+}, { first: true });
+const records = { scope: site.scope, version: site.version };
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, text = '', className = '') => {
@@ -381,10 +388,10 @@ let tourScope = null;           // the workflows the run covers, when it started
 let tourLast = null;            // the last step this run ran, by workflow/step
 let branchClosed = false;       // the branch being walked, closed in the list down the side
 
-/** The contract set, which contracts.js beside the page defines. */
+/** The contract set, which contracts.js beside the page defines, in the picked environment. */
 const loadContracts = async () => {
   if (!globalThis.BlueprintContracts) throw new Error('contracts.js did not load');
-  return globalThis.BlueprintContracts;
+  return site.contracts;
 };
 
 // ── Reading the contracts ───────────────────────────────────────────────────
@@ -2284,17 +2291,26 @@ boot().catch((error) => {
 });
 </script>
 <!-- the mock: control panel -->
-<script type="application/json" id="blueprint-sign-in">{"client_id":"blueprint-harness"}</script>
 <script>
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-adapters:${scope}`, `blueprint-mock-sign-in:${scope}`, `blueprint-mock-audio:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -2334,19 +2350,27 @@ boot().catch((error) => {
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
+  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
+  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = activityOnly
+      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
+      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on, {
+      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
+      ...(activityOnly ? { views: ['activity'] } : {}),
+    }));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.

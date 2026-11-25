@@ -613,3 +613,8 @@ components:
         status: proposed
         createdAt: "2026-10-11T14:05:00Z"
         updatedAt: "2026-10-11T14:05:00Z"
+  securitySchemes:
+    callerId:
+      $ref: ../../components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

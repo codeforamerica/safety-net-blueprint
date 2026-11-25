@@ -26,6 +26,7 @@ export const listDocuments = <ThrowOnError extends boolean = false>(options?: Op
     requestValidator: async (data) => await zListDocumentsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListDocumentsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/documents',
     ...options
 });
@@ -41,6 +42,7 @@ export const uploadDocument = <ThrowOnError extends boolean = false>(options: Op
     requestValidator: async (data) => await zUploadDocumentData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUploadDocumentResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/documents',
     ...options,
     headers: {
@@ -56,6 +58,7 @@ export const getDocument = <ThrowOnError extends boolean = false>(options: Optio
     requestValidator: async (data) => await zGetDocumentData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetDocumentResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/documents/{documentId}',
     ...options
 });

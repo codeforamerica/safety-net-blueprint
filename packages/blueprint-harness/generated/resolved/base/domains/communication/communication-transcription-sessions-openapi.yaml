@@ -472,3 +472,8 @@ components:
           type: string
           format: date-time
           description: When it happened, by the client's clock.
+  securitySchemes:
+    callerId:
+      $ref: ../../components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

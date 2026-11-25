@@ -83,3 +83,8 @@ components:
                         - type: boolean
                         - type: "null"
       description: Evaluation result for expeditedSnap.
+  securitySchemes:
+    callerId:
+      $ref: ../../base/components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

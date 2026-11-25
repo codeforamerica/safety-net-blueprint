@@ -34,6 +34,7 @@ export const listEvents = <ThrowOnError extends boolean = false>(options?: Optio
     requestValidator: async (data) => await zListEventsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListEventsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/events',
     ...options
 });
@@ -49,6 +50,7 @@ export const publishEvent = <ThrowOnError extends boolean = false>(options: Opti
     requestValidator: async (data) => await zPublishEventData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zPublishEventResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/events',
     ...options,
     headers: {
@@ -88,6 +90,7 @@ export const streamEvents = <ThrowOnError extends boolean = false>(options?: Opt
     requestValidator: async (data) => await zStreamEventsData.parseAsync(data),
     responseType: 'text',
     responseValidator: async (data) => await zStreamEventsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/events/stream',
     ...options
 });
@@ -101,6 +104,7 @@ export const getEvent = <ThrowOnError extends boolean = false>(options: Options<
     requestValidator: async (data) => await zGetEventData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetEventResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/events/{eventId}',
     ...options
 });

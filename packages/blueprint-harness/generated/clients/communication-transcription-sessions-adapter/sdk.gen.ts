@@ -121,7 +121,7 @@ export const requestCredentials = <ThrowOnError extends boolean = false>(options
     requestValidator: async (data) => await zRequestCredentialsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zRequestCredentialsResponse.parseAsync(data),
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/credentials',
     ...options,
     headers: {

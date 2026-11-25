@@ -22664,3 +22664,14 @@ components:
             - "null"
           format: date
           description: The date the document itself bears, which is not the date it arrived.
+  securitySchemes:
+    callerId:
+      type: apiKey
+      in: header
+      name: X-Caller-Id
+      description: |
+        Who's calling, by the id the records hold, with their roles in X-Caller-Roles. It identifies the caller without proving anything, as the mock does; a deployment overlays it with a scheme that does.
+      x-caller:
+        roles: X-Caller-Roles
+security:
+  - callerId: []

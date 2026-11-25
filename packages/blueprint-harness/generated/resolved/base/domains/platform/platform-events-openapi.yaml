@@ -241,3 +241,8 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Event"
+  securitySchemes:
+    callerId:
+      $ref: ../../components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

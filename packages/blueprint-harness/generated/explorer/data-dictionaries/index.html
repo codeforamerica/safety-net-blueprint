@@ -76,17 +76,26 @@
     
   </script>
 <!-- the mock: control panel -->
-<script type="application/json" id="blueprint-sign-in">{"client_id":"blueprint-harness"}</script>
 <script>
 (() => {
   let reloaded = false;
   try { reloaded = performance.getEntriesByType('navigation')[0]?.type === 'reload'; } catch { /* not known */ }
-  if (!reloaded) return;
   const scope = new URL('../mock/', location.href).href;
   try {
+    if (sessionStorage.getItem('blueprint-mock-switching:' + scope)) {
+      sessionStorage.removeItem('blueprint-mock-switching:' + scope);
+      // A switch, not a reload: the records go on (try-it/records.js reads this).
+      document.documentElement.dataset.environmentSwitched = '';
+      return;
+    }
+  } catch { /* not switching */ }
+  if (!reloaded) return;
+  // Each environment's keys have its name after the scope (scope#name).
+  const ours = (key, kind) => key === `${kind}:${scope}` || key.startsWith(`${kind}:${scope}#`);
+  try {
     for (const key of Object.keys(sessionStorage)) {
-      if ([`blueprint-mock-records:${scope}`, `blueprint-mock-stubs:${scope}`, `blueprint-mock-server:${scope}`, `blueprint-mock-adapters:${scope}`, `blueprint-mock-sign-in:${scope}`, `blueprint-mock-audio:${scope}`, `blueprint-mock-activity:${scope}`].includes(key)
-        || key.startsWith(`blueprint-try-results:${scope}:`)) sessionStorage.removeItem(key);
+      if (['blueprint-mock-records', 'blueprint-mock-stubs', 'blueprint-mock-server', 'blueprint-mock-adapters', 'blueprint-mock-sign-in', 'blueprint-mock-audio', 'blueprint-mock-activity'].some((kind) => ours(key, kind))
+        || key.startsWith(`blueprint-try-results:${scope}`)) sessionStorage.removeItem(key);
     }
   } catch { /* nothing saved */ }
 })();
@@ -126,19 +135,27 @@
   toggle.type = 'button';
   toggle.setAttribute('role', 'switch');
   toggle.setAttribute('aria-controls', 'mock-panel');
-  toggle.append('Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
+  // A page that's already interactive, such as Scenarios, asks for the Activity view only.
+  const activityOnly = document.querySelector('meta[name="blueprint-try-it"]')?.content === 'activity';
+  toggle.append(activityOnly ? 'Activity' : 'Try it', Object.assign(document.createElement('span'), { className: 'knob' }));
   const crumbs = document.querySelector('.page-crumbs');
   if (crumbs) crumbs.append(toggle); else { toggle.classList.add('floating'); document.body.append(toggle); }
 
   const show = (on) => {
     document.documentElement.dataset.tryIt = on ? 'on' : 'off';
     toggle.setAttribute('aria-checked', String(on));
-    toggle.title = on ? 'Turn off Try it: the page shows the reference alone' : 'Turn on Try it: send requests to the mock running in this page, and see what happens';
+    toggle.title = activityOnly
+      ? (on ? 'Hide the activity log' : 'Show the requests and events the scenario sends')
+      : (on ? 'Turn off Try it and show the reference only' : 'Turn on Try it to send requests to the mock running in this page');
   };
   const turn = (on) => {
     remember(on);
     show(on);
-    return ready().then(() => BlueprintMock.setTryIt(on, { contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }));
+    // In the environment the reader picked (try-it/environments.js).
+    return ready().then(() => BlueprintMock.setTryIt(on, {
+      ...BlueprintMock.inEnvironment({ contracts: BlueprintContracts, version: BlueprintContractsVersion, scope }, { first: activityOnly }),
+      ...(activityOnly ? { views: ['activity'] } : {}),
+    }));
   };
   toggle.onclick = () => turn(toggle.getAttribute('aria-checked') !== 'true');
   // The panel's own Close turns it off too.

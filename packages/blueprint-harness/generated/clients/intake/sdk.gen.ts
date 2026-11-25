@@ -26,6 +26,7 @@ export const listApplications = <ThrowOnError extends boolean = false>(options?:
     requestValidator: async (data) => await zListApplicationsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListApplicationsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications',
     ...options
 });
@@ -37,6 +38,7 @@ export const createApplication = <ThrowOnError extends boolean = false>(options:
     requestValidator: async (data) => await zCreateApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications',
     ...options,
     headers: {
@@ -51,6 +53,7 @@ export const createApplication = <ThrowOnError extends boolean = false>(options:
 export const deleteApplication = <ThrowOnError extends boolean = false>(options: Options<DeleteApplicationData, ThrowOnError>) => (options.client ?? client).delete<DeleteApplicationResponses, DeleteApplicationErrors, ThrowOnError>({
     requestValidator: async (data) => await zDeleteApplicationData.parseAsync(data),
     responseValidator: async (data) => await zDeleteApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}',
     ...options
 });
@@ -62,6 +65,7 @@ export const getApplication = <ThrowOnError extends boolean = false>(options: Op
     requestValidator: async (data) => await zGetApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}',
     ...options
 });
@@ -73,6 +77,7 @@ export const updateApplication = <ThrowOnError extends boolean = false>(options:
     requestValidator: async (data) => await zUpdateApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}',
     ...options,
     headers: {
@@ -88,6 +93,7 @@ export const listIncomeVerifications = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zListIncomeVerificationsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListIncomeVerificationsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/income-verifications',
     ...options
 });
@@ -99,6 +105,7 @@ export const createIncomeVerification = <ThrowOnError extends boolean = false>(o
     requestValidator: async (data) => await zCreateIncomeVerificationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateIncomeVerificationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/income-verifications',
     ...options,
     headers: {
@@ -114,6 +121,7 @@ export const getIncomeVerification = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zGetIncomeVerificationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetIncomeVerificationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/income-verifications/{incomeVerificationId}',
     ...options
 });
@@ -125,6 +133,7 @@ export const listApplicationIncomes = <ThrowOnError extends boolean = false>(opt
     requestValidator: async (data) => await zListApplicationIncomesData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListApplicationIncomesResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/incomes',
     ...options
 });
@@ -136,6 +145,7 @@ export const createApplicationIncome = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zCreateApplicationIncomeData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateApplicationIncomeResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/incomes',
     ...options,
     headers: {
@@ -151,6 +161,7 @@ export const getApplicationIncome = <ThrowOnError extends boolean = false>(optio
     requestValidator: async (data) => await zGetApplicationIncomeData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationIncomeResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/incomes/{incomeId}',
     ...options
 });
@@ -162,6 +173,7 @@ export const updateApplicationIncome = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zUpdateApplicationIncomeData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateApplicationIncomeResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/incomes/{incomeId}',
     ...options,
     headers: {
@@ -177,6 +189,7 @@ export const listApplicationInterviews = <ThrowOnError extends boolean = false>(
     requestValidator: async (data) => await zListApplicationInterviewsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListApplicationInterviewsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews',
     ...options
 });
@@ -188,6 +201,7 @@ export const createApplicationInterview = <ThrowOnError extends boolean = false>
     requestValidator: async (data) => await zCreateApplicationInterviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateApplicationInterviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews',
     ...options,
     headers: {
@@ -203,6 +217,7 @@ export const getApplicationInterview = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zGetApplicationInterviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationInterviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews/{interviewId}',
     ...options
 });
@@ -214,6 +229,7 @@ export const listApplicationMembers = <ThrowOnError extends boolean = false>(opt
     requestValidator: async (data) => await zListApplicationMembersData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListApplicationMembersResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/members',
     ...options
 });
@@ -225,6 +241,7 @@ export const createApplicationMember = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zCreateApplicationMemberData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCreateApplicationMemberResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/members',
     ...options,
     headers: {
@@ -239,6 +256,7 @@ export const createApplicationMember = <ThrowOnError extends boolean = false>(op
 export const deleteApplicationMember = <ThrowOnError extends boolean = false>(options: Options<DeleteApplicationMemberData, ThrowOnError>) => (options.client ?? client).delete<DeleteApplicationMemberResponses, DeleteApplicationMemberErrors, ThrowOnError>({
     requestValidator: async (data) => await zDeleteApplicationMemberData.parseAsync(data),
     responseValidator: async (data) => await zDeleteApplicationMemberResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/members/{memberId}',
     ...options
 });
@@ -250,6 +268,7 @@ export const getApplicationMember = <ThrowOnError extends boolean = false>(optio
     requestValidator: async (data) => await zGetApplicationMemberData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationMemberResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/members/{memberId}',
     ...options
 });
@@ -261,6 +280,7 @@ export const updateApplicationMember = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zUpdateApplicationMemberData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateApplicationMemberResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/members/{memberId}',
     ...options,
     headers: {
@@ -278,6 +298,7 @@ export const submitApplication = <ThrowOnError extends boolean = false>(options:
     requestValidator: async (data) => await zSubmitApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zSubmitApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/submit',
     ...options
 });
@@ -291,6 +312,7 @@ export const openApplication = <ThrowOnError extends boolean = false>(options: O
     requestValidator: async (data) => await zOpenApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zOpenApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/open',
     ...options
 });
@@ -304,6 +326,7 @@ export const closeApplication = <ThrowOnError extends boolean = false>(options: 
     requestValidator: async (data) => await zCloseApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCloseApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/close',
     ...options,
     headers: {
@@ -321,6 +344,7 @@ export const withdrawApplication = <ThrowOnError extends boolean = false>(option
     requestValidator: async (data) => await zWithdrawApplicationData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zWithdrawApplicationResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/withdraw',
     ...options
 });
@@ -334,6 +358,7 @@ export const startInterview = <ThrowOnError extends boolean = false>(options: Op
     requestValidator: async (data) => await zStartInterviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zStartInterviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews/{interviewId}/start',
     ...options
 });
@@ -348,6 +373,7 @@ export const processSuggestionsInterview = <ThrowOnError extends boolean = false
     requestValidator: async (data) => await zProcessSuggestionsInterviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zProcessSuggestionsInterviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews/{interviewId}/process-suggestions',
     ...options
 });
@@ -361,6 +387,7 @@ export const completeInterview = <ThrowOnError extends boolean = false>(options:
     requestValidator: async (data) => await zCompleteInterviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCompleteInterviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interviews/{interviewId}/complete',
     ...options
 });
@@ -372,6 +399,7 @@ export const getApplicationSummary = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zGetApplicationSummaryData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationSummaryResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/summary',
     ...options
 });
@@ -383,6 +411,7 @@ export const getInterviewFlagsInputs = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zGetInterviewFlagsInputsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetInterviewFlagsInputsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/interview-flags-inputs',
     ...options
 });
@@ -394,6 +423,7 @@ export const getApplicationReview = <ThrowOnError extends boolean = false>(optio
     requestValidator: async (data) => await zGetApplicationReviewData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationReviewResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review',
     ...options
 });
@@ -405,6 +435,7 @@ export const getApplicationReviewDemographicsSection = <ThrowOnError extends boo
     requestValidator: async (data) => await zGetApplicationReviewDemographicsSectionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationReviewDemographicsSectionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review/demographics',
     ...options
 });
@@ -416,6 +447,7 @@ export const getApplicationReviewContactSection = <ThrowOnError extends boolean 
     requestValidator: async (data) => await zGetApplicationReviewContactSectionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationReviewContactSectionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review/contact',
     ...options
 });
@@ -427,6 +459,7 @@ export const listReviewProgressBySection = <ThrowOnError extends boolean = false
     requestValidator: async (data) => await zListReviewProgressBySectionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListReviewProgressBySectionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}',
     ...options
 });
@@ -438,6 +471,7 @@ export const updateReviewProgressBySection = <ThrowOnError extends boolean = fal
     requestValidator: async (data) => await zUpdateReviewProgressBySectionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateReviewProgressBySectionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}',
     ...options,
     headers: {
@@ -453,6 +487,7 @@ export const replaceReviewProgressBySection = <ThrowOnError extends boolean = fa
     requestValidator: async (data) => await zReplaceReviewProgressBySectionData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zReplaceReviewProgressBySectionResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}',
     ...options,
     headers: {
@@ -468,6 +503,7 @@ export const getReviewProgressByItem = <ThrowOnError extends boolean = false>(op
     requestValidator: async (data) => await zGetReviewProgressByItemData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetReviewProgressByItemResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
     ...options
 });
@@ -479,6 +515,7 @@ export const updateReviewProgressByItem = <ThrowOnError extends boolean = false>
     requestValidator: async (data) => await zUpdateReviewProgressByItemData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateReviewProgressByItemResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
     ...options,
     headers: {
@@ -494,6 +531,7 @@ export const replaceReviewProgressByItem = <ThrowOnError extends boolean = false
     requestValidator: async (data) => await zReplaceReviewProgressByItemData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zReplaceReviewProgressByItemResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
     ...options,
     headers: {
@@ -509,6 +547,7 @@ export const getApplicationDetails = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zGetApplicationDetailsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zGetApplicationDetailsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/details',
     ...options
 });
@@ -522,6 +561,7 @@ export const updateApplicationDetails = <ThrowOnError extends boolean = false>(o
     requestValidator: async (data) => await zUpdateApplicationDetailsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zUpdateApplicationDetailsResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/applications/{applicationId}/details',
     ...options,
     headers: {

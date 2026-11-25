@@ -266,3 +266,8 @@ components:
           type: integer
         hasNext:
           type: boolean
+  securitySchemes:
+    callerId:
+      $ref: ../../base/components/security-schemes.yaml#/callerId
+security:
+  - callerId: []

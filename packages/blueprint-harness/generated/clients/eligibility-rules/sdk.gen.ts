@@ -26,6 +26,7 @@ export const evaluateExpeditedSnap = <ThrowOnError extends boolean = false>(opti
     requestValidator: async (data) => await zEvaluateExpeditedSnapData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zEvaluateExpeditedSnapResponse.parseAsync(data),
+    security: [{ name: 'X-Caller-Id', type: 'apiKey' }],
     url: '/determinations/evaluate-expedited-snap',
     ...options,
     headers: {

@@ -1,4 +1,4 @@
-// routing.yaml, and the modules it names, bundled by the explorer's build.
+// config.yaml's environments, and the modules it names, bundled by the explorer's build.
 (() => {
   var __defProp = Object.defineProperty;
   var __export = (target, all) => {
@@ -300,11 +300,13 @@
     return Response.json({ metadata, provider, protocol: "websocket", url: "wss://fake-secured.invalid/stream", expiresIn: 900 });
   }
 
-  // packages/blueprint-harness/explorer/routing.yaml
+  // packages/blueprint-harness/explorer/site-routing-entry.js
   globalThis.BlueprintExplorer ??= {};
-  globalThis.BlueprintExplorer.routing = [
-    ...globalThis.BlueprintExplorer.routing ?? [],
-    { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "whisper" } }, handler: whisper_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/whisper.js" },
-    { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "fake-secured" } }, handler: fake_secured_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/fake-secured.js" }
+  globalThis.BlueprintExplorer.environments = [
+    { ...{ "name": "Local", "variables": { "EVENT_PREFIX": "" }, "overlays": [], "sign_in": null }, routing: [{ ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "whisper" } }, handler: whisper_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/whisper.js" }] },
+    { ...{ "name": "Production", "variables": { "EVENT_PREFIX": "ca.", "SIGN_IN_URL": "pages/fake-sign-in.html" }, "overlays": [{ "overlay": "1.0.0", "info": { "title": "Production sign-in", "version": "1.0.0" }, "actions": [{ "target": "$", "files": "base/components/security-schemes.yaml", "description": "Sign in through the environment's sign-in page", "update": { "bearerAuth": { "type": "oauth2", "description": "The signed-in caller's token, from the environment's sign-in page.\n", "flows": { "implicit": { "authorizationUrl": "${SIGN_IN_URL}", "scopes": {} } }, "x-caller": { "id": "sub", "roles": "roles" } } } }, { "target": "$.callerId", "files": "base/components/security-schemes.yaml", "description": "Callers sign in instead of naming themselves", "remove": true }] }], "sign_in": { "client_id": "blueprint-harness" } }, routing: [
+      { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "whisper" } }, handler: whisper_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/whisper.js" },
+      { ...{ "api": "communication-transcription-sessions-adapter", "match": { "provider": "fake-secured" } }, handler: fake_secured_exports, [/* @__PURE__ */ Symbol.for("blueprint-explorer.handler-file")]: "./adapters/fake-secured.js" }
+    ] }
   ];
 })();
