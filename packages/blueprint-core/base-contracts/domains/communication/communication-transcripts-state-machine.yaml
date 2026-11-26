@@ -166,13 +166,17 @@ machines:
       # transcript doesn't accept, closed say, isn't kept. The entry's created
       # event names the line_finished event as its cause (causationid), which
       # is how a consumer finds the entry a line became. The transcript is
-      # the session's own, read from the session the event is about: the
-      # event's data can't send a line to another session's transcript.
+      # the session's own, read from the session the event is about. An
+      # event whose data names another transcript is refused, not followed
+      # or corrected: whichever id is wrong, the line may be someone else's.
       - type: communication.transcription_session.line_finished
         description: Keep a finished line in the session's transcript.
         context:
           - session: {from: communication/transcription-sessions, where: {id: $this.subject}}
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail: {status: 409, code: CONFLICT, message: "The line names a transcript that isn't its session's."}
           - call:
               operationId: addTranscriptEntry
               parameters:
@@ -193,6 +197,9 @@ machines:
         context:
           - session: {from: communication/transcription-sessions, where: {id: $this.subject}}
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail: {status: 409, code: CONFLICT, message: "The connection names a transcript that isn't its session's."}
           - if: has(this.data.gap)
             then:
               - call:

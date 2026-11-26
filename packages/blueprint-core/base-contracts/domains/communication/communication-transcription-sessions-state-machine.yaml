@@ -75,7 +75,7 @@ machines:
           type: object
           required: [transcriptId]
           properties:
-            transcriptId: {type: string, format: uuid, description: The session's transcript., x-relationship: {resource: Transcript, style: links-only}}
+            transcriptId: {type: string, format: uuid, description: "The session's transcript. The transcript refuses an event that names another.", x-relationship: {resource: Transcript, style: links-only}}
             gap:
               type: object
               additionalProperties: false
@@ -117,7 +117,7 @@ machines:
           type: object
           required: [transcriptId, key, startedAt, endedAt, text, speaker]
           properties:
-            transcriptId: {type: string, format: uuid, description: The session's transcript., x-relationship: {resource: Transcript, style: links-only}}
+            transcriptId: {type: string, format: uuid, description: "The session's transcript. The transcript refuses an event that names another.", x-relationship: {resource: Transcript, style: links-only}}
             key: {type: string, maxLength: 255, description: "The line's key, as on its updates. The transcript keeps a line once for the session and its key, so one published again after a network error isn't added twice."}
             startedAt: {type: string, format: date-time, description: "When it began, by the client's clock."}
             endedAt: {type: string, format: date-time, description: When it ended.}

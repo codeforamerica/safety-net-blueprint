@@ -202,7 +202,10 @@ borrowed:
 
   - name: Amazon States Language
     url: https://states-language.net/spec.html
-    use: When a step can fail, handle it with a `catch` on the step, as its Catch sits on a Task.
+    use: >
+      When a step can fail, handle it with a `catch` on the step, as its Catch
+      sits on a Task. To stop an action or reaction with an error, use a `fail`
+      step, as its Fail state does.
 
   - name: XState and SCXML
     url: https://stately.ai/docs

@@ -684,6 +684,10 @@ function* walkSteps(steps, resource, context, store, pending) {
           }
         }
       }
+    } else if (step.fail !== undefined) {
+      // fail: stops the walk with its error, as a call that failed does.
+      yield { step, context };
+      continue;
     } else if (step.call !== undefined) {
       // A call to an operation by its operationId, or to one held in data
       // (`$request.call`), is performed where it stands: the walk waits for
@@ -792,6 +796,10 @@ export function operationCallOf(call, context) {
 export function applySteps(steps, resource, context, store) {
   const pending = emptyPending();
   for (const { step } of walkSteps(steps, resource, context, store, pending)) {
+    if (step.fail !== undefined) {
+      console.warn(`fail: ${step.fail.message ?? ''} — only a state machine's action or reaction can fail — skipping`);
+      continue;
+    }
     const named = typeof step.call === 'string' ? step.call : step.call.operationId;
     console.warn(`call: ${named} calls an operation, which only a state machine action can do — skipping`);
   }
@@ -814,6 +822,21 @@ export function caughtEntities(step, outcome, entities = {}) {
 }
 
 /**
+ * The outcome of a `fail:` step: the error it names, as a call's failure
+ * reads, so the action or reaction fails as it would on a call that failed.
+ * Its message may be a value expression, read where the step stands.
+ *
+ * @param {{ fail: { status: number, code?: string, message?: string } }} step
+ * @param {Object} context
+ * @returns {{ ok: false, status: number, body: { code: string, message: string } }}
+ */
+export function failureOf(step, context) {
+  const { status = 409, code = 'CONFLICT', message } = step.fail ?? {};
+  const said = message === undefined ? undefined : resolveBodyValue(message, context);
+  return { ok: false, status, body: { code, message: typeof said === 'string' ? said : `fail: step with status ${status}` } };
+}
+
+/**
  * Apply an action's steps in order, performing each call to an operation as
  * it is reached.
  *
@@ -833,6 +856,10 @@ export async function applyStepsInOrder(steps, resource, context, store, perform
   const walker = walkSteps(steps, resource, context, store, pending);
   for (let next = walker.next(); !next.done; next = walker.next()) {
     const { step, context: at } = next.value;
+    if (step.fail !== undefined) {
+      walker.return();
+      return { ...pending, failed: { step, call: null, outcome: failureOf(step, at) } };
+    }
     const call = operationCallOf(step.call, at);
     const outcome = call
       ? await perform(call, step)
@@ -889,6 +916,10 @@ export function applyStepsWithCalls(steps, resource, context, store, perform) {
   const advance = () => {
     for (let next = walker.next(); !next.done; next = walker.next()) {
       const { step, context: at } = next.value;
+      if (step.fail !== undefined) {
+        walker.return();
+        return { ...pending, failed: { step, call: null, outcome: failureOf(step, at) } };
+      }
       if (!perform) {
         const named = typeof step.call === 'string' ? step.call : step.call.operationId;
         console.warn(`call: ${named} calls an operation, which nothing here can make — skipping`);

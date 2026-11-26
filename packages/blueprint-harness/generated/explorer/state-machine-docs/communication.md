@@ -87,9 +87,11 @@ Domain: `communication` | API: [communication-transcription-sessions-openapi.yam
     - `PATCH communication/transcripts/$this.data.transcriptId`
 - **`communication.transcription_session.line_finished`**
   - Look up: session (from `event.subject`)
+  - If `this.data.transcriptId is not session.transcriptId`:
   - `addTranscriptEntry`
 - **`communication.transcription_session.connected`**
   - Look up: session (from `event.subject`)
+  - If `this.data.transcriptId is not session.transcriptId`:
   - If `has(this.data.gap)`:
     - `addTranscriptEntry`
 - **`communication.transcript.idle_check`**

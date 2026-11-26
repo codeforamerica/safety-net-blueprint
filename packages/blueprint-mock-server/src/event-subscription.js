@@ -385,6 +385,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
       const unhandled = ({ step, outcome }) => {
         failed = true;
         restore();
+        if (step.fail !== undefined) {
+          console.error(`Machine onEvent "${entry.type}": failed with ${outcome.status}: ${outcome.body?.message ?? ''} — nothing saved`);
+          return;
+        }
         const named = typeof step.call === 'string' ? step.call : step.call.operationId;
         // The fields at fault, when the API named them: "invalid data" alone
         // leaves whoever reads the log to reproduce the call to find out.

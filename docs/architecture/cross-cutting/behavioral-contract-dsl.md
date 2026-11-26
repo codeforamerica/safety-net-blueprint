@@ -306,6 +306,27 @@ procedure, where it would never run.
 The events a call causes name, as their `causationid`, the action's first event
 — or, in a reaction, the event reacted to.
 
+### fail step
+
+`fail` stops an action or a reaction with an error, when something is wrong
+that a guard can't see up front, such as an event whose data disagrees with
+the record it's about. It carries an HTTP `status` and the shared Error
+shape's `code` and `message`. An action answers with that error; a reaction
+fails and the mock logs why. Either way, nothing it did is saved, as when a
+call fails. Test what's wrong with `if:` first:
+
+```yaml
+- if: this.data.transcriptId != session.transcriptId
+  then:
+    - fail: {status: 409, code: CONFLICT, message: "The line names a transcript that isn't its session's."}
+```
+
+`fail` is the [Amazon States Language](https://states-language.net/spec.html)'s
+`Fail`, which `catch` also comes from. A failed guard in a reaction skips it
+quietly, since a reaction's guard says which events it's for; `fail` says that
+an event it's for is wrong. It isn't named `raise`, which in SCXML and XState
+sends an event.
+
 ### Context
 
 `context:` declares named data bindings — each binding fetches a related record and makes it available as `$name` or `$name.field` in steps. Context can be declared at any scope where it makes sense:

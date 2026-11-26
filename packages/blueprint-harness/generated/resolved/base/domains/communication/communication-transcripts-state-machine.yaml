@@ -160,6 +160,12 @@ machines:
               where:
                 id: $this.subject
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail:
+                  status: 409
+                  code: CONFLICT
+                  message: The line names a transcript that isn't its session's.
           - call:
               operationId: addTranscriptEntry
               parameters:
@@ -187,6 +193,12 @@ machines:
               where:
                 id: $this.subject
         steps:
+          - if: this.data.transcriptId != session.transcriptId
+            then:
+              - fail:
+                  status: 409
+                  code: CONFLICT
+                  message: The connection names a transcript that isn't its session's.
           - if: has(this.data.gap)
             then:
               - call:

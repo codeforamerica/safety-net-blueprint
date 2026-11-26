@@ -185,6 +185,14 @@ describe('a call by path to another record\'s action', () => {
         actions: [
           { id: 'take', transition: { from: 'free', to: 'busy' }, guards: [{ actors: ['system'] }], steps: [{ set: { field: 'stampedAt', value: '$now' } }] },
           { id: 'go-busy', transition: { from: 'free', to: 'busy' }, guards: [{ actors: ['readwrite'] }] },
+          {
+            // Refuses a driver with no name, after stamping her, to show the stamp isn't kept.
+            id: 'sign-on', transition: { from: 'free', to: 'busy' }, guards: [{ actors: ['readwrite'] }],
+            steps: [
+              { set: { field: 'stampedAt', value: '$now' } },
+              { if: '!has(object.licence)', then: [{ fail: { status: 422, code: 'VALIDATION_ERROR', message: 'A driver signs on with a licence.' } }] },
+            ],
+          },
         ],
       },
     ]),
@@ -214,6 +222,17 @@ describe('a call by path to another record\'s action', () => {
     const after = (await send('GET', `/fleet/jobs/${job.id}`)).body;
     assert.strictEqual(after.status, 'open');
     assert.strictEqual(after.updatedAt, job.updatedAt, 'the job is as it was');
+  });
+
+  test('a fail step answers with its error, and nothing the action did is saved', async () => {
+    const send = await fleet();
+    const driver = (await send('POST', '/fleet/drivers', { name: 'Cy' })).body;
+    const signedOn = await send('POST', `/fleet/drivers/${driver.id}/sign-on`, {});
+    assert.strictEqual(signedOn.status, 422, JSON.stringify(signedOn.body));
+    assert.deepStrictEqual({ code: signedOn.body.code, message: signedOn.body.message }, { code: 'VALIDATION_ERROR', message: 'A driver signs on with a licence.' });
+    const after = (await send('GET', `/fleet/drivers/${driver.id}`)).body;
+    assert.strictEqual(after.status, 'free');
+    assert.strictEqual(after.stampedAt, undefined, 'the stamp before the fail is not kept');
   });
 
   test('a later call\'s refusal undoes the calls before it in the domain, and sends none of their events', async () => {
